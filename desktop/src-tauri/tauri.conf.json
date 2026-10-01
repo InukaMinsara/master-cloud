@@ -24,16 +24,15 @@
         "decorations": true,
         "transparent": false,
         "visible": true,
-        "closable": true,
-        "url": "index.html"
+        "closable": true
       }
     ],
     "trayIcon": {
       "id": "main-tray",
-      "iconPath": "icons/icon.png"
+      "iconPath": "icons/32x32.png"
     },
     "security": {
-      "csp": "default-src 'self'; connect-src https://*.supabase.co https://files.catbox.moe; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src https://*.supabase.co https://files.catbox.moe https://ipc.localhost; img-src 'self' data: https: asset:; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
@@ -47,39 +46,21 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": "",
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       },
-      "wix": {
-        "productName": "Master Cloud",
-        "language": "en-US",
-        "template": null
-      },
       "nsis": {
         "installerIcon": "icons/icon.ico",
-        "headerImage": null,
-        "sidebarImage": null,
         "installMode": "perMachine",
-        "license": null,
         "languages": ["English"],
-        "shortcutsEnabled": true,
         "displayLanguageSelector": false
       }
-    },
-    "resources": [
-      {
-        "path": "../../WinFsp/bin/winfsp-x64.dll",
-        "target": "."
-      }
-    ]
+    }
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": []
+      "open": true
     },
     "deep-link": {
       "schemes": ["mastercloud"]

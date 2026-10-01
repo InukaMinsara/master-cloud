@@ -5,7 +5,6 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
-use tauri::Manager;
 
 pub mod credential_store;
 
@@ -32,15 +31,14 @@ pub struct UserInfo {
 
 #[derive(Clone)]
 pub struct AuthManager {
-    state:     Arc<RwLock<AuthState>>,
-    cred:      CredentialStore,
+    state:         Arc<RwLock<AuthState>>,
+    cred:          CredentialStore,
     supabase_url:  String,
     supabase_anon: String,
 }
 
 impl AuthManager {
     pub fn new(app: &tauri::AppHandle) -> Result<Self> {
-        // Read Supabase config from tauri config (bundled at build time)
         let config = app.config();
         let supabase_url  = std::env::var("MASTER_CLOUD_SUPABASE_URL")
             .unwrap_or_else(|_| config.product_name.clone().unwrap_or_default());
@@ -49,7 +47,6 @@ impl AuthManager {
 
         let cred = CredentialStore::new("MasterCloud")?;
 
-        // Try to restore session from credential store
         let state = match cred.load_session()? {
             Some(session) => {
                 tracing::info!("Restored session for {}", session.email);
@@ -81,7 +78,6 @@ impl AuthManager {
         }
     }
 
-    /// Start OAuth flow — returns the browser URL to open
     pub fn start_oauth_url(&self, provider: &str) -> Result<String> {
         let url = format!(
             "{}/auth/v1/authorize?provider={}&redirect_to=mastercloud://auth/callback",
@@ -90,9 +86,7 @@ impl AuthManager {
         Ok(url)
     }
 
-    /// Handle OAuth callback — exchange code for session
     pub async fn handle_oauth_callback(&self, url: &str) -> Result<UserInfo> {
-        // Parse access_token from fragment or query
         let parsed = reqwest::Url::parse(url)?;
         let fragment = parsed.fragment().unwrap_or("");
         let params: std::collections::HashMap<_, _> = fragment
@@ -112,7 +106,6 @@ impl AuthManager {
             .cloned()
             .unwrap_or_default();
 
-        // Fetch user info from Supabase
         let client = reqwest::Client::new();
         let resp: serde_json::Value = client
             .get(format!("{}/auth/v1/user", self.supabase_url))
@@ -127,7 +120,6 @@ impl AuthManager {
         let email   = resp["email"].as_str().unwrap_or("").to_string();
         let name    = resp["user_metadata"]["full_name"].as_str().map(str::to_string);
 
-        // Persist session securely
         self.cred.save_session(&StoredSession {
             user_id:       user_id.clone(),
             email:         email.clone(),
@@ -144,14 +136,12 @@ impl AuthManager {
         Ok(UserInfo { id: user_id, email, name })
     }
 
-    /// Logout — clear credential store
     pub fn logout(&self) -> Result<()> {
         self.cred.clear_session()?;
         *self.state.write().unwrap() = AuthState::LoggedOut;
         Ok(())
     }
 
-    /// Refresh access token using stored refresh token
     pub async fn refresh_token(&self) -> Result<()> {
         let stored = self.cred.load_session()?.context("No stored session")?;
         let client = reqwest::Client::new();
@@ -184,8 +174,6 @@ impl AuthManager {
     pub fn supabase_url(&self) -> &str { &self.supabase_url }
     pub fn supabase_anon(&self) -> &str { &self.supabase_anon }
 }
-
-// ── Internal session type ─────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredSession {

@@ -27,7 +27,6 @@ impl CacheManager {
         std::fs::create_dir_all(&cache_dir)?;
         std::fs::create_dir_all(&stage_dir)?;
 
-        // Default cache limit: 5 GB
         let max_bytes = Arc::new(RwLock::new(5u64 * 1024 * 1024 * 1024));
 
         let http_client = reqwest::Client::builder()
@@ -37,8 +36,6 @@ impl CacheManager {
 
         Ok(Self { cache_dir, stage_dir, max_bytes, http_client })
     }
-
-    // ── Path helpers ──────────────────────────────────────────────────────────
 
     pub fn cache_path_for(&self, file_id: &str) -> String {
         let sub = &file_id[..2.min(file_id.len())];
@@ -56,24 +53,15 @@ impl CacheManager {
             .into_owned()
     }
 
-    // ── Download to cache ─────────────────────────────────────────────────────
-    //
-    // Downloads a file from cloud_url to local_path.
-    // Uses streaming — never loads full file into RAM.
-    // Atomic write: temp file → rename on completion.
-    // Verifies SHA-256 after download.
-
     pub async fn download_to_cache(&self, cloud_url: &str, local_path: &str) -> Result<()> {
         use futures::StreamExt;
         use sha2::{Digest, Sha256};
         use tokio::io::AsyncWriteExt;
 
-        // Check disk space first
-        let avail = available_space(local_path)?;
-        let max   = *self.max_bytes.read();
-        let used  = self.cache_used_bytes()?;
+        let _avail = available_space(local_path)?;
+        let max    = *self.max_bytes.read();
+        let used   = self.cache_used_bytes()?;
         if used + 50 * 1024 * 1024 > max {
-            // Cache is nearly full — evict LRU files
             self.evict_lru().await?;
         }
 
@@ -104,14 +92,11 @@ impl CacheManager {
         file.flush().await?;
         drop(file);
 
-        // Atomic rename
         tokio::fs::rename(&tmp_path, local_path).await?;
 
         tracing::debug!("Cached {} sha256={}", local_path, &hex::encode(hasher.finalize())[..8]);
         Ok(())
     }
-
-    // ── Cache eviction (LRU) ──────────────────────────────────────────────────
 
     async fn evict_lru(&self) -> Result<()> {
         let cache_dir = self.cache_dir.clone();
@@ -120,7 +105,6 @@ impl CacheManager {
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut files: Vec<(PathBuf, std::time::SystemTime, u64)> = Vec::new();
 
-            // Collect all cached files with access time and size
             for entry in walkdir::WalkDir::new(&cache_dir).min_depth(2).max_depth(3) {
                 if let Ok(e) = entry {
                     if e.file_type().is_file() {
@@ -131,16 +115,13 @@ impl CacheManager {
                 }
             }
 
-            // Sort by access time — oldest first
             files.sort_by_key(|(_, atime, _)| *atime);
 
-            let total: u64 = files.iter().map(|(_, _, s)| s).sum();
             let mut freed: u64 = 0;
-            let target_free = max_bytes / 5; // free up 20%
+            let target_free = max_bytes / 5;
 
             for (path, _, size) in &files {
                 if freed >= target_free { break; }
-                // Never evict pinned files (they won't be in this folder)
                 if let Err(e) = std::fs::remove_file(path) {
                     tracing::warn!("Eviction failed for {}: {}", path.display(), e);
                 } else {
@@ -177,8 +158,6 @@ impl CacheManager {
     }
 }
 
-// ── Disk space check ─────────────────────────────────────────────────────────
-
 pub fn available_space(path: &str) -> Result<u64> {
     #[cfg(target_os = "windows")]
     {
@@ -201,6 +180,6 @@ pub fn available_space(path: &str) -> Result<u64> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        Ok(100 * 1024 * 1024 * 1024) // 100 GB dummy on non-Windows
+        Ok(100 * 1024 * 1024 * 1024)
     }
 }

@@ -8,16 +8,11 @@
 // 4. For writes: stage to local temp, queue async upload.
 
 use anyhow::Result;
-use std::sync::Arc;
 use tauri::Manager;
 
-use crate::auth::AuthManager;
 use crate::cache::CacheManager;
 use crate::db::{Database, FileMeta, QueuedOp};
-use crate::sync::cloud_api::CloudApi;
 
-/// The WinFsp FileSystem implementation.
-/// In a real build this implements the winfsp_sys::FileSystem trait.
 pub struct MasterCloudFileSystem {
     app: tauri::AppHandle,
 }
@@ -27,14 +22,9 @@ impl MasterCloudFileSystem {
         Self { app }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    fn db(&self)    -> tauri::State<'_, Database>     { self.app.state() }
+    fn cache(&self) -> tauri::State<'_, CacheManager> { self.app.state() }
 
-    fn db(&self)    -> tauri::State<Database>     { self.app.state() }
-    fn cache(&self) -> tauri::State<CacheManager> { self.app.state() }
-    fn auth(&self)  -> tauri::State<AuthManager>  { self.app.state() }
-
-    /// Resolve a virtual drive path like "My Drive/Projects/file.txt"
-    /// to a FileMeta entry in the local DB.
     fn resolve_path(&self, path: &str) -> Option<FileMeta> {
         let db  = self.db();
         let parts: Vec<&str> = path.trim_start_matches('\\')
@@ -43,10 +33,9 @@ impl MasterCloudFileSystem {
             .collect();
 
         if parts.is_empty() {
-            return None; // root
+            return None;
         }
 
-        // Walk the path segments through the DB tree
         let mut parent_id: Option<String> = None;
         let mut current: Option<FileMeta> = None;
 
@@ -61,15 +50,11 @@ impl MasterCloudFileSystem {
         current
     }
 
-    // ── ReadDirectory ─────────────────────────────────────────────────────────
-    // Returns directory entries from SQLite cache — NO network call.
-    // Background task refreshes metadata asynchronously.
-
     pub fn read_directory(&self, path: &str) -> Vec<DirEntry> {
         let db = self.db();
 
         let parent_id = if path.trim_matches('\\').is_empty() {
-            None // root
+            None
         } else {
             self.resolve_path(path).map(|f| f.id)
         };
@@ -87,10 +72,6 @@ impl MasterCloudFileSystem {
         }).collect()
     }
 
-    // ── Open / Read ───────────────────────────────────────────────────────────
-    // Returns the local cache path if file is cached.
-    // Otherwise queues a download and returns an error — Explorer will retry.
-
     pub fn open_file(&self, path: &str) -> Result<Option<String>> {
         let meta = match self.resolve_path(path) {
             Some(m) => m,
@@ -103,14 +84,12 @@ impl MasterCloudFileSystem {
 
         let cache = self.cache();
 
-        // Check if already in cache
         if let Some(local) = &meta.local_path {
             if std::path::Path::new(local).exists() {
                 return Ok(Some(local.clone()));
             }
         }
 
-        // Not cached — queue async download and return "not ready yet"
         let cloud_url = meta.cloud_url.clone().unwrap_or_default();
         let db        = self.db();
         let local_path = cache.cache_path_for(&meta.id);
@@ -129,14 +108,8 @@ impl MasterCloudFileSystem {
         };
 
         let _ = db.enqueue_op(&op);
-
-        // Return None — caller (WinFsp callback) should return STATUS_PENDING or
-        // indicate the file is not yet locally available.
-        // WinFsp will allow a retry; in the interim Explorer shows a loading state.
         Ok(None)
     }
-
-    // ── Write / Create ────────────────────────────────────────────────────────
 
     pub fn create_file(&self, path: &str, initial_data: &[u8]) -> Result<String> {
         let cache     = self.cache();
@@ -144,13 +117,11 @@ impl MasterCloudFileSystem {
         let file_id   = uuid::Uuid::new_v4().to_string();
         let local_path = cache.stage_path_for(&file_id);
 
-        // Write to staging area first
         if let Some(parent) = std::path::Path::new(&local_path).parent() {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&local_path, initial_data)?;
 
-        // Extract name and parent from path
         let name = path.trim_start_matches('\\')
             .split('\\')
             .last()
@@ -169,7 +140,6 @@ impl MasterCloudFileSystem {
 
         let parent_meta = self.resolve_path(&parent_path);
 
-        // Insert into local DB immediately
         let meta = FileMeta {
             id:           file_id.clone(),
             parent_id:    parent_meta.map(|m| m.id),
@@ -182,14 +152,13 @@ impl MasterCloudFileSystem {
             mtime:        Some(chrono::Utc::now().to_rfc3339()),
             created_at:   Some(chrono::Utc::now().to_rfc3339()),
             is_pinned:    false,
-            is_offline:   true, // staging
+            is_offline:   true,
             local_path:   Some(local_path.clone()),
             local_sha256: None,
             sync_state:   "uploading".to_string(),
         };
         db.upsert_file_meta(&meta)?;
 
-        // Queue upload
         let op = QueuedOp {
             id:         uuid::Uuid::new_v4().to_string(),
             op_type:    "upload".to_string(),
@@ -214,7 +183,7 @@ impl MasterCloudFileSystem {
 
         let meta = FileMeta {
             id:           format!("local:{}", uuid::Uuid::new_v4()),
-            parent_id:    None, // TODO: resolve
+            parent_id:    None,
             name,
             is_dir:       true,
             size:         0,
@@ -231,7 +200,6 @@ impl MasterCloudFileSystem {
         };
         db.upsert_file_meta(&meta)?;
 
-        // Queue cloud folder creation
         let op = QueuedOp {
             id:         uuid::Uuid::new_v4().to_string(),
             op_type:    "mkdir".to_string(),
@@ -245,8 +213,6 @@ impl MasterCloudFileSystem {
         Ok(())
     }
 }
-
-// ── Data types returned to the filesystem callbacks ───────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct DirEntry {

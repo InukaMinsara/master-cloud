@@ -98,7 +98,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn conn(&self) -> std::sync::MutexGuard<Connection> {
+    pub fn conn(&self) -> std::sync::MutexGuard<'_, Connection> {
         self.conn.lock().unwrap()
     }
 

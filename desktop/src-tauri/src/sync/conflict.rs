@@ -26,17 +26,13 @@ pub struct Conflict {
     pub cloud_url:   Option<String>,
 }
 
-/// Detect if a local change conflicts with a cloud change.
 pub fn detect_conflict(meta: &FileMeta, local_mtime: &str) -> bool {
-    // If cloud mtime is newer than what we last synced and local also changed
-    if let (Some(cloud_mtime), Some(local_path)) = (&meta.mtime, &meta.local_path) {
-        // Both sides changed since last sync → conflict
+    if let (Some(cloud_mtime), Some(_local_path)) = (&meta.mtime, &meta.local_path) {
         return cloud_mtime.as_str() != local_mtime;
     }
     false
 }
 
-/// Record a detected conflict in the DB for user resolution.
 pub fn record_conflict(db: &Database, conflict: &Conflict) -> Result<()> {
     let conn = db.conn();
     conn.execute(
@@ -55,13 +51,8 @@ pub fn record_conflict(db: &Database, conflict: &Conflict) -> Result<()> {
     Ok(())
 }
 
-/// Resolve a conflict according to user choice.
-/// - KeepLocal:  upload local version to cloud
-/// - KeepCloud:  download cloud version, discard local
-/// - KeepBoth:   rename local copy, keep cloud
-/// - CreateCopy: create a timestamped copy of both
 pub async fn resolve_conflict(
-    db:         &Database,
+    db:          &Database,
     conflict_id: &str,
     resolution:  ConflictResolution,
 ) -> Result<()> {
@@ -78,7 +69,5 @@ pub async fn resolve_conflict(
         rusqlite::params![conflict_id, resolution_str],
     )?;
 
-    // Queue the actual operation based on resolution
-    // (the sync engine will pick it up next cycle)
     Ok(())
 }

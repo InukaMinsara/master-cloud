@@ -35,7 +35,7 @@ pub fn build_tray(app: &tauri::AppHandle) -> Result<()> {
         .tooltip("Master Cloud")
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
-        .menu_on_left_click(false)
+        .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
                 let app = tray.app_handle();
@@ -54,7 +54,6 @@ pub fn build_tray(app: &tauri::AppHandle) -> Result<()> {
                     }
                 }
                 "drive" => {
-                    // Open drive letter in Explorer
                     let _ = std::process::Command::new("explorer.exe")
                         .arg("M:\\")
                         .spawn();

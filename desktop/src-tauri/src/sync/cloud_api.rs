@@ -3,7 +3,6 @@
 // Uses streaming for large files, range requests for partial downloads.
 
 use anyhow::{Context, Result};
-use bytes::Bytes;
 use futures::StreamExt;
 use reqwest::Client;
 use sha2::{Digest, Sha256};
@@ -40,7 +39,7 @@ impl CloudApi {
         )
     }
 
-    fn list_url(&self, prefix: &str) -> String {
+    fn list_url(&self) -> String {
         format!("{}/storage/v1/object/list/{}", self.supabase_url, self.bucket)
     }
 
@@ -50,7 +49,6 @@ impl CloudApi {
         let path = Path::new(local_path);
         let file_size = tokio::fs::metadata(path).await?.len();
 
-        // Read file in streaming fashion — do NOT load whole file into RAM
         let file = tokio::fs::File::open(path).await?;
         let stream = tokio_util::io::ReaderStream::new(file);
         let body = reqwest::Body::wrap_stream(stream);
@@ -99,7 +97,6 @@ impl CloudApi {
             anyhow::bail!("Download failed: {}", resp.status());
         }
 
-        // Write to temp file first — atomic rename on completion
         let tmp_path = format!("{}.tmp", local_path);
         let tmp_p    = Path::new(&tmp_path);
         if let Some(parent) = tmp_p.parent() {
@@ -119,7 +116,6 @@ impl CloudApi {
         file.flush().await?;
         drop(file);
 
-        // Atomic rename — never leave partial file in place
         tokio::fs::rename(&tmp_path, local_path).await.context("Atomic rename failed")?;
 
         let sha256 = hex::encode(hasher.finalize());
@@ -131,7 +127,7 @@ impl CloudApi {
 
     pub async fn list_folder(&self, prefix: &str) -> Result<Vec<RemoteEntry>> {
         let resp: serde_json::Value = self.client
-            .post(self.list_url(prefix))
+            .post(self.list_url())
             .bearer_auth(&self.access_token)
             .header("apikey", &self.anon_key)
             .json(&serde_json::json!({
@@ -147,7 +143,7 @@ impl CloudApi {
         let arr = resp.as_array().cloned().unwrap_or_default();
         let entries = arr.iter().filter_map(|item| {
             let name = item["name"].as_str()?.to_string();
-            let is_dir = item["id"].is_null(); // Supabase: null id = folder placeholder
+            let is_dir = item["id"].is_null();
             Some(RemoteEntry {
                 name,
                 is_dir,
@@ -181,7 +177,6 @@ impl CloudApi {
     // ── Create folder ─────────────────────────────────────────────────────────
 
     pub async fn create_folder(&self, remote_path: &str) -> Result<()> {
-        // Supabase Storage uses a .keep file to represent empty folders
         let keep_path = format!("{}/.keep", remote_path.trim_end_matches('/'));
         self.client
             .post(self.storage_url(&keep_path))

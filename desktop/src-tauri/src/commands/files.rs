@@ -1,10 +1,6 @@
-// ─── commands/files.rs ───────────────────────────────────────────────────────
-
 use tauri::State;
 use crate::db::{Database, FileMeta, QueuedOp};
-use crate::fs::operations::MasterCloudFileSystem;
 use crate::auth::AuthManager;
-use crate::sync::cloud_api::CloudApi;
 
 #[tauri::command]
 pub fn cmd_list_dir(
@@ -47,7 +43,6 @@ pub fn cmd_create_folder(
     };
     db.upsert_file_meta(&meta).map_err(|e| e.to_string())?;
 
-    // Queue cloud mkdir
     let op = QueuedOp {
         id:         uuid::Uuid::new_v4().to_string(),
         op_type:    "mkdir".to_string(),
@@ -64,21 +59,19 @@ pub fn cmd_create_folder(
 
 #[tauri::command]
 pub async fn cmd_delete_item(
-    id:   String,
-    db:   State<'_, Database>,
-    auth: State<'_, AuthManager>,
+    id:    String,
+    db:    State<'_, Database>,
+    _auth: State<'_, AuthManager>,
 ) -> Result<(), String> {
     let meta = db.get_file_meta(&id).map_err(|e| e.to_string())?
         .ok_or_else(|| "File not found".to_string())?;
 
-    // Remove from local metadata
     {
         let conn = db.conn();
         conn.execute("DELETE FROM file_meta WHERE id=?1", rusqlite::params![id])
             .map_err(|e| e.to_string())?;
     }
 
-    // Queue cloud delete if it has a cloud URL
     if meta.cloud_url.is_some() {
         let op = QueuedOp {
             id:         uuid::Uuid::new_v4().to_string(),
@@ -99,9 +92,9 @@ pub async fn cmd_delete_item(
 
 #[tauri::command]
 pub fn cmd_rename_item(
-    id:      String,
+    id:       String,
     new_name: String,
-    db:      State<Database>,
+    db:       State<Database>,
 ) -> Result<(), String> {
     let conn = db.conn();
     conn.execute(
@@ -133,7 +126,6 @@ pub fn cmd_pin_offline(id: String, db: State<Database>) -> Result<(), String> {
         rusqlite::params![id],
     ).map_err(|e| e.to_string())?;
 
-    // Queue download if not already cached
     if let Ok(Some(meta)) = db.get_file_meta(&id) {
         if meta.local_path.is_none() {
             let op = QueuedOp {
@@ -156,7 +148,6 @@ pub fn cmd_pin_offline(id: String, db: State<Database>) -> Result<(), String> {
 
 #[tauri::command]
 pub fn cmd_unpin_offline(id: String, db: State<Database>) -> Result<(), String> {
-    // Make online-only: remove local copy but NEVER touch cloud file
     if let Ok(Some(meta)) = db.get_file_meta(&id) {
         if let Some(local) = meta.local_path {
             if !meta.is_pinned {

@@ -3,18 +3,18 @@
 // Tokens are stored encrypted in the OS keychain — never plaintext on disk.
 
 use anyhow::{Context, Result};
-use std::ffi::OsStr;
 use super::StoredSession;
 
 #[cfg(target_os = "windows")]
 use windows::{
-    core::PCWSTR,
+    core::{PCWSTR, PWSTR},
     Win32::Security::Credentials::{
         CredDeleteW, CredReadW, CredWriteW, CREDENTIALW, CRED_FLAGS, CRED_PERSIST_LOCAL_MACHINE,
         CRED_TYPE_GENERIC,
     },
 };
 
+#[derive(Clone)]
 pub struct CredentialStore {
     target: String,
 }
@@ -29,22 +29,22 @@ impl CredentialStore {
     #[cfg(target_os = "windows")]
     pub fn save_session(&self, session: &StoredSession) -> Result<()> {
         let json = serde_json::to_vec(session)?;
-        let target_w: Vec<u16> = self.target.encode_utf16().chain(std::iter::once(0)).collect();
-        let username_w: Vec<u16> = session.email.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut target_w: Vec<u16> = self.target.encode_utf16().chain(std::iter::once(0)).collect();
+        let mut username_w: Vec<u16> = session.email.encode_utf16().chain(std::iter::once(0)).collect();
 
         let cred = CREDENTIALW {
             Flags: CRED_FLAGS(0),
             Type: CRED_TYPE_GENERIC,
-            TargetName: PCWSTR(target_w.as_ptr()),
-            Comment: PCWSTR::null(),
+            TargetName: PWSTR(target_w.as_mut_ptr()),
+            Comment: PWSTR::null(),
             LastWritten: Default::default(),
             CredentialBlobSize: json.len() as u32,
             CredentialBlob: json.as_ptr() as *mut u8,
             Persist: CRED_PERSIST_LOCAL_MACHINE,
             AttributeCount: 0,
             Attributes: std::ptr::null_mut(),
-            TargetAlias: PCWSTR::null(),
-            UserName: PCWSTR(username_w.as_ptr()),
+            TargetAlias: PWSTR::null(),
+            UserName: PWSTR(username_w.as_mut_ptr()),
         };
 
         unsafe { CredWriteW(&cred, 0)? };

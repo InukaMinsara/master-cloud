@@ -1,9 +1,5 @@
-// ─── main.rs ─────────────────────────────────────────────────────────────────
-// Master Cloud Desktop — Entry point
-// Tauri v2 application. All heavy work runs in background Tokio tasks.
-// The window renders the React UI from `../src/`.
-
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![allow(dead_code)]
 
 mod auth;
 mod cache;
@@ -17,7 +13,6 @@ use tauri::Manager;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn main() {
-    // Initialise logging
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG").unwrap_or_else(|_| "master_cloud=debug,warn".into()),
@@ -28,7 +23,6 @@ fn main() {
     tracing::info!("Master Cloud Desktop v{} starting", env!("CARGO_PKG_VERSION"));
 
     tauri::Builder::default()
-        // ── Plugins ──────────────────────────────────────────────────────────
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -37,37 +31,33 @@ fn main() {
             Some(vec!["--background"]),
         ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // If already running, bring main window to focus
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
             }
         }))
         .plugin(tauri_plugin_deep_link::init())
-        // ── Setup ─────────────────────────────────────────────────────────────
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // Initialise SQLite journal/queue database
             let db = db::Database::open(&handle)?;
             app.manage(db);
 
-            // Initialise auth manager
             let auth_mgr = auth::AuthManager::new(&handle)?;
             app.manage(auth_mgr);
 
-            // Initialise cache manager
             let cache_mgr = cache::CacheManager::new(&handle)?;
-            app.manage(cache_mgr.clone());
+            app.manage(cache_mgr);
 
-            // Initialise sync engine (starts background Tokio tasks)
+            let virtual_drive = fs::VirtualDrive::new();
+            app.manage(virtual_drive);
+
             let sync_engine = sync::SyncEngine::new(&handle)?;
-            app.manage(sync_engine.clone());
+            app.manage(sync_engine);
 
-            // Build system tray
             tray::build_tray(&handle)?;
 
-            // Start background tasks
             let handle2 = handle.clone();
             tauri::async_runtime::spawn(async move {
                 sync::run_background(&handle2).await;
@@ -75,7 +65,6 @@ fn main() {
 
             Ok(())
         })
-        // ── Commands ──────────────────────────────────────────────────────────
         .invoke_handler(tauri::generate_handler![
             commands::auth::cmd_get_auth_status,
             commands::auth::cmd_start_oauth,

@@ -1,8 +1,6 @@
 // ─── fs/drive_letter.rs ──────────────────────────────────────────────────────
 // Finds an available drive letter, checking existing mounts first.
 
-use anyhow::Result;
-
 #[cfg(target_os = "windows")]
 use windows::Win32::Storage::FileSystem::GetLogicalDrives;
 

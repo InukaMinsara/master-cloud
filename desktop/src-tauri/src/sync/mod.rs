@@ -16,7 +16,7 @@ use tauri::Manager;
 
 use crate::auth::AuthManager;
 use crate::cache::CacheManager;
-use crate::db::{Database, FileMeta, QueuedOp};
+use crate::db::{Database, QueuedOp};
 
 pub mod cloud_api;
 pub mod conflict;
@@ -68,8 +68,8 @@ impl SyncEngine {
         Ok(Self {
             is_paused:    Arc::new(AtomicBool::new(false)),
             mode:         Arc::new(parking_lot::RwLock::new(mode)),
-            upload_sem:   Arc::new(Semaphore::new(4)),   // max 4 concurrent uploads
-            download_sem: Arc::new(Semaphore::new(6)),   // max 6 concurrent downloads
+            upload_sem:   Arc::new(Semaphore::new(4)),
+            download_sem: Arc::new(Semaphore::new(6)),
         })
     }
 
@@ -127,13 +127,11 @@ pub async fn run_background(app: &tauri::AppHandle) {
         let db   = app.state::<Database>();
         let auth = app.state::<AuthManager>();
 
-        // Only sync when authenticated
         let token = match auth.access_token() {
             Some(t) => t,
             None    => continue,
         };
 
-        // Process pending operations from the SQLite queue
         let ops = match db.get_pending_ops(20) {
             Ok(ops) => ops,
             Err(e)  => { tracing::error!("Queue read error: {}", e); continue; }
@@ -165,7 +163,6 @@ pub async fn run_background(app: &tauri::AppHandle) {
             });
         }
 
-        // Periodic metadata sync from cloud
         let _ = metadata_sync::sync_root_metadata(app).await;
         let _ = db.set_setting("last_sync", &chrono::Utc::now().to_rfc3339());
     }
@@ -174,10 +171,8 @@ pub async fn run_background(app: &tauri::AppHandle) {
 async fn execute_op(app: &tauri::AppHandle, op: &QueuedOp, token: &str) -> Result<()> {
     let auth  = app.state::<AuthManager>();
     let cache = app.state::<CacheManager>();
-    let db    = app.state::<Database>();
     let api   = CloudApi::new(auth.supabase_url(), auth.supabase_anon(), token);
 
-    // Exponential backoff based on attempt count
     if op.attempts > 0 {
         let delay = Duration::from_millis(500 * (1u64 << op.attempts.min(8)));
         tokio::time::sleep(delay).await;
@@ -202,7 +197,6 @@ async fn execute_op(app: &tauri::AppHandle, op: &QueuedOp, token: &str) -> Resul
             api.delete_file(remote_path).await?;
         }
         "mkdir" => {
-            // Cloud folder creation — metadata only
             let payload: serde_json::Value = serde_json::from_str(op.payload.as_deref().unwrap_or("{}"))?;
             let remote_path = payload["remote_path"].as_str().context("No remote_path")?;
             api.create_folder(remote_path).await?;

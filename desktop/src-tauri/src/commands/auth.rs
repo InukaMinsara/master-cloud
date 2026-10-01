@@ -1,5 +1,3 @@
-// ─── commands/auth.rs ────────────────────────────────────────────────────────
-
 use tauri::State;
 use crate::auth::{AuthManager, AuthState};
 
@@ -21,13 +19,10 @@ pub fn cmd_get_auth_status(auth: State<AuthManager>) -> serde_json::Value {
 pub fn cmd_start_oauth(
     provider: String,
     auth: State<AuthManager>,
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
 ) -> Result<String, String> {
     let url = auth.start_oauth_url(&provider).map_err(|e| e.to_string())?;
-
-    // Open URL in default browser
     open::that(&url).map_err(|e| e.to_string())?;
-
     Ok(url)
 }
 

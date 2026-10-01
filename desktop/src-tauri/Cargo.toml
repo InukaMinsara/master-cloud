@@ -4,17 +4,7 @@ version = "1.0.0"
 description = "Master Cloud Desktop Client — Virtual drive for Windows"
 authors = ["Master Cloud"]
 edition = "2021"
-rust-version = "1.70"
-
-# See more keys and definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-name = "master_cloud_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
-[[bin]]
-name = "master-cloud-desktop"
-path = "src/main.rs"
+rust-version = "1.75"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -25,16 +15,17 @@ tauri = { version = "2", features = [
   "tray-icon",
   "image-png",
 ] }
-tauri-plugin-shell = "2"
+tauri-plugin-shell       = "2"
 tauri-plugin-notification = "2"
-tauri-plugin-oauth = "2"
-tauri-plugin-store = "2"
-tauri-plugin-autostart = "2"
+tauri-plugin-store       = "2"
+tauri-plugin-autostart   = "2"
 tauri-plugin-single-instance = "2"
-tauri-plugin-deep-link = "2"
+tauri-plugin-deep-link   = "2"
+tauri-plugin-opener      = "2"
 
 # ── Async runtime ──────────────────────────────────────────────────────────
-tokio = { version = "1", features = ["full"] }
+tokio       = { version = "1", features = ["full"] }
+tokio-util  = { version = "0.7", features = ["io"] }
 
 # ── HTTP / Cloud API ───────────────────────────────────────────────────────
 reqwest = { version = "0.12", features = [
@@ -45,18 +36,38 @@ reqwest = { version = "0.12", features = [
 url = "2"
 
 # ── Serialisation ─────────────────────────────────────────────────────────
-serde = { version = "1", features = ["derive"] }
+serde      = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # ── Filesystem / OS ────────────────────────────────────────────────────────
-winfsp-sys = { version = "0.3", optional = true }          # WinFsp raw bindings
-notify = { version = "6", features = ["macos-kqueue"] }    # FS watcher
-uuid = { version = "1", features = ["v4"] }
-sha2 = "0.10"
-hex = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
-dirs = "5"
+uuid    = { version = "1", features = ["v4"] }
+sha2    = "0.10"
+hex     = "0.4"
+chrono  = { version = "0.4", features = ["serde"] }
+dirs    = "5"
 tempfile = "3"
+walkdir = "2"
+mime    = "0.3"
+mime_guess = "2"
+async-recursion = "1"
+open    = "5"
+
+# ── Logging ────────────────────────────────────────────────────────────────
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["env-filter"] }
+
+# ── Error handling ────────────────────────────────────────────────────────
+anyhow     = "1"
+thiserror  = "1"
+
+# ── Concurrency / queue ───────────────────────────────────────────────────
+parking_lot = "0.12"
+bytes       = "1"
+futures     = "0.3"
+async-trait = "0.1"
+
+# ── Persistence ───────────────────────────────────────────────────────────
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 # ── Windows-specific ──────────────────────────────────────────────────────
 [target.'cfg(windows)'.dependencies]
@@ -64,41 +75,22 @@ windows = { version = "0.58", features = [
   "Win32_Foundation",
   "Win32_Security_Credentials",
   "Win32_System_Registry",
-  "Win32_System_Com",
   "Win32_UI_Shell",
   "Win32_Storage_FileSystem",
 ] }
 winreg = "0.52"
 
-# ── Logging ────────────────────────────────────────────────────────────────
-log = "0.4"
-env_logger = "0.11"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# ── Error handling ────────────────────────────────────────────────────────
-anyhow = "1"
-thiserror = "1"
-
-# ── Concurrency / queue ───────────────────────────────────────────────────
-crossbeam-channel = "0.5"
-dashmap = "6"
-parking_lot = "0.12"
-bytes = "1"
-futures = "0.3"
-async-trait = "0.1"
-
-# ── Persistence ───────────────────────────────────────────────────────────
-rusqlite = { version = "0.31", features = ["bundled"] }
-
 [features]
-default = ["custom-protocol", "winfsp"]
+default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
-winfsp = ["winfsp-sys"]
 
 [profile.release]
-panic = "abort"
+panic         = "abort"
 codegen-units = 1
-lto = true
-opt-level = 3
-strip = true
+lto           = true
+opt-level     = 3
+strip         = true
+
+[profile.dev]
+# Faster dev builds
+opt-level = 0

@@ -106,3 +106,9 @@ scripts/generated-keys.txt
 
 # tsbuildinfo
 *.tsbuildinfo
+
+# Desktop client artifacts
+desktop/node_modules/
+desktop/src-tauri/target/
+desktop/dist/
+

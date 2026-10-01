@@ -4,7 +4,6 @@
 
 use anyhow::Result;
 use tauri::Manager;
-use uuid::Uuid;
 
 use crate::auth::AuthManager;
 use crate::db::{Database, FileMeta};
@@ -21,7 +20,6 @@ pub async fn sync_root_metadata(app: &tauri::AppHandle) -> Result<()> {
 
     let api = CloudApi::new(auth.supabase_url(), auth.supabase_anon(), &token);
 
-    // Sync top-level virtual folders
     let virtual_roots = vec![
         ("My Drive",       None::<String>),
         ("Shared with me", None),
@@ -50,7 +48,6 @@ pub async fn sync_root_metadata(app: &tauri::AppHandle) -> Result<()> {
         let _ = db.upsert_file_meta(&meta);
     }
 
-    // Sync real My Drive content (prefix = user's storage root)
     sync_prefix(app, &api, &db, "", Some("vroot:My_Drive"), 0).await?;
 
     Ok(())
@@ -67,12 +64,11 @@ pub async fn sync_prefix(
     parent_id: Option<&str>,
     depth:     usize,
 ) -> Result<()> {
-    if depth > 10 { return Ok(()); } // safety limit
+    if depth > 10 { return Ok(()); }
 
     let entries = api.list_folder(prefix).await?;
 
     for entry in entries {
-        // Generate stable ID from path
         let full_path = if prefix.is_empty() {
             entry.name.clone()
         } else {
@@ -89,7 +85,6 @@ pub async fn sync_prefix(
             size:         entry.size as i64,
             mime_type:    entry.mime_type.clone(),
             cloud_url:    if entry.is_dir { None } else {
-                // Build public URL (or use signed URL on read)
                 Some(full_path.clone())
             },
             etag:         entry.etag.clone(),
@@ -104,7 +99,6 @@ pub async fn sync_prefix(
 
         db.upsert_file_meta(&meta)?;
 
-        // Recurse into directories (limited depth to avoid blocking)
         if entry.is_dir && depth < 3 {
             sync_prefix(app, api, db, &full_path, Some(&id), depth + 1).await?;
         }
