@@ -1,0 +1,61 @@
+Windows Registry Editor Version 5.00
+
+; Master Cloud - Windows File Explorer Context Menu Integration
+
+; 1. Context menu for all files
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud]
+"MUIVerb"="MASTER CLOUD"
+"SubCommands"=""
+"Icon"="\"D:\\Im Share X\\Master Cloud\\public\\cloud-logo.svg\""
+
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\Upload]
+@="Upload to Master Cloud (10 TB)"
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\Upload\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/\""
+
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\PinOffline]
+@="Pin for Offline Access"
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\PinOffline\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/offline\""
+
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\StreamMode]
+@="Free up Space (Stream Mode)"
+[HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\StreamMode\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/offline\""
+
+; 2. Context menu for all directories
+[HKEY_CLASSES_ROOT\Directory\shell\MasterCloud]
+"MUIVerb"="MASTER CLOUD"
+"SubCommands"=""
+"Icon"="\"D:\\Im Share X\\Master Cloud\\public\\cloud-logo.svg\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\Upload]
+@="Sync Folder to Master Cloud (10 TB)"
+[HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\Upload\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\OpenDrive]
+@="Open Master Virtual Drive (Z:)"
+[HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\OpenDrive\command]
+@="\"C:\\Windows\\explorer.exe\" \"Z:\\\""
+
+; 3. Context menu for directory background
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud]
+"MUIVerb"="MASTER CLOUD"
+"SubCommands"=""
+"Icon"="\"D:\\Im Share X\\Master Cloud\\public\\cloud-logo.svg\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewDoc]
+@="New Master Document"
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewDoc\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/canvas/docs/new\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewSheet]
+@="New Master Spreadsheet"
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewSheet\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/canvas/sheets/new\""
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\OpenAI]
+@="Open Master AI Workspace"
+[HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\OpenAI\command]
+@="\"C:\\Windows\\explorer.exe\" \"http://localhost:5173/ai\""
