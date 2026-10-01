@@ -55,7 +55,7 @@ export function PublicFooter() {
           {/* Brand Column */}
           <div className="col-span-2 space-y-4">
             <Link to="/" className="flex items-center gap-3">
-              <img src="/cloud-logo.svg" alt="Master Cloud" className="h-10 w-10 shrink-0 drop-shadow" />
+              <img src="/logo-icon.svg" alt="Master Cloud" className="h-10 w-10 shrink-0 drop-shadow" />
               <div className="flex flex-col">
                 <span className="font-black text-lg tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-300">
                   MASTER CLOUD

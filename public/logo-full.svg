@@ -1,35 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="420" height="120" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" width="100%" height="100%">
   <defs>
-    <linearGradient id="bg2" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#1e40af"/>
-      <stop offset="100%" stop-color="#0ea5e9"/>
+    <linearGradient id="cloudNavyGradFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#003594" />
+      <stop offset="100%" stop-color="#0066cc" />
     </linearGradient>
-    <linearGradient id="textMaster" x1="140" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#1e3a8a"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+
+    <linearGradient id="cloudCyanGradFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0ea5e9" />
     </linearGradient>
-    <linearGradient id="textCloud" x1="140" y1="60" x2="420" y2="60" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0284c7"/>
-      <stop offset="100%" stop-color="#38bdf8"/>
+
+    <linearGradient id="mLeftFacetFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002d72" />
+      <stop offset="100%" stop-color="#0052b4" />
+    </linearGradient>
+
+    <linearGradient id="mRightFacetFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
     </linearGradient>
   </defs>
 
-  <!-- Icon background rounded square -->
-  <rect x="0" y="10" width="100" height="100" rx="20" fill="url(#bg2)"/>
+  <!-- Left Icon Group -->
+  <g transform="translate(10, 10) scale(0.85)">
+    <!-- Left Cloud Loop -->
+    <path d="M 190 140 A 65 65 0 0 0 80 180 A 60 60 0 0 0 80 300 L 220 300 A 30 30 0 0 0 220 240 L 165 240 A 35 35 0 0 1 165 170 A 35 35 0 0 1 200 190 Z"
+          fill="url(#cloudNavyGradFull)" />
 
-  <!-- Back cloud (lighter) -->
-  <path d="M73 68 C73 72 70 74.5 66.5 74.5 L37 74.5" stroke="#7dd3fc" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-  <path d="M73 68 C75.5 68 77.5 66 77.5 63.5 C77.5 61 75.5 59 73 59 C72.8 59 72.6 59.02 72.4 59.06 C71.5 55.4 68.2 52.7 64.3 52.7 C61.3 52.7 58.7 54.2 57.2 56.5 C56.6 56.2 55.9 56 55.2 56 C52.5 56 50.3 58.1 50.3 60.8 C50.3 60.9 50.3 61 50.3 61.1 C48.2 61.5 46.7 63.3 46.7 65.4 C46.7 67.7 48.6 69.6 50.9 69.6" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- Top-Right Cloud Loop -->
+    <path d="M 230 110 A 85 85 0 0 1 370 190 A 65 65 0 0 1 420 300 L 290 300 A 30 30 0 0 1 290 240 L 345 240 A 35 35 0 0 0 345 170 A 45 45 0 0 0 270 140 Z"
+          fill="url(#cloudCyanGradFull)" opacity="0.9" />
 
-  <!-- Front cloud (white) -->
-  <path d="M27 64 C24 64 21.5 61.5 21.5 58.5 C21.5 55.8 23.3 53.5 25.8 53.1 C26.5 48.5 30.5 45 35.3 45 C39.2 45 42.6 47.4 44 50.9 C44.5 50.8 45 50.75 45.5 50.75 C48.8 50.75 51.5 53.5 51.5 56.8 C51.5 60.1 48.8 62.8 45.5 62.8 L27.2 62.8" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Central Stylized 'M' Mark -->
+    <path d="M 120 300 L 175 160 L 235 245 L 205 285 L 175 245 L 145 300 Z"
+          fill="url(#mLeftFacetFull)" />
 
-  <!-- M letter below cloud -->
-  <path d="M25 80 L25 63.5 L35 75 L45 63.5 L45 80" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 235 245 L 295 160 L 350 300 L 305 300 L 275 230 L 245 270 Z"
+          fill="url(#mRightFacetFull)" />
 
-  <!-- MASTER text -->
-  <text x="118" y="62" font-family="'Segoe UI', 'Inter', Arial, sans-serif" font-weight="900" font-size="46" letter-spacing="-1" fill="url(#textMaster)">MASTER</text>
+    <polygon points="235,245 205,285 245,270" fill="#00439c" opacity="0.85" />
+  </g>
 
-  <!-- CLOUD text -->
-  <text x="118" y="104" font-family="'Segoe UI', 'Inter', Arial, sans-serif" font-weight="900" font-size="46" letter-spacing="-1" fill="url(#textCloud)">CLOUD</text>
+  <!-- Right Typography Wordmark -->
+  <text x="430" y="175"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="105"
+        font-weight="900"
+        letter-spacing="1"
+        fill="#002f87">MASTER</text>
+
+  <text x="430" y="275"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="105"
+        font-weight="900"
+        letter-spacing="2"
+        fill="#42c2f7">CLOUD</text>
 </svg>
