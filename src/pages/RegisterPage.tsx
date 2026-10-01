@@ -59,7 +59,7 @@ export function RegisterPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-3">
-            <img src="/cloud-logo.svg" alt="Master Cloud" className="h-12 w-12 drop-shadow-md" />
+            <img src="/logo-icon.svg" alt="Master Cloud" className="h-12 w-12 drop-shadow-md" />
           </Link>
           <h1 className="text-2xl font-black text-foreground tracking-tight">Create Account</h1>
           <p className="text-xs text-muted-foreground">Get started with 10 TB free cloud storage</p>

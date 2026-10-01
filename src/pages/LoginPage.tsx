@@ -65,7 +65,7 @@ export function LoginPage() {
         {/* Brand header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-3">
-            <img src="/cloud-logo.svg" alt="Master Cloud" className="h-12 w-12 drop-shadow-md" />
+            <img src="/logo-icon.svg" alt="Master Cloud" className="h-12 w-12 drop-shadow-md" />
           </Link>
           <h1 className="text-2xl font-black text-foreground tracking-tight">MASTER CLOUD</h1>
           <p className="text-xs text-muted-foreground">Sign in to your intelligent cloud storage workspace</p>

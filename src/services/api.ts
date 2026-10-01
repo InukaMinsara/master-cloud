@@ -19,29 +19,19 @@ import {
 class UnifiedApiService {
   isConfiguredWithSupabase(): boolean {
     if (!isSupabaseConfigured) return false;
-    const mode = typeof localStorage !== 'undefined' ? localStorage.getItem('master_cloud_backend_mode') : null;
-    if (mode === 'local') return false;
-    if (mode === 'supabase') return true;
-
-    // Auto-detect mode: Check if user has an active Supabase session in localStorage
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const hasSession = Object.keys(localStorage).some(
-          k => (k.startsWith('sb-') && k.endsWith('-auth-token')) || k === 'supabase.auth.token'
-        );
-        return hasSession;
-      }
-    } catch {
-      // Fallback
+    if (typeof localStorage !== 'undefined') {
+      const mode = localStorage.getItem('master_cloud_backend_mode');
+      if (mode === 'local') return false;
     }
-    return false;
+    return true;
   }
 
   // --- Auth & Profile ---
   async getCurrentUser(): Promise<ProfileRecord | null> {
     if (this.isConfiguredWithSupabase()) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
@@ -52,54 +42,51 @@ class UnifiedApiService {
           return {
             id: user.id,
             email: user.email || '',
-            display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            avatar_url: null,
+            display_name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
             role: 'user',
             created_at: user.created_at,
             updated_at: user.updated_at || user.created_at,
           };
         }
       } catch (err) {
-        console.warn('Supabase getUser fallback to local:', err);
+        console.warn('Supabase getSession fallback:', err);
       }
     }
     return localDb.getCurrentUser();
   }
 
   async login(email: string, password: string): Promise<{ user: ProfileRecord | null; error?: string }> {
-    if (isSupabaseConfigured) {
-      const mode = typeof localStorage !== 'undefined' ? localStorage.getItem('master_cloud_backend_mode') : null;
-      if (mode !== 'local') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.toLowerCase().includes('email not confirmed')) {
-            return {
-              user: null,
-              error: 'Email not confirmed. Please check your inbox or disable email confirmation in your Supabase Auth settings, or continue in Local Engine mode.',
-            };
-          }
-          return { user: null, error: error.message };
+    if (this.isConfiguredWithSupabase()) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          return {
+            user: null,
+            error: 'Email not confirmed. Please check your inbox to verify your email, or disable email confirmation in your Supabase Auth settings.',
+          };
         }
-        if (data.user) {
-          localStorage.setItem('master_cloud_backend_mode', 'supabase');
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-          return { user: profile || {
-            id: data.user.id,
-            email: data.user.email || '',
-            display_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-            avatar_url: null,
-            role: 'user',
-            created_at: data.user.created_at,
-            updated_at: data.user.updated_at || data.user.created_at,
-          }};
-        }
+        return { user: null, error: error.message };
+      }
+      if (data.user) {
+        localStorage.setItem('master_cloud_backend_mode', 'supabase');
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        return { user: profile || {
+          id: data.user.id,
+          email: data.user.email || '',
+          display_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          avatar_url: null,
+          role: 'user',
+          created_at: data.user.created_at,
+          updated_at: data.user.updated_at || data.user.created_at,
+        }};
       }
     }
-    // Local mode login
+    // Local mode fallback
     const user = localDb.getCurrentUser();
     localDb.setCurrentUser({ ...user, email });
     if (typeof localStorage !== 'undefined') {
@@ -112,16 +99,29 @@ class UnifiedApiService {
   async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
     if (this.isConfiguredWithSupabase()) {
       try {
-        const { error } = await supabase.auth.signInWithOAuth({
+        const redirectTo = `${window.location.origin}/drive`;
+        const { data, error } = await supabase.auth.signInWithOAuth({
           provider: provider === 'azure' ? 'azure' : provider,
           options: {
-            redirectTo: `${window.location.origin}/drive`,
+            redirectTo,
+            queryParams: provider === 'google' ? {
+              access_type: 'offline',
+              prompt: 'consent',
+            } : undefined,
           },
         });
-        if (error) throw error;
+        if (error) {
+          console.error(`[Supabase OAuth Error] ${provider}:`, error);
+          return { user: null, error: error.message };
+        }
+        if (data?.url) {
+          window.location.href = data.url;
+          return { user: null, redirected: true };
+        }
         return { user: null, redirected: true };
       } catch (err: any) {
-        console.warn('Supabase OAuth error, falling back to instant provider authentication:', err);
+        console.error(`[Supabase OAuth Exception] ${provider}:`, err);
+        return { user: null, error: err.message || `Failed to start ${provider} sign-in` };
       }
     }
 
@@ -166,7 +166,8 @@ class UnifiedApiService {
         email,
         password,
         options: {
-          data: { full_name: displayName },
+          data: { full_name: displayName, display_name: displayName },
+          emailRedirectTo: `${window.location.origin}/drive`,
         },
       });
       if (error) return { user: null, error: error.message };
@@ -176,7 +177,15 @@ class UnifiedApiService {
         .select('*')
         .eq('id', data.user.id)
         .single();
-      return { user: profile };
+      return { user: profile || {
+        id: data.user.id,
+        email: data.user.email || email,
+        display_name: displayName || data.user.email?.split('@')[0] || 'User',
+        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName || email)}`,
+        role: 'user',
+        created_at: data.user.created_at,
+        updated_at: data.user.updated_at || data.user.created_at,
+      }};
     }
     // Local mode signup
     const newUser: ProfileRecord = {
