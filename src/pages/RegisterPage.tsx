@@ -39,14 +39,11 @@ export function RegisterPage() {
     try {
       const res = await loginWithOAuth(provider);
       if (res.redirected) {
+        // Redirecting to provider
         return;
       }
-      if (res.success) {
-        const providerName = provider === 'azure' ? 'Microsoft' : provider === 'google' ? 'Google' : 'GitHub';
-        toast.success(`Signed up with ${providerName} (10 TB Free Storage)`);
-        navigate('/drive');
-      } else {
-        toast.error(res.error || `Failed to sign up with ${provider}`);
+      if (!res.success && res.error) {
+        toast.error(res.error);
       }
     } finally {
       setIsLoading(false);

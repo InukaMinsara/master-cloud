@@ -97,67 +97,38 @@ class UnifiedApiService {
   }
 
   async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (this.isConfiguredWithSupabase()) {
-      try {
-        const redirectTo = `${window.location.origin}/drive`;
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: provider === 'azure' ? 'azure' : provider,
-          options: {
-            redirectTo,
-            queryParams: provider === 'google' ? {
-              access_type: 'offline',
-              prompt: 'consent',
-            } : undefined,
-          },
-        });
-        if (error) {
-          console.error(`[Supabase OAuth Error] ${provider}:`, error);
-          return { user: null, error: error.message };
-        }
-        if (data?.url) {
-          window.location.href = data.url;
-          return { user: null, redirected: true };
-        }
-        return { user: null, redirected: true };
-      } catch (err: any) {
-        console.error(`[Supabase OAuth Exception] ${provider}:`, err);
-        return { user: null, error: err.message || `Failed to start ${provider} sign-in` };
+    if (!isSupabaseConfigured) {
+      return { user: null, error: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.' };
+    }
+
+    try {
+      const redirectTo = `${window.location.origin}/drive`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider === 'azure' ? 'azure' : provider,
+        options: {
+          redirectTo,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
+        },
+      });
+
+      if (error) {
+        console.error(`[Supabase OAuth Error] ${provider}:`, error);
+        return { user: null, error: error.message };
       }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return { user: null, redirected: true };
+      }
+
+      return { user: null, redirected: true };
+    } catch (err: any) {
+      console.error(`[Supabase OAuth Exception] ${provider}:`, err);
+      return { user: null, error: err.message || `Failed to sign in with ${provider}` };
     }
-
-    // Instant Google / OAuth login for Local Engine mode
-    const providerNames: Record<string, string> = {
-      google: 'Google User',
-      github: 'GitHub Developer',
-      azure: 'Microsoft User',
-    };
-    const providerEmails: Record<string, string> = {
-      google: 'google.account@mastercloud.io',
-      github: 'developer@mastercloud.io',
-      azure: 'enterprise.user@mastercloud.io',
-    };
-    const providerAvatars: Record<string, string> = {
-      google: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      github: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
-      azure: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    };
-
-    const oAuthUser: ProfileRecord = {
-      id: `usr-oauth-${provider}-${Date.now()}`,
-      email: providerEmails[provider] || `${provider}.user@mastercloud.io`,
-      display_name: providerNames[provider] || `${provider.toUpperCase()} User`,
-      avatar_url: providerAvatars[provider] || null,
-      role: 'user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    localDb.setCurrentUser(oAuthUser);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('master_cloud_backend_mode', 'local');
-    }
-    await localDb.logActivity('auth', oAuthUser.id, oAuthUser.display_name, 'login', { provider });
-    return { user: oAuthUser, redirected: false };
   }
 
   async signup(email: string, password: string, displayName: string): Promise<{ user: ProfileRecord | null; error?: string }> {
