@@ -13,26 +13,61 @@ export type CanvasAppType =
   | 'ai';
 
 // 1. MASTER DOCS & MASTER WORD (Shared Document Core)
-export interface CanvasDocData {
-  title: string;
-  content: string; // Markdown or HTML
-  version: number;
-  wordCount: number;
-  charCount: number;
-  lastSavedAt: string;
-  pageLayout?: {
-    size: 'A4' | 'Letter' | 'Legal';
-    orientation: 'portrait' | 'landscape';
-    margins: 'normal' | 'narrow' | 'wide';
-    headerText?: string;
-    footerText?: string;
-  };
-  comments?: Array<{
+export interface DocComment {
+  id: string;
+  author: string;
+  avatarUrl?: string;
+  text: string;
+  selectedText?: string;
+  createdAt: string;
+  resolved?: boolean;
+  replies?: Array<{
     id: string;
     author: string;
     text: string;
     createdAt: string;
   }>;
+}
+
+export interface DocChangeTrack {
+  id: string;
+  author: string;
+  type: 'insert' | 'delete' | 'format';
+  text: string;
+  timestamp: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
+export interface DocFootnote {
+  id: string;
+  number: number;
+  text: string;
+}
+
+export interface CanvasDocData {
+  title: string;
+  content: string; // Rich HTML Document Content
+  version: number;
+  wordCount: number;
+  charCount: number;
+  lastSavedAt: string;
+  pageLayout?: {
+    size: 'A4' | 'Letter' | 'Legal' | 'A3' | 'A5';
+    orientation: 'portrait' | 'landscape';
+    margins: 'normal' | 'narrow' | 'moderate' | 'wide' | 'custom';
+    customMargins?: { top: number; right: number; bottom: number; left: number };
+    headerText?: string;
+    footerText?: string;
+    showPageNumbers?: boolean;
+    pageBgColor?: string;
+    columns?: 1 | 2 | 3;
+    differentFirstPage?: boolean;
+  };
+  comments?: DocComment[];
+  trackChangesEnabled?: boolean;
+  changes?: DocChangeTrack[];
+  footnotes?: DocFootnote[];
+  templateId?: string;
 }
 
 // 2. MASTER SHEETS
