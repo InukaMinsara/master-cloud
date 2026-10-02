@@ -72,7 +72,7 @@ export function RegisterPage() {
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Alex Rivera"
+                  placeholder="e.g. John Doe"
                   className="pl-10 text-xs rounded-xl h-11"
                 />
               </div>

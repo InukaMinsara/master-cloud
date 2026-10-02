@@ -10,6 +10,9 @@ import {
   Save,
   KeyRound,
   ExternalLink,
+  Upload,
+  Camera,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -26,11 +29,41 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = React.useState(user?.display_name || '');
   const [avatarUrl, setAvatarUrl] = React.useState(user?.avatar_url || '');
   const [isSaving, setIsSaving] = React.useState(false);
+  const localFileRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (user) {
+      setDisplayName(user.display_name || '');
+      setAvatarUrl(user.avatar_url || '');
+    }
+  }, [user]);
 
   // Supabase runtime config tester
   const [supabaseUrl, setSupabaseUrl] = React.useState(import.meta.env.VITE_SUPABASE_URL || '');
   const [supabaseAnonKey, setSupabaseAnonKey] = React.useState(import.meta.env.VITE_SUPABASE_ANON_KEY || '');
   const isSupabaseConfigured = api.isConfiguredWithSupabase();
+
+  const handleLocalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image file must be smaller than 5 MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setAvatarUrl(result);
+      toast.success('Local image selected! Click "Save Changes" to apply.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarUrl('');
+    if (localFileRef.current) localFileRef.current.value = '';
+    toast.info('Picture removed. Default initials badge will be used.');
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +90,15 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Hidden local image input */}
+      <input
+        ref={localFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleLocalImageSelect}
+      />
+
       <div className="flex items-center justify-between pb-4 border-b border-border/60">
         <div>
           <h2 className="text-xl font-bold text-foreground">Settings</h2>
@@ -95,23 +137,53 @@ export function SettingsPage() {
             <form onSubmit={handleSaveProfile} className="space-y-5 max-w-lg">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Profile Information</h3>
-                <p className="text-xs text-muted-foreground">Your public display details in MASTER CLOUD.</p>
+                <p className="text-xs text-muted-foreground">Your personal display details and local profile picture.</p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <img
-                  src={avatarUrl || user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                  alt="Avatar"
-                  className="h-16 w-16 rounded-full object-cover border-2 border-primary/30 shadow-md"
-                />
-                <div className="space-y-1 flex-1">
-                  <label className="text-xs font-semibold text-foreground">Avatar Image URL</label>
-                  <Input
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="text-xs rounded-xl"
-                  />
+              {/* Profile Avatar & Local Uploader */}
+              <div className="flex items-center gap-5 p-4 rounded-2xl bg-secondary/30 border border-border/60">
+                <div className="relative shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="h-16 w-16 rounded-full object-cover border-2 border-primary shadow-md"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white font-black text-xl flex items-center justify-center border-2 border-primary/30 shadow-md">
+                      {(displayName || user?.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => localFileRef.current?.click()}
+                      className="rounded-xl text-xs font-semibold gap-1.5 h-8"
+                    >
+                      <Camera className="h-3.5 w-3.5 text-primary" />
+                      Upload Local Picture
+                    </Button>
+                    {avatarUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveAvatar}
+                        className="rounded-xl text-xs text-destructive hover:bg-destructive/10 h-8 gap-1.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Upload an image from your computer (PNG, JPG, WebP up to 5 MB) or use your default initial.
+                  </p>
                 </div>
               </div>
 
@@ -120,6 +192,7 @@ export function SettingsPage() {
                 <Input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your Name"
                   className="text-xs rounded-xl"
                 />
               </div>
@@ -128,10 +201,10 @@ export function SettingsPage() {
                 <label className="text-xs font-semibold text-foreground">Email Address</label>
                 <Input
                   disabled
-                  value={user?.email || 'admin@mastercloud.io'}
-                  className="text-xs rounded-xl opacity-60"
+                  value={user?.email || 'No email configured'}
+                  className="text-xs rounded-xl opacity-60 bg-muted"
                 />
-                <span className="text-[10px] text-muted-foreground">Primary verified email.</span>
+                <span className="text-[10px] text-muted-foreground">Logged-in account address.</span>
               </div>
 
               <Button type="submit" disabled={isSaving} className="rounded-xl text-xs font-semibold">

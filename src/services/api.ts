@@ -87,13 +87,21 @@ class UnifiedApiService {
       }
     }
     // Local mode fallback
-    const user = localDb.getCurrentUser();
-    localDb.setCurrentUser({ ...user, email });
+    const user: ProfileRecord = {
+      id: 'usr-' + Date.now(),
+      email: email.trim(),
+      display_name: email.trim().split('@')[0],
+      avatar_url: null,
+      role: email.trim().toLowerCase().startsWith('admin@') ? 'admin' : 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    localDb.setCurrentUser(user);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('master_cloud_backend_mode', 'local');
     }
-    await localDb.logActivity('auth', user.id, email, 'login', {});
-    return { user: { ...user, email } };
+    await localDb.logActivity('auth', user.id, email.trim(), 'login', {});
+    return { user };
   }
 
   async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
@@ -151,8 +159,8 @@ class UnifiedApiService {
       return { user: profile || {
         id: data.user.id,
         email: data.user.email || email,
-        display_name: displayName || data.user.email?.split('@')[0] || 'User',
-        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName || email)}`,
+        display_name: displayName.trim() || data.user.email?.split('@')[0] || 'User',
+        avatar_url: null,
         role: 'user',
         created_at: data.user.created_at,
         updated_at: data.user.updated_at || data.user.created_at,
@@ -161,15 +169,15 @@ class UnifiedApiService {
     // Local mode signup
     const newUser: ProfileRecord = {
       id: 'usr-' + Date.now(),
-      email,
-      display_name: displayName,
-      avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`,
+      email: email.trim(),
+      display_name: displayName.trim() || email.trim().split('@')[0],
+      avatar_url: null,
       role: 'user',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     localDb.setCurrentUser(newUser);
-    await localDb.logActivity('account', newUser.id, displayName, 'signup', { email });
+    await localDb.logActivity('account', newUser.id, displayName.trim(), 'signup', { email: email.trim() });
     return { user: newUser };
   }
 

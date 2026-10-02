@@ -157,11 +157,17 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
       {/* Owner column */}
       <td className="px-3 py-3 hidden md:table-cell text-muted-foreground">
         <div className="flex items-center gap-2">
-          <img
-            src={item.owner?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50'}
-            alt="Owner"
-            className="h-5 w-5 rounded-full object-cover"
-          />
+          {item.owner?.avatar_url ? (
+            <img
+              src={item.owner.avatar_url}
+              alt="Owner"
+              className="h-5 w-5 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-5 w-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
+              {(item.owner?.display_name || 'M').charAt(0).toUpperCase()}
+            </div>
+          )}
           <span className="truncate">{item.owner?.display_name || 'Me'}</span>
         </div>
       </td>

@@ -140,10 +140,10 @@ function saveTable<T>(tableName: string, data: T[]): void {
 // Default Seed Profile
 export const DEFAULT_USER: ProfileRecord = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: 'admin@mastercloud.io',
-  display_name: 'Alex Rivera',
-  avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  role: 'admin',
+  email: '',
+  display_name: 'Master Cloud User',
+  avatar_url: null,
+  role: 'user',
   created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
   updated_at: new Date().toISOString(),
 };

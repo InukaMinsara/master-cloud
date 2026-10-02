@@ -215,17 +215,23 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button className="flex items-center gap-2 rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all focus:outline-none">
-              <img
-                src={user?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                alt={user?.display_name || 'User'}
-                className="h-9 w-9 rounded-full object-cover border border-border shadow-sm"
-              />
+              {user?.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user?.display_name || 'User'}
+                  className="h-9 w-9 rounded-full object-cover border border-border shadow-sm"
+                />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center border border-border shadow-sm">
+                  {(user?.display_name || user?.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="right" className="w-56 p-2">
             <div className="px-2 py-1.5 border-b border-border/60 mb-1">
-              <p className="text-xs font-bold text-foreground truncate">{user?.display_name || 'Alex Rivera'}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{user?.email || 'admin@mastercloud.io'}</p>
+              <p className="text-xs font-bold text-foreground truncate">{user?.display_name || user?.email?.split('@')[0] || 'User'}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{user?.email || ''}</p>
               <Badge variant="success" className="mt-1 text-[10px] py-0 px-2">
                 {user?.role === 'admin' ? 'Administrator' : 'Standard Member'}
               </Badge>

@@ -92,7 +92,7 @@ export function ContactPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Alex Rivera"
+                  placeholder="Your Full Name"
                   className="rounded-xl text-xs"
                 />
               </div>
