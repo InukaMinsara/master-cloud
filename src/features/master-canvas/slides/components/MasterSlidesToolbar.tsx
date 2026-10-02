@@ -28,9 +28,11 @@ import {
   Bold,
   Italic,
   Underline,
+  Strikethrough,
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   Trash2,
   Copy,
   Scissors,
@@ -44,6 +46,18 @@ import {
   Settings,
   HelpCircle,
   RotateCw,
+  ShieldCheck,
+  MessageSquare,
+  History,
+  LayoutTemplate,
+  FileSpreadsheet,
+  Workflow,
+  MousePointer,
+  Diamond,
+  Hexagon,
+  Cloud,
+  Database,
+  Share2,
 } from 'lucide-react';
 import {
   MasterPresentationData,
@@ -62,7 +76,7 @@ interface MasterSlidesToolbarProps {
   presentation: MasterPresentationData;
   activeSlide: MasterSlide;
   selectedObject: MasterSlideObject | null;
-  saveStatus: 'saved' | 'saving' | 'unsaved';
+  saveStatus: 'saved' | 'saving' | 'unsaved' | 'offline' | 'syncing' | 'conflict';
   onUpdateTitle: (title: string) => void;
   onAddSlide: (layout?: SlideLayoutKind) => void;
   onAddObject: (type: MasterSlideObject['type'], shapeKind?: ShapeKind) => void;
@@ -74,7 +88,7 @@ interface MasterSlidesToolbarProps {
   onChangeTransition: (type: TransitionType, duration: number, applyAll?: boolean) => void;
   onChangeAnimation: (animation: {
     type: AnimationType;
-    trigger: 'on-click' | 'after-previous';
+    trigger: 'on-click' | 'after-previous' | 'with-previous';
     durationMs?: number;
     delayMs?: number;
   }) => void;
@@ -84,6 +98,14 @@ interface MasterSlidesToolbarProps {
   onOpenThemesModal: () => void;
   onOpenTemplatesModal: () => void;
   onOpenSorterModal: () => void;
+  onOpenMasterView: () => void;
+  onOpenHealthModal: () => void;
+  onOpenVersionHistoryModal: () => void;
+  onOpenHandoutModal: () => void;
+  onOpenIntegrationsModal: () => void;
+  onToggleLayersPanel: () => void;
+  onToggleAnimationPane: () => void;
+  onToggleComments: () => void;
   onExportHtml: () => void;
   onExportPdf: () => void;
   onExportJson: () => void;
@@ -92,9 +114,22 @@ interface MasterSlidesToolbarProps {
   onPreviewAnimation?: () => void;
   zoomLevel: number;
   onChangeZoom: (level: number) => void;
+  showGrid: boolean;
+  onToggleGrid: () => void;
+  showRulers: boolean;
+  onToggleRulers: () => void;
 }
 
-type TabType = 'FILE' | 'HOME' | 'INSERT' | 'DESIGN' | 'TRANSITIONS' | 'ANIMATIONS' | 'SLIDESHOW' | 'VIEW';
+export type SlideTabType =
+  | 'HOME'
+  | 'INSERT'
+  | 'DESIGN'
+  | 'TRANSITIONS'
+  | 'ANIMATIONS'
+  | 'SLIDESHOW'
+  | 'REVIEW'
+  | 'VIEW'
+  | 'FILE';
 
 export function MasterSlidesToolbar({
   presentation,
@@ -117,6 +152,14 @@ export function MasterSlidesToolbar({
   onOpenThemesModal,
   onOpenTemplatesModal,
   onOpenSorterModal,
+  onOpenMasterView,
+  onOpenHealthModal,
+  onOpenVersionHistoryModal,
+  onOpenHandoutModal,
+  onOpenIntegrationsModal,
+  onToggleLayersPanel,
+  onToggleAnimationPane,
+  onToggleComments,
   onExportHtml,
   onExportPdf,
   onExportJson,
@@ -125,8 +168,12 @@ export function MasterSlidesToolbar({
   onPreviewAnimation,
   zoomLevel,
   onChangeZoom,
+  showGrid,
+  onToggleGrid,
+  showRulers,
+  onToggleRulers,
 }: MasterSlidesToolbarProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('HOME');
+  const [activeTab, setActiveTab] = useState<SlideTabType>('HOME');
 
   const themes = SlideTemplates.getThemes();
   const format = selectedObject?.format || {};
@@ -143,7 +190,7 @@ export function MasterSlidesToolbar({
 
   return (
     <div className="flex flex-col border-b border-border/80 bg-card/60 backdrop-blur-md shrink-0 select-none">
-      {/* Top Main Menu Bar */}
+      {/* Top Main App Title & Status Bar */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-border/60">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -168,9 +215,12 @@ export function MasterSlidesToolbar({
               </span>
             )}
             {saveStatus === 'saved' && (
-              <span className="flex items-center gap-1 text-emerald-500">
-                <CheckCircle2 className="h-3 w-3" /> Master Cloud Synced
+              <span className="flex items-center gap-1 text-emerald-500 font-medium">
+                <CheckCircle2 className="h-3 w-3" /> Master Cloud Synced (10 TB Free)
               </span>
+            )}
+            {saveStatus === 'offline' && (
+              <span className="flex items-center gap-1 text-amber-500">Offline (Draft Cached)</span>
             )}
             {saveStatus === 'unsaved' && <span className="text-muted-foreground">Unsaved edits</span>}
           </div>
@@ -179,21 +229,21 @@ export function MasterSlidesToolbar({
         {/* Quick Launch Presentation Buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onOpenTemplatesModal()}
+            onClick={onOpenTemplatesModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-bold transition-colors"
             title="Browse Presentation Templates"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Templates</span>
+            <span className="hidden sm:inline">Templates</span>
           </button>
 
           <button
-            onClick={() => onOpenThemesModal()}
+            onClick={onOpenThemesModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors"
             title="Change Presentation Theme"
           >
             <Palette className="h-3.5 w-3.5" />
-            <span>Themes</span>
+            <span className="hidden sm:inline">Themes</span>
           </button>
 
           <button
@@ -218,21 +268,31 @@ export function MasterSlidesToolbar({
 
       {/* Ribbon Tabs Header */}
       <div className="flex items-center gap-1 px-3 pt-1 border-b border-border/50 bg-muted/20">
-        {(['HOME', 'INSERT', 'DESIGN', 'TRANSITIONS', 'ANIMATIONS', 'SLIDESHOW', 'VIEW', 'FILE'] as TabType[]).map(
-          (tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 text-xs font-bold tracking-wide rounded-t-lg transition-colors ${
-                activeTab === tab
-                  ? 'bg-card text-primary border-t-2 border-primary shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
-              }`}
-            >
-              {tab}
-            </button>
-          )
-        )}
+        {(
+          [
+            'HOME',
+            'INSERT',
+            'DESIGN',
+            'TRANSITIONS',
+            'ANIMATIONS',
+            'SLIDESHOW',
+            'REVIEW',
+            'VIEW',
+            'FILE',
+          ] as SlideTabType[]
+        ).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1.5 text-xs font-bold tracking-wide rounded-t-lg transition-colors ${
+              activeTab === tab
+                ? 'bg-card text-primary border-t-2 border-primary shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* Ribbon Action Drawer Content */}
@@ -264,6 +324,8 @@ export function MasterSlidesToolbar({
                 <option value="section-header">Section Header</option>
                 <option value="quote">Quote Banner</option>
                 <option value="big-stat">Big Statistic</option>
+                <option value="table-focus">Table Focus</option>
+                <option value="chart-focus">Chart Focus</option>
                 <option value="blank">Blank Slide</option>
               </select>
             </div>
@@ -462,25 +524,32 @@ export function MasterSlidesToolbar({
                 <Triangle className="h-4 w-4" />
               </button>
               <button
-                onClick={() => onAddObject('shape', 'star')}
+                onClick={() => onAddObject('shape', 'diamond')}
                 className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
-                title="Star"
+                title="Decision Diamond"
               >
-                <Star className="h-4 w-4" />
+                <Diamond className="h-4 w-4" />
               </button>
               <button
-                onClick={() => onAddObject('shape', 'arrow')}
+                onClick={() => onAddObject('shape', 'cloud')}
                 className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
-                title="Arrow"
+                title="Cloud Node"
               >
-                <ArrowRight className="h-4 w-4" />
+                <Cloud className="h-4 w-4 text-sky-400" />
               </button>
               <button
-                onClick={() => onAddObject('shape', 'heart')}
+                onClick={() => onAddObject('shape', 'database')}
                 className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
-                title="Heart"
+                title="Database Cylinder"
               >
-                <Heart className="h-4 w-4 text-rose-500" />
+                <Database className="h-4 w-4 text-amber-400" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'arrow-right')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Process Arrow"
+              >
+                <ArrowRight className="h-4 w-4 text-emerald-400" />
               </button>
             </div>
 
@@ -510,11 +579,12 @@ export function MasterSlidesToolbar({
             </button>
 
             <button
-              onClick={() => onAddObject('button')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+              onClick={onOpenIntegrationsModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold border border-primary/30 transition-colors shadow-sm"
+              title="Insert live data from Master Sheets, Docs, and Canvas"
             >
-              <Layers className="h-4 w-4 text-amber-500" />
-              <span>Action Button</span>
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Master Cloud Apps Data</span>
             </button>
           </div>
         )}
@@ -528,6 +598,14 @@ export function MasterSlidesToolbar({
             >
               <Palette className="h-4 w-4" />
               <span>Theme Studio</span>
+            </button>
+
+            <button
+              onClick={onOpenMasterView}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30 text-xs font-bold hover:bg-purple-500/25"
+            >
+              <LayoutTemplate className="h-4 w-4" />
+              <span>Slide Master Studio</span>
             </button>
 
             {/* Quick Themes Swatches */}
@@ -597,7 +675,7 @@ export function MasterSlidesToolbar({
               <option value="slide-down">Slide from Top to Bottom</option>
               <option value="zoom">Zoom Scale In</option>
               <option value="flip">3D Y-Axis Flip</option>
-              <option value="rotate">3D Spin & Rotate</option>
+              <option value="rotate">3D Spin &amp; Rotate</option>
               <option value="dissolve">Blur Dissolve</option>
             </select>
 
@@ -677,32 +755,14 @@ export function MasterSlidesToolbar({
               onChange={(e) =>
                 onChangeAnimation({
                   ...currentAnim,
-                  trigger: e.target.value as 'on-click' | 'after-previous',
+                  trigger: e.target.value as 'on-click' | 'after-previous' | 'with-previous',
                 })
               }
               className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
             >
-              <option value="on-click">On Click (Interactive Step)</option>
-              <option value="after-previous">After Previous (Auto)</option>
-            </select>
-
-            <span className="text-xs text-muted-foreground font-medium ml-1">Duration:</span>
-            <select
-              disabled={!selectedObject || currentAnim.type === 'none'}
-              value={currentAnim.durationMs || 500}
-              onChange={(e) =>
-                onChangeAnimation({
-                  ...currentAnim,
-                  durationMs: parseInt(e.target.value, 10),
-                })
-              }
-              className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
-            >
-              <option value="300">0.3s</option>
-              <option value="500">0.5s</option>
-              <option value="800">0.8s</option>
-              <option value="1000">1.0s</option>
-              <option value="1500">1.5s</option>
+              <option value="on-click">On Click (Step)</option>
+              <option value="after-previous">After Previous</option>
+              <option value="with-previous">With Previous</option>
             </select>
 
             {/* Preview Animation Button */}
@@ -714,23 +774,17 @@ export function MasterSlidesToolbar({
                 title="Preview Object Animation"
               >
                 <Play className="h-3 w-3 fill-current" />
-                <span>Play Animation</span>
+                <span>Play</span>
               </button>
             )}
 
-            {selectedObject && currentAnim.type !== 'none' && (
-              <button
-                onClick={() =>
-                  onChangeAnimation({
-                    type: 'none',
-                    trigger: 'on-click',
-                  })
-                }
-                className="px-2.5 py-1 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20"
-              >
-                Clear
-              </button>
-            )}
+            <button
+              onClick={onToggleAnimationPane}
+              className="flex items-center gap-1 px-3 py-1 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span>Animation Pane</span>
+            </button>
           </div>
         )}
 
@@ -763,7 +817,36 @@ export function MasterSlidesToolbar({
           </div>
         )}
 
-        {/* TAB 7: VIEW */}
+        {/* TAB 7: REVIEW */}
+        {activeTab === 'REVIEW' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenHealthModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/25"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>Document Quality &amp; Accessibility Inspector</span>
+            </button>
+
+            <button
+              onClick={onToggleComments}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <span>Slide Comments</span>
+            </button>
+
+            <button
+              onClick={onOpenVersionHistoryModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <History className="h-4 w-4 text-purple-400" />
+              <span>Version History &amp; Snapshots</span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB 8: VIEW */}
         {activeTab === 'VIEW' && (
           <div className="flex items-center gap-3">
             <button
@@ -774,9 +857,39 @@ export function MasterSlidesToolbar({
               <span>Slide Sorter</span>
             </button>
 
+            <button
+              onClick={onToggleLayersPanel}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <Layers className="h-4 w-4 text-blue-400" />
+              <span>Layers Panel</span>
+            </button>
+
+            <button
+              onClick={onToggleGrid}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                showGrid
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-accent text-muted-foreground border-border hover:text-foreground'
+              }`}
+            >
+              Grid Lines
+            </button>
+
+            <button
+              onClick={onToggleRulers}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                showRulers
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-accent text-muted-foreground border-border hover:text-foreground'
+              }`}
+            >
+              Rulers
+            </button>
+
             <div className="flex items-center gap-1.5 pl-3 border-l border-border/60">
               <span className="text-xs text-muted-foreground font-medium">Zoom:</span>
-              {[75, 100, 125].map((level) => (
+              {[50, 75, 100, 125, 150].map((level) => (
                 <button
                   key={level}
                   onClick={() => onChangeZoom(level)}
@@ -793,7 +906,7 @@ export function MasterSlidesToolbar({
           </div>
         )}
 
-        {/* TAB 8: FILE */}
+        {/* TAB 9: FILE */}
         {activeTab === 'FILE' && (
           <div className="flex items-center gap-2">
             <button
@@ -809,7 +922,7 @@ export function MasterSlidesToolbar({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
             >
               <Download className="h-3.5 w-3.5 text-amber-500" />
-              <span>Interactive HTML Deck</span>
+              <span>HTML Deck</span>
             </button>
 
             <button
@@ -817,7 +930,15 @@ export function MasterSlidesToolbar({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
             >
               <Printer className="h-3.5 w-3.5 text-blue-500" />
-              <span>Print / PDF Export</span>
+              <span>Print / PDF</span>
+            </button>
+
+            <button
+              onClick={onOpenHandoutModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
+            >
+              <FileText className="h-3.5 w-3.5 text-purple-400" />
+              <span>Handouts</span>
             </button>
 
             <button
@@ -825,7 +946,7 @@ export function MasterSlidesToolbar({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
             >
               <FileText className="h-3.5 w-3.5 text-emerald-500" />
-              <span>JSON Raw Deck</span>
+              <span>JSON Package</span>
             </button>
           </div>
         )}

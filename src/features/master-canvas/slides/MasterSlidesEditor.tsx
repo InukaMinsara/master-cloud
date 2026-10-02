@@ -13,9 +13,13 @@ import {
   ShapeKind,
   TransitionType,
   AnimationType,
+  SlideMaster,
+  SlideComment,
 } from './types';
 import { SlideTemplates } from './services/SlideTemplates';
 import { SlideExportService } from './services/SlideExportService';
+import { SlideSyncService, SyncState } from './services/SlideSyncService';
+import { SlideImportService } from './services/SlideImportService';
 import { MasterSlidesSidebar } from './components/MasterSlidesSidebar';
 import { MasterSlidesToolbar } from './components/MasterSlidesToolbar';
 import { MasterSlidesCanvas } from './components/MasterSlidesCanvas';
@@ -26,6 +30,14 @@ import { MasterSlidesThemesModal } from './components/MasterSlidesThemesModal';
 import { MasterSlidesTemplatesModal } from './components/MasterSlidesTemplatesModal';
 import { MasterSlidesCommandPalette } from './components/MasterSlidesCommandPalette';
 import { MasterSlidesContextMenu } from './components/MasterSlidesContextMenu';
+import { MasterSlidesLayersPanel } from './components/MasterSlidesLayersPanel';
+import { MasterSlidesAnimationTimeline } from './components/MasterSlidesAnimationTimeline';
+import { MasterSlidesCommentsPanel } from './components/MasterSlidesCommentsPanel';
+import { MasterSlidesHealthModal } from './components/MasterSlidesHealthModal';
+import { MasterSlidesVersionHistoryModal } from './components/MasterSlidesVersionHistoryModal';
+import { MasterSlidesMasterView } from './components/MasterSlidesMasterView';
+import { MasterSlidesHandoutModal } from './components/MasterSlidesHandoutModal';
+import { MasterSlidesIntegrationsModal } from './components/MasterSlidesIntegrationsModal';
 
 interface MasterSlidesEditorProps {
   initialFile?: FileItem | null;
@@ -36,7 +48,7 @@ interface MasterSlidesEditorProps {
 export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterSlidesEditorProps) {
   const navigate = useNavigate();
 
-  // Helper to initialize or normalize data to MasterPresentationData
+  // Normalize or initialize presentation data
   const normalizeData = (data: any): MasterPresentationData => {
     if (!data) return SlideTemplates.getPrebuiltDeck();
     if (data.slides && data.slides[0]?.objects) {
@@ -48,7 +60,15 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         id: s.id || `slide-${idx + 1}`,
         title: s.title || `Slide ${idx + 1}`,
         layout: (s.layout as SlideLayoutKind) || 'title-content',
-        bgTheme: (s.bgTheme === 'dark' ? 'dark-slate' : s.bgTheme === 'ocean' ? 'dark-slate' : s.bgTheme === 'corporate' ? 'corporate-indigo' : s.bgTheme === 'light' ? 'minimal-light' : 'dark-slate') as SlideThemeId,
+        bgTheme: (s.bgTheme === 'dark'
+          ? 'dark-slate'
+          : s.bgTheme === 'ocean'
+          ? 'dark-slate'
+          : s.bgTheme === 'corporate'
+          ? 'corporate-indigo'
+          : s.bgTheme === 'light'
+          ? 'minimal-light'
+          : 'dark-slate') as SlideThemeId,
         transition: { type: 'fade', durationSeconds: 0.5 },
         objects: (s.elements || []).map((el: any) => ({
           id: el.id,
@@ -89,11 +109,11 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
-  // Live preview triggers for transition and object animation
+  // Live preview triggers
   const [previewTransitionTrigger, setPreviewTransitionTrigger] = useState(0);
   const [previewAnimationObjectId, setPreviewAnimationObjectId] = useState<string | null>(null);
 
-  // Modals and Presentation views
+  // Modals and Panels state
   const [isPresenting, setIsPresenting] = useState(false);
   const [isPresenterView, setIsPresenterView] = useState(false);
   const [presentationStartIndex, setPresentationStartIndex] = useState(0);
@@ -101,7 +121,19 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
   const [isSorterModalOpen, setIsSorterModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
+  const [isAnimationPaneOpen, setIsAnimationPaneOpen] = useState(false);
+  const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
+  const [isVersionHistoryModalOpen, setIsVersionHistoryModalOpen] = useState(false);
+  const [isMasterViewOpen, setIsMasterViewOpen] = useState(false);
+  const [isHandoutModalOpen, setIsHandoutModalOpen] = useState(false);
+  const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
+
+  // Canvas visual settings
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
 
   // Right-click Context Menu State
   const [contextMenu, setContextMenu] = useState<{
@@ -120,13 +152,45 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   const [undoStack, setUndoStack] = useState<MasterPresentationData[]>([]);
   const [redoStack, setRedoStack] = useState<MasterPresentationData[]>([]);
 
-  // Save State
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  // Save & Sync State
+  const [saveStatus, setSaveStatus] = useState<SyncState>('saved');
   const saveTimeoutRef = useRef<any>(null);
+
+  // Listen to network status
+  useEffect(() => {
+    const unsubscribe = SlideSyncService.subscribeNetworkStatus((isOnline) => {
+      if (!isOnline) {
+        setSaveStatus('offline');
+        toast.warning('Working in offline mode. Changes are saved locally to cache.');
+      } else {
+        setSaveStatus('unsaved');
+        triggerAutoSave(presentation);
+        toast.success('Connection restored. Syncing presentation to Master Cloud...');
+      }
+    });
+    return unsubscribe;
+  }, [presentation]);
+
+  // Check for recovery draft on mount
+  useEffect(() => {
+    const fileId = initialFile?.id || 'current_doc';
+    const draft = SlideSyncService.getRecoverableDraft(fileId);
+    if (draft && new Date(draft.savedAt).getTime() > new Date(presentation.lastSavedAt).getTime()) {
+      toast.info('Found newer unsaved recovery draft from your previous session.', {
+        action: {
+          label: 'Restore',
+          onClick: () => {
+            setPresentation(draft.presentation);
+            toast.success('Restored previous unsaved session.');
+          },
+        },
+      });
+    }
+  }, [initialFile]);
 
   // Push history snapshot before mutating
   const pushHistory = useCallback((currentData: MasterPresentationData) => {
-    setUndoStack((prev) => [...prev.slice(-25), currentData]);
+    setUndoStack((prev) => [...prev.slice(-30), currentData]);
     setRedoStack([]);
   }, []);
 
@@ -148,8 +212,17 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
     toast.info('Redo performed');
   }, [redoStack, presentation]);
 
-  // Debounced auto-save to Master Cloud
+  // Debounced auto-save to Master Cloud with local offline caching
   const triggerAutoSave = (updated: MasterPresentationData) => {
+    // 1. Immediately cache locally for crash resiliency
+    const fileId = initialFile?.id || 'current_doc';
+    SlideSyncService.saveOfflineDraft(fileId, updated);
+
+    if (!SlideSyncService.isOnline()) {
+      setSaveStatus('offline');
+      return;
+    }
+
     setSaveStatus('unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -159,9 +232,10 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         try {
           await onSave(updated);
           setSaveStatus('saved');
+          SlideSyncService.clearRecoveryDraft(fileId);
         } catch (err) {
           setSaveStatus('unsaved');
-          toast.error('Failed to sync presentation to Master Cloud');
+          toast.error('Failed to sync presentation to Master Cloud. Cached locally.');
         }
       }
     }, 1200);
@@ -179,7 +253,8 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   };
 
   const activeSlide: MasterSlide =
-    presentation.slides[activeSlideIndex] || presentation.slides[0] || {
+    presentation.slides[activeSlideIndex] ||
+    presentation.slides[0] || {
       id: 'slide-fallback',
       title: 'Slide 1',
       layout: 'title-content',
@@ -377,7 +452,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
 
   const handleChangeAnimation = (anim: {
     type: AnimationType;
-    trigger: 'on-click' | 'after-previous';
+    trigger: 'on-click' | 'after-previous' | 'with-previous';
     durationMs?: number;
     delayMs?: number;
   }) => {
@@ -437,6 +512,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
 
     const newObj: MasterSlideObject = {
       id: newObjId,
+      name: `${type.toUpperCase()} Element`,
       type,
       shapeKind,
       content,
@@ -553,6 +629,35 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
     });
   };
 
+  const handleBringToFront = (id: string) => {
+    updatePresentationState((prev) => {
+      const updatedSlides = [...prev.slides];
+      const maxZ = Math.max(...updatedSlides[activeSlideIndex].objects.map((o) => o.zIndex || 1), 1);
+      const objects = updatedSlides[activeSlideIndex].objects.map((obj) =>
+        obj.id === id ? { ...obj, zIndex: maxZ + 1 } : obj
+      );
+      updatedSlides[activeSlideIndex] = {
+        ...updatedSlides[activeSlideIndex],
+        objects,
+      };
+      return { ...prev, slides: updatedSlides };
+    });
+  };
+
+  const handleSendToBack = (id: string) => {
+    updatePresentationState((prev) => {
+      const updatedSlides = [...prev.slides];
+      const objects = updatedSlides[activeSlideIndex].objects.map((obj) =>
+        obj.id === id ? { ...obj, zIndex: 0 } : obj
+      );
+      updatedSlides[activeSlideIndex] = {
+        ...updatedSlides[activeSlideIndex],
+        objects,
+      };
+      return { ...prev, slides: updatedSlides };
+    });
+  };
+
   const handleToggleLockObject = (id: string) => {
     updatePresentationState((prev) => {
       const updatedSlides = [...prev.slides];
@@ -576,6 +681,103 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
       };
       return { ...prev, slides: updatedSlides };
     });
+  };
+
+  // Comments Handlers
+  const handleAddComment = (text: string, targetObjectId?: string) => {
+    const newComment: SlideComment = {
+      id: 'comment-' + Date.now(),
+      slideId: activeSlide.id,
+      targetObjectId,
+      author: 'Lead Presenter',
+      text,
+      createdAt: new Date().toISOString(),
+      resolved: false,
+      replies: [],
+    };
+    updatePresentationState((prev) => ({
+      ...prev,
+      comments: [...(prev.comments || []), newComment],
+    }));
+    toast.success('Comment posted');
+  };
+
+  const handleAddCommentReply = (commentId: string, text: string) => {
+    updatePresentationState((prev) => {
+      const comments = (prev.comments || []).map((c) =>
+        c.id === commentId
+          ? {
+              ...c,
+              replies: [
+                ...c.replies,
+                {
+                  id: 'reply-' + Date.now(),
+                  author: 'Collaborator',
+                  text,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : c
+      );
+      return { ...prev, comments };
+    });
+  };
+
+  const handleToggleResolveComment = (commentId: string) => {
+    updatePresentationState((prev) => {
+      const comments = (prev.comments || []).map((c) =>
+        c.id === commentId ? { ...c, resolved: !c.resolved } : c
+      );
+      return { ...prev, comments };
+    });
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    updatePresentationState((prev) => ({
+      ...prev,
+      comments: (prev.comments || []).filter((c) => c.id !== commentId),
+    }));
+  };
+
+  // Version Snapshots Handlers
+  const handleCreateSnapshot = (title: string, description: string) => {
+    const snapshotItem = {
+      id: 'ver-' + Date.now(),
+      timestamp: new Date().toISOString(),
+      author: 'Master Cloud Engineer',
+      title,
+      description,
+      slideCount: presentation.slides.length,
+      snapshotData: JSON.parse(JSON.stringify(presentation)),
+    };
+    updatePresentationState((prev) => ({
+      ...prev,
+      versions: [snapshotItem, ...(prev.versions || [])],
+    }));
+    toast.success(`Saved revision snapshot: ${title}`);
+  };
+
+  const handleRestoreVersion = (snapshotData: MasterPresentationData) => {
+    pushHistory(presentation);
+    setPresentation(snapshotData);
+    setActiveSlideIndex(0);
+    triggerAutoSave(snapshotData);
+    toast.success('Restored previous version revision.');
+  };
+
+  // Slide Master Handler
+  const handleUpdateMaster = (master: SlideMaster) => {
+    updatePresentationState((prev) => ({
+      ...prev,
+      master,
+      defaultTheme: master.bgTheme,
+      headerText: master.headerText,
+      footerText: master.footerText,
+      showSlideNumbers: master.showSlideNumbers,
+      slides: prev.slides.map((s) => ({ ...s, bgTheme: master.bgTheme })),
+    }));
+    toast.success('Applied Slide Master across presentation.');
   };
 
   // Export handlers
@@ -679,16 +881,28 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         onOpenThemesModal={() => setIsThemesModalOpen(true)}
         onOpenTemplatesModal={() => setIsTemplatesModalOpen(true)}
         onOpenSorterModal={() => setIsSorterModalOpen(true)}
+        onOpenMasterView={() => setIsMasterViewOpen(true)}
+        onOpenHealthModal={() => setIsHealthModalOpen(true)}
+        onOpenVersionHistoryModal={() => setIsVersionHistoryModalOpen(true)}
+        onOpenHandoutModal={() => setIsHandoutModalOpen(true)}
+        onOpenIntegrationsModal={() => setIsIntegrationsModalOpen(true)}
+        onToggleLayersPanel={() => setIsLayersPanelOpen((prev) => !prev)}
+        onToggleAnimationPane={() => setIsAnimationPaneOpen((prev) => !prev)}
+        onToggleComments={() => setIsCommentsPanelOpen((prev) => !prev)}
         onExportHtml={handleExportHtml}
         onExportPdf={handleExportPdf}
         onExportJson={handleExportJson}
         onSaveManual={handleSaveManual}
         zoomLevel={zoomLevel}
         onChangeZoom={setZoomLevel}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((prev) => !prev)}
+        showRulers={showRulers}
+        onToggleRulers={() => setShowRulers((prev) => !prev)}
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Thumbnails Strip */}
         <MasterSlidesSidebar
           slides={presentation.slides}
@@ -726,7 +940,52 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
           onChangeSpeakerNotes={handleChangeSpeakerNotes}
           previewTransitionTrigger={previewTransitionTrigger}
           previewAnimationObjectId={previewAnimationObjectId}
+          zoomLevel={zoomLevel}
+          showGrid={showGrid}
+          showRulers={showRulers}
         />
+
+        {/* Right Collapsible Panels */}
+        {isLayersPanelOpen && (
+          <MasterSlidesLayersPanel
+            slide={activeSlide}
+            selectedObjectId={selectedObjectId}
+            onSelectObject={setSelectedObjectId}
+            onUpdateObject={handleUpdateObject}
+            onDeleteObject={handleDeleteObject}
+            onDuplicateObject={handleDuplicateObject}
+            onBringForward={handleBringForward}
+            onSendBackward={handleSendBackward}
+            onBringToFront={handleBringToFront}
+            onSendToBack={handleSendToBack}
+            onClose={() => setIsLayersPanelOpen(false)}
+          />
+        )}
+
+        {isAnimationPaneOpen && (
+          <MasterSlidesAnimationTimeline
+            slide={activeSlide}
+            selectedObjectId={selectedObjectId}
+            onSelectObject={setSelectedObjectId}
+            onUpdateObject={handleUpdateObject}
+            onPreviewSequence={handlePreviewTransition}
+            onClose={() => setIsAnimationPaneOpen(false)}
+          />
+        )}
+
+        {isCommentsPanelOpen && (
+          <MasterSlidesCommentsPanel
+            slideId={activeSlide.id}
+            slideIndex={activeSlideIndex}
+            comments={presentation.comments || []}
+            selectedObjectId={selectedObjectId}
+            onAddComment={handleAddComment}
+            onAddReply={handleAddCommentReply}
+            onToggleResolve={handleToggleResolveComment}
+            onDeleteComment={handleDeleteComment}
+            onClose={() => setIsCommentsPanelOpen(false)}
+          />
+        )}
       </div>
 
       {/* FULLSCREEN AUDIENCE PRESENTATION MODE */}
@@ -794,6 +1053,64 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
             setActiveSlideIndex(0);
             setSelectedObjectId(null);
             toast.success(`Loaded template: ${deck.title}`);
+          }}
+        />
+      )}
+
+      {/* SLIDE MASTER STUDIO VIEW */}
+      {isMasterViewOpen && (
+        <MasterSlidesMasterView
+          presentation={presentation}
+          onUpdateMaster={handleUpdateMaster}
+          onClose={() => setIsMasterViewOpen(false)}
+        />
+      )}
+
+      {/* DOCUMENT QUALITY & ACCESSIBILITY INSPECTOR */}
+      {isHealthModalOpen && (
+        <MasterSlidesHealthModal
+          presentation={presentation}
+          onClose={() => setIsHealthModalOpen(false)}
+          onJumpToSlide={(sIdx, objId) => {
+            setActiveSlideIndex(sIdx);
+            if (objId) setSelectedObjectId(objId);
+          }}
+        />
+      )}
+
+      {/* VERSION HISTORY & SNAPSHOTS MODAL */}
+      {isVersionHistoryModalOpen && (
+        <MasterSlidesVersionHistoryModal
+          presentation={presentation}
+          onClose={() => setIsVersionHistoryModalOpen(false)}
+          onCreateSnapshot={handleCreateSnapshot}
+          onRestoreVersion={handleRestoreVersion}
+        />
+      )}
+
+      {/* HANDOUTS & PRINT SETUP MODAL */}
+      {isHandoutModalOpen && (
+        <MasterSlidesHandoutModal
+          presentation={presentation}
+          onClose={() => setIsHandoutModalOpen(false)}
+        />
+      )}
+
+      {/* MASTER CLOUD ECOSYSTEM INTEGRATIONS MODAL */}
+      {isIntegrationsModalOpen && (
+        <MasterSlidesIntegrationsModal
+          onClose={() => setIsIntegrationsModalOpen(false)}
+          onInsertObject={(obj) => {
+            updatePresentationState((prev) => {
+              const updatedSlides = [...prev.slides];
+              updatedSlides[activeSlideIndex] = {
+                ...updatedSlides[activeSlideIndex],
+                objects: [...updatedSlides[activeSlideIndex].objects, obj],
+              };
+              return { ...prev, slides: updatedSlides };
+            });
+            setSelectedObjectId(obj.id);
+            toast.success(`Embedded live data from ${obj.linkedDataSource?.sourceApp || 'Master Cloud'}`);
           }}
         />
       )}
