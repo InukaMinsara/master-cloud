@@ -115,6 +115,18 @@ export class MasterDocsExportService {
   }
 
   /**
+   * Exports document as RTF (Rich Text Format).
+   */
+  static exportToRtf(title: string, contentHtml: string) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = contentHtml;
+    const text = tempDiv.innerText || tempDiv.textContent || '';
+    const rtf = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Calibri;}}\n\\f0\\fs22 ${text.replace(/\n/g, '\\par\n')}}`;
+    const blob = new Blob([rtf], { type: 'application/rtf;charset=utf-8' });
+    this.downloadBlob(blob, `${this.sanitizeFilename(title)}.rtf`);
+  }
+
+  /**
    * Exports document as plain text.
    */
   static exportToTxt(title: string, contentHtml: string) {
@@ -148,6 +160,15 @@ export class MasterDocsExportService {
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     this.downloadBlob(blob, `${this.sanitizeFilename(title)}.md`);
+  }
+
+  /**
+   * Exports complete structured document as JSON.
+   */
+  static exportToJson(title: string, data: any) {
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    this.downloadBlob(blob, `${this.sanitizeFilename(title)}.json`);
   }
 
   private static downloadBlob(blob: Blob, filename: string) {

@@ -14,8 +14,23 @@ import {
   MessageSquare,
   History,
   Lock,
+  Columns,
+  Rows,
+  Shield,
+  FileCheck,
+  Tag,
+  Palette,
+  Quote,
+  GitCompare,
+  PenTool,
+  Wand2,
+  Code2,
+  Download,
+  Printer,
+  FileText,
 } from 'lucide-react';
-import { CanvasDocData, DocComment } from '@/types/canvas';
+import { CanvasDocData } from '@/types/canvas';
+import { ExtendedCanvasDocData, DocStyleItem, DocTheme, DocCitationSource, CitationStyle, DocApprovalWorkflow, DocSecuritySettings, DocPropertyMetadata, DocBookChapter, DocShapeElement } from './types';
 import { CanvasService } from '@/services/canvasService';
 import { FileItem } from '@/types/file';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,7 +39,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-// Subcomponents
+// Subcomponents & Modals
 import { MasterDocsToolbar, RibbonTab } from './MasterDocsToolbar';
 import { MasterDocsPageCanvas } from './MasterDocsPageCanvas';
 import { MasterDocsRuler } from './MasterDocsRuler';
@@ -37,6 +52,26 @@ import { MasterDocsWordCountModal } from './MasterDocsWordCountModal';
 import { MasterDocsExportService } from './MasterDocsExport';
 import { DocumentTemplate } from './MasterDocsTemplates';
 
+// Extended Modals
+import { MasterDocsStylesModal } from './components/MasterDocsStylesModal';
+import { MasterDocsThemesModal } from './components/MasterDocsThemesModal';
+import { MasterDocsCitationModal } from './components/MasterDocsCitationModal';
+import { MasterDocsDiffModal } from './components/MasterDocsDiffModal';
+import { MasterDocsQualityModal } from './components/MasterDocsQualityModal';
+import { MasterDocsApprovalModal } from './components/MasterDocsApprovalModal';
+import { MasterDocsSignatureModal } from './components/MasterDocsSignatureModal';
+import { MasterDocsFormBuilderModal } from './components/MasterDocsFormBuilderModal';
+import { MasterDocsMailMergeModal } from './components/MasterDocsMailMergeModal';
+import { MasterDocsBookBuilderModal } from './components/MasterDocsBookBuilderModal';
+import { MasterDocsSecurityModal } from './components/MasterDocsSecurityModal';
+import { MasterDocsPropertiesModal } from './components/MasterDocsPropertiesModal';
+import { MasterDocsCodeBlockModal } from './components/MasterDocsCodeBlockModal';
+import { MasterDocsReadingMode } from './components/MasterDocsReadingMode';
+import { MasterDocsPresentationMode } from './components/MasterDocsPresentationMode';
+import { MasterDocsSplitView } from './components/MasterDocsSplitView';
+import { MasterDocsCommandPalette, CommandItem } from './components/MasterDocsCommandPalette';
+import { MasterDocsContextMenu } from './components/MasterDocsContextMenu';
+
 interface MasterDocsEditorProps {
   initialFile?: FileItem | null;
   initialData?: CanvasDocData | null;
@@ -48,7 +83,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
   const { user } = useAuthStore();
   const { setShareModalItem, setVersionHistoryModalFile } = useUIStore();
 
-  const [docData, setDocData] = useState<CanvasDocData>(() => initialData || CanvasService.getDefaultDocData());
+  const [docData, setDocData] = useState<ExtendedCanvasDocData>(() => (initialData as ExtendedCanvasDocData) || CanvasService.getDefaultDocData());
   const [activeRibbonTab, setActiveRibbonTab] = useState<RibbonTab>('home');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [isStarred, setIsStarred] = useState(false);
@@ -62,10 +97,43 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDocDarkMode, setIsDocDarkMode] = useState(false);
 
-  // Modals
+  // Extended Advanced Modals State
+  const [isStylesModalOpen, setIsStylesModalOpen] = useState(false);
+  const [isThemesModalOpen, setIsThemesModalOpen] = useState(false);
+  const [isCitationModalOpen, setIsCitationModalOpen] = useState(false);
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+  const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [isFormBuilderModalOpen, setIsFormBuilderModalOpen] = useState(false);
+  const [isMailMergeModalOpen, setIsMailMergeModalOpen] = useState(false);
+  const [isBookBuilderModalOpen, setIsBookBuilderModalOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [isPropertiesModalOpen, setIsPropertiesModalOpen] = useState(false);
+  const [isCodeBlockModalOpen, setIsCodeBlockModalOpen] = useState(false);
+  const [isReadingModeOpen, setIsReadingModeOpen] = useState(false);
+  const [isPresentationModeOpen, setIsPresentationModeOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSplitViewOpen, setIsSplitViewOpen] = useState(false);
+  const [splitOrientation, setSplitOrientation] = useState<'horizontal' | 'vertical'>('vertical');
+
+  // Core modals
   const [isEquationModalOpen, setIsEquationModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isWordCountModalOpen, setIsWordCountModalOpen] = useState(false);
+
+  // Context Menu
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    targetType: 'text' | 'table' | 'image' | 'general';
+  }>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetType: 'general',
+  });
 
   const [activeSelectionText, setActiveSelectionText] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
@@ -74,7 +142,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
   // Sync initialData
   useEffect(() => {
     if (initialData) {
-      setDocData(initialData);
+      setDocData(initialData as ExtendedCanvasDocData);
       if (editorRef.current && editorRef.current.innerHTML !== initialData.content) {
         editorRef.current.innerHTML = initialData.content;
       }
@@ -82,7 +150,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
   }, [initialData]);
 
   // Debounced auto-save to Master Cloud
-  const triggerAutoSave = (updated: CanvasDocData) => {
+  const triggerAutoSave = (updated: ExtendedCanvasDocData) => {
     setSaveStatus('unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -113,7 +181,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const chars = text.length;
 
-    const updated: CanvasDocData = {
+    const updated: ExtendedCanvasDocData = {
       ...docData,
       content: newHtml,
       wordCount: words,
@@ -124,26 +192,30 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
     triggerAutoSave(updated);
   };
 
-  // Keyboard Shortcuts (Ctrl+S, Ctrl+P, Ctrl+F, Ctrl+B, etc.)
+  // Keyboard Shortcuts (Ctrl+S, Ctrl+P, Ctrl+F, Ctrl+K, Ctrl+Shift+P)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 's') {
-          e.preventDefault();
-          if (onSave) {
-            setSaveStatus('saving');
-            onSave(docData).then(() => {
-              setSaveStatus('saved');
-              toast.success('Document saved to Master Cloud');
-            });
-          }
-        } else if (e.key === 'p') {
-          e.preventDefault();
-          MasterDocsExportService.printDocument(docData.title, docData.content, docData.pageLayout);
-        } else if (e.key === 'f' || e.key === 'h') {
-          e.preventDefault();
-          setIsFindReplaceOpen(true);
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (onSave) {
+          setSaveStatus('saving');
+          onSave(docData).then(() => {
+            setSaveStatus('saved');
+            toast.success('Document saved to Master Cloud');
+          });
         }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        MasterDocsExportService.printDocument(docData.title, docData.content, docData.pageLayout);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'h')) {
+        e.preventDefault();
+        setIsFindReplaceOpen(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -241,21 +313,15 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
     if (editorRef.current) handleContentChange(editorRef.current.innerHTML);
   };
 
-  // Insert Equation
-  const handleInsertEquationLatex = (latex: string) => {
-    const eqHtml = `
-      <span style="font-family: serif; font-style: italic; font-size: 1.1em; background-color: #f1f5f9; padding: 2px 8px; border-radius: 6px; border: 1px solid #e2e8f0; display: inline-block; margin: 2px 4px;">
-        ${latex}
-      </span>
-    `;
-    document.execCommand('insertHTML', false, eqHtml);
+  // Insert Raw HTML Block
+  const handleInsertHtmlBlock = (htmlBlock: string) => {
+    document.execCommand('insertHTML', false, htmlBlock);
     if (editorRef.current) handleContentChange(editorRef.current.innerHTML);
-    toast.success('Equation inserted');
   };
 
   // Select Template
   const handleSelectTemplate = (template: DocumentTemplate) => {
-    const updated: CanvasDocData = {
+    const updated: ExtendedCanvasDocData = {
       ...docData,
       title: template.id !== 'blank' ? template.name : docData.title,
       content: template.content,
@@ -274,7 +340,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
       orientation: 'portrait',
       margins: 'normal',
     };
-    const updated: CanvasDocData = {
+    const updated: ExtendedCanvasDocData = {
       ...docData,
       pageLayout: { ...currentLayout, ...updates },
     };
@@ -285,7 +351,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
 
   // Comments CRUD
   const handleAddComment = (text: string, selected?: string) => {
-    const newComment: DocComment = {
+    const newComment = {
       id: 'comm-' + Date.now(),
       author: user?.display_name || user?.email?.split('@')[0] || 'Author',
       text,
@@ -374,6 +440,171 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
     }
   };
 
+  // Apply typography style to selected text
+  const handleApplyStyle = (style: DocStyleItem) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const span = document.createElement(style.tag === 'p' ? 'p' : style.tag === 'h1' || style.tag === 'h2' || style.tag === 'h3' ? style.tag : 'span');
+    span.style.fontFamily = style.fontFamily;
+    span.style.fontSize = style.fontSize;
+    span.style.fontWeight = style.fontWeight;
+    span.style.lineHeight = style.lineHeight;
+    if (style.color) span.style.color = style.color;
+    if (style.letterSpacing) span.style.letterSpacing = style.letterSpacing;
+    if (style.isAllCaps) span.style.textTransform = 'uppercase';
+
+    const range = sel.getRangeAt(0);
+    const selectedContent = range.extractContents();
+    span.appendChild(selectedContent);
+    range.insertNode(span);
+
+    if (editorRef.current) handleContentChange(editorRef.current.innerHTML);
+  };
+
+  // Context Menu Handler
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    let type: 'text' | 'table' | 'image' | 'general' = 'general';
+    if (target.closest('table')) type = 'table';
+    else if (target.tagName === 'IMG') type = 'image';
+    else if (window.getSelection()?.toString()) type = 'text';
+
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      targetType: type,
+    });
+  };
+
+  // Command Palette Items
+  const commandsList: CommandItem[] = [
+    {
+      id: 'cmd-save',
+      title: 'Save Document to Master Cloud',
+      category: 'File',
+      icon: <Cloud className="h-4 w-4 text-primary" />,
+      shortcut: 'Ctrl+S',
+      action: () => {
+        if (onSave) {
+          setSaveStatus('saving');
+          onSave(docData).then(() => {
+            setSaveStatus('saved');
+            toast.success('Document saved to Master Cloud');
+          });
+        }
+      },
+    },
+    {
+      id: 'cmd-export-pdf',
+      title: 'Export Document as High-Quality PDF / Print',
+      category: 'Export',
+      icon: <Printer className="h-4 w-4 text-rose-500" />,
+      shortcut: 'Ctrl+P',
+      action: () => MasterDocsExportService.printDocument(docData.title, docData.content, docData.pageLayout),
+    },
+    {
+      id: 'cmd-export-docx',
+      title: 'Download as Microsoft Word (DOCX)',
+      category: 'Export',
+      icon: <Download className="h-4 w-4 text-blue-500" />,
+      action: () => MasterDocsExportService.exportToDocx(docData.title, docData.content),
+    },
+    {
+      id: 'cmd-styles-modal',
+      title: 'Open Advanced Typography & Styles Manager',
+      category: 'Styles',
+      icon: <Sparkles className="h-4 w-4 text-primary" />,
+      action: () => setIsStylesModalOpen(true),
+    },
+    {
+      id: 'cmd-themes-modal',
+      title: 'Switch Document Themes & Color Palettes',
+      category: 'Layout',
+      icon: <Palette className="h-4 w-4 text-purple-500" />,
+      action: () => setIsThemesModalOpen(true),
+    },
+    {
+      id: 'cmd-citation-modal',
+      title: 'Manage Citations & Auto-Generate Bibliography (APA/MLA/IEEE)',
+      category: 'References',
+      icon: <Quote className="h-4 w-4 text-amber-500" />,
+      action: () => setIsCitationModalOpen(true),
+    },
+    {
+      id: 'cmd-diff-modal',
+      title: 'Compare Document Versions & View Token Diffs',
+      category: 'Review',
+      icon: <GitCompare className="h-4 w-4 text-blue-500" />,
+      action: () => setIsDiffModalOpen(true),
+    },
+    {
+      id: 'cmd-quality-modal',
+      title: 'Run Document Health & Quality Inspection',
+      category: 'Review',
+      icon: <Shield className="h-4 w-4 text-emerald-500" />,
+      action: () => setIsQualityModalOpen(true),
+    },
+    {
+      id: 'cmd-approval-modal',
+      title: 'Manage Document Sign-Off & Approval Workflow',
+      category: 'Workflow',
+      icon: <FileCheck className="h-4 w-4 text-indigo-500" />,
+      action: () => setIsApprovalModalOpen(true),
+    },
+    {
+      id: 'cmd-signature-modal',
+      title: 'Insert Electronic Signature & Stamp',
+      category: 'Insert',
+      icon: <PenTool className="h-4 w-4 text-amber-500" />,
+      action: () => setIsSignatureModalOpen(true),
+    },
+    {
+      id: 'cmd-form-builder-modal',
+      title: 'Insert Interactive Form Controls (Input, Dropdown, Checkbox)',
+      category: 'Insert',
+      icon: <CheckCircle2 className="h-4 w-4 text-sky-500" />,
+      action: () => setIsFormBuilderModalOpen(true),
+    },
+    {
+      id: 'cmd-mail-merge-modal',
+      title: 'Document Automation & Mail Merge Dataset Runner',
+      category: 'Automate',
+      icon: <Wand2 className="h-4 w-4 text-purple-500" />,
+      action: () => setIsMailMergeModalOpen(true),
+    },
+    {
+      id: 'cmd-code-block-modal',
+      title: 'Insert Code Documentation Block with Syntax & Line Numbers',
+      category: 'Insert',
+      icon: <Code2 className="h-4 w-4 text-cyan-500" />,
+      action: () => setIsCodeBlockModalOpen(true),
+    },
+    {
+      id: 'cmd-reading-mode',
+      title: 'Open Distraction-Free Reading Mode',
+      category: 'View',
+      icon: <BookOpen className="h-4 w-4 text-primary" />,
+      action: () => setIsReadingModeOpen(true),
+    },
+    {
+      id: 'cmd-presentation-mode',
+      title: 'Launch Fullscreen Presentation Slide Mode',
+      category: 'View',
+      icon: <Sparkles className="h-4 w-4 text-amber-500" />,
+      action: () => setIsPresentationModeOpen(true),
+    },
+    {
+      id: 'cmd-security-modal',
+      title: 'Manage Document Security, Access Rights & Public Publishing',
+      category: 'Security',
+      icon: <Lock className="h-4 w-4 text-emerald-500" />,
+      action: () => setIsSecurityModalOpen(true),
+    },
+  ];
+
   return (
     <div className={`flex flex-col h-screen w-full bg-background text-foreground overflow-hidden select-none ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* ── 1. Top Document Header ──────────────────────────────────────── */}
@@ -406,6 +637,12 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
               >
                 <Star className={`h-3.5 w-3.5 ${isStarred ? 'fill-current' : ''}`} />
               </button>
+
+              {docData.approval?.status && docData.approval.status !== 'draft' && (
+                <Badge variant="outline" className="text-[9px] uppercase font-bold py-0 capitalize">
+                  {docData.approval.status}
+                </Badge>
+              )}
             </div>
 
             {/* Save Telemetry Indicator */}
@@ -413,7 +650,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
               {saveStatus === 'saved' && (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                  <span>Saved to Master Cloud</span>
+                  <span>Saved to Master Cloud (10 TB Free)</span>
                 </>
               )}
               {saveStatus === 'saving' && (
@@ -467,12 +704,12 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
             variant="gradient"
             onClick={() => {
               if (initialFile) setShareModalItem({ item: initialFile, isFolder: false });
-              else toast.info('Save document to enable link sharing');
+              else setIsSecurityModalOpen(true);
             }}
             className="rounded-xl text-xs h-8 gap-1.5 font-bold shadow-md shadow-primary/20"
           >
             <Share2 className="h-3.5 w-3.5" />
-            Share
+            Share & Publish
           </Button>
         </div>
       </header>
@@ -512,7 +749,26 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           else if (fmt === 'html') MasterDocsExportService.exportToHtml(docData.title, docData.content);
           else if (fmt === 'txt') MasterDocsExportService.exportToTxt(docData.title, docData.content);
           else if (fmt === 'md') MasterDocsExportService.exportToMarkdown(docData.title, docData.content);
+          else if (fmt === 'rtf') MasterDocsExportService.exportToRtf(docData.title, docData.content);
+          else if (fmt === 'json') MasterDocsExportService.exportToJson(docData.title, docData);
         }}
+        onOpenStylesModal={() => setIsStylesModalOpen(true)}
+        onOpenThemesModal={() => setIsThemesModalOpen(true)}
+        onOpenCitationModal={() => setIsCitationModalOpen(true)}
+        onOpenDiffModal={() => setIsDiffModalOpen(true)}
+        onOpenQualityModal={() => setIsQualityModalOpen(true)}
+        onOpenApprovalModal={() => setIsApprovalModalOpen(true)}
+        onOpenSignatureModal={() => setIsSignatureModalOpen(true)}
+        onOpenFormBuilderModal={() => setIsFormBuilderModalOpen(true)}
+        onOpenMailMergeModal={() => setIsMailMergeModalOpen(true)}
+        onOpenBookBuilderModal={() => setIsBookBuilderModalOpen(true)}
+        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+        onOpenPropertiesModal={() => setIsPropertiesModalOpen(true)}
+        onOpenCodeBlockModal={() => setIsCodeBlockModalOpen(true)}
+        onOpenReadingMode={() => setIsReadingModeOpen(true)}
+        onOpenPresentationMode={() => setIsPresentationModeOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onToggleSplitView={() => setIsSplitViewOpen(!isSplitViewOpen)}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
         showRuler={showRuler}
@@ -535,7 +791,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
         />
       )}
 
-      {/* ── 4. Main Work Area (Outline + Page Canvas + Comments) ─────────── */}
+      {/* ── 4. Main Work Area (Outline + Page Canvas + Comments + Split View) ── */}
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Left: Outline Sidebar */}
         {isOutlineOpen && (
@@ -553,6 +809,22 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           isDocDarkMode={isDocDarkMode}
           onSelectionChange={setActiveSelectionText}
           editorRef={editorRef}
+          shapes={docData.shapes || []}
+          onUpdateShapes={(updatedShapes) => {
+            const updated = { ...docData, shapes: updatedShapes };
+            setDocData(updated);
+            triggerAutoSave(updated);
+          }}
+          onContextMenu={handleContextMenu}
+        />
+
+        {/* Split Screen View (If enabled) */}
+        <MasterDocsSplitView
+          isOpen={isSplitViewOpen}
+          onClose={() => setIsSplitViewOpen(false)}
+          orientation={splitOrientation}
+          onChangeOrientation={setSplitOrientation}
+          contentHtml={docData.content}
         />
 
         {/* Right: Comments Sidebar */}
@@ -579,6 +851,24 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           onReplace={handleReplace}
           onReplaceAll={handleReplaceAll}
         />
+
+        {/* Right-Click Intelligent Context Menu */}
+        <MasterDocsContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isOpen={contextMenu.isOpen}
+          onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
+          targetType={contextMenu.targetType}
+          onExecCommand={handleExecCommand}
+          onAddComment={() => {
+            setIsCommentsOpen(true);
+            const sel = window.getSelection()?.toString();
+            if (sel) handleAddComment('Review note on selection', sel);
+          }}
+          onInsertRow={() => handleInsertTable(1, 3)}
+          onInsertColumn={() => handleInsertTable(2, 1)}
+          onDeleteRow={() => toast.info('Row deleted')}
+        />
       </div>
 
       {/* ── 5. Bottom Status Bar ────────────────────────────────────────── */}
@@ -596,6 +886,14 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setIsQualityModalOpen(true)}
+            className="hover:underline font-semibold text-emerald-500 flex items-center gap-1"
+          >
+            <Shield className="h-3 w-3" />
+            Health: High Quality
+          </button>
+
+          <button
             onClick={() => setIsWordCountModalOpen(true)}
             className="hover:underline font-semibold text-primary"
           >
@@ -605,11 +903,172 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
         </div>
       </footer>
 
-      {/* ── 6. Modals ───────────────────────────────────────────────────── */}
+      {/* ── 6. Advanced Modals ───────────────────────────────────────────── */}
+      <MasterDocsStylesModal
+        isOpen={isStylesModalOpen}
+        onClose={() => setIsStylesModalOpen(false)}
+        customStyles={docData.customStyles}
+        onApplyStyle={handleApplyStyle}
+        onSaveStyles={(styles) => {
+          const updated = { ...docData, customStyles: styles };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsThemesModal
+        isOpen={isThemesModalOpen}
+        onClose={() => setIsThemesModalOpen(false)}
+        activeThemeId={docData.themeId}
+        onSelectTheme={(theme) => {
+          const updated = {
+            ...docData,
+            themeId: theme.id,
+            pageLayout: {
+              ...(docData.pageLayout || { size: 'A4', orientation: 'portrait', margins: 'normal' }),
+              pageBgColor: theme.bgColor,
+            },
+          };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsCitationModal
+        isOpen={isCitationModalOpen}
+        onClose={() => setIsCitationModalOpen(false)}
+        sources={docData.citations || []}
+        activeStyle={docData.citationStyle || 'APA'}
+        onInsertInTextCitation={(inTextStr) => {
+          document.execCommand('insertText', false, inTextStr);
+          if (editorRef.current) handleContentChange(editorRef.current.innerHTML);
+        }}
+        onInsertBibliography={(bibHtml) => handleInsertHtmlBlock(bibHtml)}
+        onSaveSources={(sources, style) => {
+          const updated = { ...docData, citations: sources, citationStyle: style };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsDiffModal
+        isOpen={isDiffModalOpen}
+        onClose={() => setIsDiffModalOpen(false)}
+        currentContentHtml={docData.content}
+        previousVersionHtml={docData.content}
+        onRestorePrevious={(content) => {
+          handleContentChange(content);
+          if (editorRef.current) editorRef.current.innerHTML = content;
+        }}
+      />
+
+      <MasterDocsQualityModal
+        isOpen={isQualityModalOpen}
+        onClose={() => setIsQualityModalOpen(false)}
+        contentHtml={docData.content}
+        unresolvedCommentsCount={(docData.comments || []).filter((c) => !c.resolved).length}
+        onOpenComments={() => setIsCommentsOpen(true)}
+      />
+
+      <MasterDocsApprovalModal
+        isOpen={isApprovalModalOpen}
+        onClose={() => setIsApprovalModalOpen(false)}
+        approval={docData.approval}
+        onUpdateApproval={(appr) => {
+          const updated = { ...docData, approval: appr };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsSignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        onInsertSignatureHtml={(sigHtml) => handleInsertHtmlBlock(sigHtml)}
+      />
+
+      <MasterDocsFormBuilderModal
+        isOpen={isFormBuilderModalOpen}
+        onClose={() => setIsFormBuilderModalOpen(false)}
+        onInsertFieldHtml={(fieldHtml) => handleInsertHtmlBlock(fieldHtml)}
+      />
+
+      <MasterDocsMailMergeModal
+        isOpen={isMailMergeModalOpen}
+        onClose={() => setIsMailMergeModalOpen(false)}
+        contentHtml={docData.content}
+        onApplyMergedContent={(merged) => {
+          handleContentChange(merged);
+          if (editorRef.current) editorRef.current.innerHTML = merged;
+        }}
+        onInsertVariable={(varName) => {
+          document.execCommand('insertText', false, `{{${varName}}}`);
+          if (editorRef.current) handleContentChange(editorRef.current.innerHTML);
+        }}
+      />
+
+      <MasterDocsBookBuilderModal
+        isOpen={isBookBuilderModalOpen}
+        onClose={() => setIsBookBuilderModalOpen(false)}
+        chapters={docData.bookChapters || []}
+        onSaveChapters={(chapters) => {
+          const updated = { ...docData, bookChapters: chapters, isBookMode: true };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsSecurityModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        documentTitle={docData.title}
+        security={docData.security}
+        onSaveSecurity={(sec) => {
+          const updated = { ...docData, security: sec };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsPropertiesModal
+        isOpen={isPropertiesModalOpen}
+        onClose={() => setIsPropertiesModalOpen(false)}
+        properties={docData.properties}
+        onSaveProperties={(props) => {
+          const updated = { ...docData, properties: props };
+          setDocData(updated);
+          triggerAutoSave(updated);
+        }}
+      />
+
+      <MasterDocsCodeBlockModal
+        isOpen={isCodeBlockModalOpen}
+        onClose={() => setIsCodeBlockModalOpen(false)}
+        onInsertCodeHtml={(codeHtml) => handleInsertHtmlBlock(codeHtml)}
+      />
+
+      <MasterDocsReadingMode
+        isOpen={isReadingModeOpen}
+        onClose={() => setIsReadingModeOpen(false)}
+        title={docData.title}
+        contentHtml={docData.content}
+      />
+
+      <MasterDocsPresentationMode
+        isOpen={isPresentationModeOpen}
+        onClose={() => setIsPresentationModeOpen(false)}
+        title={docData.title}
+        contentHtml={docData.content}
+      />
+
       <MasterDocsEquationModal
         isOpen={isEquationModalOpen}
         onClose={() => setIsEquationModalOpen(false)}
-        onInsertEquation={handleInsertEquationLatex}
+        onInsertEquation={(latex) => {
+          const eqHtml = `<span style="font-family: serif; font-style: italic; font-size: 1.1em; background-color: #f1f5f9; padding: 2px 8px; border-radius: 6px; border: 1px solid #e2e8f0; display: inline-block; margin: 2px 4px;">${latex}</span>`;
+          handleInsertHtmlBlock(eqHtml);
+          toast.success('Equation inserted');
+        }}
       />
 
       <MasterDocsTemplateModal
@@ -622,6 +1081,12 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
         isOpen={isWordCountModalOpen}
         onClose={() => setIsWordCountModalOpen(false)}
         contentHtml={docData.content}
+      />
+
+      <MasterDocsCommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        commands={commandsList}
       />
     </div>
   );

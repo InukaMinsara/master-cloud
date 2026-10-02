@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { CanvasDocData } from '@/types/canvas';
+import { DocShapeElement } from './types';
+import { MasterDocsShapesLayer } from './components/MasterDocsShapesLayer';
 
 interface MasterDocsPageCanvasProps {
   contentHtml: string;
@@ -9,6 +11,9 @@ interface MasterDocsPageCanvasProps {
   isDocDarkMode: boolean;
   onSelectionChange?: (selectedText: string) => void;
   editorRef: React.RefObject<HTMLDivElement>;
+  shapes?: DocShapeElement[];
+  onUpdateShapes?: (shapes: DocShapeElement[]) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export function MasterDocsPageCanvas({
@@ -19,6 +24,9 @@ export function MasterDocsPageCanvas({
   isDocDarkMode,
   onSelectionChange,
   editorRef,
+  shapes = [],
+  onUpdateShapes,
+  onContextMenu,
 }: MasterDocsPageCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -119,9 +127,29 @@ export function MasterDocsPageCanvas({
     }
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Url = event.target?.result as string;
+          document.execCommand('insertImage', false, base64Url);
+          handleInput();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   return (
     <div
       ref={containerRef}
+      onContextMenu={onContextMenu}
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
       className="flex-1 overflow-auto bg-muted/40 p-4 sm:p-8 flex justify-center items-start min-h-0 relative"
       onClick={() => editorRef.current?.focus()}
     >
@@ -132,7 +160,7 @@ export function MasterDocsPageCanvas({
           transformOrigin: 'top center',
           transition: 'transform 0.15s ease-out',
         }}
-        className="pb-20"
+        className="pb-20 relative"
       >
         {/* Realistic Page Sheet */}
         <div
@@ -149,14 +177,17 @@ export function MasterDocsPageCanvas({
           className="rounded-sm shadow-2xl border border-border/80 relative flex flex-col justify-between transition-colors"
         >
           {/* Header Area */}
-          {pageLayout?.headerText && (
-            <div
-              style={{ top: `${parseInt(padding) / 3}px`, left: padding, right: padding }}
-              className="absolute text-[11px] text-muted-foreground border-b border-border/40 pb-1 flex justify-between items-center select-none"
-            >
-              <span>{pageLayout.headerText}</span>
-              <span className="text-[10px] font-mono">MASTER CLOUD DOCS</span>
-            </div>
+          <div
+            style={{ top: `${parseInt(padding) / 3}px`, left: padding, right: padding }}
+            className="absolute text-[11px] text-muted-foreground border-b border-border/40 pb-1 flex justify-between items-center select-none"
+          >
+            <span>{pageLayout?.headerText || 'Master Cloud Enterprise Document'}</span>
+            <span className="text-[10px] font-mono">CONFIDENTIAL</span>
+          </div>
+
+          {/* Embedded Drawing Shapes Layer */}
+          {shapes && onUpdateShapes && (
+            <MasterDocsShapesLayer shapes={shapes} onUpdateShapes={onUpdateShapes} />
           )}
 
           {/* Editable Document Body */}
@@ -174,7 +205,7 @@ export function MasterDocsPageCanvas({
               outline: 'none',
               minHeight: `${pageMinHeight - parseInt(padding) * 2}px`,
             }}
-            className="master-docs-content prose max-w-none focus:outline-none flex-1 leading-relaxed"
+            className="master-docs-content prose max-w-none focus:outline-none flex-1 leading-relaxed z-0"
           />
 
           {/* Footer Area */}
@@ -182,8 +213,8 @@ export function MasterDocsPageCanvas({
             style={{ bottom: `${parseInt(padding) / 3}px`, left: padding, right: padding }}
             className="absolute text-[11px] text-muted-foreground border-t border-border/40 pt-1 flex justify-between items-center select-none"
           >
-            <span>{pageLayout?.footerText || ''}</span>
-            <span className="font-mono text-[10px]">Page 1</span>
+            <span>{pageLayout?.footerText || 'Generated with Master Cloud'}</span>
+            <span className="font-mono text-[10px]">Page 1 of 1</span>
           </div>
         </div>
       </div>

@@ -49,12 +49,29 @@ import {
   Layout,
   Layers,
   ChevronDown,
+  Wand2,
+  GitCompare,
+  FileCheck,
+  PenTool,
+  ShieldCheck,
+  Tag,
+  Book,
+  Rows,
+  Play,
+  Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { CanvasDocData } from '@/types/canvas';
 
-export type RibbonTab = 'file' | 'home' | 'insert' | 'layout' | 'references' | 'review' | 'view';
+export type RibbonTab =
+  | 'file'
+  | 'home'
+  | 'insert'
+  | 'layout'
+  | 'references'
+  | 'automate'
+  | 'review'
+  | 'view';
 
 interface MasterDocsToolbarProps {
   activeTab: RibbonTab;
@@ -76,7 +93,26 @@ interface MasterDocsToolbarProps {
   onToggleFindReplace: () => void;
   onSave: () => void;
   onPrint: () => void;
-  onExport: (format: 'pdf' | 'docx' | 'html' | 'txt' | 'md') => void;
+  onExport: (format: 'pdf' | 'docx' | 'html' | 'txt' | 'md' | 'rtf' | 'json') => void;
+  // Advanced features
+  onOpenStylesModal: () => void;
+  onOpenThemesModal: () => void;
+  onOpenCitationModal: () => void;
+  onOpenDiffModal: () => void;
+  onOpenQualityModal: () => void;
+  onOpenApprovalModal: () => void;
+  onOpenSignatureModal: () => void;
+  onOpenFormBuilderModal: () => void;
+  onOpenMailMergeModal: () => void;
+  onOpenBookBuilderModal: () => void;
+  onOpenSecurityModal: () => void;
+  onOpenPropertiesModal: () => void;
+  onOpenCodeBlockModal: () => void;
+  onOpenReadingMode: () => void;
+  onOpenPresentationMode: () => void;
+  onOpenCommandPalette: () => void;
+  onToggleSplitView: () => void;
+  // View states
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
   showRuler: boolean;
@@ -110,6 +146,23 @@ export function MasterDocsToolbar({
   onSave,
   onPrint,
   onExport,
+  onOpenStylesModal,
+  onOpenThemesModal,
+  onOpenCitationModal,
+  onOpenDiffModal,
+  onOpenQualityModal,
+  onOpenApprovalModal,
+  onOpenSignatureModal,
+  onOpenFormBuilderModal,
+  onOpenMailMergeModal,
+  onOpenBookBuilderModal,
+  onOpenSecurityModal,
+  onOpenPropertiesModal,
+  onOpenCodeBlockModal,
+  onOpenReadingMode,
+  onOpenPresentationMode,
+  onOpenCommandPalette,
+  onToggleSplitView,
   zoomLevel,
   setZoomLevel,
   showRuler,
@@ -122,7 +175,7 @@ export function MasterDocsToolbar({
   setIsDocDarkMode,
 }: MasterDocsToolbarProps) {
   const [selectedFont, setSelectedFont] = useState('Inter');
-  const [selectedFontSize, setSelectedFontSize] = useState('3'); // HTML fontSize 1-7
+  const [selectedFontSize, setSelectedFontSize] = useState('3');
   const [tableGridHover, setTableGridHover] = useState({ r: 2, c: 2 });
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
 
@@ -133,6 +186,7 @@ export function MasterDocsToolbar({
     { label: 'Times New Roman', value: '"Times New Roman", serif' },
     { label: 'Georgia', value: 'Georgia, serif' },
     { label: 'JetBrains Mono (Code)', value: '"JetBrains Mono", monospace' },
+    { label: 'Playfair Display', value: '"Playfair Display", serif' },
   ];
 
   const fontSizes = [
@@ -150,547 +204,699 @@ export function MasterDocsToolbar({
     onExecCommand('fontName', val);
   };
 
-  const handleSizeChange = (val: string) => {
+  const handleFontSizeChange = (val: string) => {
     setSelectedFontSize(val);
     onExecCommand('fontSize', val);
   };
 
-  const handleInsertDate = () => {
-    const today = new Date().toLocaleDateString(undefined, { dateStyle: 'long' });
-    onExecCommand('insertText', today);
-  };
-
-  const handleInsertDivider = () => {
-    onExecCommand('insertHorizontalRule');
+  const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          onInsertImage(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
-    <div className="flex flex-col border-b border-border/80 bg-card/95 backdrop-blur-md select-none shrink-0">
-      {/* ── 1. Top Ribbon Navigation Tabs ──────────────────────────────── */}
-      <div className="flex items-center gap-1 px-4 pt-1.5 border-b border-border/60 bg-muted/20">
-        {(['file', 'home', 'insert', 'layout', 'references', 'review', 'view'] as RibbonTab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3.5 py-1.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              activeTab === tab
-                ? 'bg-card text-primary border-t-2 border-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+    <div className="flex flex-col border-b border-border/80 bg-card/70 backdrop-blur-md shrink-0 select-none z-20">
+      {/* ── 1. Ribbon Tabs Header ─────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-3 pt-1 border-b border-border/50 bg-muted/30">
+        <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none">
+          {(
+            [
+              { id: 'file', label: 'File' },
+              { id: 'home', label: 'Home' },
+              { id: 'insert', label: 'Insert' },
+              { id: 'layout', label: 'Layout' },
+              { id: 'references', label: 'References' },
+              { id: 'automate', label: 'Automate' },
+              { id: 'review', label: 'Review' },
+              { id: 'view', label: 'View' },
+            ] as { id: RibbonTab; label: string }[]
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all relative ${
+                activeTab === tab.id
+                  ? 'bg-card text-primary shadow-xs after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Quick Command Palette Button */}
+        <button
+          onClick={onOpenCommandPalette}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground border border-border/60 bg-background/50 transition-colors"
+          title="Command Palette (Ctrl+Shift+P)"
+        >
+          <Search className="h-3 w-3" />
+          <span className="hidden md:inline">Command Palette</span>
+          <kbd className="text-[9px] bg-muted px-1 py-0.2 rounded font-mono">⌘K</kbd>
+        </button>
       </div>
 
-      {/* ── 2. Active Tab Toolbar Actions ───────────────────────────────── */}
-      <div className="flex items-center gap-2 p-2 overflow-x-auto min-h-[52px]">
-
-        {/* ── TAB: FILE ─────────────────────────────────────────────────── */}
+      {/* ── 2. Active Tab Ribbon Content ──────────────────────────────────── */}
+      <div className="flex items-center gap-1 px-3 py-1.5 overflow-x-auto min-h-[44px] text-xs">
+        {/* ──────── TAB: FILE ──────── */}
         {activeTab === 'file' && (
-          <div className="flex items-center gap-1.5">
-            <Button size="sm" variant="ghost" onClick={onSave} className="rounded-xl text-xs h-8 gap-1.5 font-bold text-primary">
-              <Save className="h-3.5 w-3.5" /> Save
+          <div className="flex items-center gap-1.5 animate-in fade-in duration-150">
+            <Button size="sm" variant="ghost" onClick={onSave} className="h-8 gap-1.5 px-2.5 font-semibold text-xs">
+              <Save className="h-3.5 w-3.5 text-primary" /> Save
             </Button>
-            <Button size="sm" variant="ghost" onClick={onOpenTemplates} className="rounded-xl text-xs h-8 gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Templates
+            <Button size="sm" variant="ghost" onClick={onOpenTemplates} className="h-8 gap-1.5 px-2.5 font-semibold text-xs">
+              <FolderOpen className="h-3.5 w-3.5 text-amber-500" /> Templates
             </Button>
-            <div className="h-4 w-px bg-border mx-1" />
+            <Button size="sm" variant="ghost" onClick={onOpenPropertiesModal} className="h-8 gap-1.5 px-2.5 font-semibold text-xs">
+              <Tag className="h-3.5 w-3.5 text-indigo-500" /> Properties
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onOpenSecurityModal} className="h-8 gap-1.5 px-2.5 font-semibold text-xs">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Security
+            </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button size="sm" variant="ghost" className="rounded-xl text-xs h-8 gap-1.5">
-                  <Download className="h-3.5 w-3.5 text-blue-500" /> Download As <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="left" className="w-48">
-                <DropdownMenuItem onClick={() => onExport('docx')}>
-                  <FileText className="h-4 w-4 mr-2 text-blue-600" /> Word Document (.docx)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('pdf')}>
-                  <Printer className="h-4 w-4 mr-2 text-rose-500" /> PDF Document (.pdf)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('html')}>
-                  <FileDown className="h-4 w-4 mr-2 text-indigo-500" /> Web Page (.html)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('txt')}>
-                  <FileDown className="h-4 w-4 mr-2 text-muted-foreground" /> Plain Text (.txt)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('md')}>
-                  <FileDown className="h-4 w-4 mr-2 text-emerald-500" /> Markdown (.md)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="h-5 w-px bg-border mx-1" />
 
-            <Button size="sm" variant="ghost" onClick={onPrint} className="rounded-xl text-xs h-8 gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => onExport('docx')} className="h-8 gap-1 px-2 text-xs">
+              <Download className="h-3.5 w-3.5 text-blue-500" /> DOCX
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onExport('pdf')} className="h-8 gap-1 px-2 text-xs">
+              <Download className="h-3.5 w-3.5 text-rose-500" /> PDF
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onExport('html')} className="h-8 gap-1 px-2 text-xs">
+              <Download className="h-3.5 w-3.5 text-emerald-500" /> HTML
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onExport('md')} className="h-8 gap-1 px-2 text-xs">
+              <Download className="h-3.5 w-3.5 text-violet-500" /> Markdown
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onExport('rtf')} className="h-8 gap-1 px-2 text-xs">
+              <Download className="h-3.5 w-3.5 text-amber-500" /> RTF
+            </Button>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            <Button size="sm" variant="ghost" onClick={onPrint} className="h-8 gap-1.5 px-2.5 font-semibold text-xs">
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
           </div>
         )}
 
-        {/* ── TAB: HOME ─────────────────────────────────────────────────── */}
+        {/* ──────── TAB: HOME ──────── */}
         {activeTab === 'home' && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Font Family */}
+          <div className="flex items-center gap-1 animate-in fade-in duration-150">
+            {/* Styles Modal Button */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenStylesModal}
+              className="h-8 gap-1.5 px-2.5 font-bold text-xs bg-primary/5 text-primary border-primary/30 mr-1"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Styles Manager
+            </Button>
+
+            {/* Font Family Selector */}
             <select
               value={selectedFont}
               onChange={(e) => handleFontChange(e.target.value)}
-              className="h-8 px-2.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-primary font-medium"
+              className="h-8 px-2 rounded-lg bg-background border border-border text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             >
               {fontFamilies.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
               ))}
             </select>
 
-            {/* Font Size */}
+            {/* Font Size Selector */}
             <select
               value={selectedFontSize}
-              onChange={(e) => handleSizeChange(e.target.value)}
-              className="h-8 px-2 text-xs rounded-xl border border-border bg-background focus:outline-none focus:border-primary"
+              onChange={(e) => handleFontSizeChange(e.target.value)}
+              className="h-8 px-2 rounded-lg bg-background border border-border text-xs focus:ring-1 focus:ring-primary focus:outline-none"
             >
               {fontSizes.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
               ))}
             </select>
 
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-5 w-px bg-border mx-1" />
 
-            {/* Basic Styles */}
-            <button
-              onClick={() => onExecCommand('bold')}
-              title="Bold (Ctrl+B)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Bold className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('italic')}
-              title="Italic (Ctrl+I)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Italic className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('underline')}
-              title="Underline (Ctrl+U)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Underline className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('strikeThrough')}
-              title="Strikethrough"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Strikethrough className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('subscript')}
-              title="Subscript"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Subscript className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('superscript')}
-              title="Superscript"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Superscript className="h-4 w-4" />
-            </button>
-
-            {/* Text Color Picker */}
-            <div className="relative flex items-center">
-              <input
-                type="color"
-                title="Text Color"
-                onChange={(e) => onExecCommand('foreColor', e.target.value)}
-                className="w-7 h-7 p-0.5 rounded-lg border border-border bg-background cursor-pointer"
-              />
+            {/* Basic Formatting */}
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onExecCommand('bold')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Bold (Ctrl+B)"
+              >
+                <Bold className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('italic')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Italic (Ctrl+I)"
+              >
+                <Italic className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('underline')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Underline (Ctrl+U)"
+              >
+                <Underline className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('strikeThrough')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Strikethrough"
+              >
+                <Strikethrough className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('subscript')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Subscript"
+              >
+                <Subscript className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('superscript')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Superscript"
+              >
+                <Superscript className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Highlight Color Picker */}
-            <div className="relative flex items-center">
-              <input
-                type="color"
-                defaultValue="#fef08a"
-                title="Highlight Background Color"
-                onChange={(e) => onExecCommand('hiliteColor', e.target.value)}
-                className="w-7 h-7 p-0.5 rounded-lg border border-border bg-background cursor-pointer"
-              />
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* Colors */}
+            <div className="flex items-center gap-1.5">
+              <label className="flex items-center gap-1 cursor-pointer p-1 rounded-lg hover:bg-accent text-[11px]" title="Text Color">
+                <span className="font-bold text-xs text-foreground">A</span>
+                <input
+                  type="color"
+                  defaultValue="#1e293b"
+                  onChange={(e) => onExecCommand('foreColor', e.target.value)}
+                  className="w-4 h-4 rounded cursor-pointer border-0 p-0"
+                />
+              </label>
+
+              <label className="flex items-center gap-1 cursor-pointer p-1 rounded-lg hover:bg-accent text-[11px]" title="Highlight Color">
+                <span className="p-0.5 bg-yellow-300 rounded text-slate-900 font-bold text-[10px]">H</span>
+                <input
+                  type="color"
+                  defaultValue="#fef08a"
+                  onChange={(e) => onExecCommand('hiliteColor', e.target.value)}
+                  className="w-4 h-4 rounded cursor-pointer border-0 p-0"
+                />
+              </label>
             </div>
 
-            <button
-              onClick={() => onExecCommand('removeFormat')}
-              title="Clear Formatting"
-              className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <Eraser className="h-4 w-4" />
-            </button>
-
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-5 w-px bg-border mx-1" />
 
             {/* Alignment */}
-            <button
-              onClick={() => onExecCommand('justifyLeft')}
-              title="Align Left (Ctrl+L)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <AlignLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('justifyCenter')}
-              title="Center (Ctrl+E)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <AlignCenter className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('justifyRight')}
-              title="Align Right (Ctrl+R)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <AlignRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('justifyFull')}
-              title="Justify (Ctrl+J)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <AlignJustify className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onExecCommand('justifyLeft')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Align Left"
+              >
+                <AlignLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('justifyCenter')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Align Center"
+              >
+                <AlignCenter className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('justifyRight')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Align Right"
+              >
+                <AlignRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('justifyFull')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Justify"
+              >
+                <AlignJustify className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-5 w-px bg-border mx-1" />
 
             {/* Lists */}
-            <button
-              onClick={() => onExecCommand('insertUnorderedList')}
-              title="Bulleted List"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('insertOrderedList')}
-              title="Numbered List"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <ListOrdered className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('formatBlock', 'blockquote')}
-              title="Quote Block"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Quote className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onExecCommand('formatBlock', 'pre')}
-              title="Code Block"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
-            >
-              <Code className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onExecCommand('insertUnorderedList')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Bulleted List"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onExecCommand('insertOrderedList')}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+                title="Numbered List"
+              >
+                <ListOrdered className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div className="h-4 w-px bg-border mx-0.5" />
+            <div className="h-5 w-px bg-border mx-1" />
 
-            {/* Heading Presets */}
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button size="sm" variant="outline" className="rounded-xl text-xs h-8 gap-1 font-semibold">
-                  Styles <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="left" className="w-44">
-                <DropdownMenuItem onClick={() => onExecCommand('formatBlock', 'p')}>
-                  Normal Text (Paragraph)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExecCommand('formatBlock', 'h1')} className="font-bold text-base">
-                  Heading 1 (H1)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExecCommand('formatBlock', 'h2')} className="font-bold text-sm">
-                  Heading 2 (H2)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExecCommand('formatBlock', 'h3')} className="font-bold text-xs">
-                  Heading 3 (H3)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Headings Presets */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onExecCommand('formatBlock', '<h1>')}
+                className="px-2 py-1 rounded-lg hover:bg-accent text-[11px] font-bold text-foreground"
+                title="Heading 1"
+              >
+                H1
+              </button>
+              <button
+                onClick={() => onExecCommand('formatBlock', '<h2>')}
+                className="px-2 py-1 rounded-lg hover:bg-accent text-[11px] font-semibold text-foreground"
+                title="Heading 2"
+              >
+                H2
+              </button>
+              <button
+                onClick={() => onExecCommand('formatBlock', '<h3>')}
+                className="px-2 py-1 rounded-lg hover:bg-accent text-[11px] font-medium text-foreground"
+                title="Heading 3"
+              >
+                H3
+              </button>
+            </div>
 
-            {/* Find & Replace Toggle */}
+            <div className="h-5 w-px bg-border mx-1" />
+
             <button
               onClick={onToggleFindReplace}
-              title="Find & Replace (Ctrl+F / Ctrl+H)"
-              className="p-1.5 rounded-lg text-foreground hover:bg-accent transition-colors"
+              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+              title="Find & Replace (Ctrl+F)"
             >
               <Search className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        {/* ── TAB: INSERT ───────────────────────────────────────────────── */}
+        {/* ──────── TAB: INSERT ──────── */}
         {activeTab === 'insert' && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Insert Image */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const url = prompt('Enter image URL (or paste image directly into document):');
-                if (url) onInsertImage(url);
-              }}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
-            >
-              <ImageIcon className="h-3.5 w-3.5 text-blue-500" /> Image
-            </Button>
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            {/* Table Dropdown Picker */}
+            <div className="relative">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsTableDropdownOpen(!isTableDropdownOpen)}
+                className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+              >
+                <TableIcon className="h-3.5 w-3.5 text-blue-500" /> Table <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
 
-            {/* Insert Table Grid Picker */}
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button size="sm" variant="outline" className="rounded-xl text-xs h-8 gap-1.5 font-semibold">
-                  <TableIcon className="h-3.5 w-3.5 text-emerald-500" /> Table <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="left" className="p-3">
-                <p className="text-[11px] font-bold text-muted-foreground mb-2">
-                  Insert Table ({tableGridHover.r} &times; {tableGridHover.c})
-                </p>
-                <div className="grid grid-cols-6 gap-1 bg-muted/40 p-2 rounded-xl border border-border">
-                  {[1, 2, 3, 4, 5, 6].map((r) =>
-                    [1, 2, 3, 4, 5, 6].map((c) => {
-                      const isHovered = r <= tableGridHover.r && c <= tableGridHover.c;
-                      return (
+              {isTableDropdownOpen && (
+                <div className="absolute top-10 left-0 z-50 p-3 bg-card border border-border shadow-xl rounded-xl w-48 space-y-2">
+                  <div className="text-[11px] font-bold text-foreground">
+                    Insert Table ({tableGridHover.r} &times; {tableGridHover.c})
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {Array.from({ length: 5 }).map((_, r) =>
+                      Array.from({ length: 5 }).map((_, c) => (
                         <div
                           key={`${r}-${c}`}
-                          onMouseEnter={() => setTableGridHover({ r, c })}
+                          onMouseEnter={() => setTableGridHover({ r: r + 1, c: c + 1 })}
                           onClick={() => {
-                            onInsertTable(r, c);
+                            onInsertTable(r + 1, c + 1);
                             setIsTableDropdownOpen(false);
                           }}
-                          className={`w-4 h-4 rounded border transition-colors cursor-pointer ${
-                            isHovered ? 'bg-primary border-primary' : 'bg-background border-border hover:border-primary'
+                          className={`h-5 rounded-xs border cursor-pointer transition-colors ${
+                            r < tableGridHover.r && c < tableGridHover.c
+                              ? 'bg-primary/40 border-primary'
+                              : 'bg-muted border-border hover:bg-accent'
                           }`}
                         />
-                      );
-                    })
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+            </div>
 
-            {/* Insert Link */}
+            {/* Image Inserter */}
+            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-background hover:bg-accent cursor-pointer text-xs font-semibold transition-colors">
+              <ImageIcon className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Image</span>
+              <input type="file" accept="image/*" onChange={handleLocalImageUpload} className="hidden" />
+            </label>
+
+            {/* Hyperlink */}
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                const url = prompt('Enter Hyperlink URL (e.g. https://example.com):');
+                const url = prompt('Enter website URL:');
                 if (url) onInsertLink(url);
               }}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
             >
-              <LinkIcon className="h-3.5 w-3.5 text-purple-500" /> Link
+              <LinkIcon className="h-3.5 w-3.5 text-sky-500" /> Link
             </Button>
 
-            {/* Insert Math / LaTeX Equation */}
+            {/* Interactive Forms */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenFormBuilderModal}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+            >
+              <CheckSquare className="h-3.5 w-3.5 text-indigo-500" /> Form Field
+            </Button>
+
+            {/* Code Block Modal */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenCodeBlockModal}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+            >
+              <Code className="h-3.5 w-3.5 text-cyan-500" /> Code Snippet
+            </Button>
+
+            {/* LaTeX Equations */}
             <Button
               size="sm"
               variant="outline"
               onClick={onInsertEquation}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
             >
-              <Sigma className="h-3.5 w-3.5 text-indigo-500" /> Equation
+              <Sigma className="h-3.5 w-3.5 text-purple-500" /> Equation
             </Button>
 
-            {/* Insert Callout Note Box */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onInsertCallout}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
-            >
-              <Quote className="h-3.5 w-3.5 text-amber-500" /> Callout Note
-            </Button>
-
-            <div className="h-4 w-px bg-border mx-1" />
-
-            {/* Special Elements */}
-            <Button size="sm" variant="ghost" onClick={handleInsertDivider} className="rounded-xl text-xs h-8 gap-1">
-              <Minus className="h-3.5 w-3.5" /> Divider
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleInsertDate} className="rounded-xl text-xs h-8 gap-1">
-              <Calendar className="h-3.5 w-3.5" /> Date
-            </Button>
-          </div>
-        )}
-
-        {/* ── TAB: LAYOUT ───────────────────────────────────────────────── */}
-        {activeTab === 'layout' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Page Size */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Size:</span>
-              <select
-                value={pageLayout?.size || 'A4'}
-                onChange={(e) => onUpdateLayout({ size: e.target.value as any })}
-                className="h-8 px-2 text-xs rounded-xl border border-border bg-background font-medium"
-              >
-                <option value="A4">A4 (210 &times; 297 mm)</option>
-                <option value="Letter">Letter (8.5 &times; 11 in)</option>
-                <option value="Legal">Legal (8.5 &times; 14 in)</option>
-                <option value="A3">A3 (297 &times; 420 mm)</option>
-                <option value="A5">A5 (148 &times; 210 mm)</option>
-              </select>
-            </div>
-
-            {/* Orientation */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Orientation:</span>
-              <select
-                value={pageLayout?.orientation || 'portrait'}
-                onChange={(e) => onUpdateLayout({ orientation: e.target.value as any })}
-                className="h-8 px-2 text-xs rounded-xl border border-border bg-background font-medium"
-              >
-                <option value="portrait">Portrait</option>
-                <option value="landscape">Landscape</option>
-              </select>
-            </div>
-
-            {/* Margins */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Margins:</span>
-              <select
-                value={pageLayout?.margins || 'normal'}
-                onChange={(e) => onUpdateLayout({ margins: e.target.value as any })}
-                className="h-8 px-2 text-xs rounded-xl border border-border bg-background font-medium"
-              >
-                <option value="normal">Normal (1.0 in)</option>
-                <option value="narrow">Narrow (0.5 in)</option>
-                <option value="moderate">Moderate (0.75 in)</option>
-                <option value="wide">Wide (1.5 in)</option>
-              </select>
-            </div>
-
-            {/* Columns */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Columns:</span>
-              <select
-                value={pageLayout?.columns || 1}
-                onChange={(e) => onUpdateLayout({ columns: parseInt(e.target.value, 10) as any })}
-                className="h-8 px-2 text-xs rounded-xl border border-border bg-background font-medium"
-              >
-                <option value="1">1 Column</option>
-                <option value="2">2 Columns</option>
-                <option value="3">3 Columns</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* ── TAB: REFERENCES ───────────────────────────────────────────── */}
-        {activeTab === 'references' && (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onInsertTOC}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold text-primary"
-            >
-              <BookOpen className="h-3.5 w-3.5" /> Insert Table of Contents
-            </Button>
+            {/* Footnote */}
             <Button
               size="sm"
               variant="outline"
               onClick={onInsertFootnote}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
             >
-              <FileText className="h-3.5 w-3.5" /> Insert Footnote
+              <Quote className="h-3.5 w-3.5 text-amber-500" /> Footnote
             </Button>
-          </div>
-        )}
 
-        {/* ── TAB: REVIEW ───────────────────────────────────────────────── */}
-        {activeTab === 'review' && (
-          <div className="flex items-center gap-2">
+            {/* Callout Box */}
             <Button
               size="sm"
               variant="outline"
-              onClick={onOpenWordCount}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
+              onClick={onInsertCallout}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
             >
-              <FileText className="h-3.5 w-3.5 text-blue-500" /> Word Count Statistics
-            </Button>
-            <Button
-              size="sm"
-              variant={isCommentsOpen ? 'default' : 'outline'}
-              onClick={onToggleComments}
-              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
-            >
-              <MessageSquare className="h-3.5 w-3.5" /> Comments &amp; Review
+              <FileText className="h-3.5 w-3.5 text-rose-500" /> Callout
             </Button>
           </div>
         )}
 
-        {/* ── TAB: VIEW ─────────────────────────────────────────────────── */}
-        {activeTab === 'view' && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Zoom:</span>
-              <select
-                value={zoomLevel}
-                onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                className="h-8 px-2 text-xs rounded-xl border border-border bg-background font-medium"
-              >
-                <option value="0.5">50%</option>
-                <option value="0.75">75%</option>
-                <option value="1">100% (Normal)</option>
-                <option value="1.25">125%</option>
-                <option value="1.5">150%</option>
-                <option value="2">200%</option>
-              </select>
+        {/* ──────── TAB: LAYOUT ──────── */}
+        {activeTab === 'layout' && (
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            {/* Themes Modal */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenThemesModal}
+              className="h-8 gap-1.5 px-2.5 font-bold text-xs bg-primary/5 text-primary border-primary/30"
+            >
+              <Palette className="h-3.5 w-3.5" /> Themes & Palettes
+            </Button>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* Page Size */}
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-[11px] font-semibold">Size:</span>
+              {(['A4', 'Letter', 'Legal', 'A3', 'A5'] as const).map((sz) => (
+                <button
+                  key={sz}
+                  onClick={() => onUpdateLayout({ size: sz })}
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    (pageLayout?.size || 'A4') === sz ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent'
+                  }`}
+                >
+                  {sz}
+                </button>
+              ))}
             </div>
 
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="h-5 w-px bg-border mx-1" />
 
-            <Button
-              size="sm"
-              variant={showRuler ? 'default' : 'outline'}
-              onClick={() => setShowRuler(!showRuler)}
-              className="rounded-xl text-xs h-8 gap-1 font-semibold"
-            >
-              Ruler: {showRuler ? 'ON' : 'OFF'}
-            </Button>
+            {/* Orientation */}
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-[11px] font-semibold">Orientation:</span>
+              <button
+                onClick={() => onUpdateLayout({ orientation: 'portrait' })}
+                className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                  (pageLayout?.orientation || 'portrait') === 'portrait'
+                    ? 'bg-primary text-primary-foreground font-bold'
+                    : 'hover:bg-accent'
+                }`}
+              >
+                Portrait
+              </button>
+              <button
+                onClick={() => onUpdateLayout({ orientation: 'landscape' })}
+                className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                  pageLayout?.orientation === 'landscape' ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent'
+                }`}
+              >
+                Landscape
+              </button>
+            </div>
 
-            <Button
-              size="sm"
-              variant={isOutlineOpen ? 'default' : 'outline'}
-              onClick={onToggleOutline}
-              className="rounded-xl text-xs h-8 gap-1 font-semibold"
-            >
-              Document Outline
-            </Button>
+            <div className="h-5 w-px bg-border mx-1" />
 
-            <Button
-              size="sm"
-              variant={isDocDarkMode ? 'default' : 'outline'}
-              onClick={() => setIsDocDarkMode(!isDocDarkMode)}
-              className="rounded-xl text-xs h-8 gap-1 font-semibold"
-            >
-              Dark Sheet Mode
+            {/* Margins */}
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-[11px] font-semibold">Margins:</span>
+              {(['normal', 'narrow', 'moderate', 'wide'] as const).map((mg) => (
+                <button
+                  key={mg}
+                  onClick={() => onUpdateLayout({ margins: mg })}
+                  className={`px-2 py-1 rounded-lg text-xs capitalize font-medium ${
+                    (pageLayout?.margins || 'normal') === mg ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent'
+                  }`}
+                >
+                  {mg}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* Columns */}
+            <div className="flex items-center gap-1">
+              <Columns className="h-3.5 w-3.5 text-muted-foreground" />
+              {[1, 2, 3].map((cols) => (
+                <button
+                  key={cols}
+                  onClick={() => onUpdateLayout({ columns: cols as any })}
+                  className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                    (pageLayout?.columns || 1) === cols ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent'
+                  }`}
+                >
+                  {cols} Col
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ──────── TAB: REFERENCES ──────── */}
+        {activeTab === 'references' && (
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            <Button size="sm" variant="outline" onClick={onInsertTOC} className="h-8 gap-1.5 px-2.5 text-xs font-semibold">
+              <BookOpen className="h-3.5 w-3.5 text-primary" /> Table of Contents
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="rounded-xl text-xs h-8 gap-1 font-semibold"
+              onClick={onOpenCitationModal}
+              className="h-8 gap-1.5 px-2.5 font-bold text-xs bg-primary/5 text-primary border-primary/30"
             >
-              {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              {isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+              <Quote className="h-3.5 w-3.5" /> Citations & Bibliography
+            </Button>
+
+            <Button size="sm" variant="outline" onClick={onInsertFootnote} className="h-8 gap-1.5 px-2.5 text-xs font-semibold">
+              <Quote className="h-3.5 w-3.5 text-amber-500" /> Insert Footnote
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenBookBuilderModal}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+            >
+              <Book className="h-3.5 w-3.5 text-indigo-500" /> Book & Chapter Builder
             </Button>
           </div>
         )}
 
+        {/* ──────── TAB: AUTOMATE ──────── */}
+        {activeTab === 'automate' && (
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenMailMergeModal}
+              className="h-8 gap-1.5 px-2.5 font-bold text-xs bg-primary/5 text-primary border-primary/30"
+            >
+              <Wand2 className="h-3.5 w-3.5" /> Mail Merge & Variables
+            </Button>
+
+            <span className="text-[11px] text-muted-foreground">
+              Embed placeholders <code className="bg-background px-1 py-0.5 rounded font-mono text-primary">&#123;&#123;name&#125;&#125;</code> and run batch generation from CSV datasets.
+            </span>
+          </div>
+        )}
+
+        {/* ──────── TAB: REVIEW ──────── */}
+        {activeTab === 'review' && (
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenQualityModal}
+              className="h-8 gap-1.5 px-2.5 font-bold text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" /> Quality & Health Audit
+            </Button>
+
+            <Button size="sm" variant="outline" onClick={onOpenDiffModal} className="h-8 gap-1.5 px-2.5 text-xs font-semibold">
+              <GitCompare className="h-3.5 w-3.5 text-blue-500" /> Document Diff
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenApprovalModal}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+            >
+              <FileCheck className="h-3.5 w-3.5 text-indigo-500" /> Approval Workflow
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenSignatureModal}
+              className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
+            >
+              <PenTool className="h-3.5 w-3.5 text-amber-500" /> Electronic Signature
+            </Button>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            <Button size="sm" variant="ghost" onClick={onOpenWordCount} className="h-8 gap-1.5 px-2 text-xs">
+              <FileText className="h-3.5 w-3.5" /> Word Count
+            </Button>
+
+            <Button
+              size="sm"
+              variant={isCommentsOpen ? 'gradient' : 'ghost'}
+              onClick={onToggleComments}
+              className="h-8 gap-1.5 px-2 text-xs font-semibold"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> Comments
+            </Button>
+          </div>
+        )}
+
+        {/* ──────── TAB: VIEW ──────── */}
+        {activeTab === 'view' && (
+          <div className="flex items-center gap-2 animate-in fade-in duration-150">
+            <Button size="sm" variant="outline" onClick={onOpenReadingMode} className="h-8 gap-1.5 px-2.5 font-bold text-xs">
+              <BookOpen className="h-3.5 w-3.5 text-primary" /> Reading Mode
+            </Button>
+
+            <Button size="sm" variant="outline" onClick={onOpenPresentationMode} className="h-8 gap-1.5 px-2.5 text-xs font-semibold">
+              <Play className="h-3.5 w-3.5 text-emerald-500" /> Presentation
+            </Button>
+
+            <Button size="sm" variant="outline" onClick={onToggleSplitView} className="h-8 gap-1.5 px-2.5 text-xs font-semibold">
+              <Rows className="h-3.5 w-3.5 text-indigo-500" /> Split View
+            </Button>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))}
+                className="px-2 py-1 rounded hover:bg-accent text-xs font-bold"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <span className="text-xs font-mono font-semibold">{Math.round(zoomLevel * 100)}%</span>
+              <button
+                onClick={() => setZoomLevel(Math.min(2.0, zoomLevel + 0.1))}
+                className="px-2 py-1 rounded hover:bg-accent text-xs font-bold"
+                title="Zoom In"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* View Toggles */}
+            <button
+              onClick={() => setShowRuler(!showRuler)}
+              className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                showRuler ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent text-muted-foreground'
+              }`}
+            >
+              Ruler
+            </button>
+
+            <button
+              onClick={onToggleOutline}
+              className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                isOutlineOpen ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent text-muted-foreground'
+              }`}
+            >
+              Outline
+            </button>
+
+            <button
+              onClick={() => setIsDocDarkMode(!isDocDarkMode)}
+              className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                isDocDarkMode ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent text-muted-foreground'
+              }`}
+            >
+              Dark Sheet
+            </button>
+
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground"
+              title="Fullscreen"
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
