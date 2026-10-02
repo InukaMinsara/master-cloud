@@ -1,0 +1,703 @@
+import React, { useState } from 'react';
+import {
+  FileText,
+  Home,
+  PlusCircle,
+  Palette,
+  Sparkles,
+  Play,
+  MonitorPlay,
+  Grid,
+  Save,
+  Download,
+  Printer,
+  Type,
+  Square,
+  Circle,
+  Triangle,
+  Star,
+  ArrowRight,
+  Heart,
+  Image as ImageIcon,
+  Table as TableIcon,
+  BarChart3,
+  PieChart,
+  LineChart,
+  Video,
+  Music,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Trash2,
+  Copy,
+  Scissors,
+  Layers,
+  Clock,
+  CheckCircle2,
+  Maximize2,
+  Sliders,
+  MoveRight,
+  Eye,
+  Settings,
+  HelpCircle,
+  RotateCw,
+} from 'lucide-react';
+import {
+  MasterPresentationData,
+  MasterSlide,
+  MasterSlideObject,
+  SlideAspect,
+  SlideLayoutKind,
+  SlideThemeId,
+  ShapeKind,
+  TransitionType,
+  AnimationType,
+} from '../types';
+import { SlideTemplates } from '../services/SlideTemplates';
+
+interface MasterSlidesToolbarProps {
+  presentation: MasterPresentationData;
+  activeSlide: MasterSlide;
+  selectedObject: MasterSlideObject | null;
+  saveStatus: 'saved' | 'saving' | 'unsaved';
+  onUpdateTitle: (title: string) => void;
+  onAddSlide: (layout?: SlideLayoutKind) => void;
+  onAddObject: (type: MasterSlideObject['type'], shapeKind?: ShapeKind) => void;
+  onUpdateSelectedObject: (updates: Partial<MasterSlideObject>) => void;
+  onDeleteSelectedObject: () => void;
+  onDuplicateSelectedObject: () => void;
+  onChangeSlideTheme: (theme: SlideThemeId) => void;
+  onChangeSlideLayout: (layout: SlideLayoutKind) => void;
+  onChangeTransition: (type: TransitionType, duration: number, applyAll?: boolean) => void;
+  onChangeAnimation: (type: AnimationType) => void;
+  onChangeAspect: (aspect: SlideAspect) => void;
+  onStartPresentation: (startFromCurrent?: boolean) => void;
+  onOpenPresenterView: () => void;
+  onOpenThemesModal: () => void;
+  onOpenTemplatesModal: () => void;
+  onOpenSorterModal: () => void;
+  onExportHtml: () => void;
+  onExportPdf: () => void;
+  onExportJson: () => void;
+  onSaveManual: () => void;
+  zoomLevel: number;
+  onChangeZoom: (level: number) => void;
+}
+
+type TabType = 'FILE' | 'HOME' | 'INSERT' | 'DESIGN' | 'TRANSITIONS' | 'ANIMATIONS' | 'SLIDESHOW' | 'VIEW';
+
+export function MasterSlidesToolbar({
+  presentation,
+  activeSlide,
+  selectedObject,
+  saveStatus,
+  onUpdateTitle,
+  onAddSlide,
+  onAddObject,
+  onUpdateSelectedObject,
+  onDeleteSelectedObject,
+  onDuplicateSelectedObject,
+  onChangeSlideTheme,
+  onChangeSlideLayout,
+  onChangeTransition,
+  onChangeAnimation,
+  onChangeAspect,
+  onStartPresentation,
+  onOpenPresenterView,
+  onOpenThemesModal,
+  onOpenTemplatesModal,
+  onOpenSorterModal,
+  onExportHtml,
+  onExportPdf,
+  onExportJson,
+  onSaveManual,
+  zoomLevel,
+  onChangeZoom,
+}: MasterSlidesToolbarProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('HOME');
+
+  const themes = SlideTemplates.getThemes();
+  const format = selectedObject?.format || {};
+
+  return (
+    <div className="flex flex-col border-b border-border/80 bg-card/60 backdrop-blur-md shrink-0 select-none">
+      {/* Top Main Menu Bar */}
+      <div className="h-12 px-4 flex items-center justify-between border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500 font-black">
+              <BarChart3 className="h-4 w-4" />
+            </div>
+            <div>
+              <input
+                type="text"
+                value={presentation.title}
+                onChange={(e) => onUpdateTitle(e.target.value)}
+                className="font-bold text-sm bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary focus:outline-none px-1 py-0.5 max-w-sm transition-colors text-foreground"
+                placeholder="Untitled Presentation"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-2 border-l border-border/60">
+            {saveStatus === 'saving' && (
+              <span className="flex items-center gap-1 text-amber-500">
+                <Clock className="h-3 w-3 animate-spin" /> Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="flex items-center gap-1 text-emerald-500">
+                <CheckCircle2 className="h-3 w-3" /> Master Cloud Synced
+              </span>
+            )}
+            {saveStatus === 'unsaved' && <span className="text-muted-foreground">Unsaved edits</span>}
+          </div>
+        </div>
+
+        {/* Quick Launch Presentation Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onOpenTemplatesModal()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-bold transition-colors"
+            title="Browse Presentation Templates"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Templates</span>
+          </button>
+
+          <button
+            onClick={() => onOpenThemesModal()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors"
+            title="Change Presentation Theme"
+          >
+            <Palette className="h-3.5 w-3.5" />
+            <span>Themes</span>
+          </button>
+
+          <button
+            onClick={onOpenPresenterView}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted hover:bg-accent text-foreground text-xs font-bold transition-colors border border-border"
+            title="Open Presenter View Studio (Dual Monitor)"
+          >
+            <MonitorPlay className="h-3.5 w-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Presenter Studio</span>
+          </button>
+
+          <button
+            onClick={() => onStartPresentation(false)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition-all shadow-md active:scale-95"
+            title="Start Fullscreen Slideshow (F5)"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
+            <span>Present</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Ribbon Tabs Header */}
+      <div className="flex items-center gap-1 px-3 pt-1 border-b border-border/50 bg-muted/20">
+        {(['HOME', 'INSERT', 'DESIGN', 'TRANSITIONS', 'ANIMATIONS', 'SLIDESHOW', 'VIEW', 'FILE'] as TabType[]).map(
+          (tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 text-xs font-bold tracking-wide rounded-t-lg transition-colors ${
+                activeTab === tab
+                  ? 'bg-card text-primary border-t-2 border-primary shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+              }`}
+            >
+              {tab}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Ribbon Action Drawer Content */}
+      <div className="h-16 px-4 flex items-center gap-4 overflow-x-auto bg-card/70 py-2">
+        {/* TAB 1: HOME */}
+        {activeTab === 'HOME' && (
+          <div className="flex items-center gap-4">
+            {/* Add Slide & Layouts */}
+            <div className="flex items-center gap-1.5 pr-3 border-r border-border/60">
+              <button
+                onClick={() => onAddSlide('title-content')}
+                className="flex flex-col items-center justify-center px-2 py-1 rounded-lg hover:bg-accent text-xs font-medium text-foreground transition-colors"
+                title="Add New Slide"
+              >
+                <PlusCircle className="h-4 w-4 text-primary" />
+                <span className="text-[10px] mt-0.5">New Slide</span>
+              </button>
+
+              <select
+                value={activeSlide.layout}
+                onChange={(e) => onChangeSlideLayout(e.target.value as SlideLayoutKind)}
+                className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                title="Change Slide Layout"
+              >
+                <option value="title">Title Slide</option>
+                <option value="title-content">Title + Content</option>
+                <option value="two-columns">Two Columns</option>
+                <option value="comparison">Comparison</option>
+                <option value="section-header">Section Header</option>
+                <option value="quote">Quote Banner</option>
+                <option value="big-stat">Big Statistic</option>
+                <option value="blank">Blank Slide</option>
+              </select>
+            </div>
+
+            {/* Typography Formatting for Selected Object */}
+            <div className="flex items-center gap-1.5 pr-3 border-r border-border/60">
+              <select
+                disabled={!selectedObject || selectedObject.type !== 'text'}
+                value={format.fontFamily || 'Inter, sans-serif'}
+                onChange={(e) =>
+                  onUpdateSelectedObject({
+                    format: { ...format, fontFamily: e.target.value },
+                  })
+                }
+                className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[120px] disabled:opacity-40"
+              >
+                <option value="Inter, sans-serif">Inter (Modern)</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="Georgia, serif">Georgia (Editorial)</option>
+                <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+              </select>
+
+              <select
+                disabled={!selectedObject || selectedObject.type !== 'text'}
+                value={format.fontSize || 20}
+                onChange={(e) =>
+                  onUpdateSelectedObject({
+                    format: { ...format, fontSize: parseInt(e.target.value, 10) },
+                  })
+                }
+                className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              >
+                {[12, 14, 16, 18, 20, 24, 28, 32, 36, 44, 52, 64, 72].map((size) => (
+                  <option key={size} value={size}>
+                    {size}px
+                  </option>
+                ))}
+              </select>
+
+              <button
+                disabled={!selectedObject || selectedObject.type !== 'text'}
+                onClick={() =>
+                  onUpdateSelectedObject({
+                    format: { ...format, bold: !format.bold },
+                  })
+                }
+                className={`p-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
+                  format.bold ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent border-border'
+                }`}
+                title="Bold"
+              >
+                <Bold className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                disabled={!selectedObject || selectedObject.type !== 'text'}
+                onClick={() =>
+                  onUpdateSelectedObject({
+                    format: { ...format, italic: !format.italic },
+                  })
+                }
+                className={`p-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
+                  format.italic ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent border-border'
+                }`}
+                title="Italic"
+              >
+                <Italic className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                disabled={!selectedObject || selectedObject.type !== 'text'}
+                onClick={() =>
+                  onUpdateSelectedObject({
+                    format: { ...format, underline: !format.underline },
+                  })
+                }
+                className={`p-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
+                  format.underline ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent border-border'
+                }`}
+                title="Underline"
+              >
+                <Underline className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Text Align */}
+              <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-lg border border-border">
+                <button
+                  disabled={!selectedObject || selectedObject.type !== 'text'}
+                  onClick={() => onUpdateSelectedObject({ format: { ...format, align: 'left' } })}
+                  className={`p-1 rounded ${format.align === 'left' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                >
+                  <AlignLeft className="h-3 w-3" />
+                </button>
+                <button
+                  disabled={!selectedObject || selectedObject.type !== 'text'}
+                  onClick={() => onUpdateSelectedObject({ format: { ...format, align: 'center' } })}
+                  className={`p-1 rounded ${format.align === 'center' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                >
+                  <AlignCenter className="h-3 w-3" />
+                </button>
+                <button
+                  disabled={!selectedObject || selectedObject.type !== 'text'}
+                  onClick={() => onUpdateSelectedObject({ format: { ...format, align: 'right' } })}
+                  className={`p-1 rounded ${format.align === 'right' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                >
+                  <AlignRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Colors & Object Actions */}
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs cursor-pointer" title="Text Color">
+                <span className="text-[10px] text-muted-foreground font-medium">Text</span>
+                <input
+                  type="color"
+                  value={format.textColor || '#ffffff'}
+                  onChange={(e) =>
+                    onUpdateSelectedObject({
+                      format: { ...format, textColor: e.target.value },
+                    })
+                  }
+                  className="w-6 h-6 rounded cursor-pointer border border-border bg-transparent"
+                />
+              </label>
+
+              <label className="flex items-center gap-1 text-xs cursor-pointer" title="Fill Color">
+                <span className="text-[10px] text-muted-foreground font-medium">Fill</span>
+                <input
+                  type="color"
+                  value={format.fillColor || '#3b82f6'}
+                  onChange={(e) =>
+                    onUpdateSelectedObject({
+                      format: { ...format, fillColor: e.target.value },
+                    })
+                  }
+                  className="w-6 h-6 rounded cursor-pointer border border-border bg-transparent"
+                />
+              </label>
+
+              {selectedObject && (
+                <div className="flex items-center gap-1 pl-2 border-l border-border/60">
+                  <button
+                    onClick={onDuplicateSelectedObject}
+                    className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground border border-border"
+                    title="Duplicate Object"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={onDeleteSelectedObject}
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive border border-destructive/20"
+                    title="Delete Object"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: INSERT */}
+        {activeTab === 'INSERT' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onAddObject('text')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+            >
+              <Type className="h-4 w-4 text-primary" />
+              <span>Text Box</span>
+            </button>
+
+            {/* Shape Choices */}
+            <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border">
+              <button
+                onClick={() => onAddObject('shape', 'rectangle')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Rectangle"
+              >
+                <Square className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'circle')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Circle"
+              >
+                <Circle className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'triangle')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Triangle"
+              >
+                <Triangle className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'star')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Star"
+              >
+                <Star className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'arrow')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Arrow"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onAddObject('shape', 'heart')}
+                className="p-1.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                title="Heart"
+              >
+                <Heart className="h-4 w-4 text-rose-500" />
+              </button>
+            </div>
+
+            {/* Media & Data */}
+            <button
+              onClick={() => onAddObject('image')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+            >
+              <ImageIcon className="h-4 w-4 text-emerald-500" />
+              <span>Image</span>
+            </button>
+
+            <button
+              onClick={() => onAddObject('table')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+            >
+              <TableIcon className="h-4 w-4 text-indigo-500" />
+              <span>Table</span>
+            </button>
+
+            <button
+              onClick={() => onAddObject('chart')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+            >
+              <BarChart3 className="h-4 w-4 text-cyan-500" />
+              <span>Chart</span>
+            </button>
+
+            <button
+              onClick={() => onAddObject('button')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/60 hover:bg-accent text-xs font-semibold text-foreground border border-border transition-colors"
+            >
+              <Layers className="h-4 w-4 text-amber-500" />
+              <span>Action Button</span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB 3: DESIGN */}
+        {activeTab === 'DESIGN' && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onOpenThemesModal}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-sm"
+            >
+              <Palette className="h-4 w-4" />
+              <span>Theme Studio</span>
+            </button>
+
+            {/* Quick Themes Swatches */}
+            <div className="flex items-center gap-1.5 pr-3 border-r border-border/60">
+              {themes.map((theme) => (
+                <button
+                  key={theme.id}
+                  onClick={() => onChangeSlideTheme(theme.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                    activeSlide.bgTheme === theme.id
+                      ? 'border-primary bg-primary/20 text-foreground font-bold'
+                      : 'border-border/60 hover:border-border text-muted-foreground'
+                  }`}
+                >
+                  {theme.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Aspect Ratio */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground font-medium">Ratio:</span>
+              <button
+                onClick={() => onChangeAspect('16:9')}
+                className={`px-2 py-1 rounded text-xs font-bold border transition-colors ${
+                  presentation.aspectRatio === '16:9'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                16:9
+              </button>
+              <button
+                onClick={() => onChangeAspect('4:3')}
+                className={`px-2 py-1 rounded text-xs font-bold border transition-colors ${
+                  presentation.aspectRatio === '4:3'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                4:3
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: TRANSITIONS */}
+        {activeTab === 'TRANSITIONS' && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground font-medium">Slide Transition:</span>
+            <select
+              value={activeSlide.transition?.type || 'fade'}
+              onChange={(e) => onChangeTransition(e.target.value as TransitionType, 0.5, false)}
+              className="text-xs bg-background border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
+            >
+              <option value="none">None (Instant)</option>
+              <option value="fade">Smooth Fade</option>
+              <option value="slide-left">Slide Left</option>
+              <option value="slide-right">Slide Right</option>
+              <option value="zoom">Zoom Scale</option>
+              <option value="flip">3D Flip</option>
+            </select>
+
+            <button
+              onClick={() => onChangeTransition(activeSlide.transition?.type || 'fade', 0.5, true)}
+              className="px-3 py-1 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              Apply to All Slides
+            </button>
+          </div>
+        )}
+
+        {/* TAB 5: ANIMATIONS */}
+        {activeTab === 'ANIMATIONS' && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground font-medium">Object Animation:</span>
+            <select
+              disabled={!selectedObject}
+              value={selectedObject?.animation?.type || 'none'}
+              onChange={(e) => onChangeAnimation(e.target.value as AnimationType)}
+              className="text-xs bg-background border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold disabled:opacity-40"
+            >
+              <option value="none">None</option>
+              <option value="appear">Appear</option>
+              <option value="fade-in">Fade In</option>
+              <option value="slide-up">Slide Up</option>
+              <option value="slide-down">Slide Down</option>
+              <option value="zoom-in">Zoom In</option>
+              <option value="bounce">Bounce</option>
+            </select>
+          </div>
+        )}
+
+        {/* TAB 6: SLIDESHOW */}
+        {activeTab === 'SLIDESHOW' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onStartPresentation(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm"
+            >
+              <Play className="h-3.5 w-3.5 fill-current" />
+              <span>From Beginning (F5)</span>
+            </button>
+
+            <button
+              onClick={() => onStartPresentation(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <Play className="h-3.5 w-3.5" />
+              <span>From Current Slide</span>
+            </button>
+
+            <button
+              onClick={onOpenPresenterView}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm"
+            >
+              <MonitorPlay className="h-3.5 w-3.5" />
+              <span>Presenter Studio</span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB 7: VIEW */}
+        {activeTab === 'VIEW' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenSorterModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
+            >
+              <Grid className="h-4 w-4 text-primary" />
+              <span>Slide Sorter</span>
+            </button>
+
+            <div className="flex items-center gap-1.5 pl-3 border-l border-border/60">
+              <span className="text-xs text-muted-foreground font-medium">Zoom:</span>
+              {[75, 100, 125].map((level) => (
+                <button
+                  key={level}
+                  onClick={() => onChangeZoom(level)}
+                  className={`px-2 py-1 text-xs rounded border transition-colors ${
+                    zoomLevel === level
+                      ? 'bg-primary text-primary-foreground border-primary font-bold'
+                      : 'border-border text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {level}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 8: FILE */}
+        {activeTab === 'FILE' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onSaveManual}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-sm"
+            >
+              <Save className="h-3.5 w-3.5" />
+              <span>Save (Ctrl+S)</span>
+            </button>
+
+            <button
+              onClick={onExportHtml}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
+            >
+              <Download className="h-3.5 w-3.5 text-amber-500" />
+              <span>Interactive HTML Deck</span>
+            </button>
+
+            <button
+              onClick={onExportPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
+            >
+              <Printer className="h-3.5 w-3.5 text-blue-500" />
+              <span>Print / PDF Export</span>
+            </button>
+
+            <button
+              onClick={onExportJson}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-semibold border border-border"
+            >
+              <FileText className="h-3.5 w-3.5 text-emerald-500" />
+              <span>JSON Raw Deck</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
