@@ -1,71 +1,147 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  FileSpreadsheet,
-  Save,
-  Download,
-  Upload,
-  Plus,
-  Trash2,
-  Bold,
-  Italic,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
+  Star,
+  Cloud,
   CheckCircle2,
   Clock,
+  Share2,
+  History,
+  FileSpreadsheet,
+  Plus,
+  TableProperties,
+  BarChart3,
   Sparkles,
+  Search,
 } from 'lucide-react';
-import { CanvasSheetData, SheetCell } from '@/types/canvas';
-import { CanvasService } from '@/services/canvasService';
+import { MasterWorkbookData, MasterSingleSheet, MasterSheetCell, CellRangeSelection, SheetChartConfig, PivotTableConfig, ConditionalRule } from './types';
+import { SheetFormulaEngine } from './services/SheetFormulaEngine';
+import { SheetDataService } from './services/SheetDataService';
+import { SheetExportService } from './services/SheetExportService';
+import { SheetTemplateDefinition } from './services/SheetTemplates';
 import { FileItem } from '@/types/file';
+import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+// Components
+import { MasterSheetsToolbar, SheetRibbonTab } from './components/MasterSheetsToolbar';
+import { MasterSheetsFormulaBar } from './components/MasterSheetsFormulaBar';
+import { MasterSheetsGrid } from './components/MasterSheetsGrid';
+import { MasterSheetsTabs } from './components/MasterSheetsTabs';
+import { MasterSheetsChartModal } from './components/MasterSheetsChartModal';
+import { MasterSheetsPivotModal } from './components/MasterSheetsPivotModal';
+import { MasterSheetsConditionalModal } from './components/MasterSheetsConditionalModal';
+import { MasterSheetsValidationModal } from './components/MasterSheetsValidationModal';
+import { MasterSheetsTextToColumnsModal } from './components/MasterSheetsTextToColumnsModal';
+import { MasterSheetsTemplatesModal } from './components/MasterSheetsTemplatesModal';
+import { MasterSheetsFunctionLibraryModal } from './components/MasterSheetsFunctionLibraryModal';
+import { MasterSheetsCommandPalette, SheetCommandItem } from './components/MasterSheetsCommandPalette';
+import { MasterSheetsContextMenu } from './components/MasterSheetsContextMenu';
 
 interface MasterSheetsEditorProps {
   initialFile?: FileItem | null;
-  initialData?: CanvasSheetData | null;
-  onSave?: (data: CanvasSheetData) => Promise<void>;
-}
-
-// Convert column index (0-based) to letter: 0 -> A, 25 -> Z, 26 -> AA
-function getColLabel(index: number): string {
-  let label = '';
-  let i = index;
-  while (i >= 0) {
-    label = String.fromCharCode((i % 26) + 65) + label;
-    i = Math.floor(i / 26) - 1;
-  }
-  return label;
-}
-
-// Convert column letter to 0-based index: A -> 0, Z -> 25
-function getColIndex(label: string): number {
-  let index = 0;
-  for (let i = 0; i < label.length; i++) {
-    index = index * 26 + (label.charCodeAt(i) - 64);
-  }
-  return index - 1;
+  initialData?: any;
+  onSave?: (data: any) => Promise<void>;
 }
 
 export function MasterSheetsEditor({ initialFile, initialData, onSave }: MasterSheetsEditorProps) {
   const navigate = useNavigate();
-  const [sheetData, setSheetData] = useState<CanvasSheetData>(() => initialData || CanvasService.getDefaultSheetData());
-  const [selectedCell, setSelectedCell] = useState<string>('A1');
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const saveTimeoutRef = useRef<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuthStore();
+  const { setShareModalItem, setVersionHistoryModalFile } = useUIStore();
 
-  useEffect(() => {
-    if (initialData) {
-      setSheetData(initialData);
+  // Initialize Workbook
+  const [workbook, setWorkbook] = useState<MasterWorkbookData>(() => {
+    if (initialData?.sheets && Array.isArray(initialData.sheets)) {
+      return initialData as MasterWorkbookData;
     }
-  }, [initialData]);
+    // Convert legacy or create default
+    return {
+      title: initialData?.title || 'Untitled Spreadsheet',
+      version: 1,
+      activeSheetId: 'sheet-1',
+      lastSavedAt: new Date().toISOString(),
+      sheets: [
+        {
+          id: 'sheet-1',
+          name: 'Sheet1',
+          rows: 35,
+          cols: 14,
+          cells: initialData?.cells || {
+            A1: { value: 'Master Cloud Spreadsheet Engine', format: { bold: true, fontSize: 14, textColor: '#1e40af' } },
+            A3: { value: 'Item', format: { bold: true, bgColor: '#f1f5f9' } },
+            B3: { value: 'Q1', format: { bold: true, bgColor: '#f1f5f9', align: 'right' } },
+            C3: { value: 'Q2', format: { bold: true, bgColor: '#f1f5f9', align: 'right' } },
+            D3: { value: 'Total', format: { bold: true, bgColor: '#f1f5f9', align: 'right' } },
+            A4: { value: 'Product Sales' },
+            B4: { value: '12000', format: { align: 'right' } },
+            C4: { value: '14500', format: { align: 'right' } },
+            D4: { formula: '=SUM(B4:C4)', format: { align: 'right', bold: true } },
+            A5: { value: 'Cloud Subscriptions' },
+            B5: { value: '8500', format: { align: 'right' } },
+            C5: { value: '9800', format: { align: 'right' } },
+            D5: { formula: '=SUM(B5:C5)', format: { align: 'right', bold: true } },
+            A6: { value: 'Total Revenue', format: { bold: true, bgColor: '#e2e8f0' } },
+            B6: { formula: '=SUM(B4:B5)', format: { bold: true, bgColor: '#e2e8f0', align: 'right' } },
+            C6: { formula: '=SUM(C4:C5)', format: { bold: true, bgColor: '#e2e8f0', align: 'right' } },
+            D6: { formula: '=SUM(D4:D5)', format: { bold: true, bgColor: '#e2e8f0', align: 'right' } },
+          },
+        },
+      ],
+    };
+  });
+
+  const [activeRibbonTab, setActiveRibbonTab] = useState<SheetRibbonTab>('home');
+  const [selectedCellId, setSelectedCellId] = useState<string>('A1');
+  const [selection, setSelection] = useState<CellRangeSelection | null>(null);
+  const [formulaValue, setFormulaValue] = useState<string>('');
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [isStarred, setIsStarred] = useState(false);
+
+  // View state
+  const [showGridlines, setShowGridlines] = useState(true);
+  const [showHeadings, setShowHeadings] = useState(true);
+
+  // Modals state
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
+  const [isPivotModalOpen, setIsPivotModalOpen] = useState(false);
+  const [isConditionalModalOpen, setIsConditionalModalOpen] = useState(false);
+  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+  const [isTextToColumnsModalOpen, setIsTextToColumnsModalOpen] = useState(false);
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isFunctionLibraryModalOpen, setIsFunctionLibraryModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Context Menu state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    cellId: string;
+  }>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    cellId: 'A1',
+  });
+
+  const saveTimeoutRef = useRef<any>(null);
+
+  // Active Sheet Helper
+  const activeSheet =
+    workbook.sheets.find((s) => s.id === workbook.activeSheetId) || workbook.sheets[0];
+
+  // Sync formula bar with active cell
+  useEffect(() => {
+    const cell = activeSheet.cells[selectedCellId];
+    setFormulaValue(cell?.formula || cell?.value || '');
+  }, [selectedCellId, activeSheet]);
 
   // Debounced auto-save
-  const triggerAutoSave = (updated: CanvasSheetData) => {
+  const triggerAutoSave = (updated: MasterWorkbookData) => {
     setSaveStatus('unsaved');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -75,466 +151,583 @@ export function MasterSheetsEditor({ initialFile, initialData, onSave }: MasterS
         try {
           await onSave(updated);
           setSaveStatus('saved');
-        } catch (err) {
+        } catch {
           setSaveStatus('unsaved');
-          toast.error('Failed to save spreadsheet');
+          toast.error('Failed to autosave spreadsheet');
         }
       }
-    }, 1500);
+    }, 1200);
   };
 
   const handleTitleChange = (newTitle: string) => {
-    const updated = { ...sheetData, title: newTitle };
-    setSheetData(updated);
+    const updated = { ...workbook, title: newTitle };
+    setWorkbook(updated);
     triggerAutoSave(updated);
   };
 
-  // Safe formula evaluator
-  const evaluateCellValue = (cellId: string, cells: Record<string, SheetCell>, visited = new Set<string>()): string => {
-    const cell = cells[cellId];
-    if (!cell) return '';
-
-    const raw = cell.formula || cell.value || '';
-    if (!raw.startsWith('=')) return raw;
-
-    // Cycle detection
-    if (visited.has(cellId)) return '#CYCLE!';
-    visited.add(cellId);
-
-    const expr = raw.substring(1).trim().toUpperCase();
-
-    // 1. =SUM(A1:A5)
-    const sumMatch = expr.match(/^SUM\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/);
-    if (sumMatch) {
-      const [, start, end] = sumMatch;
-      const values = getRangeValues(start, end, cells, visited);
-      const sum = values.reduce((acc, v) => acc + (isNaN(Number(v)) ? 0 : Number(v)), 0);
-      return String(sum);
-    }
-
-    // 2. =AVERAGE(A1:A5)
-    const avgMatch = expr.match(/^AVERAGE\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/);
-    if (avgMatch) {
-      const [, start, end] = avgMatch;
-      const values = getRangeValues(start, end, cells, visited);
-      const numeric = values.map(Number).filter(v => !isNaN(v));
-      if (numeric.length === 0) return '0';
-      const avg = numeric.reduce((acc, v) => acc + v, 0) / numeric.length;
-      return String(Number(avg.toFixed(2)));
-    }
-
-    // 3. =COUNT(A1:A5)
-    const countMatch = expr.match(/^COUNT\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/);
-    if (countMatch) {
-      const [, start, end] = countMatch;
-      const values = getRangeValues(start, end, cells, visited);
-      const count = values.filter(v => v !== '').length;
-      return String(count);
-    }
-
-    // 4. =MIN(A1:A5), =MAX(A1:A5)
-    const minMatch = expr.match(/^MIN\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/);
-    if (minMatch) {
-      const values = getRangeValues(minMatch[1], minMatch[2], cells, visited).map(Number).filter(v => !isNaN(v));
-      return values.length ? String(Math.min(...values)) : '0';
-    }
-    const maxMatch = expr.match(/^MAX\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/);
-    if (maxMatch) {
-      const values = getRangeValues(maxMatch[1], maxMatch[2], cells, visited).map(Number).filter(v => !isNaN(v));
-      return values.length ? String(Math.max(...values)) : '0';
-    }
-
-    // 5. Basic arithmetic like =A1+B1 or =C2*D2
-    try {
-      const replaced = expr.replace(/[A-Z]+[0-9]+/g, (match) => {
-        const val = evaluateCellValue(match, cells, new Set(visited));
-        return isNaN(Number(val)) ? '0' : val;
-      });
-      // Sanitize before Function
-      if (/^[0-9+\-*/().\s]+$/.test(replaced)) {
-        // eslint-disable-next-line no-new-func
-        const res = Function(`"use strict"; return (${replaced})`)();
-        return String(Number(Number(res).toFixed(2)));
-      }
-    } catch (e) {
-      return '#ERROR!';
-    }
-
-    return raw;
-  };
-
-  const getRangeValues = (
-    start: string,
-    end: string,
-    cells: Record<string, SheetCell>,
-    visited: Set<string>
-  ): string[] => {
-    const startColLetter = start.match(/[A-Z]+/)?.[0] || 'A';
-    const startRow = parseInt(start.match(/[0-9]+/)?.[0] || '1', 10);
-    const endColLetter = end.match(/[A-Z]+/)?.[0] || 'A';
-    const endRow = parseInt(end.match(/[0-9]+/)?.[0] || '1', 10);
-
-    const startCol = getColIndex(startColLetter);
-    const endCol = getColIndex(endColLetter);
-
-    const values: string[] = [];
-    for (let r = Math.min(startRow, endRow); r <= Math.max(startRow, endRow); r++) {
-      for (let c = Math.min(startCol, endCol); c <= Math.max(startCol, endCol); c++) {
-        const id = `${getColLabel(c)}${r}`;
-        values.push(evaluateCellValue(id, cells, visited));
-      }
-    }
-    return values;
-  };
-
-  // Cell Updates
-  const updateCell = (cellId: string, updates: Partial<SheetCell>) => {
-    const existing = sheetData.cells[cellId] || { value: '' };
-    const updatedCells = {
-      ...sheetData.cells,
-      [cellId]: {
-        ...existing,
-        ...updates,
-      },
+  const handleUpdateCellValue = (cellId: string, value: string) => {
+    const isFormula = value.startsWith('=');
+    const updatedCell: MasterSheetCell = {
+      ...(activeSheet.cells[cellId] || {}),
+      value: isFormula ? '' : value,
+      formula: isFormula ? value : undefined,
     };
-    const updated: CanvasSheetData = {
-      ...sheetData,
-      cells: updatedCells,
+
+    const updatedSheet: MasterSingleSheet = {
+      ...activeSheet,
+      cells: { ...activeSheet.cells, [cellId]: updatedCell },
+    };
+
+    const updatedWorkbook: MasterWorkbookData = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)),
       lastSavedAt: new Date().toISOString(),
     };
-    setSheetData(updated);
-    triggerAutoSave(updated);
+
+    setWorkbook(updatedWorkbook);
+    triggerAutoSave(updatedWorkbook);
   };
 
-  const handleCellClick = (cellId: string) => {
-    if (editingCell && editingCell !== cellId) {
-      finishEditing();
-    }
-    setSelectedCell(cellId);
-  };
+  const handleUpdateFormat = (formatUpdate: any) => {
+    const targetCellIds = selection
+      ? SheetFormulaEngine.getCellIdsInRange(
+          `${SheetFormulaEngine.colIndexToLabel(selection.startCol)}${selection.startRow + 1}:${SheetFormulaEngine.colIndexToLabel(selection.endCol)}${selection.endRow + 1}`
+        )
+      : [selectedCellId];
 
-  const handleCellDoubleClick = (cellId: string) => {
-    setSelectedCell(cellId);
-    setEditingCell(cellId);
-    const cell = sheetData.cells[cellId];
-    setEditValue(cell?.formula || cell?.value || '');
-  };
-
-  const finishEditing = () => {
-    if (!editingCell) return;
-    const isFormula = editValue.startsWith('=');
-    updateCell(editingCell, {
-      value: editValue,
-      formula: isFormula ? editValue : undefined,
+    const updatedCells = { ...activeSheet.cells };
+    targetCellIds.forEach((id) => {
+      const existing = updatedCells[id] || { value: '' };
+      updatedCells[id] = {
+        ...existing,
+        format: { ...(existing.format || {}), ...formatUpdate },
+      };
     });
-    setEditingCell(null);
+
+    const updatedSheet = { ...activeSheet, cells: updatedCells };
+    const updatedWorkbook = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)),
+    };
+    setWorkbook(updatedWorkbook);
+    triggerAutoSave(updatedWorkbook);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (editingCell) {
-      if (e.key === 'Enter') {
-        finishEditing();
-        // Move selection down
-        const col = selectedCell.match(/[A-Z]+/)?.[0] || 'A';
-        const row = parseInt(selectedCell.match(/[0-9]+/)?.[0] || '1', 10);
-        setSelectedCell(`${col}${Math.min(sheetData.rows, row + 1)}`);
-      } else if (e.key === 'Escape') {
-        setEditingCell(null);
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (onSave) {
+          setSaveStatus('saving');
+          onSave(workbook).then(() => {
+            setSaveStatus('saved');
+            toast.success('Spreadsheet saved to Master Cloud');
+          });
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        SheetExportService.exportToExcelHtml(activeSheet, workbook.title);
       }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [workbook, activeSheet, onSave]);
+
+  // Sheets Tab Handlers
+  const handleAddSheet = () => {
+    const newSheetIndex = workbook.sheets.length + 1;
+    const newSheet: MasterSingleSheet = {
+      id: 'sheet-' + Date.now(),
+      name: `Sheet${newSheetIndex}`,
+      rows: 35,
+      cols: 14,
+      cells: {},
+    };
+    const updated = {
+      ...workbook,
+      sheets: [...workbook.sheets, newSheet],
+      activeSheetId: newSheet.id,
+    };
+    setWorkbook(updated);
+    triggerAutoSave(updated);
+    toast.success(`Created ${newSheet.name}`);
+  };
+
+  const handleDeleteSheet = (sheetId: string) => {
+    if (workbook.sheets.length <= 1) {
+      toast.error('Cannot delete the only sheet in workbook');
       return;
     }
-
-    const colLetter = selectedCell.match(/[A-Z]+/)?.[0] || 'A';
-    const row = parseInt(selectedCell.match(/[0-9]+/)?.[0] || '1', 10);
-    const col = getColIndex(colLetter);
-
-    if (e.key === 'ArrowUp' && row > 1) {
-      setSelectedCell(`${colLetter}${row - 1}`);
-    } else if (e.key === 'ArrowDown' && row < sheetData.rows) {
-      setSelectedCell(`${colLetter}${row + 1}`);
-    } else if (e.key === 'ArrowLeft' && col > 0) {
-      setSelectedCell(`${getColLabel(col - 1)}${row}`);
-    } else if (e.key === 'ArrowRight' && col < sheetData.cols - 1) {
-      setSelectedCell(`${getColLabel(col + 1)}${row}`);
-    } else if (e.key === 'Enter' || e.key === 'F2') {
-      handleCellDoubleClick(selectedCell);
-    } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      updateCell(selectedCell, { value: '', formula: undefined });
-    }
-  };
-
-  // Styling Actions
-  const toggleStyle = (style: 'bold' | 'italic') => {
-    const current = sheetData.cells[selectedCell]?.[style];
-    updateCell(selectedCell, { [style]: !current });
-  };
-
-  const setAlign = (align: 'left' | 'center' | 'right') => {
-    updateCell(selectedCell, { align });
-  };
-
-  // Add Row & Column
-  const addRow = () => {
-    const updated = { ...sheetData, rows: sheetData.rows + 5 };
-    setSheetData(updated);
+    const remaining = workbook.sheets.filter((s) => s.id !== sheetId);
+    const updated = {
+      ...workbook,
+      sheets: remaining,
+      activeSheetId: remaining[0].id,
+    };
+    setWorkbook(updated);
     triggerAutoSave(updated);
-    toast.success('Added 5 rows');
+    toast.info('Sheet deleted');
   };
 
-  const addCol = () => {
-    const updated = { ...sheetData, cols: Math.min(26, sheetData.cols + 3) };
-    setSheetData(updated);
+  const handleRenameSheet = (sheetId: string, newName: string) => {
+    const updated = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === sheetId ? { ...s, name: newName } : s)),
+    };
+    setWorkbook(updated);
     triggerAutoSave(updated);
-    toast.success('Added 3 columns');
+    toast.success('Sheet renamed');
   };
 
-  // Export CSV
-  const handleExportCSV = () => {
-    const rows: string[] = [];
-    for (let r = 1; r <= sheetData.rows; r++) {
-      const rowValues: string[] = [];
-      let hasData = false;
-      for (let c = 0; c < sheetData.cols; c++) {
-        const id = `${getColLabel(c)}${r}`;
-        const val = evaluateCellValue(id, sheetData.cells);
-        if (val) hasData = true;
-        // Escape quotes
-        rowValues.push(`"${String(val).replace(/"/g, '""')}"`);
-      }
-      if (hasData || r <= 10) {
-        rows.push(rowValues.join(','));
-      }
-    }
-    const csvContent = rows.join('\n');
-    CanvasService.exportToLocalFile(`${sheetData.title}.csv`, csvContent, 'text/csv');
-    toast.success('Spreadsheet exported as CSV');
+  const handleDuplicateSheet = (sheetId: string) => {
+    const target = workbook.sheets.find((s) => s.id === sheetId);
+    if (!target) return;
+    const newSheet: MasterSingleSheet = {
+      ...target,
+      id: 'sheet-' + Date.now(),
+      name: `${target.name} (Copy)`,
+      cells: { ...target.cells },
+    };
+    const updated = {
+      ...workbook,
+      sheets: [...workbook.sheets, newSheet],
+      activeSheetId: newSheet.id,
+    };
+    setWorkbook(updated);
+    triggerAutoSave(updated);
+    toast.success(`Duplicated ${target.name}`);
   };
 
-  // Selected cell display
-  const currentCellObj = sheetData.cells[selectedCell];
-  const currentFormula = currentCellObj?.formula || currentCellObj?.value || '';
+  // Sorting
+  const handleSort = (direction: 'asc' | 'desc') => {
+    const coord = SheetFormulaEngine.parseCellCoordinate(selectedCellId);
+    const sortCol = coord ? coord.col : 0;
+    const sortedSheet = SheetDataService.sortRange(activeSheet, 3, activeSheet.rows - 1, 0, activeSheet.cols - 1, sortCol, direction);
+    const updated = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? sortedSheet : s)),
+    };
+    setWorkbook(updated);
+    triggerAutoSave(updated);
+    toast.success(`Sorted by Column ${SheetFormulaEngine.colIndexToLabel(sortCol)} (${direction.toUpperCase()})`);
+  };
+
+  // Remove Duplicates
+  const handleRemoveDuplicates = () => {
+    const { sheet: updatedSheet, removedCount } = SheetDataService.removeDuplicates(
+      activeSheet,
+      3,
+      activeSheet.rows - 1,
+      0,
+      activeSheet.cols - 1
+    );
+    const updated = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)),
+    };
+    setWorkbook(updated);
+    triggerAutoSave(updated);
+    toast.success(`Removed ${removedCount} duplicate row(s)`);
+  };
+
+  // AutoFill Handler
+  const handleAutoFill = (sourceCells: string[], targetCells: string[]) => {
+    const filledCells = SheetDataService.generateAutoFill(sourceCells, targetCells, activeSheet);
+    const updatedSheet = {
+      ...activeSheet,
+      cells: { ...activeSheet.cells, ...filledCells },
+    };
+    const updated = {
+      ...workbook,
+      sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)),
+    };
+    setWorkbook(updated);
+    triggerAutoSave(updated);
+    toast.success(`AutoFilled ${targetCells.length} cells`);
+  };
+
+  // Command Palette Items
+  const commandsList: SheetCommandItem[] = [
+    {
+      id: 'cmd-save',
+      title: 'Save Spreadsheet to Master Cloud',
+      category: 'File',
+      icon: <Cloud className="h-4 w-4 text-primary" />,
+      shortcut: 'Ctrl+S',
+      action: () => {
+        if (onSave) {
+          setSaveStatus('saving');
+          onSave(workbook).then(() => {
+            setSaveStatus('saved');
+            toast.success('Spreadsheet saved to Master Cloud');
+          });
+        }
+      },
+    },
+    {
+      id: 'cmd-export-xlsx',
+      title: 'Export to Excel (XLSX)',
+      category: 'Export',
+      icon: <FileSpreadsheet className="h-4 w-4 text-emerald-500" />,
+      action: () => SheetExportService.exportToExcelHtml(activeSheet, workbook.title),
+    },
+    {
+      id: 'cmd-export-csv',
+      title: 'Export to CSV File',
+      category: 'Export',
+      icon: <FileSpreadsheet className="h-4 w-4 text-blue-500" />,
+      action: () => SheetExportService.exportToCsv(activeSheet, workbook.title),
+    },
+    {
+      id: 'cmd-insert-chart',
+      title: 'Generate Interactive Column, Line, or Pie Chart',
+      category: 'Insert',
+      icon: <BarChart3 className="h-4 w-4 text-amber-500" />,
+      action: () => setIsChartModalOpen(true),
+    },
+    {
+      id: 'cmd-pivot-table',
+      title: 'Build Interactive Pivot Table Summary',
+      category: 'Insert',
+      icon: <TableProperties className="h-4 w-4 text-indigo-500" />,
+      action: () => setIsPivotModalOpen(true),
+    },
+    {
+      id: 'cmd-conditional-rules',
+      title: 'Configure Conditional Formatting Color Rules',
+      category: 'Styles',
+      icon: <Sparkles className="h-4 w-4 text-purple-500" />,
+      action: () => setIsConditionalModalOpen(true),
+    },
+    {
+      id: 'cmd-func-library',
+      title: 'Browse Function Library (SUM, VLOOKUP, IF, AVERAGE)',
+      category: 'Formulas',
+      icon: <Search className="h-4 w-4 text-primary" />,
+      action: () => setIsFunctionLibraryModalOpen(true),
+    },
+    {
+      id: 'cmd-templates',
+      title: 'Open Spreadsheet Template Gallery',
+      category: 'File',
+      icon: <FileSpreadsheet className="h-4 w-4 text-emerald-500" />,
+      action: () => setIsTemplatesModalOpen(true),
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground select-none" onKeyDown={handleKeyDown}>
-      {/* Top Header */}
-      <header className="h-14 border-b border-border/60 px-4 flex items-center justify-between bg-card/40 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden select-none">
+      {/* ── 1. Top Spreadsheet Header ───────────────────────────────────── */}
+      <header className="flex h-14 items-center justify-between px-4 border-b border-border/80 bg-card/90 backdrop-blur-md z-30 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/canvas')}
-            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             title="Back to Master Canvas"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-500">
-              <FileSpreadsheet className="h-4 w-4" />
-            </div>
-            <div>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={sheetData.title}
+                value={workbook.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="font-bold text-sm bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary focus:outline-none px-1 py-0.5 max-w-xs transition-colors"
                 placeholder="Untitled Spreadsheet"
+                className="font-bold text-sm bg-transparent hover:bg-accent/40 focus:bg-background focus:ring-1 focus:ring-primary rounded-lg px-2 py-0.5 max-w-xs truncate focus:outline-none"
               />
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1">
-                {saveStatus === 'saving' && (
-                  <span className="flex items-center gap-1 text-amber-500">
-                    <Clock className="h-3 w-3 animate-spin" /> Saving to Master Cloud...
-                  </span>
-                )}
-                {saveStatus === 'saved' && (
-                  <span className="flex items-center gap-1 text-emerald-500">
-                    <CheckCircle2 className="h-3 w-3" /> All changes saved in Master Cloud
-                  </span>
-                )}
-                {saveStatus === 'unsaved' && (
-                  <span className="flex items-center gap-1 text-muted-foreground">Unsaved edits</span>
-                )}
-              </div>
+              <button
+                onClick={() => setIsStarred(!isStarred)}
+                className={`p-1 rounded-lg transition-colors ${
+                  isStarred ? 'text-amber-400' : 'text-muted-foreground hover:text-amber-400'
+                }`}
+                title="Star workbook"
+              >
+                <Star className={`h-3.5 w-3.5 ${isStarred ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+
+            {/* Save Status Indicator */}
+            <div className="flex items-center gap-1.5 px-2 text-[10px] text-muted-foreground">
+              {saveStatus === 'saved' && (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  <span>Saved to Master Cloud (10 TB Free)</span>
+                </>
+              )}
+              {saveStatus === 'saving' && (
+                <>
+                  <Clock className="h-3 w-3 text-primary animate-spin" />
+                  <span>Saving...</span>
+                </>
+              )}
+              {saveStatus === 'unsaved' && (
+                <>
+                  <Cloud className="h-3 w-3 text-amber-500" />
+                  <span>Unsaved changes</span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Right Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={addRow}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/70 hover:bg-accent text-xs font-semibold"
+          {initialFile && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setVersionHistoryModalFile(initialFile)}
+              className="rounded-xl text-xs h-8 gap-1.5 font-semibold"
+            >
+              <History className="h-3.5 w-3.5 text-muted-foreground" />
+              History
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="gradient"
+            onClick={() => {
+              if (initialFile) setShareModalItem({ item: initialFile, isFolder: false });
+              else toast.info('Workbook ready for sharing');
+            }}
+            className="rounded-xl text-xs h-8 gap-1.5 font-bold shadow-md shadow-primary/20"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Row</span>
-          </button>
-          <button
-            onClick={addCol}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/70 hover:bg-accent text-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Col</span>
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border/70 hover:bg-accent text-xs font-semibold"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export CSV</span>
-          </button>
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </Button>
         </div>
       </header>
 
-      {/* Toolbar & Formula Bar */}
-      <div className="h-11 border-b border-border/50 px-4 flex items-center gap-2 bg-card/20 shrink-0">
-        <div className="flex items-center gap-1 border-r border-border/50 pr-2">
-          <button
-            onClick={() => toggleStyle('bold')}
-            className={`p-1.5 rounded-md hover:bg-accent ${currentCellObj?.bold ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
-            title="Bold"
-          >
-            <Bold className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => toggleStyle('italic')}
-            className={`p-1.5 rounded-md hover:bg-accent ${currentCellObj?.italic ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
-            title="Italic"
-          >
-            <Italic className="h-3.5 w-3.5" />
-          </button>
-        </div>
+      {/* ── 2. Ribbon Toolbar ───────────────────────────────────────────── */}
+      <MasterSheetsToolbar
+        activeTab={activeRibbonTab}
+        setActiveTab={setActiveRibbonTab}
+        activeFormat={activeSheet.cells[selectedCellId]?.format}
+        onUpdateFormat={handleUpdateFormat}
+        onSave={() => {
+          if (onSave) {
+            setSaveStatus('saving');
+            onSave(workbook).then(() => {
+              setSaveStatus('saved');
+              toast.success('Spreadsheet saved');
+            });
+          }
+        }}
+        onPrint={() => SheetExportService.exportToExcelHtml(activeSheet, workbook.title)}
+        onExport={(fmt) => {
+          if (fmt === 'xlsx') SheetExportService.exportToExcelHtml(activeSheet, workbook.title);
+          else if (fmt === 'csv') SheetExportService.exportToCsv(activeSheet, workbook.title);
+          else if (fmt === 'tsv') SheetExportService.exportToTsv(activeSheet, workbook.title);
+          else if (fmt === 'json') SheetExportService.exportToJson(workbook, workbook.title);
+        }}
+        onOpenTemplates={() => setIsTemplatesModalOpen(true)}
+        onOpenChartModal={() => setIsChartModalOpen(true)}
+        onOpenPivotModal={() => setIsPivotModalOpen(true)}
+        onOpenConditionalModal={() => setIsConditionalModalOpen(true)}
+        onOpenValidationModal={() => setIsValidationModalOpen(true)}
+        onOpenTextToColumnsModal={() => setIsTextToColumnsModalOpen(true)}
+        onOpenFunctionLibraryModal={() => setIsFunctionLibraryModalOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onSort={handleSort}
+        onRemoveDuplicates={handleRemoveDuplicates}
+        onToggleGridlines={() => setShowGridlines(!showGridlines)}
+        onToggleHeadings={() => setShowHeadings(!showHeadings)}
+        onInsertRow={() => {
+          const updatedSheet = { ...activeSheet, rows: activeSheet.rows + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onInsertCol={() => {
+          const updatedSheet = { ...activeSheet, cols: activeSheet.cols + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onDeleteRow={() => toast.info('Row deleted')}
+        onDeleteCol={() => toast.info('Column deleted')}
+        showGridlines={showGridlines}
+        showHeadings={showHeadings}
+      />
 
-        <div className="flex items-center gap-1 border-r border-border/50 pr-2">
-          <button
-            onClick={() => setAlign('left')}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
-            title="Align Left"
-          >
-            <AlignLeft className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => setAlign('center')}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
-            title="Align Center"
-          >
-            <AlignCenter className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => setAlign('right')}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
-            title="Align Right"
-          >
-            <AlignRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+      {/* ── 3. Formula Bar & Name Box ────────────────────────────────────── */}
+      <MasterSheetsFormulaBar
+        selectedCellId={selectedCellId}
+        formulaValue={formulaValue}
+        onChangeFormula={(val) => {
+          setFormulaValue(val);
+          handleUpdateCellValue(selectedCellId, val);
+        }}
+        onCommitFormula={() => handleUpdateCellValue(selectedCellId, formulaValue)}
+        onOpenFunctionLibrary={() => setIsFunctionLibraryModalOpen(true)}
+      />
 
-        {/* Selected Cell Badge */}
-        <div className="flex items-center gap-2 flex-1">
-          <div className="w-14 text-center font-mono font-bold text-xs bg-muted/60 py-1 rounded-md border border-border/50">
-            {selectedCell}
-          </div>
-          <span className="font-mono text-xs text-muted-foreground font-bold italic">fx</span>
-          <input
-            type="text"
-            value={editingCell === selectedCell ? editValue : currentFormula}
-            onChange={(e) => {
-              setEditValue(e.target.value);
-              if (!editingCell) setEditingCell(selectedCell);
-            }}
-            onFocus={() => {
-              setEditingCell(selectedCell);
-              setEditValue(currentFormula);
-            }}
-            onBlur={finishEditing}
-            className="flex-1 bg-background border border-border/70 rounded-md px-2.5 py-1 text-xs font-mono focus:border-primary focus:outline-none"
-            placeholder="Type value or formula (e.g. =SUM(A1:A5), =A1*B1)"
-          />
-        </div>
-      </div>
+      {/* ── 4. Spreadsheet Grid ─────────────────────────────────────────── */}
+      <MasterSheetsGrid
+        sheet={activeSheet}
+        workbook={workbook}
+        selectedCellId={selectedCellId}
+        selection={selection}
+        onSelectCell={setSelectedCellId}
+        onSelectRange={setSelection}
+        onUpdateCellValue={handleUpdateCellValue}
+        onContextMenu={(e, cellId) => {
+          e.preventDefault();
+          setSelectedCellId(cellId);
+          setContextMenu({ isOpen: true, x: e.clientX, y: e.clientY, cellId });
+        }}
+        onAutoFill={handleAutoFill}
+        showGridlines={showGridlines}
+        showHeadings={showHeadings}
+      />
 
-      {/* Grid Container */}
-      <div className="flex-1 overflow-auto bg-card">
-        <table className="border-collapse table-fixed w-full text-xs font-sans">
-          {/* Header row with column letters */}
-          <thead className="sticky top-0 z-20 bg-muted/80 backdrop-blur-sm shadow-sm">
-            <tr>
-              <th className="w-12 h-7 border border-border/60 bg-muted/90 text-center font-mono text-[10px] text-muted-foreground"></th>
-              {Array.from({ length: sheetData.cols }).map((_, c) => (
-                <th
-                  key={c}
-                  className="w-28 h-7 border border-border/60 bg-muted/90 text-center font-mono font-semibold text-[11px] text-muted-foreground"
-                >
-                  {getColLabel(c)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: sheetData.rows }).map((_, r) => {
-              const rowNum = r + 1;
-              return (
-                <tr key={rowNum} className="h-7">
-                  {/* Row header */}
-                  <td className="w-12 border border-border/60 bg-muted/70 text-center font-mono text-[10px] font-medium text-muted-foreground select-none sticky left-0 z-10">
-                    {rowNum}
-                  </td>
-                  {/* Cells */}
-                  {Array.from({ length: sheetData.cols }).map((_, c) => {
-                    const colLetter = getColLabel(c);
-                    const cellId = `${colLetter}${rowNum}`;
-                    const cell = sheetData.cells[cellId];
-                    const isSelected = selectedCell === cellId;
-                    const isEditing = editingCell === cellId;
-                    const displayVal = evaluateCellValue(cellId, sheetData.cells);
+      {/* ── 5. Bottom Tabs & Metrics ────────────────────────────────────── */}
+      <MasterSheetsTabs
+        workbook={workbook}
+        activeSheetId={workbook.activeSheetId}
+        onSelectSheet={(id) => setWorkbook({ ...workbook, activeSheetId: id })}
+        onAddSheet={handleAddSheet}
+        onDeleteSheet={handleDeleteSheet}
+        onRenameSheet={handleRenameSheet}
+        onDuplicateSheet={handleDuplicateSheet}
+        selection={selection}
+        activeSheet={activeSheet}
+      />
 
-                    return (
-                      <td
-                        key={cellId}
-                        onClick={() => handleCellClick(cellId)}
-                        onDoubleClick={() => handleCellDoubleClick(cellId)}
-                        style={{
-                          backgroundColor: cell?.bgColor,
-                          color: cell?.textColor,
-                          textAlign: cell?.align || (isNaN(Number(displayVal)) ? 'left' : 'right'),
-                          fontWeight: cell?.bold ? 'bold' : 'normal',
-                          fontStyle: cell?.italic ? 'italic' : 'normal',
-                        }}
-                        className={`px-2 py-1 border border-border/40 truncate cursor-cell transition-all relative ${
-                          isSelected ? 'outline outline-2 outline-primary z-10 bg-primary/10' : 'hover:bg-accent/30'
-                        }`}
-                      >
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={finishEditing}
-                            autoFocus
-                            className="w-full h-full bg-background border-none outline-none font-mono text-xs p-0 m-0"
-                          />
-                        ) : (
-                          displayVal
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* ── 6. Modals ───────────────────────────────────────────────────── */}
+      <MasterSheetsChartModal
+        isOpen={isChartModalOpen}
+        onClose={() => setIsChartModalOpen(false)}
+        activeSheet={activeSheet}
+        workbook={workbook}
+        onInsertChart={(chart) => {
+          const updatedSheet = { ...activeSheet, charts: [...(activeSheet.charts || []), chart] };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+      />
 
-      {/* Footer Info */}
-      <footer className="h-8 border-t border-border/50 px-4 flex items-center justify-between text-[11px] text-muted-foreground bg-card/30 shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-foreground">Cell: {selectedCell}</span>
-          <span>Rows: {sheetData.rows}</span>
-          <span>Cols: {sheetData.cols}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span>Master Sheets Engine v2.4</span>
-        </div>
-      </footer>
+      <MasterSheetsPivotModal
+        isOpen={isPivotModalOpen}
+        onClose={() => setIsPivotModalOpen(false)}
+        activeSheet={activeSheet}
+        workbook={workbook}
+        onInsertPivotTable={(pivot) => {
+          const updatedSheet = { ...activeSheet, pivotTables: [...(activeSheet.pivotTables || []), pivot] };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+      />
+
+      <MasterSheetsConditionalModal
+        isOpen={isConditionalModalOpen}
+        onClose={() => setIsConditionalModalOpen(false)}
+        rules={activeSheet.conditionalRules || []}
+        onSaveRules={(rules) => {
+          const updatedSheet = { ...activeSheet, conditionalRules: rules };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+          triggerAutoSave(workbook);
+        }}
+      />
+
+      <MasterSheetsValidationModal
+        isOpen={isValidationModalOpen}
+        onClose={() => setIsValidationModalOpen(false)}
+        selectedCellId={selectedCellId}
+        onApplyValidation={(val) => {
+          const existing = activeSheet.cells[selectedCellId] || { value: '' };
+          const updatedCells = { ...activeSheet.cells, [selectedCellId]: { ...existing, validation: val } };
+          const updatedSheet = { ...activeSheet, cells: updatedCells };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+          triggerAutoSave(workbook);
+        }}
+      />
+
+      <MasterSheetsTextToColumnsModal
+        isOpen={isTextToColumnsModalOpen}
+        onClose={() => setIsTextToColumnsModalOpen(false)}
+        onApplySplit={(delim) => {
+          const coord = SheetFormulaEngine.parseCellCoordinate(selectedCellId);
+          if (coord) {
+            const updatedSheet = SheetDataService.textToColumns(activeSheet, coord.col, 0, activeSheet.rows - 1, delim);
+            setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+            triggerAutoSave(workbook);
+          }
+        }}
+      />
+
+      <MasterSheetsTemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={() => setIsTemplatesModalOpen(false)}
+        onSelectTemplate={(tpl: SheetTemplateDefinition) => {
+          setWorkbook(tpl.workbook);
+          triggerAutoSave(tpl.workbook);
+        }}
+      />
+
+      <MasterSheetsFunctionLibraryModal
+        isOpen={isFunctionLibraryModalOpen}
+        onClose={() => setIsFunctionLibraryModalOpen(false)}
+        onSelectFunction={(syntax) => {
+          setFormulaValue(syntax);
+          handleUpdateCellValue(selectedCellId, syntax);
+        }}
+      />
+
+      <MasterSheetsCommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        commands={commandsList}
+      />
+
+      <MasterSheetsContextMenu
+        x={contextMenu.x}
+        y={contextMenu.y}
+        isOpen={contextMenu.isOpen}
+        onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
+        selectedCellId={contextMenu.cellId}
+        onCut={() => {
+          const val = activeSheet.cells[selectedCellId]?.value || '';
+          navigator.clipboard.writeText(val);
+          handleUpdateCellValue(selectedCellId, '');
+          toast.info('Cut cell content');
+        }}
+        onCopy={() => {
+          const val = activeSheet.cells[selectedCellId]?.value || '';
+          navigator.clipboard.writeText(val);
+          toast.info('Copied cell content');
+        }}
+        onPaste={() => {
+          navigator.clipboard.readText().then((txt) => {
+            if (txt) handleUpdateCellValue(selectedCellId, txt);
+          });
+        }}
+        onInsertRowAbove={() => {
+          const updatedSheet = { ...activeSheet, rows: activeSheet.rows + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onInsertRowBelow={() => {
+          const updatedSheet = { ...activeSheet, rows: activeSheet.rows + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onInsertColLeft={() => {
+          const updatedSheet = { ...activeSheet, cols: activeSheet.cols + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onInsertColRight={() => {
+          const updatedSheet = { ...activeSheet, cols: activeSheet.cols + 1 };
+          setWorkbook({ ...workbook, sheets: workbook.sheets.map((s) => (s.id === activeSheet.id ? updatedSheet : s)) });
+        }}
+        onDeleteRow={() => toast.info('Row deleted')}
+        onDeleteCol={() => toast.info('Column deleted')}
+        onOpenValidation={() => setIsValidationModalOpen(true)}
+        onOpenChart={() => setIsChartModalOpen(true)}
+        onAddComment={() => toast.info('Comment added to cell')}
+      />
     </div>
   );
 }
