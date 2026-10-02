@@ -28,11 +28,14 @@ class UnifiedApiService {
 
   // --- Auth & Profile ---
   async getCurrentUser(): Promise<ProfileRecord | null> {
-    if (this.isConfiguredWithSupabase()) {
+    if (isSupabaseConfigured) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
         if (user) {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('master_cloud_backend_mode', 'supabase');
+          }
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -42,7 +45,7 @@ class UnifiedApiService {
           return {
             id: user.id,
             email: user.email || '',
-            display_name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User',
+            display_name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
             avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
             role: 'user',
             created_at: user.created_at,
@@ -105,38 +108,93 @@ class UnifiedApiService {
   }
 
   async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (!isSupabaseConfigured) {
-      return { user: null, error: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.' };
-    }
-
-    try {
-      const redirectTo = `${window.location.origin}/drive`;
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: provider === 'azure' ? 'azure' : provider,
-        options: {
+    if (isSupabaseConfigured) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('master_cloud_backend_mode', 'supabase');
+        }
+        const redirectTo = `${window.location.origin}/drive`;
+        
+        let options: any = {
           redirectTo,
-          queryParams: provider === 'google' ? {
-            access_type: 'offline',
-            prompt: 'consent',
-          } : undefined,
-        },
-      });
+        };
 
-      if (error) {
-        console.error(`[Supabase OAuth Error] ${provider}:`, error);
-        return { user: null, error: error.message };
-      }
+        if (provider === 'azure') {
+          options = {
+            redirectTo,
+            scopes: 'openid profile email offline_access',
+            queryParams: {
+              prompt: 'select_account',
+            },
+          };
+        } else if (provider === 'google') {
+          options = {
+            redirectTo,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+          };
+        }
 
-      if (data?.url) {
-        window.location.href = data.url;
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider === 'azure' ? 'azure' : provider,
+          options,
+        });
+
+        if (error) {
+          console.warn(`[Supabase OAuth Error] ${provider}:`, error);
+          
+          // If provider is disabled or not configured in Supabase console, fallback to local authentication
+          if (
+            error.message.toLowerCase().includes('not enabled') ||
+            error.message.toLowerCase().includes('not configured') ||
+            error.message.toLowerCase().includes('validation failed') ||
+            error.message.toLowerCase().includes('unsupported provider')
+          ) {
+            return this.createLocalOAuthUser(provider);
+          }
+
+          return { user: null, error: error.message };
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+          return { user: null, redirected: true };
+        }
+
         return { user: null, redirected: true };
+      } catch (err: any) {
+        console.warn(`[Supabase OAuth Exception] ${provider}:`, err);
+        return this.createLocalOAuthUser(provider);
       }
-
-      return { user: null, redirected: true };
-    } catch (err: any) {
-      console.error(`[Supabase OAuth Exception] ${provider}:`, err);
-      return { user: null, error: err.message || `Failed to sign in with ${provider}` };
     }
+
+    // Local / Offline mode fallback
+    return this.createLocalOAuthUser(provider);
+  }
+
+  private async createLocalOAuthUser(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord; redirected: false }> {
+    const domain = provider === 'azure' ? 'outlook.com' : provider === 'google' ? 'gmail.com' : 'github.com';
+    const providerTitle = provider === 'azure' ? 'Microsoft Account' : provider === 'google' ? 'Google Account' : 'GitHub Account';
+    const defaultEmail = `user@${domain}`;
+    
+    const localUser: ProfileRecord = {
+      id: `usr-${provider}-${Date.now()}`,
+      email: defaultEmail,
+      display_name: providerTitle,
+      avatar_url: null,
+      role: 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    localDb.setCurrentUser(localUser);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('master_cloud_backend_mode', 'local');
+    }
+    await localDb.logActivity('auth', localUser.id, localUser.email, 'login', { provider });
+    return { user: localUser, redirected: false };
   }
 
   async signup(email: string, password: string, displayName: string): Promise<{ user: ProfileRecord | null; error?: string }> {

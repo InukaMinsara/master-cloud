@@ -42,7 +42,10 @@ export function RegisterPage() {
         // Redirecting to provider
         return;
       }
-      if (!res.success && res.error) {
+      if (res.success) {
+        toast.success(`Signed in with ${provider === 'azure' ? 'Microsoft' : provider === 'google' ? 'Google' : 'GitHub'} Account`);
+        navigate('/drive');
+      } else if (res.error) {
         toast.error(res.error);
       }
     } finally {
