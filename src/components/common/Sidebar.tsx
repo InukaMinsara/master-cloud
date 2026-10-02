@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
   HardDrive,
   Users,
   Clock,
@@ -53,6 +54,7 @@ export function Sidebar() {
   };
 
   const navItems = [
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
     { label: 'Master Canvas', path: '/canvas', icon: Sparkles, badge: 'Canvas' },
     { label: 'Shared with me', path: '/shared', icon: Users },
@@ -65,7 +67,7 @@ export function Sidebar() {
   const systemItems = [
     { label: 'Sync Center', path: '/sync', icon: ArrowRightLeft },
     { label: 'Offline Center', path: '/offline', icon: WifiOff },
-    { label: 'Security Center', path: '/security', icon: ShieldCheck },
+    { label: 'Security Center', path: '/security-center', icon: ShieldCheck },
     { label: 'System Diagnostics', path: '/diagnostics', icon: Activity },
     { label: 'Storage Analytics', path: '/storage', icon: PieChart },
     { label: 'Device Center', path: '/devices', icon: Laptop },
@@ -82,7 +84,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border/60">
         <NavLink to="/" className="flex items-center gap-3 overflow-hidden">
-          <img src="/cloud-logo.svg" alt="Master Cloud" className="h-9 w-9 shrink-0 drop-shadow" />
+          <img src="/logo-icon.svg" alt="Master Cloud" className="h-9 w-9 shrink-0 drop-shadow" />
           {!sidebarCollapsed && (
             <div className="flex flex-col">
               <span className="font-bold text-base tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-300">

@@ -25,7 +25,7 @@ export function RegisterPage() {
       const res = await signup(email.trim(), password, displayName.trim());
       if (res.success) {
         toast.success('Account created with 10 TB Free Storage! Welcome to MASTER CLOUD.');
-        navigate('/drive');
+        navigate('/dashboard');
       } else {
         toast.error(res.error || 'Failed to create account');
       }

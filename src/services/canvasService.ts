@@ -106,6 +106,14 @@ export const CANVAS_APP_CONFIG: Record<CanvasAppType, {
     color: '#ef4444',
     description: 'AI Video Storyboard studio with multi-scene rendering pipeline',
   },
+  ai: {
+    name: 'Master AI Intelligence',
+    ext: 'mai',
+    mime: 'application/x-master-ai',
+    iconName: 'Sparkles',
+    color: '#3b82f6',
+    description: 'AI Copilot & Document Intelligence Gateway',
+  },
 };
 
 export class CanvasService {

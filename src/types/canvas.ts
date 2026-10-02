@@ -9,7 +9,8 @@ export type CanvasAppType =
   | 'excel'
   | 'onenote'
   | 'pics' 
-  | 'vids';
+  | 'vids'
+  | 'ai';
 
 // 1. MASTER DOCS & MASTER WORD (Shared Document Core)
 export interface CanvasDocData {

@@ -15,7 +15,9 @@ import { FeaturesCatalogPage } from '@/pages/public/FeaturesCatalogPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 
 // Authenticated Cloud App Pages
+import { DashboardPage } from '@/pages/DashboardPage';
 import { DrivePage } from '@/pages/DrivePage';
+import { AIPage } from '@/pages/AIPage';
 import { SharedPage } from '@/pages/SharedPage';
 import { RecentPage } from '@/pages/RecentPage';
 import { StarredPage } from '@/pages/StarredPage';
@@ -84,8 +86,10 @@ export function App() {
 
       {/* ─── 3. AUTHENTICATED CLOUD APP WORKSPACE ROUTES ─── */}
       <Route element={<AppLayout />}>
-        <Route path="/app" element={<DrivePage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/app" element={<DashboardPage />} />
         <Route path="/drive" element={<DrivePage />} />
+        <Route path="/ai" element={<AIPage />} />
         <Route path="/shared" element={<SharedPage />} />
         <Route path="/recent" element={<RecentPage />} />
         <Route path="/starred" element={<StarredPage />} />

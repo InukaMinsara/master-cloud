@@ -29,12 +29,12 @@ import { useContextMenuStore } from '@/stores/contextMenuStore';
 
 interface FileCardProps {
   file: FileItem;
-  allFiles: FileItem[];
+  allFiles?: FileItem[];
 }
 
 export function FileCard({ file, allFiles }: FileCardProps) {
   const { openContextMenu } = useContextMenuStore();
-  const { selectedItemIds, selectItem, toggleStar, deleteItem, copyFile, setActiveDetailsItem } = useFileStore();
+  const { files: storeFiles, selectedItemIds, selectItem, toggleStar, deleteItem, copyFile, setActiveDetailsItem } = useFileStore();
   const { setShareModalItem, setVersionHistoryModalFile } = useUIStore();
   const { openPreview } = usePreviewStore();
 
@@ -59,7 +59,7 @@ export function FileCard({ file, allFiles }: FileCardProps) {
   };
 
   const handleDoubleClick = () => {
-    openPreview(file, allFiles);
+    openPreview(file, allFiles || storeFiles);
   };
 
   const handleSelect = (e: React.MouseEvent) => {

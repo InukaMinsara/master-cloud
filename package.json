@@ -12,6 +12,7 @@
     "drive:start": "node scripts/webdav-server.mjs",
     "drive:install": "node scripts/webdav-server.mjs --install",
     "drive:uninstall": "node scripts/webdav-server.mjs --uninstall",
+    "package:zip": "node scripts/build-deployment-package.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -11,6 +11,7 @@ import { MasterDrawEditor } from '@/features/master-canvas/draw/MasterDrawEditor
 import { MasterNotesEditor } from '@/features/master-canvas/notes/MasterNotesEditor';
 import { MasterPicsStudio } from '@/features/master-canvas/pics/MasterPicsStudio';
 import { MasterVidsStudio } from '@/features/master-canvas/vids/MasterVidsStudio';
+import { AIPage } from '@/pages/AIPage';
 import { Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -100,6 +101,8 @@ export function CanvasEditorPage() {
       return <MasterPicsStudio />;
     case 'vids':
       return <MasterVidsStudio />;
+    case 'ai':
+      return <AIPage />;
     default:
       return (
         <div className="flex-1 flex items-center justify-center p-8">

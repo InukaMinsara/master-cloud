@@ -8,7 +8,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   init: () => Promise<void>;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
   loginWithOAuth: (provider: 'google' | 'github' | 'azure') => Promise<{ success: boolean; redirected?: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: res.error };
       }
       set({ user: res.user, isAuthenticated: true });
-      return { success: true };
+      return { success: true, user: res.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Login failed' };
     }

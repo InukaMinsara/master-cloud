@@ -24,7 +24,11 @@ export function LoginPage() {
       const res = await login(email.trim(), password);
       if (res.success) {
         toast.success('Welcome back to MASTER CLOUD!');
-        navigate('/drive');
+        if (res.user?.role === 'admin' || email.trim().toLowerCase().startsWith('admin@')) {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         toast.error(res.error || 'Invalid credentials');
       }
