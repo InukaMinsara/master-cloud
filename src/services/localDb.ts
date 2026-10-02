@@ -140,7 +140,7 @@ function saveTable<T>(tableName: string, data: T[]): void {
 // Default Seed Profile
 export const DEFAULT_USER: ProfileRecord = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: '',
+  email: 'user@mastercloud.io',
   display_name: 'Master Cloud User',
   avatar_url: null,
   role: 'user',
@@ -476,7 +476,11 @@ class LocalDatabaseService {
     ]);
 
     const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
-    this.currentUser = savedUser ? JSON.parse(savedUser) : DEFAULT_USER;
+    let parsedUser = savedUser ? JSON.parse(savedUser) : DEFAULT_USER;
+    if (!parsedUser.email || parsedUser.email.trim() === '') {
+      parsedUser.email = 'user@mastercloud.io';
+    }
+    this.currentUser = parsedUser;
   }
 
   // --- Auth / Profile ---

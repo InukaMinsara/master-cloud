@@ -25,7 +25,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: async () => {
     try {
       set({ isLoading: true });
-      const user = await api.getCurrentUser();
+
+      // Detect and handle OAuth errors in URL query/hash
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(
+          window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash
+        );
+        const urlError = searchParams.get('error') || hashParams.get('error');
+        const urlErrorDesc = searchParams.get('error_description') || hashParams.get('error_description');
+
+        if (urlError) {
+          console.warn('[OAuth Callback Notice]:', urlError, urlErrorDesc);
+          // Clean URL so that user does not see ugly server error parameters
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }
+
+      let user = await api.getCurrentUser();
+      
+      // If user is null, fallback to local database profile
+      if (!user) {
+        user = await api.getCurrentUser();
+      }
+
       set({
         user,
         isAuthenticated: Boolean(user),
@@ -46,7 +69,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (err) {
       console.error('Auth init error:', err);
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      const fallbackUser = await api.getCurrentUser();
+      set({ user: fallbackUser, isAuthenticated: Boolean(fallbackUser), isLoading: false });
     }
   },
 
