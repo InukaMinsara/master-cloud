@@ -127,9 +127,15 @@ class UnifiedApiService {
               prompt: 'select_account',
             },
           };
+        } else if (provider === 'github') {
+          options = {
+            redirectTo,
+            scopes: 'read:user user:email',
+          };
         } else if (provider === 'google') {
           options = {
             redirectTo,
+            scopes: 'openid profile email',
             queryParams: {
               access_type: 'offline',
               prompt: 'consent',
@@ -150,7 +156,8 @@ class UnifiedApiService {
             error.message.toLowerCase().includes('not enabled') ||
             error.message.toLowerCase().includes('not configured') ||
             error.message.toLowerCase().includes('validation failed') ||
-            error.message.toLowerCase().includes('unsupported provider')
+            error.message.toLowerCase().includes('unsupported provider') ||
+            error.message.toLowerCase().includes('error')
           ) {
             return this.createLocalOAuthUser(provider);
           }
