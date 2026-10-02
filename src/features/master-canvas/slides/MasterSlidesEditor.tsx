@@ -49,6 +49,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         title: s.title || `Slide ${idx + 1}`,
         layout: (s.layout as SlideLayoutKind) || 'title-content',
         bgTheme: (s.bgTheme === 'dark' ? 'dark-slate' : s.bgTheme === 'ocean' ? 'dark-slate' : s.bgTheme === 'corporate' ? 'corporate-indigo' : s.bgTheme === 'light' ? 'minimal-light' : 'dark-slate') as SlideThemeId,
+        transition: { type: 'fade', durationSeconds: 0.5 },
         objects: (s.elements || []).map((el: any) => ({
           id: el.id,
           type: (el.type === 'title' || el.type === 'text' || el.type === 'bullet' ? 'text' : el.type) as any,
@@ -87,6 +88,10 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   );
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+
+  // Live preview triggers for transition and object animation
+  const [previewTransitionTrigger, setPreviewTransitionTrigger] = useState(0);
+  const [previewAnimationObjectId, setPreviewAnimationObjectId] = useState<string | null>(null);
 
   // Modals and Presentation views
   const [isPresenting, setIsPresenting] = useState(false);
@@ -202,6 +207,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
       title: `Slide ${presentation.slides.length + 1}`,
       layout,
       bgTheme: activeSlide.bgTheme || presentation.defaultTheme || 'dark-slate',
+      transition: { type: 'fade', durationSeconds: 0.5 },
       objects: [
         {
           id: 'obj-title-' + Date.now(),
@@ -213,6 +219,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
           height: 14,
           zIndex: 1,
           format: { bold: true, fontSize: 32, textColor: '#ffffff' },
+          animation: { type: 'fade-in', trigger: 'after-previous', durationMs: 400 },
         },
         {
           id: 'obj-body-' + Date.now(),
@@ -224,6 +231,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
           height: 50,
           zIndex: 1,
           format: { fontSize: 18, textColor: '#cbd5e1' },
+          animation: { type: 'slide-up', trigger: 'on-click', durationMs: 500 },
         },
       ],
       notes: '',
@@ -359,7 +367,36 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
       };
       return { ...prev, slides: updatedSlides };
     });
+    setPreviewTransitionTrigger((prev) => prev + 1);
     if (applyAll) toast.success('Transition applied to all slides');
+  };
+
+  const handlePreviewTransition = () => {
+    setPreviewTransitionTrigger((prev) => prev + 1);
+  };
+
+  const handleChangeAnimation = (anim: {
+    type: AnimationType;
+    trigger: 'on-click' | 'after-previous';
+    durationMs?: number;
+    delayMs?: number;
+  }) => {
+    if (selectedObjectId) {
+      handleUpdateObject(selectedObjectId, {
+        animation: anim,
+      });
+      setPreviewAnimationObjectId(selectedObjectId);
+      setTimeout(() => setPreviewAnimationObjectId(null), (anim.durationMs || 500) + 200);
+    }
+  };
+
+  const handlePreviewAnimation = () => {
+    if (selectedObjectId) {
+      setPreviewAnimationObjectId(selectedObjectId);
+      const obj = activeSlide.objects.find((o) => o.id === selectedObjectId);
+      const dur = (obj?.animation?.durationMs || 500) + 200;
+      setTimeout(() => setPreviewAnimationObjectId(null), dur);
+    }
   };
 
   const handleChangeAspect = (aspectRatio: SlideAspect) => {
@@ -415,6 +452,11 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         borderRadius: type === 'button' ? 9999 : 8,
         align: 'center',
       },
+      animation: {
+        type: 'fade-in',
+        trigger: 'on-click',
+        durationMs: 500,
+      },
     };
 
     updatePresentationState((prev) => {
@@ -426,6 +468,8 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
       return { ...prev, slides: updatedSlides };
     });
     setSelectedObjectId(newObjId);
+    setPreviewAnimationObjectId(newObjId);
+    setTimeout(() => setPreviewAnimationObjectId(null), 600);
     toast.success(`Inserted ${type} object`);
   };
 
@@ -537,7 +581,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
   // Export handlers
   const handleExportHtml = () => {
     SlideExportService.exportToHtmlDeck(presentation, `${presentation.title}.html`);
-    toast.success('Downloaded interactive HTML presentation deck');
+    toast.success('Downloaded interactive HTML presentation deck with transitions & animations');
   };
 
   const handleExportPdf = () => {
@@ -623,12 +667,9 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         onChangeSlideTheme={handleChangeSlideTheme}
         onChangeSlideLayout={handleChangeSlideLayout}
         onChangeTransition={handleChangeTransition}
-        onChangeAnimation={(type) =>
-          selectedObjectId &&
-          handleUpdateObject(selectedObjectId, {
-            animation: { type, trigger: 'on-click' },
-          })
-        }
+        onChangeAnimation={handleChangeAnimation}
+        onPreviewTransition={handlePreviewTransition}
+        onPreviewAnimation={handlePreviewAnimation}
         onChangeAspect={handleChangeAspect}
         onStartPresentation={(startFromCurrent) => {
           setPresentationStartIndex(startFromCurrent ? activeSlideIndex : 0);
@@ -683,6 +724,8 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
           }}
           speakerNotes={activeSlide.notes || ''}
           onChangeSpeakerNotes={handleChangeSpeakerNotes}
+          previewTransitionTrigger={previewTransitionTrigger}
+          previewAnimationObjectId={previewAnimationObjectId}
         />
       </div>
 

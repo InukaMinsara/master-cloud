@@ -26,9 +26,28 @@ export type ShapeKind =
   | 'callout'
   | 'cloud';
 
-export type TransitionType = 'none' | 'fade' | 'slide-left' | 'slide-right' | 'zoom' | 'flip';
+export type TransitionType =
+  | 'none'
+  | 'fade'
+  | 'slide-left'
+  | 'slide-right'
+  | 'slide-up'
+  | 'slide-down'
+  | 'zoom'
+  | 'flip'
+  | 'rotate'
+  | 'dissolve';
 
-export type AnimationType = 'none' | 'appear' | 'fade-in' | 'slide-up' | 'slide-down' | 'zoom-in' | 'bounce';
+export type AnimationType =
+  | 'none'
+  | 'appear'
+  | 'fade-in'
+  | 'slide-up'
+  | 'slide-down'
+  | 'zoom-in'
+  | 'bounce'
+  | 'flip'
+  | 'spin';
 
 export interface SlideObjectFormat {
   bold?: boolean;

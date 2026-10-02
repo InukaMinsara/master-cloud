@@ -86,6 +86,7 @@ export class SlideTemplates {
           title: 'Master Cloud Ecosystem',
           layout: 'title',
           bgTheme: 'dark-slate',
+          transition: { type: 'fade', durationSeconds: 0.5 },
           notes: 'Welcome everyone to the Master Cloud platform presentation.',
           objects: [
             {
@@ -98,6 +99,7 @@ export class SlideTemplates {
               height: 18,
               zIndex: 1,
               format: { bold: true, fontSize: 44, textColor: '#38bdf8', align: 'center' },
+              animation: { type: 'zoom-in', trigger: 'after-previous', durationMs: 600, delayMs: 100 },
             },
             {
               id: 'obj-subtitle',
@@ -109,6 +111,7 @@ export class SlideTemplates {
               height: 14,
               zIndex: 1,
               format: { fontSize: 20, textColor: '#94a3b8', align: 'center' },
+              animation: { type: 'slide-up', trigger: 'after-previous', durationMs: 600, delayMs: 300 },
             },
             {
               id: 'obj-badge',
@@ -121,6 +124,7 @@ export class SlideTemplates {
               height: 8,
               zIndex: 1,
               format: { fillColor: '#1e293b', strokeColor: '#38bdf8', strokeWidth: 1, fontSize: 11, textColor: '#38bdf8', align: 'center' },
+              animation: { type: 'bounce', trigger: 'after-previous', durationMs: 700, delayMs: 500 },
             },
           ],
         },
@@ -129,6 +133,7 @@ export class SlideTemplates {
           title: 'Core Platform Pillars',
           layout: 'two-columns',
           bgTheme: 'dark-slate',
+          transition: { type: 'slide-left', durationSeconds: 0.6 },
           notes: 'Highlight the key pillars of Master Cloud: Docs, Sheets, Slides, Canvas, and Virtual Drive.',
           objects: [
             {
@@ -141,6 +146,7 @@ export class SlideTemplates {
               height: 12,
               zIndex: 1,
               format: { bold: true, fontSize: 28, textColor: '#f8fafc' },
+              animation: { type: 'fade-in', trigger: 'after-previous', durationMs: 400 },
             },
             {
               id: 'obj-card-1',
@@ -153,6 +159,7 @@ export class SlideTemplates {
               height: 60,
               zIndex: 1,
               format: { fillColor: '#1e293b', strokeColor: '#334155', strokeWidth: 1, borderRadius: 12 },
+              animation: { type: 'slide-up', trigger: 'on-click', durationMs: 500 },
             },
             {
               id: 'obj-text-1',
@@ -164,6 +171,7 @@ export class SlideTemplates {
               height: 52,
               zIndex: 2,
               format: { fontSize: 14, textColor: '#e2e8f0' },
+              animation: { type: 'fade-in', trigger: 'on-click', durationMs: 400 },
             },
             {
               id: 'obj-card-2',
@@ -176,6 +184,7 @@ export class SlideTemplates {
               height: 60,
               zIndex: 1,
               format: { fillColor: '#1e293b', strokeColor: '#334155', strokeWidth: 1, borderRadius: 12 },
+              animation: { type: 'slide-up', trigger: 'on-click', durationMs: 500 },
             },
             {
               id: 'obj-text-2',
@@ -187,6 +196,7 @@ export class SlideTemplates {
               height: 52,
               zIndex: 2,
               format: { fontSize: 14, textColor: '#e2e8f0' },
+              animation: { type: 'fade-in', trigger: 'on-click', durationMs: 400 },
             },
           ],
         },
@@ -195,6 +205,7 @@ export class SlideTemplates {
           title: 'Strategic Roadmap & Milestones',
           layout: 'title-content',
           bgTheme: 'dark-slate',
+          transition: { type: 'zoom', durationSeconds: 0.6 },
           notes: 'Review the 2026 release schedule and performance benchmarks.',
           objects: [
             {
@@ -207,6 +218,7 @@ export class SlideTemplates {
               height: 12,
               zIndex: 1,
               format: { bold: true, fontSize: 28, textColor: '#f8fafc' },
+              animation: { type: 'fade-in', trigger: 'after-previous', durationMs: 400 },
             },
             {
               id: 'obj-stat-1',
@@ -219,6 +231,7 @@ export class SlideTemplates {
               height: 26,
               zIndex: 1,
               format: { fillColor: '#064e3b', strokeColor: '#10b981', strokeWidth: 1, fontSize: 16, bold: true, textColor: '#ecfdf5', align: 'center' },
+              animation: { type: 'zoom-in', trigger: 'on-click', durationMs: 500 },
             },
             {
               id: 'obj-stat-2',
@@ -231,6 +244,7 @@ export class SlideTemplates {
               height: 26,
               zIndex: 1,
               format: { fillColor: '#1e1b4b', strokeColor: '#6366f1', strokeWidth: 1, fontSize: 16, bold: true, textColor: '#e0e7ff', align: 'center' },
+              animation: { type: 'zoom-in', trigger: 'on-click', durationMs: 500 },
             },
             {
               id: 'obj-stat-3',
@@ -243,6 +257,7 @@ export class SlideTemplates {
               height: 26,
               zIndex: 1,
               format: { fillColor: '#1e293b', strokeColor: '#38bdf8', strokeWidth: 1, fontSize: 16, bold: true, textColor: '#38bdf8', align: 'center' },
+              animation: { type: 'zoom-in', trigger: 'on-click', durationMs: 500 },
             },
             {
               id: 'obj-footer-text',
@@ -254,6 +269,7 @@ export class SlideTemplates {
               height: 14,
               zIndex: 1,
               format: { fontSize: 15, textColor: '#94a3b8', italic: true, align: 'center' },
+              animation: { type: 'fade-in', trigger: 'after-previous', durationMs: 600, delayMs: 200 },
             },
           ],
         },

@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MasterSlide, MasterSlideObject, SlideThemeConfig } from '../types';
 import { SlideTemplates } from '../services/SlideTemplates';
-import { Move, RotateCw, Trash2, Lock, Unlock, MessageSquare } from 'lucide-react';
+import { SlideAnimationService } from '../services/SlideAnimationService';
+import { Move, RotateCw, Trash2, Lock, Unlock, MessageSquare, Sparkles } from 'lucide-react';
 
 interface MasterSlidesCanvasProps {
   slide: MasterSlide;
@@ -12,6 +13,8 @@ interface MasterSlidesCanvasProps {
   onContextMenu: (e: React.MouseEvent, objId?: string) => void;
   speakerNotes: string;
   onChangeSpeakerNotes: (notes: string) => void;
+  previewTransitionTrigger?: number;
+  previewAnimationObjectId?: string | null;
 }
 
 export function MasterSlidesCanvas({
@@ -23,14 +26,28 @@ export function MasterSlidesCanvas({
   onContextMenu,
   speakerNotes,
   onChangeSpeakerNotes,
+  previewTransitionTrigger = 0,
+  previewAnimationObjectId = null,
 }: MasterSlidesCanvasProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const [showNotes, setShowNotes] = useState(false);
+  const [transitionPlaying, setTransitionPlaying] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const themes = SlideTemplates.getThemes();
   const currentTheme = themes.find((t) => t.id === slide.bgTheme) || themes[0];
+
+  // Trigger transition animation on slide switch or preview trigger
+  useEffect(() => {
+    if (slide.transition && slide.transition.type !== 'none') {
+      setTransitionPlaying(true);
+      const timer = setTimeout(() => {
+        setTransitionPlaying(false);
+      }, (slide.transition.durationSeconds || 0.5) * 1000 + 100);
+      return () => clearTimeout(timer);
+    }
+  }, [slide.id, previewTransitionTrigger, slide.transition?.type, slide.transition?.durationSeconds]);
 
   const handleObjectMouseDown = (e: React.MouseEvent, obj: MasterSlideObject) => {
     e.stopPropagation();
@@ -62,12 +79,22 @@ export function MasterSlidesCanvas({
     setDragStartPos(null);
   };
 
+  // List of animated objects for step numbering
+  const animatedObjects = slide.objects.filter((o) => o.animation && o.animation.type !== 'none');
+
+  const transitionStyle = transitionPlaying && slide.transition?.type && slide.transition.type !== 'none'
+    ? SlideAnimationService.getSlideTransitionStyle(slide.transition.type, slide.transition.durationSeconds || 0.5)
+    : {};
+
   return (
     <div
       className="flex-1 flex flex-col items-center justify-center p-6 bg-muted/40 overflow-hidden relative select-none"
       onClick={() => onSelectObject(null)}
       onContextMenu={(e) => onContextMenu(e)}
     >
+      {/* Inject animation keyframes */}
+      <style>{SlideAnimationService.getAnimationKeyframesCss()}</style>
+
       {/* 16:9 Slide Canvas Frame */}
       <div
         ref={canvasRef}
@@ -77,13 +104,24 @@ export function MasterSlidesCanvas({
           aspectRatio: '16/9',
           maxWidth: '1100px',
           width: '100%',
+          ...transitionStyle,
         }}
-        className={`relative rounded-2xl shadow-2xl overflow-hidden border border-border/80 transition-all ${currentTheme.bgGradient}`}
+        className={`relative rounded-2xl shadow-2xl overflow-hidden border border-border/80 ${currentTheme.bgGradient}`}
       >
         {/* Render Slide Objects */}
         {slide.objects.map((obj) => {
           const isSelected = obj.id === selectedObjectId;
           const f = obj.format || {};
+          const isAnimPreview = previewAnimationObjectId === obj.id;
+          const animStyle = isAnimPreview && obj.animation && obj.animation.type !== 'none'
+            ? SlideAnimationService.getObjectAnimationStyle(
+                obj.animation.type,
+                (obj.animation.durationMs || 500) / 1000,
+                0
+              )
+            : {};
+
+          const animIndex = animatedObjects.findIndex((o) => o.id === obj.id);
 
           return (
             <div
@@ -106,11 +144,23 @@ export function MasterSlidesCanvas({
                 zIndex: obj.zIndex,
                 transform: f.rotation ? `rotate(${f.rotation}deg)` : 'none',
                 cursor: obj.isLocked ? 'default' : 'move',
+                ...animStyle,
               }}
               className={`group transition-shadow ${
                 isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-slate-900 shadow-xl' : ''
               }`}
             >
+              {/* Animation Badge in Edit Mode */}
+              {animIndex !== -1 && (
+                <div
+                  className="absolute -top-3 -left-3 flex items-center gap-0.5 bg-amber-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-full shadow-lg z-30 pointer-events-none"
+                  title={`Animation: ${obj.animation?.type} (${obj.animation?.trigger})`}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  <span>{animIndex + 1}</span>
+                </div>
+              )}
+
               {/* Object Renderers */}
               {obj.type === 'text' && (
                 <div
@@ -153,6 +203,19 @@ export function MasterSlidesCanvas({
                   style={{ borderRadius: `${f.borderRadius || 8}px` }}
                   className="w-full h-full object-contain pointer-events-none"
                 />
+              )}
+
+              {obj.type === 'button' && (
+                <div
+                  style={{
+                    backgroundColor: f.fillColor || currentTheme.accentColor,
+                    borderRadius: `${f.borderRadius || 9999}px`,
+                    color: f.textColor || '#ffffff',
+                  }}
+                  className="w-full h-full flex items-center justify-center font-black tracking-wider uppercase shadow-lg text-xs"
+                >
+                  {obj.content || 'ACTION BUTTON'}
+                </div>
               )}
 
               {/* Selection Action Badges */}

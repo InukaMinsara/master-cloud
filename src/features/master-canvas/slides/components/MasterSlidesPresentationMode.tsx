@@ -13,9 +13,11 @@ import {
   Maximize2,
   Clock,
   Sparkles,
+  Play,
 } from 'lucide-react';
-import { MasterPresentationData, MasterSlide, SlideThemeConfig } from '../types';
+import { MasterPresentationData, MasterSlide, SlideThemeConfig, MasterSlideObject } from '../types';
 import { SlideTemplates } from '../services/SlideTemplates';
+import { SlideAnimationService } from '../services/SlideAnimationService';
 
 interface MasterSlidesPresentationModeProps {
   presentation: MasterPresentationData;
@@ -31,6 +33,7 @@ export function MasterSlidesPresentationMode({
   onOpenPresenterView,
 }: MasterSlidesPresentationModeProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(initialSlideIndex);
+  const [currentStep, setCurrentStep] = useState(0);
   const [blackScreen, setBlackScreen] = useState(false);
   const [whiteScreen, setWhiteScreen] = useState(false);
   const [laserMode, setLaserMode] = useState(false);
@@ -50,6 +53,41 @@ export function MasterSlidesPresentationMode({
   const themes = SlideTemplates.getThemes();
   const currentTheme = themes.find((t) => t.id === currentSlide?.bgTheme) || themes[0];
 
+  // Calculate on-click animated objects on current slide
+  const onClickObjects = currentSlide?.objects
+    .filter((o) => o.animation && o.animation.type !== 'none' && o.animation.trigger !== 'after-previous') || [];
+  const totalSteps = onClickObjects.length;
+
+  // Reset step on slide change
+  useEffect(() => {
+    setCurrentStep(0);
+  }, [currentSlideIndex]);
+
+  const handleNext = () => {
+    if (blackScreen || whiteScreen) return;
+    if (currentStep < totalSteps) {
+      setCurrentStep((prev) => prev + 1);
+    } else if (currentSlideIndex < activeSlides.length - 1) {
+      setCurrentSlideIndex((prev) => prev + 1);
+      setCurrentStep(0);
+    }
+  };
+
+  const handlePrev = () => {
+    if (blackScreen || whiteScreen) return;
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+    } else if (currentSlideIndex > 0) {
+      setCurrentSlideIndex((prev) => prev - 1);
+      // set to last step of previous slide
+      const prevSlide = activeSlides[currentSlideIndex - 1];
+      const prevOnClickCount = prevSlide?.objects.filter(
+        (o) => o.animation && o.animation.type !== 'none' && o.animation.trigger !== 'after-previous'
+      ).length || 0;
+      setCurrentStep(prevOnClickCount);
+    }
+  };
+
   // Auto-hide control dock on mouse inactivity
   const handleMouseMove = (e: React.MouseEvent) => {
     if (laserMode) {
@@ -68,17 +106,15 @@ export function MasterSlidesPresentationMode({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
-        if (!blackScreen && !whiteScreen) {
-          setCurrentSlideIndex((prev) => Math.min(activeSlides.length - 1, prev + 1));
-        }
+        handleNext();
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
-        if (!blackScreen && !whiteScreen) {
-          setCurrentSlideIndex((prev) => Math.max(0, prev - 1));
-        }
+        handlePrev();
       } else if (e.key === 'Home') {
         setCurrentSlideIndex(0);
+        setCurrentStep(0);
       } else if (e.key === 'End') {
         setCurrentSlideIndex(activeSlides.length - 1);
+        setCurrentStep(0);
       } else if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'b' || e.key === 'B') {
@@ -98,7 +134,7 @@ export function MasterSlidesPresentationMode({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSlides.length, blackScreen, whiteScreen, onClose]);
+  }, [activeSlides.length, currentSlideIndex, currentStep, totalSteps, blackScreen, whiteScreen, onClose]);
 
   // Setup drawing canvas
   useEffect(() => {
@@ -143,13 +179,25 @@ export function MasterSlidesPresentationMode({
 
   if (!currentSlide) return null;
 
+  const transitionType = currentSlide.transition?.type || 'fade';
+  const transitionDuration = currentSlide.transition?.durationSeconds || 0.5;
+
   return (
     <div
       onMouseMove={handleMouseMove}
+      onClick={(e) => {
+        // If not drawing or interacting with dock, clicking advances presentation
+        if (!penMode && !showDrawer && (e.target as HTMLElement).tagName !== 'BUTTON') {
+          handleNext();
+        }
+      }}
       className={`fixed inset-0 z-50 flex items-center justify-center select-none overflow-hidden ${
         blackScreen ? 'bg-black' : whiteScreen ? 'bg-white' : currentTheme.bgGradient
       }`}
     >
+      {/* Inject animation and transition keyframes */}
+      <style>{SlideAnimationService.getAnimationKeyframesCss()}</style>
+
       {/* Black / White Screen Overlays */}
       {blackScreen && (
         <div className="absolute inset-0 bg-black z-40 flex items-center justify-center">
@@ -185,19 +233,65 @@ export function MasterSlidesPresentationMode({
         className={`fixed inset-0 z-30 ${penMode ? 'cursor-crosshair pointer-events-auto' : 'pointer-events-none'}`}
       />
 
-      {/* 16:9 Presentation Stage */}
+      {/* 16:9 Presentation Stage with Real Slide Transitions */}
       <div
+        key={currentSlide.id}
         style={{
           aspectRatio: presentation.aspectRatio === '4:3' ? '4/3' : '16/9',
           maxWidth: '1440px',
           width: '92%',
           maxHeight: '90vh',
+          ...SlideAnimationService.getSlideTransitionStyle(transitionType, transitionDuration),
         }}
-        className="relative w-full h-full flex flex-col justify-between p-12 transition-all duration-300"
+        className="relative w-full h-full flex flex-col justify-between p-12"
       >
-        {/* Render Slide Objects with Transitions */}
+        {/* Render Slide Objects with Interactive Build-In Animations */}
         {currentSlide.objects.map((obj) => {
           const f = obj.format || {};
+          const anim = obj.animation;
+
+          let isVisible = true;
+          let animStyle: React.CSSProperties = {};
+
+          if (anim && anim.type !== 'none') {
+            if (anim.trigger === 'after-previous') {
+              // Auto plays after previous with delay
+              animStyle = SlideAnimationService.getObjectAnimationStyle(
+                anim.type,
+                (anim.durationMs || 500) / 1000,
+                (anim.delayMs || 0) / 1000
+              );
+            } else {
+              // On-click build-in step
+              const stepIndex = onClickObjects.findIndex((o) => o.id === obj.id) + 1;
+              if (currentStep < stepIndex) {
+                isVisible = false;
+              } else {
+                animStyle = SlideAnimationService.getObjectAnimationStyle(
+                  anim.type,
+                  (anim.durationMs || 500) / 1000,
+                  0
+                );
+              }
+            }
+          }
+
+          if (!isVisible) {
+            return (
+              <div
+                key={obj.id}
+                style={{
+                  position: 'absolute',
+                  left: `${obj.x}%`,
+                  top: `${obj.y}%`,
+                  width: `${obj.width}%`,
+                  height: `${obj.height}%`,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          }
 
           return (
             <div
@@ -210,8 +304,8 @@ export function MasterSlidesPresentationMode({
                 height: `${obj.height}%`,
                 zIndex: obj.zIndex,
                 transform: f.rotation ? `rotate(${f.rotation}deg)` : 'none',
+                ...animStyle,
               }}
-              className="animate-in fade-in zoom-in-95 duration-200"
             >
               {obj.type === 'text' && (
                 <div
@@ -278,23 +372,36 @@ export function MasterSlidesPresentationMode({
       >
         {/* Navigation buttons */}
         <button
-          onClick={() => setCurrentSlideIndex((prev) => Math.max(0, prev - 1))}
-          disabled={currentSlideIndex === 0}
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePrev();
+          }}
+          disabled={currentSlideIndex === 0 && currentStep === 0}
           className="p-2 rounded-xl hover:bg-slate-800 text-slate-200 disabled:opacity-30 transition-colors"
-          title="Previous Slide (Left Arrow)"
+          title="Previous Step / Slide (Left Arrow)"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <span className="text-xs font-mono font-bold text-slate-300 px-2">
-          {currentSlideIndex + 1} / {activeSlides.length}
-        </span>
+        <div className="flex flex-col items-center px-2">
+          <span className="text-xs font-mono font-bold text-slate-300">
+            {currentSlideIndex + 1} / {activeSlides.length}
+          </span>
+          {totalSteps > 0 && (
+            <span className="text-[9px] font-mono text-amber-400">
+              Build Step {currentStep}/{totalSteps}
+            </span>
+          )}
+        </div>
 
         <button
-          onClick={() => setCurrentSlideIndex((prev) => Math.min(activeSlides.length - 1, prev + 1))}
-          disabled={currentSlideIndex === activeSlides.length - 1}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNext();
+          }}
+          disabled={currentSlideIndex === activeSlides.length - 1 && currentStep === totalSteps}
           className="p-2 rounded-xl hover:bg-slate-800 text-slate-200 disabled:opacity-30 transition-colors"
-          title="Next Slide (Right Arrow / Space)"
+          title="Next Step / Slide (Right Arrow / Space)"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -303,7 +410,8 @@ export function MasterSlidesPresentationMode({
 
         {/* Laser Pointer toggle */}
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setLaserMode(!laserMode);
             setPenMode(false);
           }}
@@ -317,7 +425,8 @@ export function MasterSlidesPresentationMode({
 
         {/* Drawing Pen toggle */}
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setPenMode(!penMode);
             setLaserMode(false);
           }}
@@ -330,7 +439,7 @@ export function MasterSlidesPresentationMode({
         </button>
 
         {penMode && (
-          <div className="flex items-center gap-1 pl-1">
+          <div className="flex items-center gap-1 pl-1" onClick={(e) => e.stopPropagation()}>
             {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#ffffff'].map((color) => (
               <button
                 key={color}
@@ -355,7 +464,8 @@ export function MasterSlidesPresentationMode({
 
         {/* Black / White Screen */}
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             setBlackScreen(!blackScreen);
             setWhiteScreen(false);
           }}
@@ -369,7 +479,10 @@ export function MasterSlidesPresentationMode({
 
         {/* Slide Selector Drawer toggle */}
         <button
-          onClick={() => setShowDrawer(!showDrawer)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDrawer(!showDrawer);
+          }}
           className={`p-2 rounded-xl transition-colors ${
             showDrawer ? 'bg-amber-500 text-slate-950 font-bold' : 'hover:bg-slate-800 text-slate-300'
           }`}
@@ -382,7 +495,10 @@ export function MasterSlidesPresentationMode({
 
         {/* Close presentation */}
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="p-2 rounded-xl hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors"
           title="Exit Fullscreen (ESC)"
         >
@@ -392,7 +508,10 @@ export function MasterSlidesPresentationMode({
 
       {/* Slide Thumbnails Drawer Modal */}
       {showDrawer && (
-        <div className="fixed inset-x-0 bottom-24 z-50 max-w-5xl mx-auto bg-slate-900/95 backdrop-blur-2xl border border-slate-700 rounded-3xl p-4 shadow-2xl">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-x-0 bottom-24 z-50 max-w-5xl mx-auto bg-slate-900/95 backdrop-blur-2xl border border-slate-700 rounded-3xl p-4 shadow-2xl"
+        >
           <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3 px-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Jump to Slide
@@ -411,6 +530,7 @@ export function MasterSlidesPresentationMode({
                 key={s.id}
                 onClick={() => {
                   setCurrentSlideIndex(idx);
+                  setCurrentStep(0);
                   setShowDrawer(false);
                 }}
                 className={`flex-shrink-0 w-36 aspect-video rounded-xl border p-2 cursor-pointer transition-all ${

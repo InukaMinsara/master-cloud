@@ -72,7 +72,12 @@ interface MasterSlidesToolbarProps {
   onChangeSlideTheme: (theme: SlideThemeId) => void;
   onChangeSlideLayout: (layout: SlideLayoutKind) => void;
   onChangeTransition: (type: TransitionType, duration: number, applyAll?: boolean) => void;
-  onChangeAnimation: (type: AnimationType) => void;
+  onChangeAnimation: (animation: {
+    type: AnimationType;
+    trigger: 'on-click' | 'after-previous';
+    durationMs?: number;
+    delayMs?: number;
+  }) => void;
   onChangeAspect: (aspect: SlideAspect) => void;
   onStartPresentation: (startFromCurrent?: boolean) => void;
   onOpenPresenterView: () => void;
@@ -83,6 +88,8 @@ interface MasterSlidesToolbarProps {
   onExportPdf: () => void;
   onExportJson: () => void;
   onSaveManual: () => void;
+  onPreviewTransition?: () => void;
+  onPreviewAnimation?: () => void;
   zoomLevel: number;
   onChangeZoom: (level: number) => void;
 }
@@ -114,6 +121,8 @@ export function MasterSlidesToolbar({
   onExportPdf,
   onExportJson,
   onSaveManual,
+  onPreviewTransition,
+  onPreviewAnimation,
   zoomLevel,
   onChangeZoom,
 }: MasterSlidesToolbarProps) {
@@ -121,6 +130,16 @@ export function MasterSlidesToolbar({
 
   const themes = SlideTemplates.getThemes();
   const format = selectedObject?.format || {};
+  const currentAnim = selectedObject?.animation || {
+    type: 'none',
+    trigger: 'on-click',
+    durationMs: 500,
+    delayMs: 0,
+  };
+  const currentTransition = activeSlide.transition || {
+    type: 'fade',
+    durationSeconds: 0.5,
+  };
 
   return (
     <div className="flex flex-col border-b border-border/80 bg-card/60 backdrop-blur-md shrink-0 select-none">
@@ -560,20 +579,64 @@ export function MasterSlidesToolbar({
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground font-medium">Slide Transition:</span>
             <select
-              value={activeSlide.transition?.type || 'fade'}
-              onChange={(e) => onChangeTransition(e.target.value as TransitionType, 0.5, false)}
+              value={currentTransition.type}
+              onChange={(e) =>
+                onChangeTransition(
+                  e.target.value as TransitionType,
+                  currentTransition.durationSeconds || 0.5,
+                  false
+                )
+              }
               className="text-xs bg-background border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
             >
               <option value="none">None (Instant)</option>
-              <option value="fade">Smooth Fade</option>
-              <option value="slide-left">Slide Left</option>
-              <option value="slide-right">Slide Right</option>
-              <option value="zoom">Zoom Scale</option>
-              <option value="flip">3D Flip</option>
+              <option value="fade">Smooth Crossfade</option>
+              <option value="slide-left">Slide from Right to Left</option>
+              <option value="slide-right">Slide from Left to Right</option>
+              <option value="slide-up">Slide from Bottom to Top</option>
+              <option value="slide-down">Slide from Top to Bottom</option>
+              <option value="zoom">Zoom Scale In</option>
+              <option value="flip">3D Y-Axis Flip</option>
+              <option value="rotate">3D Spin & Rotate</option>
+              <option value="dissolve">Blur Dissolve</option>
             </select>
 
+            <span className="text-xs text-muted-foreground font-medium ml-2">Duration:</span>
+            <select
+              value={currentTransition.durationSeconds || 0.5}
+              onChange={(e) =>
+                onChangeTransition(currentTransition.type, parseFloat(e.target.value), false)
+              }
+              className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="0.3">0.3s (Fast)</option>
+              <option value="0.5">0.5s (Normal)</option>
+              <option value="0.8">0.8s (Smooth)</option>
+              <option value="1.0">1.0s (Slow)</option>
+              <option value="1.5">1.5s (Cinematic)</option>
+              <option value="2.0">2.0s (Deliberate)</option>
+            </select>
+
+            {/* Preview Button */}
+            {onPreviewTransition && (
+              <button
+                onClick={onPreviewTransition}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm transition-all"
+                title="Preview Slide Transition Effect"
+              >
+                <Play className="h-3 w-3 fill-current" />
+                <span>Preview</span>
+              </button>
+            )}
+
             <button
-              onClick={() => onChangeTransition(activeSlide.transition?.type || 'fade', 0.5, true)}
+              onClick={() =>
+                onChangeTransition(
+                  currentTransition.type,
+                  currentTransition.durationSeconds || 0.5,
+                  true
+                )
+              }
               className="px-3 py-1 rounded-lg bg-accent hover:bg-accent/80 text-foreground text-xs font-bold border border-border"
             >
               Apply to All Slides
@@ -587,18 +650,87 @@ export function MasterSlidesToolbar({
             <span className="text-xs text-muted-foreground font-medium">Object Animation:</span>
             <select
               disabled={!selectedObject}
-              value={selectedObject?.animation?.type || 'none'}
-              onChange={(e) => onChangeAnimation(e.target.value as AnimationType)}
+              value={currentAnim.type}
+              onChange={(e) =>
+                onChangeAnimation({
+                  ...currentAnim,
+                  type: e.target.value as AnimationType,
+                })
+              }
               className="text-xs bg-background border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold disabled:opacity-40"
             >
               <option value="none">None</option>
-              <option value="appear">Appear</option>
+              <option value="appear">Appear Instantly</option>
               <option value="fade-in">Fade In</option>
               <option value="slide-up">Slide Up</option>
               <option value="slide-down">Slide Down</option>
               <option value="zoom-in">Zoom In</option>
-              <option value="bounce">Bounce</option>
+              <option value="bounce">Bounce In</option>
+              <option value="flip">3D Flip (X-Axis)</option>
+              <option value="spin">Spin In</option>
             </select>
+
+            <span className="text-xs text-muted-foreground font-medium ml-1">Trigger:</span>
+            <select
+              disabled={!selectedObject || currentAnim.type === 'none'}
+              value={currentAnim.trigger || 'on-click'}
+              onChange={(e) =>
+                onChangeAnimation({
+                  ...currentAnim,
+                  trigger: e.target.value as 'on-click' | 'after-previous',
+                })
+              }
+              className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+            >
+              <option value="on-click">On Click (Interactive Step)</option>
+              <option value="after-previous">After Previous (Auto)</option>
+            </select>
+
+            <span className="text-xs text-muted-foreground font-medium ml-1">Duration:</span>
+            <select
+              disabled={!selectedObject || currentAnim.type === 'none'}
+              value={currentAnim.durationMs || 500}
+              onChange={(e) =>
+                onChangeAnimation({
+                  ...currentAnim,
+                  durationMs: parseInt(e.target.value, 10),
+                })
+              }
+              className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+            >
+              <option value="300">0.3s</option>
+              <option value="500">0.5s</option>
+              <option value="800">0.8s</option>
+              <option value="1000">1.0s</option>
+              <option value="1500">1.5s</option>
+            </select>
+
+            {/* Preview Animation Button */}
+            {onPreviewAnimation && (
+              <button
+                disabled={!selectedObject || currentAnim.type === 'none'}
+                onClick={onPreviewAnimation}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold shadow-sm transition-all disabled:opacity-40"
+                title="Preview Object Animation"
+              >
+                <Play className="h-3 w-3 fill-current" />
+                <span>Play Animation</span>
+              </button>
+            )}
+
+            {selectedObject && currentAnim.type !== 'none' && (
+              <button
+                onClick={() =>
+                  onChangeAnimation({
+                    type: 'none',
+                    trigger: 'on-click',
+                  })
+                }
+                className="px-2.5 py-1 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20"
+              >
+                Clear
+              </button>
+            )}
           </div>
         )}
 
