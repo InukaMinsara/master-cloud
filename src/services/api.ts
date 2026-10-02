@@ -41,12 +41,35 @@ class UnifiedApiService {
             .select('*')
             .eq('id', user.id)
             .single();
-          if (profile) return profile;
+          if (profile && profile.email) return profile;
+
+          const resolvedEmail =
+            user.email ||
+            user.user_metadata?.email ||
+            user.user_metadata?.preferred_username ||
+            user.user_metadata?.user_principal_name ||
+            'user@mastercloud.io';
+
+          const resolvedName =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.user_metadata?.user_name ||
+            user.user_metadata?.handle ||
+            user.user_metadata?.display_name ||
+            resolvedEmail.split('@')[0] ||
+            'Master Cloud User';
+
+          const resolvedAvatar =
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            user.user_metadata?.avatar ||
+            null;
+
           return {
             id: user.id,
-            email: user.email || '',
-            display_name: user.user_metadata?.full_name || user.user_metadata?.display_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+            email: resolvedEmail,
+            display_name: resolvedName,
+            avatar_url: resolvedAvatar,
             role: 'user',
             created_at: user.created_at,
             updated_at: user.updated_at || user.created_at,
@@ -80,8 +103,8 @@ class UnifiedApiService {
           .single();
         return { user: profile || {
           id: data.user.id,
-          email: data.user.email || '',
-          display_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          email: data.user.email || email.trim(),
+          display_name: data.user.user_metadata?.full_name || email.trim().split('@')[0] || 'User',
           avatar_url: null,
           role: 'user',
           created_at: data.user.created_at,
@@ -107,7 +130,7 @@ class UnifiedApiService {
     return { user };
   }
 
-  async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
+  async loginWithOAuth(provider: 'google' | 'github' | 'azure' | 'figma'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
     if (isSupabaseConfigured) {
       try {
         if (typeof localStorage !== 'undefined') {
@@ -141,10 +164,15 @@ class UnifiedApiService {
               prompt: 'consent',
             },
           };
+        } else if (provider === 'figma') {
+          options = {
+            redirectTo,
+            scopes: 'files:read',
+          };
         }
 
         const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: provider === 'azure' ? 'azure' : provider,
+          provider: provider as any,
           options,
         });
 
@@ -181,10 +209,10 @@ class UnifiedApiService {
     return this.createLocalOAuthUser(provider);
   }
 
-  private async createLocalOAuthUser(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord; redirected: false }> {
-    const domain = provider === 'azure' ? 'outlook.com' : provider === 'google' ? 'gmail.com' : 'github.com';
-    const providerTitle = provider === 'azure' ? 'Microsoft Account' : provider === 'google' ? 'Google Account' : 'GitHub Account';
-    const defaultEmail = `user@${domain}`;
+  private async createLocalOAuthUser(provider: 'google' | 'github' | 'azure' | 'figma'): Promise<{ user: ProfileRecord; redirected: false }> {
+    const domain = provider === 'azure' ? 'outlook.com' : provider === 'google' ? 'gmail.com' : provider === 'github' ? 'github.com' : 'figma.com';
+    const providerTitle = provider === 'azure' ? 'Microsoft User' : provider === 'google' ? 'Google User' : provider === 'github' ? 'GitHub Developer' : 'Figma Designer';
+    const defaultEmail = `${provider}.user@${domain}`;
     
     const localUser: ProfileRecord = {
       id: `usr-${provider}-${Date.now()}`,

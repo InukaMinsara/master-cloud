@@ -10,7 +10,7 @@ interface AuthState {
   init: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
-  loginWithOAuth: (provider: 'google' | 'github' | 'azure') => Promise<{ success: boolean; redirected?: boolean; error?: string }>;
+  loginWithOAuth: (provider: 'google' | 'github' | 'azure' | 'figma') => Promise<{ success: boolean; redirected?: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<ProfileRecord>) => Promise<void>;
 }
@@ -87,7 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithOAuth: async (provider: 'google' | 'github' | 'azure') => {
+  loginWithOAuth: async (provider: 'google' | 'github' | 'azure' | 'figma') => {
     try {
       const res = await api.loginWithOAuth(provider);
       if (res.error) {
