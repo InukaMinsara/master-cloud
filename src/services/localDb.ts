@@ -485,12 +485,26 @@ class LocalDatabaseService {
 
   // --- Auth / Profile ---
   getCurrentUser(): ProfileRecord {
-    return this.currentUser;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.email) {
+            this.currentUser = parsed;
+            return parsed;
+          }
+        }
+      }
+    } catch {}
+    return this.currentUser || DEFAULT_USER;
   }
 
   setCurrentUser(user: ProfileRecord): void {
     this.currentUser = user;
-    localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
+    }
   }
 
   async updateProfile(updates: Partial<ProfileRecord>): Promise<ProfileRecord> {

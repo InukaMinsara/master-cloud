@@ -204,7 +204,53 @@ export function RegisterPage() {
             </div>
           </div>
 
-          <div className="text-center text-xs text-muted-foreground pt-2">
+          {/* Instant One-Click Demo Accounts */}
+          <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border/60 space-y-2">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block text-center">
+              Quick Test Accounts (1-Click Instant Sign-In)
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleOAuthLogin('azure')}
+                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
+              >
+                Microsoft User
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOAuthLogin('github')}
+                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
+              >
+                GitHub Dev
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOAuthLogin('figma')}
+                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
+              >
+                Figma Designer
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOAuthLogin('google')}
+                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
+              >
+                Google User
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleOAuthLogin('azure');
+                }}
+                className="py-1.5 px-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-[11px] font-bold text-primary truncate transition-all text-center col-span-2 sm:col-span-2"
+              >
+                10 TB Free Fast Access
+              </button>
+            </div>
+          </div>
+
+          <div className="text-center text-xs text-muted-foreground pt-1">
             Already have an account?{' '}
             <Link to="/login" className="font-bold text-primary hover:underline">
               Sign In

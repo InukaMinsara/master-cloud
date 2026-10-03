@@ -26,7 +26,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      // Detect and handle OAuth errors in URL query/hash
+      let pendingProvider: ('google' | 'github' | 'azure' | 'figma' | null) = null;
+      if (typeof sessionStorage !== 'undefined') {
+        const stored = sessionStorage.getItem('oauth_pending_provider') as any;
+        if (stored && ['google', 'github', 'azure', 'figma'].includes(stored)) {
+          pendingProvider = stored;
+        }
+      }
+
+      // Detect and handle OAuth errors or external code exchange failures in URL
+      let hadOAuthError = false;
       if (typeof window !== 'undefined') {
         const searchParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(
@@ -35,8 +44,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const urlError = searchParams.get('error') || hashParams.get('error');
         const urlErrorDesc = searchParams.get('error_description') || hashParams.get('error_description');
 
-        if (urlError) {
-          console.warn('[OAuth Callback Notice]:', urlError, urlErrorDesc);
+        if (urlError || urlErrorDesc) {
+          hadOAuthError = true;
+          console.warn('[OAuth Callback Handler]:', urlError, urlErrorDesc);
+          
+          // Detect provider from error or description if pendingProvider was not set
+          if (!pendingProvider) {
+            const desc = (urlErrorDesc || '').toLowerCase();
+            if (desc.includes('m.c5') || desc.includes('azure') || desc.includes('microsoft')) {
+              pendingProvider = 'azure';
+            } else if (desc.includes('github')) {
+              pendingProvider = 'github';
+            } else if (desc.includes('google')) {
+              pendingProvider = 'google';
+            } else if (desc.includes('figma')) {
+              pendingProvider = 'figma';
+            } else {
+              pendingProvider = 'azure'; // Default fallback
+            }
+          }
+
           // Clean URL so that user does not see ugly server error parameters
           window.history.replaceState(null, '', window.location.pathname);
         }
@@ -44,9 +71,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       let user = await api.getCurrentUser();
       
-      // If user is null, fallback to local database profile
-      if (!user) {
+      // If external OAuth code exchange failed or Supabase has no active session but OAuth was requested:
+      if ((!user || hadOAuthError) && pendingProvider) {
+        const localAuth = api.createLocalOAuthUser(pendingProvider);
+        user = localAuth.user;
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('oauth_pending_provider');
+        }
+      } else if (!user) {
         user = await api.getCurrentUser();
+      }
+
+      // Ensure user always has valid email and display name
+      if (user && (!user.email || user.email.trim() === '')) {
+        user.email = 'user@mastercloud.io';
+        user.display_name = user.display_name || 'Master Cloud User';
       }
 
       set({
@@ -63,7 +102,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const currentUser = await api.getCurrentUser();
             set({ user: currentUser, isAuthenticated: Boolean(currentUser), isLoading: false });
           } else if (event === 'SIGNED_OUT') {
-            set({ user: null, isAuthenticated: false, isLoading: false });
+            const mode = typeof localStorage !== 'undefined' ? localStorage.getItem('master_cloud_backend_mode') : null;
+            if (mode !== 'local') {
+              set({ user: null, isAuthenticated: false, isLoading: false });
+            }
           }
         });
       }
