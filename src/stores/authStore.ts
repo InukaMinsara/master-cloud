@@ -10,7 +10,8 @@ interface AuthState {
   init: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string; user?: ProfileRecord | null }>;
-  loginWithOAuth: (provider: 'google' | 'github' | 'azure' | 'figma') => Promise<{ success: boolean; redirected?: boolean; error?: string }>;
+  loginWithOAuth: (provider: 'google' | 'github' | 'azure') => Promise<{ success: boolean; redirected?: boolean; error?: string }>;
+  loginWithGoogle: (email?: string, name?: string, avatar?: string) => Promise<{ success: boolean; redirected?: boolean; error?: string; user?: ProfileRecord | null }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<ProfileRecord>) => Promise<void>;
 }
@@ -25,69 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: async () => {
     try {
       set({ isLoading: true });
-
-      let pendingProvider: ('google' | 'github' | 'azure' | 'figma' | null) = null;
-      if (typeof sessionStorage !== 'undefined') {
-        const stored = sessionStorage.getItem('oauth_pending_provider') as any;
-        if (stored && ['google', 'github', 'azure', 'figma'].includes(stored)) {
-          pendingProvider = stored;
-        }
-      }
-
-      // Detect and handle OAuth errors or external code exchange failures in URL
-      let hadOAuthError = false;
-      if (typeof window !== 'undefined') {
-        const searchParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(
-          window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash
-        );
-        const urlError = searchParams.get('error') || hashParams.get('error');
-        const urlErrorDesc = searchParams.get('error_description') || hashParams.get('error_description');
-
-        if (urlError || urlErrorDesc) {
-          hadOAuthError = true;
-          console.warn('[OAuth Callback Handler]:', urlError, urlErrorDesc);
-          
-          // Detect provider from error or description if pendingProvider was not set
-          if (!pendingProvider) {
-            const desc = (urlErrorDesc || '').toLowerCase();
-            if (desc.includes('m.c5') || desc.includes('azure') || desc.includes('microsoft')) {
-              pendingProvider = 'azure';
-            } else if (desc.includes('github')) {
-              pendingProvider = 'github';
-            } else if (desc.includes('google')) {
-              pendingProvider = 'google';
-            } else if (desc.includes('figma')) {
-              pendingProvider = 'figma';
-            } else {
-              pendingProvider = 'azure'; // Default fallback
-            }
-          }
-
-          // Clean URL so that user does not see ugly server error parameters
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-      }
-
-      let user = await api.getCurrentUser();
-      
-      // If external OAuth code exchange failed or Supabase has no active session but OAuth was requested:
-      if ((!user || hadOAuthError) && pendingProvider) {
-        const localAuth = api.createLocalOAuthUser(pendingProvider);
-        user = localAuth.user;
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.removeItem('oauth_pending_provider');
-        }
-      } else if (!user) {
-        user = await api.getCurrentUser();
-      }
-
-      // Ensure user always has valid email and display name
-      if (user && (!user.email || user.email.trim() === '')) {
-        user.email = 'user@mastercloud.io';
-        user.display_name = user.display_name || 'Master Cloud User';
-      }
-
+      const user = await api.getCurrentUser();
       set({
         user,
         isAuthenticated: Boolean(user),
@@ -102,17 +41,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const currentUser = await api.getCurrentUser();
             set({ user: currentUser, isAuthenticated: Boolean(currentUser), isLoading: false });
           } else if (event === 'SIGNED_OUT') {
-            const mode = typeof localStorage !== 'undefined' ? localStorage.getItem('master_cloud_backend_mode') : null;
-            if (mode !== 'local') {
-              set({ user: null, isAuthenticated: false, isLoading: false });
-            }
+            set({ user: null, isAuthenticated: false, isLoading: false });
           }
         });
       }
     } catch (err) {
       console.error('Auth init error:', err);
-      const fallbackUser = await api.getCurrentUser();
-      set({ user: fallbackUser, isAuthenticated: Boolean(fallbackUser), isLoading: false });
+      set({ user: null, isAuthenticated: false, isLoading: false });
+    }
+  },
+
+  loginWithGoogle: async (email?: string, name?: string, avatar?: string) => {
+    try {
+      const res = await api.loginWithGoogle(email, name, avatar);
+      if (res.error) {
+        return { success: false, error: res.error };
+      }
+      if (res.redirected) {
+        return { success: true, redirected: true };
+      }
+      set({ user: res.user, isAuthenticated: true });
+      return { success: true, redirected: false, user: res.user };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Google login failed' };
     }
   },
 
@@ -129,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithOAuth: async (provider: 'google' | 'github' | 'azure' | 'figma') => {
+  loginWithOAuth: async (provider: 'google' | 'github' | 'azure') => {
     try {
       const res = await api.loginWithOAuth(provider);
       if (res.error) {

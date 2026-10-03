@@ -140,7 +140,7 @@ function saveTable<T>(tableName: string, data: T[]): void {
 // Default Seed Profile
 export const DEFAULT_USER: ProfileRecord = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: 'user@mastercloud.io',
+  email: '',
   display_name: 'Master Cloud User',
   avatar_url: null,
   role: 'user',
@@ -476,35 +476,17 @@ class LocalDatabaseService {
     ]);
 
     const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
-    let parsedUser = savedUser ? JSON.parse(savedUser) : DEFAULT_USER;
-    if (!parsedUser.email || parsedUser.email.trim() === '') {
-      parsedUser.email = 'user@mastercloud.io';
-    }
-    this.currentUser = parsedUser;
+    this.currentUser = savedUser ? JSON.parse(savedUser) : DEFAULT_USER;
   }
 
   // --- Auth / Profile ---
   getCurrentUser(): ProfileRecord {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          if (parsed && parsed.email) {
-            this.currentUser = parsed;
-            return parsed;
-          }
-        }
-      }
-    } catch {}
-    return this.currentUser || DEFAULT_USER;
+    return this.currentUser;
   }
 
   setCurrentUser(user: ProfileRecord): void {
     this.currentUser = user;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
-    }
+    localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
   }
 
   async updateProfile(updates: Partial<ProfileRecord>): Promise<ProfileRecord> {

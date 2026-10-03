@@ -1,22 +1,72 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, Mail, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, ShieldCheck, Cloud, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { signup, loginWithOAuth } = useAuthStore();
+  const { signup, loginWithGoogle, loginWithOAuth } = useAuthStore();
 
-  const [displayName, setDisplayName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showEmailSignup, setShowEmailSignup] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Email form state
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Custom Google prompt modal state
+  const [showGooglePromptModal, setShowGooglePromptModal] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [customGoogleName, setCustomGoogleName] = useState('');
+
+  const handleGoogleSignUpClick = async () => {
+    setIsLoading(true);
+    try {
+      if (isSupabaseConfigured) {
+        const res = await loginWithOAuth('google');
+        if (res.redirected) return;
+        if (!res.success && res.error) {
+          toast.error(res.error);
+        }
+      } else {
+        setShowGooglePromptModal(true);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Google Sign-Up failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCustomGoogleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customGoogleEmail.trim()) {
+      toast.error('Please enter your Google Email address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await loginWithGoogle(customGoogleEmail.trim(), customGoogleName.trim() || undefined);
+      if (res.success) {
+        toast.success(`Account created! 10 TB Permanent Free Storage activated for ${customGoogleEmail}`);
+        setShowGooglePromptModal(false);
+        navigate('/drive');
+      } else {
+        toast.error(res.error || 'Failed to sign up with Google');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim() || !email.trim() || !password) return;
 
@@ -25,7 +75,7 @@ export function RegisterPage() {
       const res = await signup(email.trim(), password, displayName.trim());
       if (res.success) {
         toast.success('Account created with 10 TB Free Storage! Welcome to MASTER CLOUD.');
-        navigate('/dashboard');
+        navigate('/drive');
       } else {
         toast.error(res.error || 'Failed to create account');
       }
@@ -34,220 +84,146 @@ export function RegisterPage() {
     }
   };
 
-  const handleOAuthLogin = async (provider: 'google' | 'github' | 'azure' | 'figma') => {
-    setIsLoading(true);
-    try {
-      const res = await loginWithOAuth(provider);
-      if (res.redirected) {
-        // Redirecting to provider
-        return;
-      }
-      if (res.success) {
-        const providerName =
-          provider === 'azure' ? 'Microsoft' : provider === 'google' ? 'Google' : provider === 'github' ? 'GitHub' : 'Figma';
-        toast.success(`Signed in with ${providerName} Account`);
-        navigate('/drive');
-      } else if (res.error) {
-        toast.error(res.error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background select-none">
       <div className="w-full max-w-md space-y-6">
+        {/* Brand Header */}
         <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-3">
-            <img src="/logo-icon.svg" alt="Master Cloud" className="h-12 w-12 drop-shadow-md" />
+          <Link to="/" className="inline-flex items-center gap-3 group">
+            <img
+              src="/logo-icon.svg"
+              alt="Master Cloud"
+              className="h-14 w-14 drop-shadow-md transition-transform group-hover:scale-105"
+            />
           </Link>
-          <h1 className="text-2xl font-black text-foreground tracking-tight">Create Account</h1>
-          <p className="text-xs text-muted-foreground">Get started with 10 TB free cloud storage</p>
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">Create Account</h1>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/20">
+              10 TB FREE
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            Get your 10 TB permanent free cloud storage workspace instantly with Google
+          </p>
         </div>
 
-        <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-2xl space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="pl-10 text-xs rounded-xl h-11"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="pl-10 text-xs rounded-xl h-11"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  required
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  className="pl-10 pr-10 text-xs rounded-xl h-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  title={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              variant="gradient"
+        {/* Card */}
+        <div className="rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xl shadow-black/10 space-y-6">
+          {/* PRIMARY HERO: GOOGLE SIGN UP BUTTON */}
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleGoogleSignUpClick}
               disabled={isLoading}
-              className="w-full h-11 rounded-xl text-xs font-semibold mt-2"
+              className="w-full h-14 rounded-2xl border-2 border-border/80 hover:border-primary/60 bg-background hover:bg-accent/60 text-foreground font-bold text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg transition-all active:scale-98 group"
             >
-              {isLoading ? 'Creating Account...' : 'Get Started Free (Instant 10 TB)'}
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </form>
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>{isLoading ? 'Connecting to Google...' : 'Sign up with Google'}</span>
+            </button>
 
-          {/* Social OAuth Sign Up */}
-          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              <span>1-Click Activation: Instant 10 TB free storage allocated on your Google account.</span>
+            </div>
+          </div>
+
+          {/* Toggle for Standard Email Signup */}
+          <div className="pt-2">
             <div className="relative flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border/60" />
               </div>
-              <span className="relative bg-card px-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Or sign up with OAuth
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
-                onClick={() => handleOAuthLogin('google')}
-                className="flex items-center justify-center py-2 px-3 rounded-xl border border-border/70 hover:bg-accent text-xs font-semibold gap-1.5 transition-colors"
-                title="Sign up with Google"
+                onClick={() => setShowEmailSignup(!showEmailSignup)}
+                className="relative bg-card px-3 text-[11px] text-muted-foreground hover:text-foreground font-medium"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
-                <span>Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('github')}
-                className="flex items-center justify-center py-2 px-3 rounded-xl border border-border/70 hover:bg-accent text-xs font-semibold gap-1.5 transition-colors"
-                title="Sign up with GitHub"
-              >
-                <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
-                <span>GitHub</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('azure')}
-                className="flex items-center justify-center py-2 px-3 rounded-xl border border-border/70 hover:bg-accent text-xs font-semibold gap-1.5 transition-colors"
-                title="Sign up with Microsoft"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 23 23">
-                  <path fill="#f35325" d="M1 1h10v10H1z"/>
-                  <path fill="#81bc06" d="M12 1h10v10H12z"/>
-                  <path fill="#05a6f0" d="M1 12h10v10H1z"/>
-                  <path fill="#ffba08" d="M12 12h10v10H12z"/>
-                </svg>
-                <span>Microsoft</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('figma')}
-                className="flex items-center justify-center py-2 px-3 rounded-xl border border-border/70 hover:bg-accent text-xs font-semibold gap-1.5 transition-colors"
-                title="Sign up with Figma"
-              >
-                <svg className="h-4 w-4 shrink-0" viewBox="0 0 38 57" fill="none">
-                  <path d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38C23.2533 38 19 33.7467 19 28.5Z" fill="#1ABCFE"/>
-                  <path d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z" fill="#0ACF83"/>
-                  <path d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z" fill="#FF7262"/>
-                  <path d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z" fill="#F24E1E"/>
-                  <path d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z" fill="#A259FF"/>
-                </svg>
-                <span>Figma</span>
+                {showEmailSignup ? 'Hide standard email registration ▲' : 'Or register with email & password ▼'}
               </button>
             </div>
-          </div>
 
-          {/* Instant One-Click Demo Accounts */}
-          <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border/60 space-y-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block text-center">
-              Quick Test Accounts (1-Click Instant Sign-In)
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('azure')}
-                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
-              >
-                Microsoft User
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('github')}
-                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
-              >
-                GitHub Dev
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('figma')}
-                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
-              >
-                Figma Designer
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('google')}
-                className="py-1.5 px-2 rounded-lg bg-background border border-border/80 hover:border-primary/50 text-[11px] font-medium text-foreground truncate transition-all text-center"
-              >
-                Google User
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleOAuthLogin('azure');
-                }}
-                className="py-1.5 px-2 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 text-[11px] font-bold text-primary truncate transition-all text-center col-span-2 sm:col-span-2"
-              >
-                10 TB Free Fast Access
-              </button>
-            </div>
+            {showEmailSignup && (
+              <form onSubmit={handleEmailSubmit} className="space-y-4 pt-4 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      required
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="e.g. Inuka Minsara"
+                      className="pl-10 text-xs rounded-xl h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="pl-10 text-xs rounded-xl h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      required
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      className="pl-10 pr-10 text-xs rounded-xl h-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  disabled={isLoading}
+                  className="w-full h-11 rounded-xl text-xs font-semibold"
+                >
+                  {isLoading ? 'Creating Account...' : 'Get Started Free (Instant 10 TB)'}
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </form>
+            )}
           </div>
 
           <div className="text-center text-xs text-muted-foreground pt-1">
@@ -257,7 +233,103 @@ export function RegisterPage() {
             </Link>
           </div>
         </div>
+
+        {/* Security Trust Badges */}
+        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Google OAuth 2.0
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1.5">
+            <Cloud className="h-3.5 w-3.5 text-blue-500" /> 10 TB Zero-Knowledge Storage
+          </span>
+        </div>
       </div>
+
+      {/* Google Sign-In Email Modal (when in local engine mode) */}
+      {showGooglePromptModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border/80 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 border-b border-border/60 pb-4">
+              <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-500">
+                <svg className="h-6 w-6" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Sign up with Google Account</h3>
+                <p className="text-xs text-muted-foreground">Enter your Google email to activate your 10 TB free storage</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCustomGoogleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Your Google Email (Gmail)</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    required
+                    type="email"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    placeholder="yourname@gmail.com"
+                    className="pl-10 text-xs rounded-xl h-11"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Your Display Name</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    value={customGoogleName}
+                    onChange={(e) => setCustomGoogleName(e.target.value)}
+                    placeholder="e.g. Inuka Minsara"
+                    className="pl-10 text-xs rounded-xl h-11"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowGooglePromptModal(false)}
+                  className="rounded-xl text-xs h-10 px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  disabled={isLoading}
+                  className="rounded-xl text-xs h-10 px-6 font-bold"
+                >
+                  {isLoading ? 'Creating...' : 'Activate 10 TB Free'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

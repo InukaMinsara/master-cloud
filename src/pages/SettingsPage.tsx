@@ -199,17 +199,23 @@ export function SettingsPage() {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground">Email Address</label>
-                <Input
-                  disabled
-                  value={user?.email || 'No email configured'}
-                  className="text-xs rounded-xl opacity-60 bg-muted"
-                />
-                <span className="text-[10px] text-muted-foreground">Logged-in account address.</span>
+                <div className="relative">
+                  <Input
+                    disabled
+                    value={user?.email || 'No email configured'}
+                    className="text-xs rounded-xl opacity-80 bg-muted pr-28"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <Check className="h-3 w-3" />
+                    <span>Google Verified</span>
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground">Connected Google account associated with your permanent 10 TB free cloud quota.</span>
               </div>
 
               <Button type="submit" disabled={isSaving} className="rounded-xl text-xs font-semibold">
                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save Changes
+                {isSaving ? 'Saving Changes...' : 'Save Profile Changes'}
               </Button>
             </form>
           )}

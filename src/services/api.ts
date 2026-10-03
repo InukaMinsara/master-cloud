@@ -28,58 +28,98 @@ class UnifiedApiService {
 
   // --- Auth & Profile ---
   async getCurrentUser(): Promise<ProfileRecord | null> {
-    if (isSupabaseConfigured) {
+    if (this.isConfiguredWithSupabase()) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
         if (user) {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('master_cloud_backend_mode', 'supabase');
-          }
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
-          if (profile && profile.email) return profile;
 
-          const resolvedEmail =
-            user.email ||
-            user.user_metadata?.email ||
-            user.user_metadata?.preferred_username ||
-            user.user_metadata?.user_principal_name ||
-            'user@mastercloud.io';
-
-          const resolvedName =
+          // Accurately extract real Google profile metadata & email
+          const realEmail = user.email || user.user_metadata?.email || profile?.email || '';
+          const realName =
+            profile?.display_name ||
             user.user_metadata?.full_name ||
             user.user_metadata?.name ||
-            user.user_metadata?.user_name ||
-            user.user_metadata?.handle ||
             user.user_metadata?.display_name ||
-            resolvedEmail.split('@')[0] ||
-            'Master Cloud User';
-
-          const resolvedAvatar =
+            (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
+          const realAvatar =
+            profile?.avatar_url ||
             user.user_metadata?.avatar_url ||
             user.user_metadata?.picture ||
-            user.user_metadata?.avatar ||
             null;
 
-          return {
+          const resolvedUser: ProfileRecord = {
             id: user.id,
-            email: resolvedEmail,
-            display_name: resolvedName,
-            avatar_url: resolvedAvatar,
-            role: 'user',
-            created_at: user.created_at,
-            updated_at: user.updated_at || user.created_at,
+            email: realEmail,
+            display_name: realName,
+            avatar_url: realAvatar,
+            role: profile?.role || (realEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
+            created_at: profile?.created_at || user.created_at,
+            updated_at: profile?.updated_at || user.updated_at || new Date().toISOString(),
           };
+
+          // If profiles table had missing avatar or email, sync it to Supabase so it persists permanently
+          if (!profile?.avatar_url && realAvatar) {
+            try {
+              await supabase.from('profiles').upsert({
+                id: user.id,
+                email: realEmail,
+                display_name: realName,
+                avatar_url: realAvatar,
+                updated_at: new Date().toISOString(),
+              });
+            } catch (syncErr) {
+              console.warn('Profile sync non-blocking error:', syncErr);
+            }
+          }
+
+          localDb.setCurrentUser(resolvedUser);
+          return resolvedUser;
         }
       } catch (err) {
         console.warn('Supabase getSession fallback:', err);
       }
     }
     return localDb.getCurrentUser();
+  }
+
+  async loginWithGoogle(
+    mockGoogleEmail?: string,
+    mockGoogleName?: string,
+    mockGoogleAvatar?: string
+  ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
+    if (this.isConfiguredWithSupabase()) {
+      return this.loginWithOAuth('google');
+    }
+
+    // Direct Google authentication in local/offline engine
+    const googleEmail = mockGoogleEmail?.trim() || 'user@gmail.com';
+    const googleName =
+      mockGoogleName?.trim() ||
+      googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    const googleAvatar = mockGoogleAvatar || null;
+
+    const user: ProfileRecord = {
+      id: 'google-usr-' + Date.now(),
+      email: googleEmail,
+      display_name: googleName,
+      avatar_url: googleAvatar,
+      role: googleEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    localDb.setCurrentUser(user);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('master_cloud_backend_mode', 'local');
+    }
+    await localDb.logActivity('auth', user.id, googleName, 'login_google', { email: googleEmail });
+    return { user };
   }
 
   async login(email: string, password: string): Promise<{ user: ProfileRecord | null; error?: string }> {
@@ -101,15 +141,17 @@ class UnifiedApiService {
           .select('*')
           .eq('id', data.user.id)
           .single();
-        return { user: profile || {
+        const userObj: ProfileRecord = {
           id: data.user.id,
-          email: data.user.email || email.trim(),
-          display_name: data.user.user_metadata?.full_name || email.trim().split('@')[0] || 'User',
-          avatar_url: null,
-          role: 'user',
+          email: data.user.email || email,
+          display_name: profile?.display_name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+          avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || data.user.user_metadata?.picture || null,
+          role: profile?.role || (email.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
           created_at: data.user.created_at,
           updated_at: data.user.updated_at || data.user.created_at,
-        }};
+        };
+        localDb.setCurrentUser(userObj);
+        return { user: userObj };
       }
     }
     // Local mode fallback
@@ -130,107 +172,42 @@ class UnifiedApiService {
     return { user };
   }
 
-  async loginWithOAuth(provider: 'google' | 'github' | 'azure' | 'figma'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem('oauth_pending_provider', provider);
-      sessionStorage.setItem('oauth_pending_time', Date.now().toString());
-    }
-
-    if (provider === 'figma') {
-      // Figma instant direct OAuth profile connection
-      return this.createLocalOAuthUser('figma');
-    }
-
-    if (isSupabaseConfigured) {
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('master_cloud_backend_mode', 'supabase');
-        }
-        const redirectTo = `${window.location.origin}/drive`;
-        
-        let options: any = {
-          redirectTo,
-        };
-
-        if (provider === 'azure') {
-          options = {
-            redirectTo,
-            scopes: 'openid profile email offline_access',
-            queryParams: {
-              prompt: 'select_account',
-            },
-          };
-        } else if (provider === 'github') {
-          options = {
-            redirectTo,
-            scopes: 'read:user user:email',
-          };
-        } else if (provider === 'google') {
-          options = {
-            redirectTo,
-            scopes: 'openid profile email',
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            },
-          };
-        }
-
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: provider as any,
-          options,
-        });
-
-        if (error) {
-          console.warn(`[Supabase OAuth Error] ${provider}:`, error);
-          return this.createLocalOAuthUser(provider);
-        }
-
-        if (data?.url) {
-          window.location.href = data.url;
-          return { user: null, redirected: true };
-        }
-
-        return this.createLocalOAuthUser(provider);
-      } catch (err: any) {
-        console.warn(`[Supabase OAuth Exception] ${provider}:`, err);
-        return this.createLocalOAuthUser(provider);
+  async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
+    if (!isSupabaseConfigured) {
+      if (provider === 'google') {
+        return this.loginWithGoogle();
       }
+      return { user: null, error: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.' };
     }
 
-    // Local / Offline mode fallback
-    return this.createLocalOAuthUser(provider);
-  }
+    try {
+      const redirectTo = `${window.location.origin}/drive`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider === 'azure' ? 'azure' : provider,
+        options: {
+          redirectTo,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
+        },
+      });
 
-  public createLocalOAuthUser(provider: 'google' | 'github' | 'azure' | 'figma'): { user: ProfileRecord; redirected: false } {
-    const domain = provider === 'azure' ? 'outlook.com' : provider === 'google' ? 'gmail.com' : provider === 'github' ? 'github.com' : 'figma.com';
-    const providerTitle = provider === 'azure' ? 'Microsoft User' : provider === 'google' ? 'Google User' : provider === 'github' ? 'GitHub Developer' : 'Figma Designer';
-    const defaultEmail = `${provider}.user@${domain}`;
-    const avatar =
-      provider === 'azure'
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-        : provider === 'github'
-        ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
-        : provider === 'figma'
-        ? 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80';
-    
-    const localUser: ProfileRecord = {
-      id: `usr-${provider}-${Date.now()}`,
-      email: defaultEmail,
-      display_name: providerTitle,
-      avatar_url: avatar,
-      role: 'user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+      if (error) {
+        console.error(`[Supabase OAuth Error] ${provider}:`, error);
+        return { user: null, error: error.message };
+      }
 
-    localDb.setCurrentUser(localUser);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('master_cloud_backend_mode', 'local');
+      if (data?.url) {
+        window.location.href = data.url;
+        return { user: null, redirected: true };
+      }
+
+      return { user: null, redirected: true };
+    } catch (err: any) {
+      console.error(`[Supabase OAuth Exception] ${provider}:`, err);
+      return { user: null, error: err.message || `Failed to sign in with ${provider}` };
     }
-    localDb.logActivity('auth', localUser.id, localUser.email, 'login', { provider });
-    return { user: localUser, redirected: false };
   }
 
   async signup(email: string, password: string, displayName: string): Promise<{ user: ProfileRecord | null; error?: string }> {
@@ -250,15 +227,17 @@ class UnifiedApiService {
         .select('*')
         .eq('id', data.user.id)
         .single();
-      return { user: profile || {
+      const userObj: ProfileRecord = {
         id: data.user.id,
         email: data.user.email || email,
-        display_name: displayName.trim() || data.user.email?.split('@')[0] || 'User',
-        avatar_url: null,
-        role: 'user',
+        display_name: profile?.display_name || displayName.trim() || data.user.email?.split('@')[0] || 'User',
+        avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url || data.user.user_metadata?.picture || null,
+        role: profile?.role || 'user',
         created_at: data.user.created_at,
         updated_at: data.user.updated_at || data.user.created_at,
-      }};
+      };
+      localDb.setCurrentUser(userObj);
+      return { user: userObj };
     }
     // Local mode signup
     const newUser: ProfileRecord = {

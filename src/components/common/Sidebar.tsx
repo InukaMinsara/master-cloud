@@ -26,7 +26,6 @@ import {
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
 import { useFileStore } from '@/stores/fileStore';
-import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { formatBytes } from '@/lib/utils';
@@ -35,7 +34,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, setNewFolderModalOpen } = useUIStore();
-  const { user } = useAuthStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -215,7 +213,7 @@ export function Sidebar() {
 
       {/* Storage Quota Footer Widget */}
       {!sidebarCollapsed && (
-        <div className="p-3 m-3 mb-1.5 rounded-2xl bg-secondary/50 border border-border/60 space-y-2">
+        <div className="p-3 m-3 rounded-2xl bg-secondary/50 border border-border/60 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-foreground">Storage</span>
             <span className="text-muted-foreground">{storageBreakdown.percentageUsed}% used</span>
@@ -231,35 +229,6 @@ export function Sidebar() {
             Storage Analytics
           </NavLink>
         </div>
-      )}
-
-      {/* Logged-In User Account Display */}
-      {!sidebarCollapsed && user && (
-        <NavLink
-          to="/settings"
-          className="p-2.5 mx-3 mb-3 rounded-2xl bg-card border border-border/70 hover:border-primary/40 flex items-center gap-2.5 transition-all group shadow-sm"
-          title="Account Settings"
-        >
-          {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={user.display_name || 'User'}
-              className="h-8 w-8 rounded-full object-cover border border-border shrink-0"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {(user.display_name || user.email || 'U').charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
-              {user.display_name || user.email?.split('@')[0] || 'User'}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate font-mono">
-              {user.email || 'user@mastercloud.io'}
-            </p>
-          </div>
-        </NavLink>
       )}
     </aside>
   );
