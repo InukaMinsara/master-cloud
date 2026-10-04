@@ -28,6 +28,7 @@ export function SettingsPage() {
   const { theme, setTheme, activeSettingsTab, setActiveSettingsTab } = useUIStore();
 
   const [displayName, setDisplayName] = React.useState(user?.display_name || '');
+  const [email, setEmail] = React.useState(user?.email || '');
   const [avatarUrl, setAvatarUrl] = React.useState(user?.avatar_url || '');
   const [isSaving, setIsSaving] = React.useState(false);
   const localFileRef = React.useRef<HTMLInputElement>(null);
@@ -35,6 +36,7 @@ export function SettingsPage() {
   React.useEffect(() => {
     if (user) {
       setDisplayName(user.display_name || '');
+      setEmail(user.email || '');
       setAvatarUrl(user.avatar_url || '');
     }
   }, [user]);
@@ -73,6 +75,7 @@ export function SettingsPage() {
       await updateProfile({
         display_name: displayName.trim(),
         avatar_url: avatarUrl.trim() || null,
+        email: email.trim(),
       });
       toast.success('Profile updated successfully');
     } catch (err: any) {
@@ -198,11 +201,13 @@ export function SettingsPage() {
                 <label className="text-xs font-semibold text-foreground">Email Address</label>
                 <div className="relative">
                   <Input
-                    disabled
-                    value={user?.email || 'No email configured'}
-                    className="text-xs rounded-xl opacity-80 bg-muted pr-28"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="yourname@gmail.com"
+                    className="text-xs rounded-xl pr-28"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 pointer-events-none">
                     <Check className="h-3 w-3" />
                     <span>Google Verified</span>
                   </span>

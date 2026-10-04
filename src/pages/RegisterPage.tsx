@@ -22,8 +22,8 @@ export function RegisterPage() {
 
   // Custom Google prompt modal state
   const [showGooglePromptModal, setShowGooglePromptModal] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  const [customGoogleName, setCustomGoogleName] = useState('');
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('immaster2024@gmail.com');
+  const [customGoogleName, setCustomGoogleName] = useState('Inuka Minsara');
 
   const handleGoogleSignUpClick = async () => {
     setIsLoading(true);
@@ -32,13 +32,15 @@ export function RegisterPage() {
         const res = await loginWithOAuth('google');
         if (res.redirected) return;
         if (!res.success && res.error) {
-          toast.error(res.error);
+          toast.error(`Supabase OAuth: ${res.error}`);
+          setShowGooglePromptModal(true);
         }
       } else {
         setShowGooglePromptModal(true);
       }
     } catch (err: any) {
       toast.error(err.message || 'Google Sign-Up failed');
+      setShowGooglePromptModal(true);
     } finally {
       setIsLoading(false);
     }

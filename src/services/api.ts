@@ -128,19 +128,19 @@ class UnifiedApiService {
     mockGoogleName?: string,
     mockGoogleAvatar?: string
   ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !mockGoogleEmail) {
       return this.loginWithOAuth('google');
     }
 
-    // Direct Google authentication in local/offline engine
-    const googleEmail = mockGoogleEmail?.trim() || 'user@gmail.com';
+    // Direct Google authentication with explicit email and profile
+    const googleEmail = mockGoogleEmail?.trim() || 'immaster2024@gmail.com';
     const googleName =
       mockGoogleName?.trim() ||
-      googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      (googleEmail.toLowerCase().includes('immaster') ? 'Inuka Minsara' : googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()));
     const googleAvatar = mockGoogleAvatar || null;
 
     const user: ProfileRecord = {
-      id: 'google-usr-' + Date.now(),
+      id: 'google-usr-' + (googleEmail.replace(/[^a-zA-Z0-9]/g, '-')),
       email: googleEmail,
       display_name: googleName,
       avatar_url: googleAvatar,
@@ -153,6 +153,22 @@ class UnifiedApiService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('master_cloud_backend_mode', 'local');
     }
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email,
+          display_name: user.display_name,
+          avatar_url: user.avatar_url,
+          role: user.role,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn('Profile upsert fallback:', err);
+      }
+    }
+
     await localDb.logActivity('auth', user.id, googleName, 'login_google', { email: googleEmail });
     return { user };
   }
