@@ -713,7 +713,7 @@ function buildPropfindXml(reqPath, entries, usedBytes) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<D:multistatus xmlns:D="DAV:">\n${responses.join('\n')}\n</D:multistatus>`;
 }
 
-function streamCloudUrlsToResponse(cloudUrls, res) {
+function streamCloudUrlsToResponse(cloudUrls, res, rangeHeader = null) {
   let idx = 0;
   function nextChunk() {
     if (idx >= cloudUrls.length) {
@@ -727,7 +727,9 @@ function streamCloudUrlsToResponse(cloudUrls, res) {
     }
     const [cleanUrl, hash] = rawUrl.split('#');
     const reqHeaders = { 'User-Agent': 'Mozilla/5.0' };
-    if (hash && hash.startsWith('range=')) {
+    if (rangeHeader) {
+      reqHeaders['Range'] = rangeHeader;
+    } else if (hash && hash.startsWith('range=')) {
       reqHeaders['Range'] = `bytes=${hash.slice(6)}`;
     }
     https.get(cleanUrl, { headers: reqHeaders }, (upRes) => {
@@ -954,13 +956,65 @@ const server = http.createServer((req, res) => {
 
   // GET / HEAD: Stream from RAM buffer, Online Cloud URLs, or staging file!
   if (method === 'GET' || method === 'HEAD') {
-    const fileEntry = manifest.files[relPath];
+    let fileEntry = manifest.files[relPath];
+    if (!fileEntry) {
+      // Alternate lookup (case-insensitive or normalized)
+      const lower = relPath.toLowerCase();
+      const altKey = Object.keys(manifest.files).find(
+        k => k.toLowerCase() === lower || k.toLowerCase().replace(/ \(\d+\)/g, '') === lower
+      );
+      if (altKey) fileEntry = manifest.files[altKey];
+    }
+
     if (fileEntry) {
+      const totalSize = Number(fileEntry.size) || 0;
+      const rangeHeader = req.headers['range'];
+
+      if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10) || 0;
+        const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+        const chunkLength = Math.max(0, end - start + 1);
+
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkLength,
+          'Content-Type': mimeType(fileEntry.name),
+          'Last-Modified': formatDate(fileEntry.mtime),
+          'ETag': `"${totalSize}-${new Date(fileEntry.mtime).getTime()}"`,
+        });
+
+        if (method === 'HEAD') {
+          res.end();
+          return;
+        }
+
+        const ramBuf = inMemoryStagingBuffers.get(relPath);
+        if (ramBuf) {
+          res.end(ramBuf.subarray(start, end + 1));
+          return;
+        }
+
+        if (fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
+          streamCloudUrlsToResponse(fileEntry.cloudUrls, res, rangeHeader);
+        } else {
+          const localPath = path.join(STORAGE_DIR, relPath);
+          if (fs.existsSync(localPath)) {
+            fs.createReadStream(localPath, { start, end }).pipe(res);
+          } else {
+            res.end();
+          }
+        }
+        return;
+      }
+
       res.writeHead(200, {
         'Content-Type': mimeType(fileEntry.name),
-        'Content-Length': fileEntry.size,
+        'Content-Length': totalSize,
+        'Accept-Ranges': 'bytes',
         'Last-Modified': formatDate(fileEntry.mtime),
-        'ETag': `"${fileEntry.size}-${new Date(fileEntry.mtime).getTime()}"`,
+        'ETag': `"${totalSize}-${new Date(fileEntry.mtime).getTime()}"`,
       });
       if (method === 'HEAD') {
         res.end();

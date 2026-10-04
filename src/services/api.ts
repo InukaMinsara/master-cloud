@@ -358,6 +358,7 @@ class UnifiedApiService {
   }
 
   async getFolders(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FolderItem[]> {
+    const localFolders = await localDb.getFolders(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
         let query = supabase.from('folders').select('*, owner:profiles(*)');
@@ -372,12 +373,19 @@ class UnifiedApiService {
           }
         }
         const { data, error } = await query.order('name');
-        if (!error && data) return data as FolderItem[];
+        if (!error && data && data.length > 0) {
+          const map = new Map<string, FolderItem>();
+          for (const f of data as FolderItem[]) map.set(f.name.toLowerCase(), f);
+          for (const lf of localFolders) {
+            if (!map.has(lf.name.toLowerCase())) map.set(lf.name.toLowerCase(), lf);
+          }
+          return Array.from(map.values());
+        }
       } catch (err) {
         console.warn('Supabase getFolders fallback:', err);
       }
     }
-    return localDb.getFolders(parentFolderId, includeDeleted);
+    return localFolders;
   }
 
   async getFolderById(id: string): Promise<FolderRecord | null> {
@@ -477,6 +485,7 @@ class UnifiedApiService {
 
   // --- Files ---
   async getFiles(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FileItem[]> {
+    const localFiles = await localDb.getFiles(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
         let query = supabase.from('files').select('*, owner:profiles(*)');
@@ -491,12 +500,19 @@ class UnifiedApiService {
           }
         }
         const { data, error } = await query.order('name');
-        if (!error && data) return data as FileItem[];
+        if (!error && data && data.length > 0) {
+          const map = new Map<string, FileItem>();
+          for (const f of data as FileItem[]) map.set(f.name.toLowerCase(), f);
+          for (const lf of localFiles) {
+            if (!map.has(lf.name.toLowerCase())) map.set(lf.name.toLowerCase(), lf);
+          }
+          return Array.from(map.values());
+        }
       } catch (err) {
         console.warn('Supabase getFiles fallback:', err);
       }
     }
-    return localDb.getFiles(parentFolderId, includeDeleted);
+    return localFiles;
   }
 
   async getFileById(id: string): Promise<FileItem | null> {
@@ -571,15 +587,18 @@ class UnifiedApiService {
   }
 
   async getFileBlob(storagePath: string): Promise<Blob | null> {
+    if (storagePath.startsWith('zdrive:')) {
+      return localDb.getFileBlob(storagePath);
+    }
     if (this.isConfiguredWithSupabase()) {
-      const { data, error } = await supabase.storage
-        .from('master-cloud-files')
-        .download(storagePath);
-      if (error) {
-        console.error('Storage download error:', error);
-        return null;
+      try {
+        const { data, error } = await supabase.storage
+          .from('master-cloud-files')
+          .download(storagePath);
+        if (!error && data) return data;
+      } catch (err) {
+        console.warn('Supabase download error:', err);
       }
-      return data;
     }
     return localDb.getFileBlob(storagePath);
   }
