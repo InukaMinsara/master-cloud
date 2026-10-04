@@ -197,14 +197,22 @@ export function FilePreviewModal() {
           </div>
         ) : category === 'image' ? (
           <div className="overflow-auto max-h-full max-w-full flex items-center justify-center">
-            <img
-              src={blobUrl || `https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200`}
-              alt={activeFile.name}
-              className="max-h-[80vh] max-w-[85vw] object-contain transition-transform duration-200"
-              style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              }}
-            />
+            {blobUrl ? (
+              <img
+                src={blobUrl}
+                alt={activeFile.name}
+                className="max-h-[80vh] max-w-[85vw] object-contain transition-transform duration-200"
+                style={{
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                }}
+              />
+            ) : (
+              <div className="text-white/60 text-sm">Image preview unavailable</div>
+            )}
+          </div>
+        ) : (activeFile.extension === 'pdf' || activeFile.mime_type.includes('pdf')) && blobUrl ? (
+          <div className="w-full max-w-5xl h-[80vh] rounded-2xl bg-white overflow-hidden shadow-2xl flex flex-col">
+            <iframe src={blobUrl} title={activeFile.name} className="w-full h-full border-none" />
           </div>
         ) : category === 'video' ? (
           <div className="w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10">

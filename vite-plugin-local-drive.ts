@@ -1,0 +1,335 @@
+import type { Plugin } from 'vite';
+import fs from 'fs';
+import path from 'path';
+
+const DRIVE_PATHS = ['Z:\\', 'D:\\MasterCloudDrive'];
+
+function getDriveRoot(): string {
+  for (const p of DRIVE_PATHS) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch {
+      // ignore
+    }
+  }
+  return 'D:\\MasterCloudDrive';
+}
+
+function guessMimeType(ext: string): string {
+  const map: Record<string, string> = {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+    webp: 'image/webp',
+    ico: 'image/x-icon',
+    mp4: 'video/mp4',
+    mkv: 'video/x-matroska',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    txt: 'text/plain; charset=utf-8',
+    md: 'text/markdown; charset=utf-8',
+    json: 'application/json; charset=utf-8',
+    js: 'text/javascript; charset=utf-8',
+    jsx: 'text/javascript; charset=utf-8',
+    ts: 'text/typescript; charset=utf-8',
+    tsx: 'text/typescript; charset=utf-8',
+    html: 'text/html; charset=utf-8',
+    css: 'text/css; charset=utf-8',
+    yaml: 'text/yaml; charset=utf-8',
+    yml: 'text/yaml; charset=utf-8',
+    xml: 'text/xml; charset=utf-8',
+    csv: 'text/csv; charset=utf-8',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    zip: 'application/zip',
+    fig: 'application/octet-stream',
+    msheet: 'application/json; charset=utf-8',
+  };
+  return map[ext.toLowerCase()] || 'application/octet-stream';
+}
+
+let cachedItems: any[] = [];
+let isScanning = false;
+let lastScanTime = 0;
+const SCAN_INTERVAL_MS = 10000;
+
+async function scanDriveAsync(dir: string, baseDir: string = dir, maxDepth = 4, depth = 0): Promise<any[]> {
+  if (depth > maxDepth) return [];
+  const results: any[] = [];
+  try {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (
+        entry.name.startsWith('.') ||
+        entry.name === 'node_modules' ||
+        entry.name === '.git' ||
+        entry.name === '$RECYCLE.BIN' ||
+        entry.name === 'System Volume Information'
+      ) {
+        continue;
+      }
+
+      const fullPath = path.join(dir, entry.name);
+      const isDir = entry.isDirectory();
+      const relPath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+      const parentRel = path.dirname(relPath).replace(/\\/g, '/');
+
+      let size = 0;
+      let mtime = new Date().toISOString();
+      let birthtime = mtime;
+
+      if (!isDir) {
+        try {
+          const st = await fs.promises.stat(fullPath);
+          size = st.size;
+          mtime = st.mtime.toISOString();
+          birthtime = st.birthtime.toISOString();
+        } catch {
+          // ignore stat errors
+        }
+      }
+
+      results.push({
+        relPath,
+        name: entry.name,
+        isDir,
+        parentRelPath: parentRel === '.' ? null : parentRel,
+        size,
+        mtime,
+        birthtime,
+      });
+
+      if (isDir) {
+        const sub = await scanDriveAsync(fullPath, baseDir, maxDepth, depth + 1);
+        results.push(...sub);
+      }
+    }
+  } catch {
+    // ignore directory read errors
+  }
+  return results;
+}
+
+function triggerBackgroundScan() {
+  if (isScanning) return;
+  const driveRoot = getDriveRoot();
+  isScanning = true;
+  scanDriveAsync(driveRoot)
+    .then((items) => {
+      cachedItems = items;
+      lastScanTime = Date.now();
+    })
+    .catch(() => {})
+    .finally(() => {
+      isScanning = false;
+    });
+}
+
+// Initial scan trigger on load
+triggerBackgroundScan();
+
+export function localDrivePlugin(): Plugin {
+  return {
+    name: 'vite-plugin-local-drive',
+    configureServer(server) {
+      // Trigger background scan on server startup
+      triggerBackgroundScan();
+
+      // 1. List files & folders from local drive (Z:\ or D:\MasterCloudDrive)
+      server.middlewares.use('/api/local-drive/list', (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+
+        const driveRoot = getDriveRoot();
+        const now = Date.now();
+        if (now - lastScanTime > SCAN_INTERVAL_MS) {
+          triggerBackgroundScan();
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify({
+            ok: true,
+            driveLetter: driveRoot.startsWith('Z') ? 'Z:' : 'D:',
+            drivePath: driveRoot,
+            items: cachedItems,
+          })
+        );
+      });
+
+      // 2. Read & stream file bytes for preview & download
+      server.middlewares.use('/api/local-drive/read', (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+
+        try {
+          const driveRoot = getDriveRoot();
+          const urlObj = new URL(req.url || '', 'http://localhost');
+          const rawRelPath = urlObj.searchParams.get('path') || '';
+          const cleanRelPath = rawRelPath.replace(/^[/\\]+/, '').replace(/\\/g, '/');
+
+          if (!cleanRelPath || cleanRelPath.includes('..')) {
+            res.statusCode = 400;
+            res.end('Invalid path parameter');
+            return;
+          }
+
+          const targetPath = path.join(driveRoot, cleanRelPath);
+          if (fs.existsSync(targetPath)) {
+            const stat = fs.statSync(targetPath);
+            if (stat.isDirectory()) {
+              res.statusCode = 400;
+              res.end('Path is a directory');
+              return;
+            }
+
+            const ext = cleanRelPath.split('.').pop() || '';
+            const mime = guessMimeType(ext);
+
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Content-Length', stat.size);
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+
+            const stream = fs.createReadStream(targetPath);
+            stream.pipe(res);
+            return;
+          }
+
+          // Fallback: Check cloud-manifest.json
+          const manifestPath = path.resolve(process.cwd(), 'scripts', 'cloud-manifest.json');
+          if (fs.existsSync(manifestPath)) {
+            try {
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+              const fileRecord = manifest.files?.[cleanRelPath];
+              if (fileRecord?.cloudUrls?.[0]) {
+                res.writeHead(302, { Location: fileRecord.cloudUrls[0] });
+                res.end();
+                return;
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          res.statusCode = 404;
+          res.end('File not found on Z: drive');
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.end('Failed to stream file: ' + err.message);
+        }
+      });
+
+      // 3. Write / upload files to drive
+      server.middlewares.use('/api/local-drive/upload', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+
+        try {
+          const driveRoot = getDriveRoot();
+          const encodedRel = req.headers['x-file-path'] || '';
+          const relPath = decodeURIComponent(String(encodedRel)).replace(/^[/\\]+/, '');
+
+          if (!relPath || relPath.includes('..')) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: 'Invalid path' }));
+            return;
+          }
+
+          const targetPath = path.join(driveRoot, relPath);
+          const targetDir = path.dirname(targetPath);
+          if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+          }
+
+          const writeStream = fs.createWriteStream(targetPath);
+          req.pipe(writeStream);
+
+          writeStream.on('finish', () => {
+            triggerBackgroundScan();
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, relPath }));
+          });
+
+          writeStream.on('error', (err) => {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: err.message }));
+          });
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: false, error: err.message }));
+        }
+      });
+
+      // 4. File system operations (mkdir, rename, delete)
+      server.middlewares.use('/api/local-drive/fs-op', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk.toString();
+        });
+
+        req.on('end', () => {
+          try {
+            const driveRoot = getDriveRoot();
+            const { op, relPath, newRelPath } = JSON.parse(body || '{}');
+
+            if (!relPath || String(relPath).includes('..')) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: false, error: 'Invalid relPath' }));
+              return;
+            }
+
+            const target = path.join(driveRoot, String(relPath));
+            if (op === 'mkdir') {
+              if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
+            } else if (op === 'delete') {
+              if (fs.existsSync(target)) {
+                fs.rmSync(target, { recursive: true, force: true });
+              }
+            } else if (op === 'rename') {
+              if (newRelPath && !String(newRelPath).includes('..')) {
+                const newTarget = path.join(driveRoot, String(newRelPath));
+                if (fs.existsSync(target)) fs.renameSync(target, newTarget);
+              }
+            }
+
+            triggerBackgroundScan();
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true }));
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: false, error: err.message }));
+          }
+        });
+      });
+    },
+  };
+}

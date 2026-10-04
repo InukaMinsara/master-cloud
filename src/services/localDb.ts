@@ -139,11 +139,11 @@ function saveTable<T>(tableName: string, data: T[]): void {
 
 // Default Seed Profile
 export const DEFAULT_USER: ProfileRecord = {
-  id: '00000000-0000-0000-0000-000000000001',
-  email: '',
-  display_name: 'Master Cloud User',
+  id: 'usr-inuka-minsara-master',
+  email: 'immaster2024@gmail.com',
+  display_name: 'Inuka Minsara',
   avatar_url: null,
-  role: 'user',
+  role: 'admin',
   created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
   updated_at: new Date().toISOString(),
 };
