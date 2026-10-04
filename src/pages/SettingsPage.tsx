@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -143,17 +144,13 @@ export function SettingsPage() {
               {/* Profile Avatar & Local Uploader */}
               <div className="flex items-center gap-5 p-4 rounded-2xl bg-secondary/30 border border-border/60">
                 <div className="relative shrink-0">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="h-16 w-16 rounded-full object-cover border-2 border-primary shadow-md"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white font-black text-xl flex items-center justify-center border-2 border-primary/30 shadow-md">
-                      {(displayName || user?.email || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <UserAvatar
+                    src={avatarUrl}
+                    name={displayName}
+                    email={user?.email}
+                    size="xl"
+                    className="border-2 border-primary shadow-md"
+                  />
                 </div>
 
                 <div className="space-y-2">

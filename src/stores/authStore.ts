@@ -26,10 +26,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: async () => {
     try {
       set({ isLoading: true });
+
+      // Immediate session check
+      if (isSupabaseConfigured) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const meta = session.user.user_metadata || {};
+            const identityMeta = session.user.identities?.[0]?.identity_data || {};
+            const realEmail = session.user.email || meta.email || identityMeta.email || '';
+            const realName =
+              meta.full_name ||
+              meta.name ||
+              identityMeta.full_name ||
+              identityMeta.name ||
+              meta.display_name ||
+              (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
+            const realAvatar =
+              meta.avatar_url ||
+              meta.picture ||
+              identityMeta.avatar_url ||
+              identityMeta.picture ||
+              null;
+
+            const immediateUser: ProfileRecord = {
+              id: session.user.id,
+              email: realEmail,
+              display_name: realName,
+              avatar_url: realAvatar,
+              role: realEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user',
+              created_at: session.user.created_at,
+              updated_at: new Date().toISOString(),
+            };
+            set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+          }
+        } catch {
+          // Fallback to api.getCurrentUser()
+        }
+      }
+
       const user = await api.getCurrentUser();
       set({
         user,
-        isAuthenticated: Boolean(user),
+        isAuthenticated: Boolean(user && user.email),
         isLoading: false,
       });
 
@@ -37,9 +76,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (isSupabaseConfigured && !isAuthListenerInitialized) {
         isAuthListenerInitialized = true;
         supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            const meta = session.user.user_metadata || {};
+            const identityMeta = session.user.identities?.[0]?.identity_data || {};
+            const realEmail = session.user.email || meta.email || identityMeta.email || '';
+            const realName =
+              meta.full_name ||
+              meta.name ||
+              identityMeta.full_name ||
+              identityMeta.name ||
+              meta.display_name ||
+              (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
+            const realAvatar =
+              meta.avatar_url ||
+              meta.picture ||
+              identityMeta.avatar_url ||
+              identityMeta.picture ||
+              null;
+
+            const immediateUser: ProfileRecord = {
+              id: session.user.id,
+              email: realEmail,
+              display_name: realName,
+              avatar_url: realAvatar,
+              role: realEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user',
+              created_at: session.user.created_at,
+              updated_at: new Date().toISOString(),
+            };
+            set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+
             const currentUser = await api.getCurrentUser();
-            set({ user: currentUser, isAuthenticated: Boolean(currentUser), isLoading: false });
+            if (currentUser) {
+              set({ user: currentUser, isAuthenticated: true, isLoading: false });
+            }
           } else if (event === 'SIGNED_OUT') {
             set({ user: null, isAuthenticated: false, isLoading: false });
           }

@@ -25,6 +25,7 @@ import { api } from '@/services/api';
 import { NotificationRecord } from '@/types/database';
 import { formatDateRelative } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -215,17 +216,7 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button className="flex items-center gap-2 rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all focus:outline-none">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user?.display_name || 'User'}
-                  className="h-9 w-9 rounded-full object-cover border border-border shadow-sm"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center border border-border shadow-sm">
-                  {(user?.display_name || user?.email || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
+              <UserAvatar user={user} size="md" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="right" className="w-56 p-2">

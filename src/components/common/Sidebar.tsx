@@ -26,16 +26,19 @@ import {
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
 import { useFileStore } from '@/stores/fileStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { formatBytes } from '@/lib/utils';
 import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar, setNewFolderModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
+  const { user } = useAuthStore();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const folderInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -227,6 +230,27 @@ export function Sidebar() {
             className="block text-center text-xs font-semibold text-primary hover:underline pt-1"
           >
             Storage Analytics
+          </NavLink>
+        </div>
+      )}
+
+      {/* User Profile Mini Bar */}
+      {!sidebarCollapsed && user && (
+        <div className="px-3 pb-3">
+          <NavLink
+            to="/settings"
+            className="flex items-center gap-2.5 p-2 rounded-2xl bg-secondary/40 hover:bg-secondary/70 border border-border/50 transition-colors group"
+            title="Open Account Settings"
+          >
+            <UserAvatar user={user} size="sm" className="border border-primary/30" />
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                {user.display_name || user.email?.split('@')[0] || 'User'}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                {user.email || 'Google Account'}
+              </span>
+            </div>
           </NavLink>
         </div>
       )}

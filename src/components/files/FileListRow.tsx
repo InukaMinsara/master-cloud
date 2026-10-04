@@ -25,6 +25,7 @@ import { usePreviewStore } from '@/stores/previewStore';
 import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface FileListRowProps {
   item: (FileItem & { isFolder?: false }) | (FolderItem & { isFolder: true });
@@ -157,17 +158,11 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
       {/* Owner column */}
       <td className="px-3 py-3 hidden md:table-cell text-muted-foreground">
         <div className="flex items-center gap-2">
-          {item.owner?.avatar_url ? (
-            <img
-              src={item.owner.avatar_url}
-              alt="Owner"
-              className="h-5 w-5 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-5 w-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
-              {(item.owner?.display_name || 'M').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            user={item.owner}
+            name={item.owner?.display_name || 'Me'}
+            size="xs"
+          />
           <span className="truncate">{item.owner?.display_name || 'Me'}</span>
         </div>
       </td>

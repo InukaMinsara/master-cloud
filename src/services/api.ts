@@ -28,49 +28,69 @@ class UnifiedApiService {
 
   // --- Auth & Profile ---
   async getCurrentUser(): Promise<ProfileRecord | null> {
-    if (this.isConfiguredWithSupabase()) {
+    // 1. Always check active Supabase Auth session first if configured
+    if (isSupabaseConfigured) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.warn('Supabase getSession error:', sessionError);
+        }
         const user = session?.user;
         if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+          // Sync backend mode to supabase
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('master_cloud_backend_mode', 'supabase');
+          }
 
-          // Accurately extract real Google profile metadata & email
-          const realEmail = user.email || user.user_metadata?.email || profile?.email || '';
+          const meta = user.user_metadata || {};
+          const identityMeta = user.identities?.[0]?.identity_data || {};
+
+          // Extract real Google metadata & email
+          const realEmail = user.email || meta.email || identityMeta.email || '';
           const realName =
-            profile?.display_name ||
-            user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            user.user_metadata?.display_name ||
+            meta.full_name ||
+            meta.name ||
+            identityMeta.full_name ||
+            identityMeta.name ||
+            meta.display_name ||
             (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
           const realAvatar =
-            profile?.avatar_url ||
-            user.user_metadata?.avatar_url ||
-            user.user_metadata?.picture ||
+            meta.avatar_url ||
+            meta.picture ||
+            identityMeta.avatar_url ||
+            identityMeta.picture ||
             null;
+
+          let profile: ProfileRecord | null = null;
+          try {
+            const { data } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            profile = data;
+          } catch {
+            // Profile record may not exist yet, continue with session metadata
+          }
 
           const resolvedUser: ProfileRecord = {
             id: user.id,
-            email: realEmail,
-            display_name: realName,
-            avatar_url: realAvatar,
+            email: realEmail || profile?.email || '',
+            display_name: profile?.display_name || realName,
+            avatar_url: profile?.avatar_url || realAvatar,
             role: profile?.role || (realEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
             created_at: profile?.created_at || user.created_at,
             updated_at: profile?.updated_at || user.updated_at || new Date().toISOString(),
           };
 
-          // If profiles table had missing avatar or email, sync it to Supabase so it persists permanently
+          // If profiles table has missing avatar or email, sync it to Supabase so it persists permanently
           if (!profile?.avatar_url && realAvatar) {
             try {
               await supabase.from('profiles').upsert({
                 id: user.id,
-                email: realEmail,
-                display_name: realName,
-                avatar_url: realAvatar,
+                email: resolvedUser.email,
+                display_name: resolvedUser.display_name,
+                avatar_url: resolvedUser.avatar_url,
                 updated_at: new Date().toISOString(),
               });
             } catch (syncErr) {
@@ -85,6 +105,7 @@ class UnifiedApiService {
         console.warn('Supabase getSession fallback:', err);
       }
     }
+
     return localDb.getCurrentUser();
   }
 
@@ -93,7 +114,7 @@ class UnifiedApiService {
     mockGoogleName?: string,
     mockGoogleAvatar?: string
   ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (this.isConfiguredWithSupabase()) {
+    if (isSupabaseConfigured) {
       return this.loginWithOAuth('google');
     }
 
@@ -183,18 +204,18 @@ class UnifiedApiService {
     try {
       const redirectTo = `${window.location.origin}/drive`;
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: provider === 'azure' ? 'azure' : provider,
+        provider: 'google',
         options: {
           redirectTo,
-          queryParams: provider === 'google' ? {
+          queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
-          } : undefined,
+            prompt: 'select_account consent',
+          },
         },
       });
 
       if (error) {
-        console.error(`[Supabase OAuth Error] ${provider}:`, error);
+        console.error(`[Supabase OAuth Error] Google:`, error);
         return { user: null, error: error.message };
       }
 
@@ -205,8 +226,8 @@ class UnifiedApiService {
 
       return { user: null, redirected: true };
     } catch (err: any) {
-      console.error(`[Supabase OAuth Exception] ${provider}:`, err);
-      return { user: null, error: err.message || `Failed to sign in with ${provider}` };
+      console.error(`[Supabase OAuth Exception] Google:`, err);
+      return { user: null, error: err.message || `Failed to sign in with Google` };
     }
   }
 
