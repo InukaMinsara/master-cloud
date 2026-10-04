@@ -73,29 +73,43 @@ class UnifiedApiService {
             // Profile record may not exist yet, continue with session metadata
           }
 
+          // Discard mock/placeholder values that might have been stored previously
+          const isStaleName =
+            !profile?.display_name ||
+            profile.display_name === 'Microsoft User' ||
+            profile.display_name === 'Master Cloud User' ||
+            profile.display_name === 'User';
+          const finalDisplayName = isStaleName ? realName : (profile?.display_name || realName);
+
+          const isPlaceholderAvatar =
+            !profile?.avatar_url ||
+            profile.avatar_url.includes('unsplash.com');
+          const finalAvatarUrl = isPlaceholderAvatar ? (realAvatar || null) : (profile?.avatar_url || realAvatar);
+
+          const finalEmail = realEmail || (profile?.email && profile.email !== 'azure.user@outlook.com' ? profile.email : '');
+
           const resolvedUser: ProfileRecord = {
             id: user.id,
-            email: realEmail || profile?.email || '',
-            display_name: profile?.display_name || realName,
-            avatar_url: profile?.avatar_url || realAvatar,
-            role: profile?.role || (realEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
+            email: finalEmail,
+            display_name: finalDisplayName,
+            avatar_url: finalAvatarUrl,
+            role: profile?.role || (finalEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
             created_at: profile?.created_at || user.created_at,
-            updated_at: profile?.updated_at || user.updated_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           };
 
-          // If profiles table has missing avatar or email, sync it to Supabase so it persists permanently
-          if (!profile?.avatar_url && realAvatar) {
-            try {
-              await supabase.from('profiles').upsert({
-                id: user.id,
-                email: resolvedUser.email,
-                display_name: resolvedUser.display_name,
-                avatar_url: resolvedUser.avatar_url,
-                updated_at: new Date().toISOString(),
-              });
-            } catch (syncErr) {
-              console.warn('Profile sync non-blocking error:', syncErr);
-            }
+          // Always sync the accurate Google profile to the Supabase database
+          try {
+            await supabase.from('profiles').upsert({
+              id: user.id,
+              email: resolvedUser.email,
+              display_name: resolvedUser.display_name,
+              avatar_url: resolvedUser.avatar_url,
+              role: resolvedUser.role,
+              updated_at: new Date().toISOString(),
+            });
+          } catch (syncErr) {
+            console.warn('Profile sync non-blocking error:', syncErr);
           }
 
           localDb.setCurrentUser(resolvedUser);
@@ -303,7 +317,10 @@ class UnifiedApiService {
             .eq('id', user.id)
             .select()
             .single();
-          if (!error && data) return data;
+          if (!error && data) {
+            localDb.setCurrentUser(data);
+            return data;
+          }
         }
       } catch (err) {
         console.warn('Supabase updateProfile fallback:', err);

@@ -476,7 +476,28 @@ class LocalDatabaseService {
     ]);
 
     const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
-    this.currentUser = savedUser ? JSON.parse(savedUser) : DEFAULT_USER;
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (
+          parsed &&
+          parsed.email &&
+          parsed.email !== 'azure.user@outlook.com' &&
+          parsed.display_name !== 'Microsoft User' &&
+          !(parsed.avatar_url && parsed.avatar_url.includes('unsplash.com'))
+        ) {
+          this.currentUser = parsed;
+        } else {
+          localStorage.removeItem(DB_PREFIX + 'current_user');
+          this.currentUser = DEFAULT_USER;
+        }
+      } catch {
+        localStorage.removeItem(DB_PREFIX + 'current_user');
+        this.currentUser = DEFAULT_USER;
+      }
+    } else {
+      this.currentUser = DEFAULT_USER;
+    }
   }
 
   // --- Auth / Profile ---
