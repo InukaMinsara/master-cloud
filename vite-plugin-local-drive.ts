@@ -170,7 +170,7 @@ export function localDrivePlugin(): Plugin {
 
       // 2. Read & stream file bytes for preview & download
       server.middlewares.use('/api/local-drive/read', (req, res) => {
-        if (req.method !== 'GET') {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
           res.statusCode = 405;
           res.end();
           return;
@@ -200,10 +200,40 @@ export function localDrivePlugin(): Plugin {
             const ext = cleanRelPath.split('.').pop() || '';
             const mime = guessMimeType(ext);
 
+            const range = req.headers.range;
+            if (range) {
+              const parts = range.replace(/bytes=/, '').split('-');
+              const start = parseInt(parts[0], 10);
+              const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+              const chunkSize = end - start + 1;
+
+              res.statusCode = 206;
+              res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+              res.setHeader('Accept-Ranges', 'bytes');
+              res.setHeader('Content-Length', chunkSize);
+              res.setHeader('Content-Type', mime);
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+
+              if (req.method === 'HEAD') {
+                res.end();
+                return;
+              }
+
+              const stream = fs.createReadStream(targetPath, { start, end });
+              stream.pipe(res);
+              return;
+            }
+
+            res.statusCode = 200;
             res.setHeader('Content-Type', mime);
             res.setHeader('Content-Length', stat.size);
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Cache-Control', 'public, max-age=3600');
+
+            if (req.method === 'HEAD') {
+              res.end();
+              return;
+            }
 
             const stream = fs.createReadStream(targetPath);
             stream.pipe(res);
@@ -215,7 +245,26 @@ export function localDrivePlugin(): Plugin {
           if (fs.existsSync(manifestPath)) {
             try {
               const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-              const fileRecord = manifest.files?.[cleanRelPath];
+              let fileRecord = manifest.files?.[cleanRelPath];
+              if (!fileRecord) {
+                const lower = cleanRelPath.toLowerCase();
+                for (const [k, v] of Object.entries(manifest.files || {})) {
+                  if (k.toLowerCase() === lower) {
+                    fileRecord = v as any;
+                    break;
+                  }
+                }
+              }
+              if (!fileRecord) {
+                const clean = cleanRelPath.replace(/ \(\d+\)(\.[^.]+)$/, '$1');
+                const lowerClean = clean.toLowerCase();
+                for (const [k, v] of Object.entries(manifest.files || {})) {
+                  if (k.toLowerCase() === lowerClean) {
+                    fileRecord = v as any;
+                    break;
+                  }
+                }
+              }
               if (fileRecord?.cloudUrls?.[0]) {
                 res.writeHead(302, { Location: fileRecord.cloudUrls[0] });
                 res.end();
