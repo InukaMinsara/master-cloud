@@ -56,6 +56,8 @@ const RCLONE_RC_URL = 'http://127.0.0.1:5572';
 let manifest = { files: {}, folders: {} };
 const folderChildren = new Map(); // parentRel -> Map<name, folderObj>
 const fileChildren = new Map();   // parentRel -> Map<name, fileObj>
+const folderCaseMap = new Map();  // lowerKey -> actualKey
+const fileCaseMap = new Map();    // lowerKey -> actualKey
 let totalUsedBytes = 0;
 let lastWriteActivityMs = 0;
 
@@ -73,6 +75,7 @@ function getParentRel(relPath) {
 
 function setManifestFolder(relPath, folderObj) {
   manifest.folders[relPath] = folderObj;
+  folderCaseMap.set(relPath.toLowerCase(), relPath);
   const p = getParentRel(relPath);
   let m = folderChildren.get(p);
   if (!m) { m = new Map(); folderChildren.set(p, m); }
@@ -83,6 +86,7 @@ function deleteManifestFolder(relPath) {
   const f = manifest.folders[relPath];
   if (!f) return;
   delete manifest.folders[relPath];
+  folderCaseMap.delete(relPath.toLowerCase());
   folderChildren.get(getParentRel(relPath))?.delete(f.name);
 }
 
@@ -92,6 +96,7 @@ function setManifestFile(relPath, fileObj) {
     totalUsedBytes = Math.max(0, totalUsedBytes - (Number(prev.size) || 0));
   }
   manifest.files[relPath] = fileObj;
+  fileCaseMap.set(relPath.toLowerCase(), relPath);
   totalUsedBytes += (Number(fileObj.size) || 0);
   const p = getParentRel(relPath);
   let m = fileChildren.get(p);
@@ -104,12 +109,34 @@ function deleteManifestFile(relPath) {
   if (!f) return;
   totalUsedBytes = Math.max(0, totalUsedBytes - (Number(f.size) || 0));
   delete manifest.files[relPath];
-  fileChildren.get(getParentRel(relPath))?.delete(f.name);
+  fileCaseMap.delete(relPath.toLowerCase());
+  folderChildren.get(getParentRel(relPath))?.delete(f.name);
+}
+
+function findManifestFolder(relPath) {
+  if (!relPath) return null;
+  if (manifest.folders[relPath]) return { key: relPath, folder: manifest.folders[relPath] };
+  const actualKey = folderCaseMap.get(relPath.toLowerCase());
+  if (actualKey && manifest.folders[actualKey]) return { key: actualKey, folder: manifest.folders[actualKey] };
+  return null;
+}
+
+function findManifestFile(relPath) {
+  if (!relPath) return null;
+  if (manifest.files[relPath]) return { key: relPath, file: manifest.files[relPath] };
+  const actualKey = fileCaseMap.get(relPath.toLowerCase());
+  if (actualKey && manifest.files[actualKey]) return { key: actualKey, file: manifest.files[actualKey] };
+  const clean = relPath.replace(/ \(\d+\)(\.[^.]+)$/, '$1').toLowerCase();
+  const cleanKey = fileCaseMap.get(clean);
+  if (cleanKey && manifest.files[cleanKey]) return { key: cleanKey, file: manifest.files[cleanKey] };
+  return null;
 }
 
 function rebuildMemoryIndex() {
   folderChildren.clear();
   fileChildren.clear();
+  folderCaseMap.clear();
+  fileCaseMap.clear();
   totalUsedBytes = 0;
   for (const [k, f] of Object.entries(manifest.folders)) {
     if (f && f.name) setManifestFolder(k, f);
@@ -714,10 +741,25 @@ function buildPropfindXml(reqPath, entries, usedBytes) {
 }
 
 function streamCloudUrlsToResponse(cloudUrls, res, rangeHeader = null) {
+  let isClosed = false;
+  let activeUpstreamReq = null;
+
+  const cleanup = () => {
+    if (isClosed) return;
+    isClosed = true;
+    if (activeUpstreamReq) {
+      try { activeUpstreamReq.destroy(); } catch {}
+      activeUpstreamReq = null;
+    }
+  };
+
+  res.on('close', cleanup);
+  res.on('error', cleanup);
+
   let idx = 0;
   function nextChunk() {
-    if (idx >= cloudUrls.length) {
-      res.end();
+    if (isClosed || idx >= cloudUrls.length) {
+      if (!isClosed) res.end();
       return;
     }
     const rawUrl = cloudUrls[idx++];
@@ -726,25 +768,45 @@ function streamCloudUrlsToResponse(cloudUrls, res, rangeHeader = null) {
       return;
     }
     const [cleanUrl, hash] = rawUrl.split('#');
-    const reqHeaders = { 'User-Agent': 'Mozilla/5.0' };
-    if (rangeHeader) {
-      reqHeaders['Range'] = rangeHeader;
-    } else if (hash && hash.startsWith('range=')) {
-      reqHeaders['Range'] = `bytes=${hash.slice(6)}`;
+    const reqHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' };
+
+    let packOffset = 0;
+    let packLimit = Infinity;
+    if (hash && hash.startsWith('range=')) {
+      const [pStart, pEnd] = hash.slice(6).split('-').map(Number);
+      packOffset = isNaN(pStart) ? 0 : pStart;
+      packLimit = isNaN(pEnd) ? Infinity : pEnd;
     }
-    https.get(cleanUrl, { headers: reqHeaders }, (upRes) => {
+
+    if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+      const parts = rangeHeader.slice(6).split('-');
+      const rStart = parseInt(parts[0], 10) || 0;
+      const rEnd = parts[1] ? parseInt(parts[1], 10) : Infinity;
+      const absStart = packOffset + rStart;
+      const absEnd = packLimit !== Infinity ? Math.min(packLimit, packOffset + rEnd) : (rEnd !== Infinity ? packOffset + rEnd : '');
+      reqHeaders['Range'] = `bytes=${absStart}-${absEnd}`;
+    } else if (packOffset > 0 || packLimit !== Infinity) {
+      reqHeaders['Range'] = `bytes=${packOffset}-${packLimit !== Infinity ? packLimit : ''}`;
+    }
+
+    activeUpstreamReq = https.get(cleanUrl, { headers: reqHeaders }, (upRes) => {
+      if (isClosed) {
+        upRes.destroy();
+        return;
+      }
       if (upRes.statusCode >= 300 && upRes.statusCode < 400 && upRes.headers.location) {
-        https.get(upRes.headers.location, { headers: reqHeaders }, (r2) => {
+        activeUpstreamReq = https.get(upRes.headers.location, { headers: reqHeaders }, (r2) => {
+          if (isClosed) { r2.destroy(); return; }
           r2.pipe(res, { end: false });
           r2.on('end', nextChunk);
-          r2.on('error', () => res.end());
-        }).on('error', () => res.end());
+          r2.on('error', cleanup);
+        }).on('error', cleanup);
         return;
       }
       upRes.pipe(res, { end: false });
       upRes.on('end', nextChunk);
-      upRes.on('error', () => res.end());
-    }).on('error', () => res.end());
+      upRes.on('error', cleanup);
+    }).on('error', cleanup);
   }
   nextChunk();
 }
@@ -880,14 +942,63 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Virtual desktop.ini for instant folder view (Forces Windows Explorer to use Generic template without scanning 1000s of media files!)
+  const isDesktopIni = path.basename(relPath).toLowerCase() === 'desktop.ini';
+  if (isDesktopIni) {
+    const iniContent = '[.ShellClassInfo]\r\nFolderType=Generic\r\n';
+    const iniBuf = Buffer.from(iniContent, 'utf8');
+
+    if (method === 'PROPFIND') {
+      const xml = buildPropfindXml(urlPath, [{
+        isSelf: true,
+        name: 'desktop.ini',
+        isDir: false,
+        size: iniBuf.length,
+        mtime: '2026-09-27T00:00:00.000Z',
+        birthtime: '2026-09-27T00:00:00.000Z',
+      }], totalUsedBytes);
+      res.writeHead(207, {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Content-Length': Buffer.byteLength(xml),
+      });
+      res.end(xml);
+      return;
+    }
+
+    if (method === 'GET' || method === 'HEAD') {
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Length': iniBuf.length,
+        'Cache-Control': 'public, max-age=86400',
+      });
+      if (method === 'HEAD') { res.end(); return; }
+      res.end(iniBuf);
+      return;
+    }
+  }
+
   // PROPFIND: O(1) Hash Map Lookup in RAM (0.005ms — Zero Loops!)
   if (method === 'PROPFIND') {
     const depth = req.headers['depth'] || '1';
     const isRoot = relPath === '';
-    const folderEntry = isRoot
-      ? { relPath: '', name: 'MASTER CLOUD (10 TB)', mtime: '2026-09-27T00:00:00.000Z', birthtime: '2026-09-27T00:00:00.000Z' }
-      : manifest.folders[relPath];
-    const fileEntry = !isRoot ? manifest.files[relPath] : null;
+    let folderEntry = null;
+    let fileEntry = null;
+    let folderKey = '';
+
+    if (isRoot) {
+      folderEntry = { relPath: '', name: 'MASTER CLOUD (10 TB)', mtime: '2026-09-27T00:00:00.000Z', birthtime: '2026-09-27T00:00:00.000Z' };
+    } else {
+      const fFolder = findManifestFolder(relPath);
+      if (fFolder) {
+        folderEntry = fFolder.folder;
+        folderKey = fFolder.key;
+      } else {
+        const fFile = findManifestFile(relPath);
+        if (fFile) {
+          fileEntry = fFile.file;
+        }
+      }
+    }
 
     if (!folderEntry && !fileEntry) {
       res.writeHead(404, { 'Content-Length': '0' });
@@ -907,7 +1018,7 @@ const server = http.createServer((req, res) => {
       });
 
       if (depth !== '0') {
-        const subFolders = folderChildren.get(relPath);
+        const subFolders = folderChildren.get(folderKey);
         if (subFolders) {
           for (const fObj of subFolders.values()) {
             entries.push({
@@ -920,7 +1031,7 @@ const server = http.createServer((req, res) => {
             });
           }
         }
-        const subFiles = fileChildren.get(relPath);
+        const subFiles = fileChildren.get(folderKey);
         if (subFiles) {
           for (const fileObj of subFiles.values()) {
             entries.push({
@@ -956,15 +1067,9 @@ const server = http.createServer((req, res) => {
 
   // GET / HEAD: Stream from RAM buffer, Online Cloud URLs, or staging file!
   if (method === 'GET' || method === 'HEAD') {
-    let fileEntry = manifest.files[relPath];
-    if (!fileEntry) {
-      // Alternate lookup (case-insensitive or normalized)
-      const lower = relPath.toLowerCase();
-      const altKey = Object.keys(manifest.files).find(
-        k => k.toLowerCase() === lower || k.toLowerCase().replace(/ \(\d+\)/g, '') === lower
-      );
-      if (altKey) fileEntry = manifest.files[altKey];
-    }
+    const fFile = findManifestFile(relPath);
+    let fileEntry = fFile ? fFile.file : null;
+    const fileKey = fFile ? fFile.key : relPath;
 
     if (fileEntry) {
       const totalSize = Number(fileEntry.size) || 0;
@@ -990,7 +1095,7 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        const ramBuf = inMemoryStagingBuffers.get(relPath);
+        const ramBuf = inMemoryStagingBuffers.get(fileKey) || inMemoryStagingBuffers.get(relPath);
         if (ramBuf) {
           res.end(ramBuf.subarray(start, end + 1));
           return;
@@ -999,7 +1104,7 @@ const server = http.createServer((req, res) => {
         if (fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
           streamCloudUrlsToResponse(fileEntry.cloudUrls, res, rangeHeader);
         } else {
-          const localPath = path.join(STORAGE_DIR, relPath);
+          const localPath = path.join(STORAGE_DIR, fileKey);
           if (fs.existsSync(localPath)) {
             fs.createReadStream(localPath, { start, end }).pipe(res);
           } else {
@@ -1020,7 +1125,7 @@ const server = http.createServer((req, res) => {
         res.end();
         return;
       }
-      const ramBuf = inMemoryStagingBuffers.get(relPath);
+      const ramBuf = inMemoryStagingBuffers.get(fileKey) || inMemoryStagingBuffers.get(relPath);
       if (ramBuf) {
         res.end(ramBuf);
         return;
@@ -1028,7 +1133,7 @@ const server = http.createServer((req, res) => {
       if (fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
         streamCloudUrlsToResponse(fileEntry.cloudUrls, res);
       } else {
-        const localPath = path.join(STORAGE_DIR, relPath);
+        const localPath = path.join(STORAGE_DIR, fileKey);
         if (fs.existsSync(localPath)) {
           fs.createReadStream(localPath).pipe(res);
         } else {
@@ -1295,15 +1400,22 @@ function mapDrive() {
         `${DRIVE_LETTER}:`,
         `--config=${rcloneConfPath}`,
         `--volname=MASTER CLOUD (10 TB)`,
-        '--vfs-cache-mode=writes',
+        '--network-mode',
+        '--file-perms=0777',
+        '--dir-perms=0777',
+        '--vfs-cache-mode=full',
         '--cache-dir=D:\\MasterCloudCache',
-        '--vfs-cache-max-age=1h',
-        '--dir-cache-time=24h',
-        '--attr-timeout=24h',
+        '--vfs-cache-max-age=72h',
+        '--vfs-cache-max-size=25G',
+        '--vfs-read-chunk-size=128k',
+        '--vfs-read-chunk-size-limit=16M',
+        '--vfs-fast-fingerprint',
+        '--dir-cache-time=72h',
+        '--attr-timeout=72h',
         '--poll-interval=0',
-        '--transfers=64',
-        '--checkers=64',
-        '--buffer-size=64M',
+        '--transfers=16',
+        '--checkers=16',
+        '--buffer-size=0',
         '--no-modtime',
         '--no-checksum',
         '--rc',
