@@ -36,7 +36,7 @@ export function AppLayout() {
         <AppHeader />
         
         <main className="flex flex-1 h-full min-h-0 overflow-hidden relative">
-          <div className="flex-1 h-full min-w-0 overflow-hidden">
+          <div className="flex flex-col flex-1 h-full min-h-0 min-w-0 overflow-hidden">
             <Outlet />
           </div>
 

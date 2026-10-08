@@ -46,10 +46,16 @@ export function CanvasPage() {
     { type: 'draw', icon: Palette },
     { type: 'notes', icon: BookOpen },
     { type: 'onenote', icon: BookOpen },
+    { type: 'pics', icon: ImageIcon },
+    { type: 'vids', icon: Video },
   ];
 
   const handleOpenApp = (type: CanvasAppType) => {
-    navigate(`/canvas/${type}/new`);
+    if (type === 'pics' || type === 'vids') {
+      navigate(`/canvas/${type}`);
+    } else {
+      navigate(`/canvas/${type}/new`);
+    }
   };
 
   const handleOpenFile = (file: FileItem) => {
@@ -68,7 +74,7 @@ export function CanvasPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 border border-border/80 p-8 sm:p-12 shadow-xl">
         <div className="max-w-2xl space-y-3">
@@ -108,9 +114,16 @@ export function CanvasPage() {
                     <Icon className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                      {config.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                        {config.name}
+                      </h3>
+                      {type === 'vids' && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-500/15 text-red-500 border border-red-500/20">
+                          Qwen 3.8 Omni
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                       {config.description}
                     </p>
@@ -135,7 +148,7 @@ export function CanvasPage() {
             <span>Recent Canvas Documents ({canvasFiles.length})</span>
           </h2>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/drive')}
             className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
           >
             <FolderOpen className="h-3.5 w-3.5" />

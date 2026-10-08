@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
+import { useFileStore } from '@/stores/fileStore';
+
 export function TrashPage() {
+  const { fetchItems } = useFileStore();
   const [deletedFiles, setDeletedFiles] = React.useState<FileItem[]>([]);
   const [deletedFolders, setDeletedFolders] = React.useState<FolderItem[]>([]);
   const [emptyDialogOpen, setEmptyDialogOpen] = React.useState(false);
@@ -38,6 +41,7 @@ export function TrashPage() {
       await api.restoreFile(id);
     }
     toast.success('Item restored to original location');
+    fetchItems();
     loadTrash();
   };
 
@@ -48,6 +52,7 @@ export function TrashPage() {
       await api.permanentDeleteFile(id);
     }
     toast.success('Item permanently deleted');
+    fetchItems();
     loadTrash();
   };
 
@@ -55,6 +60,7 @@ export function TrashPage() {
     await api.emptyTrash();
     toast.success('Trash emptied');
     setEmptyDialogOpen(false);
+    fetchItems();
     loadTrash();
   };
 

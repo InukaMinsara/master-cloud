@@ -24,8 +24,11 @@ import {
   ShieldCheck,
   Zap,
   Layers,
-  ArrowUpRight,
   Download,
+  ArrowUpRight,
+  Film,
+  WifiOff,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -69,17 +72,17 @@ export function DashboardPage() {
     }
   };
 
-  const canvasShortcuts = [
-    { label: 'Master Docs', type: 'docs', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Master Sheets', type: 'sheets', icon: FileSpreadsheet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Master Slides', type: 'slides', icon: Presentation, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'Master Forms', type: 'forms', icon: CheckSquare, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { label: 'Master Draw', type: 'draw', icon: Palette, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    { label: 'Master Notes', type: 'notes', icon: BookOpen, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+  const quickShortcuts = [
+    { label: 'My Drive', path: '/drive', icon: HardDrive, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Media Library', path: '/media', icon: Film, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Starred Files', path: '/starred', icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: 'Offline Center', path: '/offline', icon: WifiOff, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Sync Center', path: '/sync', icon: ArrowRightLeft, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+    { label: 'Storage Analytics', path: '/storage', icon: PieChart, color: 'text-rose-500', bg: 'bg-rose-500/10' },
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8 select-none bg-background text-foreground">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8 select-none bg-background text-foreground">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -119,11 +122,11 @@ export function DashboardPage() {
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/canvas')}
+            onClick={() => navigate('/drive')}
             className="rounded-xl gap-2 font-bold text-xs shadow-md shadow-primary/20"
           >
-            <Sparkles className="h-4 w-4" />
-            Master Canvas
+            <HardDrive className="h-4 w-4" />
+            Open My Drive
           </Button>
         </div>
       </div>
@@ -233,31 +236,31 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ─── 3. QUICK ACTIONS & MASTER CANVAS SHORTCUTS ─── */}
+      {/* ─── 3. QUICK WORKSPACE ACTIONS ─── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
-            Quick Actions &amp; Master Canvas Suite
+            Quick Workspace Actions
           </h2>
-          <Link to="/canvas" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
-            View All Apps <ArrowUpRight className="h-3 w-3" />
+          <Link to="/drive" className="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+            Browse Drive <ArrowUpRight className="h-3 w-3" />
           </Link>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {canvasShortcuts.map((c) => {
+          {quickShortcuts.map((c) => {
             const Icon = c.icon;
             return (
               <button
-                key={c.type}
-                onClick={() => navigate(`/canvas/${c.type}/new`)}
+                key={c.label}
+                onClick={() => navigate(c.path)}
                 className="p-3.5 rounded-2xl border border-border/80 bg-card hover:border-primary/50 hover:shadow-md transition-all text-left flex flex-col justify-between group"
               >
                 <div className={`h-9 w-9 rounded-xl ${c.bg} ${c.color} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
                   <Icon className="h-4 w-4" />
                 </div>
                 <span className="text-xs font-bold text-foreground truncate">{c.label}</span>
-                <span className="text-[10px] text-muted-foreground">New +</span>
+                <span className="text-[10px] text-muted-foreground">Open &rarr;</span>
               </button>
             );
           })}
@@ -335,7 +338,7 @@ export function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {recentFiles.map((f) => (
-                  <FileCard key={f.id} file={f} />
+                  <FileCard key={f.id} file={f} allFiles={recentFiles} />
                 ))}
               </div>
             )}
@@ -353,7 +356,7 @@ export function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {starredFiles.map((f) => (
-                  <FileCard key={f.id} file={f} />
+                  <FileCard key={f.id} file={f} allFiles={starredFiles} />
                 ))}
               </div>
             )}

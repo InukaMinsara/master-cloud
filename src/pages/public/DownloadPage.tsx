@@ -12,13 +12,13 @@ import { toast } from 'sonner';
 // ── Official Release Configuration ───────────────────────────────────────────
 const INSTALLER_URL     = '/releases/MasterCloudSetup.exe';
 const INSTALLER_MSI_URL = '/releases/MasterCloudSetup-x64.msi';
-const INSTALLER_SHA256  = 'F4DC1981DF94894B864C043177B58B94DFE0E3498E19B74A074872BC4F45E5F2';
+const INSTALLER_SHA256  = 'E3430EEB938EBDBDA85159E134C83A73AE4E4C80FA9462F007C1B8784987A9D5';
 const INSTALLER_VERSION = '1.0.0';
 const INSTALLER_DATE    = 'October 2026';
-const INSTALLER_SIZE    = '3.80 MB';
+const INSTALLER_SIZE    = '149.5 MB';
 
 const INSTALL_STEPS = [
-  { n: 1, icon: Download,   title: 'Download',           desc: 'MasterCloudSetup.exe (3.8 MB)' },
+  { n: 1, icon: Download,   title: 'Download',           desc: 'MasterCloudSetup.exe (149.5 MB)' },
   { n: 2, icon: Monitor,    title: 'Install',             desc: '1-click Windows NSIS installer' },
   { n: 3, icon: Lock,       title: 'Sign In',             desc: 'Secure browser OAuth session' },
   { n: 4, icon: HardDrive,  title: 'Choose Drive Letter', desc: 'M: N: O: P: — auto-detected' },

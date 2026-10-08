@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { localDb } from './localDb';
+import { localDb, binaryStorage } from './localDb';
 import { DownloadService } from './downloadService';
+import { TelegramCloudService } from './telegramCloudService';
 import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/types/file';
 import {
   ProfileRecord,
@@ -547,35 +548,41 @@ class UnifiedApiService {
             throw new Error('Not enough storage available.');
           }
 
-          const storagePath = `${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          // Upload via Telegram Cloud + Multi-CDN Hybrid Storage Engine (0$ server cost, 10 TB unlimited!)
+          const storagePath = await TelegramCloudService.uploadFile(
+            file,
+            file.name,
+            file.type || 'application/octet-stream',
+            onProgress
+          );
 
-          // Upload to Supabase Storage Bucket
-          const { error: uploadErr } = await supabase.storage
-            .from('master-cloud-files')
-            .upload(storagePath, file, {
-              cacheControl: '3600',
-              upsert: false,
-            });
+          const ext = file.name.split('.').pop() || '';
+          const { data: fileData, error: dbErr } = await supabase
+            .from('files')
+            .insert({
+              owner_id: user.id,
+              parent_folder_id: parentFolderId,
+              name: file.name,
+              storage_path: storagePath,
+              mime_type: file.type || 'application/octet-stream',
+              size_bytes: file.size,
+              extension: ext,
+            })
+            .select('*, owner:profiles(*)')
+            .single();
 
-          if (!uploadErr) {
-            onProgress?.(100, file.size);
+          if (!dbErr && fileData) {
+            // Cache locally for instant preview
+            await binaryStorage.saveBlob(storagePath, file);
 
-            const ext = file.name.split('.').pop() || '';
-            const { data: fileData, error: dbErr } = await supabase
-              .from('files')
-              .insert({
-                owner_id: user.id,
-                parent_folder_id: parentFolderId,
-                name: file.name,
-                storage_path: storagePath,
-                mime_type: file.type || 'application/octet-stream',
-                size_bytes: file.size,
-                extension: ext,
-              })
-              .select('*, owner:profiles(*)')
-              .single();
-
-            if (!dbErr && fileData) return fileData as FileItem;
+            // Update used quota in database
+            if (quota) {
+              await supabase
+                .from('storage_quotas')
+                .update({ used_storage_bytes: quota.used_storage_bytes + file.size })
+                .eq('user_id', user.id);
+            }
+            return fileData as FileItem;
           }
         }
       } catch (err: any) {
@@ -586,16 +593,83 @@ class UnifiedApiService {
     return localDb.uploadFile(file, parentFolderId, onProgress);
   }
 
+  async createDocumentFile(
+    name: string,
+    content: string,
+    mimeType: string,
+    extension: string,
+    parentFolderId: string | null = null
+  ): Promise<FileItem> {
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const blob = new Blob([content], { type: mimeType });
+          const storagePath = `${user.id}/canvas_${Date.now()}_${name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          
+          await supabase.storage.from('master-cloud-files').upload(storagePath, blob, { upsert: true });
+
+          const { data: fileData, error } = await supabase
+            .from('files')
+            .insert({
+              owner_id: user.id,
+              parent_folder_id: parentFolderId,
+              name,
+              storage_path: storagePath,
+              mime_type: mimeType,
+              size_bytes: blob.size,
+              extension,
+            })
+            .select('*, owner:profiles(*)')
+            .single();
+
+          if (!error && fileData) {
+            await binaryStorage.saveBlob(storagePath, blob);
+            return fileData as FileItem;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase createDocumentFile fallback to localDb:', err);
+      }
+    }
+    return localDb.createDocumentFile(name, content, mimeType, extension, parentFolderId);
+  }
+
   async getFileBlob(storagePath: string): Promise<Blob | null> {
     if (storagePath.startsWith('zdrive:')) {
       return localDb.getFileBlob(storagePath);
     }
+
+    if (storagePath.startsWith('seed/')) {
+      return localDb.getFileBlob(storagePath);
+    }
+
+    // Check local binary cache first for instant high-speed preview
+    const cached = await binaryStorage.getBlob(storagePath);
+    if (cached) return cached;
+
+    if (storagePath.startsWith('tgcloud:')) {
+      try {
+        const downloaded = await TelegramCloudService.downloadFile(storagePath);
+        if (downloaded) {
+          await binaryStorage.saveBlob(storagePath, downloaded);
+          return downloaded;
+        }
+      } catch (err) {
+        console.error('TelegramCloud download error:', err);
+      }
+      return null;
+    }
+
     if (this.isConfiguredWithSupabase()) {
       try {
         const { data, error } = await supabase.storage
           .from('master-cloud-files')
           .download(storagePath);
-        if (!error && data) return data;
+        if (!error && data) {
+          await binaryStorage.saveBlob(storagePath, data);
+          return data;
+        }
       } catch (err) {
         console.warn('Supabase download error:', err);
       }

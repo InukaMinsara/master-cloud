@@ -296,6 +296,118 @@ const SEED_FILES: FileRecord[] = [
   },
 ];
 
+function createSeedBlob(storagePath: string): Blob | null {
+  if (storagePath.includes('banner.png') || storagePath.endsWith('.png') || storagePath.endsWith('.jpg')) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#090d16"/>
+          <stop offset="50%" stop-color="#0f172a"/>
+          <stop offset="100%" stop-color="#1e1b4b"/>
+        </linearGradient>
+        <linearGradient id="blueG" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#3b82f6"/>
+          <stop offset="100%" stop-color="#8b5cf6"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="630" fill="url(#bg)"/>
+      <circle cx="600" cy="220" r="140" fill="#3b82f6" opacity="0.12"/>
+      <g transform="translate(535, 140) scale(2.8)" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+      </g>
+      <text x="600" y="360" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="46" fill="#ffffff" text-anchor="middle" letter-spacing="-1">MASTER CLOUD ULTRA</text>
+      <text x="600" y="410" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="20" fill="#94a3b8" text-anchor="middle">10 TB Permanent Free Storage • High-Performance Multi-CDN Architecture</text>
+      <rect x="430" y="460" width="340" height="48" rx="24" fill="url(#blueG)"/>
+      <text x="600" y="491" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="15" fill="#ffffff" text-anchor="middle">AUTHENTICATED REAL ASSET</text>
+    </svg>`;
+    return new Blob([svg], { type: 'image/svg+xml' });
+  }
+
+  if (storagePath.includes('architecture.pdf') || storagePath.endsWith('.pdf')) {
+    const pdfText = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length 380 >> stream
+BT
+/F1 20 Tf
+50 720 Td
+(MASTER CLOUD ARCHITECTURE & SYSTEM OVERVIEW) Tj
+0 -40 Td
+/F1 12 Tf
+(Platform: Master Cloud 10 TB Dedicated Free Cloud) Tj
+0 -22 Td
+(Engine: Telegram Cloud + Multi-CDN Zero-Cost Hybrid Pipeline) Tj
+0 -22 Td
+(Storage Capacity: 10,240 GB per Registered User Account) Tj
+0 -22 Td
+(Security Protocol: Zero-Trust AES-256-GCM Sliced Streams) Tj
+0 -22 Td
+(File Slicing: Standard 19.5 MB Sub-Chunks with Reassembly) Tj
+0 -22 Td
+(Status: Fully Operational and Verified Live) Tj
+ET
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000676 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+745
+%%EOF`;
+    return new Blob([pdfText], { type: 'application/pdf' });
+  }
+
+  if (storagePath.includes('financials.xlsx') || storagePath.endsWith('.xlsx') || storagePath.endsWith('.csv')) {
+    const csv = `Quarter,Operating Budget,Cloud Infrastructure,Multi-CDN Savings,Active Users,Growth Rate
+Q1 2026,$250,000,$12,000,$238,000,14,500,+45%
+Q2 2026,$380,000,$15,000,$365,000,28,900,+99%
+Q3 2026,$510,000,$18,000,$492,000,52,400,+81%
+Q4 2026,$720,000,$22,000,$698,000,98,200,+87%
+Total 2026,$1,860,000,$67,000,$1,793,000,194,000,+78% Avg`;
+    return new Blob([csv], { type: 'text/csv' });
+  }
+
+  if (storagePath.includes('ambient.mp3') || storagePath.endsWith('.mp3') || storagePath.endsWith('.wav')) {
+    const sampleRate = 8000;
+    const numSamples = sampleRate * 2;
+    const buffer = new ArrayBuffer(44 + numSamples);
+    const view = new DataView(buffer);
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate, true);
+    view.setUint16(32, 1, true);
+    view.setUint16(34, 8, true);
+    writeString(36, 'data');
+    view.setUint32(40, numSamples, true);
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      const sample = 128 + Math.round(50 * Math.sin(2 * Math.PI * 440 * t) * Math.exp(-t));
+      view.setUint8(44 + i, sample);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  return null;
+}
+
 class LocalDatabaseService {
   private files: FileRecord[];
   private folders: FolderRecord[];
@@ -983,6 +1095,64 @@ class LocalDatabaseService {
     };
   }
 
+  async createDocumentFile(
+    name: string,
+    content: string,
+    mimeType: string,
+    extension: string,
+    parentFolderId: string | null = null
+  ): Promise<FileItem> {
+    const fileId = 'file-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    const storagePath = `canvas/${this.currentUser.id}/${fileId}-${name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const blob = new Blob([content], { type: mimeType });
+    await binaryStorage.saveBlob(storagePath, blob);
+
+    const newVersion: FileVersionRecord = {
+      id: 'ver-' + Date.now(),
+      file_id: fileId,
+      version_number: 1,
+      storage_path: storagePath,
+      size_bytes: blob.size,
+      checksum: 'ck-' + Date.now(),
+      created_by: this.currentUser.id,
+      notes: 'Created in Master Canvas',
+      created_at: new Date().toISOString(),
+    };
+
+    const newFile: FileRecord = {
+      id: fileId,
+      owner_id: this.currentUser.id,
+      parent_folder_id: parentFolderId,
+      name,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      size_bytes: blob.size,
+      extension,
+      checksum: newVersion.checksum,
+      is_starred: false,
+      deleted_at: null,
+      current_version_id: newVersion.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    this.files.unshift(newFile);
+    this.versions.unshift(newVersion);
+    saveTable('files', this.files);
+    saveTable('versions', this.versions);
+
+    await this.logActivity('file', newFile.id, newFile.name, 'create', {
+      canvas: true,
+      size: blob.size,
+    });
+
+    return {
+      ...newFile,
+      owner: this.currentUser,
+      versions: [newVersion],
+    };
+  }
+
   async getFileBlob(storagePath: string): Promise<Blob | null> {
     if (storagePath.startsWith('zdrive:') && typeof fetch !== 'undefined') {
       try {
@@ -995,7 +1165,17 @@ class LocalDatabaseService {
         // Fallback to IndexedDB
       }
     }
-    return binaryStorage.getBlob(storagePath);
+    const stored = await binaryStorage.getBlob(storagePath);
+    if (stored) return stored;
+
+    if (storagePath.startsWith('seed/')) {
+      const generated = createSeedBlob(storagePath);
+      if (generated) {
+        await binaryStorage.saveBlob(storagePath, generated);
+        return generated;
+      }
+    }
+    return null;
   }
 
   async renameFile(id: string, newName: string): Promise<FileRecord> {

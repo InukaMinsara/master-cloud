@@ -217,7 +217,7 @@ export interface VideoScene {
   id: string;
   sceneNumber: number;
   description: string;
-  cameraMovement: 'static' | 'pan-left' | 'pan-right' | 'zoom-in' | 'orbit';
+  cameraMovement: 'static' | 'pan-left' | 'pan-right' | 'zoom-in' | 'orbit' | 'drone-shot' | 'tilt-up';
   durationSeconds: number;
 }
 
@@ -235,4 +235,5 @@ export interface GeneratedVid {
   progress: number;
   createdAt: string;
   cloudFileId?: string;
+  model?: string;
 }

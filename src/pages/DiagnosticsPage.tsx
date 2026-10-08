@@ -59,7 +59,7 @@ export function DiagnosticsPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
         <div>
@@ -177,6 +177,19 @@ export function DiagnosticsPage() {
                 Queue State: {syncStatus.isSyncing ? 'SYNCING' : 'IDLE'} • Queued: {syncStatus.queuedCount} • Failed: {syncStatus.failedCount}.
               </p>
               <span className="text-[10px] font-mono text-emerald-500 font-semibold">SYNC ENGINE ONLINE</span>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border/70 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+            <div className="h-9 w-9 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center shrink-0 mt-0.5">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-xs text-foreground">AI Video Generation Subsystem</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Engine: <code className="text-purple-400 font-mono text-[10px]">qwen/qwen3.8-omni-flash:free</code>. Cinematic storyboarding, 4K temporal motion vectors & High-Throughput Media Pipeline.
+              </p>
+              <span className="text-[10px] font-mono text-purple-500 font-semibold">QWEN OMNI ENGINE READY</span>
             </div>
           </div>
         </div>

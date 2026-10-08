@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   HardDrive,
@@ -22,6 +22,9 @@ import {
   Bot,
   ArrowRightLeft,
   WifiOff,
+  FileText,
+  FileSpreadsheet,
+  Presentation,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
@@ -31,10 +34,11 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { formatBytes } from '@/lib/utils';
 import { api } from '@/services/api';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function Sidebar() {
+  const navigate = useNavigate();
   const { sidebarCollapsed, toggleSidebar, setNewFolderModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
@@ -59,7 +63,6 @@ export function Sidebar() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
-    { label: 'Master Canvas', path: '/canvas', icon: Sparkles, badge: 'Canvas' },
     { label: 'Shared with me', path: '/shared', icon: Users },
     { label: 'Recent', path: '/recent', icon: Clock },
     { label: 'Starred', path: '/starred', icon: Star },
@@ -122,7 +125,7 @@ export function Sidebar() {
               {!sidebarCollapsed && <span>New Item</span>}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="left" className="w-52">
+          <DropdownMenuContent align="left" className="w-56">
             <DropdownMenuItem onClick={() => setNewFolderModalOpen(true)}>
               <FolderPlus className="h-4 w-4 text-primary" />
               <span>New folder</span>

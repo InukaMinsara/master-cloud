@@ -5,7 +5,10 @@ import { FileItem, FolderItem } from '@/types/file';
 import { FileCard } from '@/components/files/FileCard';
 import { FolderCard } from '@/components/files/FolderCard';
 
+import { useFileStore } from '@/stores/fileStore';
+
 export function StarredPage() {
+  const { files: storeFiles, folders: storeFolders } = useFileStore();
   const [starredFiles, setStarredFiles] = React.useState<FileItem[]>([]);
   const [starredFolders, setStarredFolders] = React.useState<FolderItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -18,7 +21,7 @@ export function StarredPage() {
         setStarredFolders(folders);
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [storeFiles, storeFolders]);
 
   const isEmpty = starredFiles.length === 0 && starredFolders.length === 0;
 

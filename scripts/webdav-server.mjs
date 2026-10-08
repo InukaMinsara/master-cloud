@@ -221,20 +221,25 @@ function pumpDiskFlushQueue() {
 }
 
 function findRcloneExe() {
-  const localBin = path.join(__dirname, 'bin', 'rclone.exe');
-  if (fs.existsSync(localBin)) return localBin;
-
-  const wingetPath = path.join(
-    process.env.LOCALAPPDATA || 'C:\\Users\\HP\\AppData\\Local',
-    'Microsoft',
-    'WinGet',
-    'Packages',
-    'Rclone.Rclone_Microsoft.Winget.Source_8wekyb3d8bbwe',
-    'rclone-v1.75.1-windows-amd64',
-    'rclone.exe'
-  );
-  if (fs.existsSync(wingetPath)) return wingetPath;
-
+  const candidates = [
+    path.join(__dirname, 'bin', 'rclone.exe'),
+    path.join(__dirname, '..', 'bin', 'rclone.exe'),
+    path.join(process.resourcesPath || '', 'bin', 'rclone.exe'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'bin', 'rclone.exe'),
+    path.join(
+      process.env.LOCALAPPDATA || 'C:\\Users\\HP\\AppData\\Local',
+      'Microsoft',
+      'WinGet',
+      'Packages',
+      'Rclone.Rclone_Microsoft.Winget.Source_8wekyb3d8bbwe',
+      'rclone-v1.75.1-windows-amd64',
+      'rclone.exe'
+    ),
+    path.join(process.env.LOCALAPPDATA || 'C:\\Users\\HP\\AppData\\Local', 'Microsoft', 'WinGet', 'Links', 'rclone.exe'),
+  ];
+  for (const c of candidates) {
+    if (c && fs.existsSync(c)) return c;
+  }
   return 'rclone';
 }
 
@@ -858,6 +863,27 @@ async function indexIngestedTreeAsync(fullDir) {
   } catch { /* ignore */ }
 }
 
+function resolveLocalDiskPath(fileKey) {
+  if (!fileKey) return null;
+  const normKey = fileKey.replace(/\\/g, '/');
+  const sub = normKey.startsWith('Mg/') ? normKey.slice(3) : normKey;
+  const candidates = [
+    path.join('E:\\Mg', sub),
+    path.join('E:\\Mg', normKey),
+    path.join('E:\\', normKey),
+    path.join(STORAGE_DIR, normKey),
+  ];
+  for (const cand of candidates) {
+    try {
+      if (fs.existsSync(cand)) {
+        const st = fs.statSync(cand);
+        if (!st.isDirectory() && st.size > 0) return cand;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 // ── High-Performance O(1) In-Memory Manifest WebDAV Server ───────────────────
 const server = http.createServer((req, res) => {
   const method = req.method.toUpperCase();
@@ -1101,6 +1127,13 @@ const server = http.createServer((req, res) => {
           return;
         }
 
+        // 1. Ultra-Fast Local Disk Priority: If file exists on E:\Mg or local storage, stream instantly!
+        const localCandidate = resolveLocalDiskPath(fileKey) || resolveLocalDiskPath(relPath);
+        if (localCandidate) {
+          fs.createReadStream(localCandidate, { start, end }).pipe(res);
+          return;
+        }
+
         if (fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
           streamCloudUrlsToResponse(fileEntry.cloudUrls, res, rangeHeader);
         } else {
@@ -1130,6 +1163,14 @@ const server = http.createServer((req, res) => {
         res.end(ramBuf);
         return;
       }
+
+      // 1. Ultra-Fast Local Disk Priority: If file exists on E:\Mg or local storage, stream instantly!
+      const localCandidate = resolveLocalDiskPath(fileKey) || resolveLocalDiskPath(relPath);
+      if (localCandidate) {
+        fs.createReadStream(localCandidate).pipe(res);
+        return;
+      }
+
       if (fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
         streamCloudUrlsToResponse(fileEntry.cloudUrls, res);
       } else {

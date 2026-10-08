@@ -51,7 +51,7 @@ export function AdminPage() {
   const [flags, setFlags] = useState({
     publicRegistration: true,
     windowsVirtualDrive: true,
-    masterCanvas: true,
+    masterCanvas: false,
     zeroTrustAudit: true,
     maintenanceMode: false,
   });

@@ -111,6 +111,9 @@ scripts/generated-keys.txt
 desktop/node_modules/
 desktop/src-tauri/target/
 desktop/dist/
+dist-desktop/
+scripts/bin/
+public/releases/MasterCloudSetup.exe
 
 # Release archives
 MASTER-CLOUD-READY.zip

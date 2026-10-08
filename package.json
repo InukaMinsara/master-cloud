@@ -11,10 +11,13 @@
     "bot:keys": "node scripts/xkiro-bot.mjs",
     "drive:start": "node scripts/webdav-server.mjs",
     "drive:install": "node scripts/webdav-server.mjs --install",
-    "drive:uninstall": "node scripts/webdav-server.mjs --uninstall",
     "package:zip": "node scripts/build-deployment-package.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "desktop:start": "electron desktop/main.cjs",
+    "desktop:build": "electron-builder --win --x64"
   },
+  "main": "desktop/main.cjs",
+
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "canvas-confetti": "^1.9.4",
@@ -38,6 +41,8 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
     "postcss": "^8.5.2",
     "puppeteer": "^25.12.0",
     "tailwindcss": "^3.4.17",
@@ -45,5 +50,31 @@
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
     "webdav-server": "^2.6.3"
+  },
+  "build": {
+    "appId": "com.mastercloud.desktop",
+    "productName": "Master Cloud",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Master Cloud"
+    },
+    "files": [
+      "desktop/**/*",
+      "scripts/webdav-server.mjs",
+      "scripts/bin/rclone.exe",
+      "public/logo-icon.svg"
+    ],
+    "asarUnpack": [
+      "scripts/**/*"
+    ]
   }
 }

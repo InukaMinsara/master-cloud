@@ -13,14 +13,7 @@ import {
   Upload,
   Archive,
   FileText,
-  FileSpreadsheet,
-  Presentation,
-  CheckSquare,
-  Palette,
-  BookOpen,
-  Image as ImageIcon,
   Video,
-  Sparkles,
   RefreshCw,
   CheckCheck,
   PieChart,
@@ -187,28 +180,6 @@ export function ContextMenu() {
     closeContextMenu();
   };
 
-  // Open in Canvas application handler
-  const handleOpenInCanvas = () => {
-    if (!targetFile) return;
-    const ext = targetFile.extension.toLowerCase();
-    closeContextMenu();
-
-    if (ext === 'mdoc' || ext === 'txt' || ext === 'md' || ext === 'doc' || ext === 'docx') {
-      navigate(`/canvas/docs/${targetFile.id}`);
-    } else if (ext === 'msheet' || ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
-      navigate(`/canvas/sheets/${targetFile.id}`);
-    } else if (ext === 'mslide' || ext === 'pptx' || ext === 'ppt') {
-      navigate(`/canvas/slides/${targetFile.id}`);
-    } else if (ext === 'mform') {
-      navigate(`/canvas/forms/${targetFile.id}`);
-    } else if (ext === 'mdraw') {
-      navigate(`/canvas/draw/${targetFile.id}`);
-    } else if (ext === 'mnote') {
-      navigate(`/canvas/notes/${targetFile.id}`);
-    } else {
-      openPreview(targetFile, files);
-    }
-  };
 
   // Folder actions
   const handleFolderOpen = () => {
@@ -275,14 +246,6 @@ export function ContextMenu() {
           >
             <Eye className="h-4 w-4 text-blue-500" />
             <span>Preview File</span>
-          </button>
-
-          <button
-            onClick={handleOpenInCanvas}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors text-primary"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Open in Master Canvas</span>
           </button>
 
           <button
@@ -459,77 +422,6 @@ export function ContextMenu() {
           >
             <FolderPlus className="h-4 w-4 text-blue-500" />
             <span>New Folder</span>
-          </button>
-
-          <div className="my-1 border-t border-border/60" />
-          <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Master Canvas Creation
-          </div>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/docs/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <FileText className="h-4 w-4 text-blue-500" />
-            <span>New Master Document</span>
-          </button>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/sheets/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-            <span>New Master Spreadsheet</span>
-          </button>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/slides/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <Presentation className="h-4 w-4 text-amber-500" />
-            <span>New Master Slide Deck</span>
-          </button>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/forms/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <CheckSquare className="h-4 w-4 text-purple-500" />
-            <span>New Master Form</span>
-          </button>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/draw/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <Palette className="h-4 w-4 text-rose-500" />
-            <span>New Master Drawing</span>
-          </button>
-
-          <button
-            onClick={() => {
-              navigate('/canvas/notes/new');
-              closeContextMenu();
-            }}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl font-medium hover:bg-accent hover:text-accent-foreground text-left transition-colors"
-          >
-            <BookOpen className="h-4 w-4 text-indigo-500" />
-            <span>New Master Notebook</span>
           </button>
 
           <div className="my-1 border-t border-border/60" />

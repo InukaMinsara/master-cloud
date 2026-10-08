@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CanvasAppType } from '@/types/canvas';
 import { CanvasService } from '@/services/canvasService';
@@ -25,33 +25,46 @@ export function CanvasEditorPage() {
 
   const canvasApp = (app?.toLowerCase() || 'docs') as CanvasAppType;
 
+  const currentFileRef = useRef<FileItem | null>(null);
+  currentFileRef.current = currentFile;
+
   useEffect(() => {
-    // Studios (pics, vids) do not need pre-existing file IDs
-    if (canvasApp === 'pics' || canvasApp === 'vids') {
+    // Studios (pics, vids, ai) do not need pre-existing file IDs
+    if (canvasApp === 'pics' || canvasApp === 'vids' || (canvasApp as string) === 'ai') {
       setLoading(false);
       return;
     }
 
+    // Fast path for new document: INSTANT ZERO-LATENCY LOAD!
+    if (!id || id === 'new') {
+      const defaultTitle = `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
+      const initial = CanvasService.getDefaultData(canvasApp, defaultTitle);
+      setDocData(initial);
+      setLoading(false);
+
+      // Silently persist file record in background
+      CanvasService.createCanvasDocument(canvasApp, defaultTitle)
+        .then(({ file }) => {
+          setCurrentFile(file);
+          window.history.replaceState(null, '', `/canvas/${canvasApp}/${file.id}`);
+        })
+        .catch((err) => {
+          console.warn('Background canvas doc creation error:', err);
+        });
+      return;
+    }
+
+    // Existing document path
     async function initDocument() {
       setLoading(true);
       try {
-        if (!id || id === 'new') {
-          // Create new document in Master Cloud
-          const defaultTitle = `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
-          const { file, initialData } = await CanvasService.createCanvasDocument(canvasApp, defaultTitle);
-          setCurrentFile(file);
-          setDocData(initialData);
-          // Update URL without page reload
-          window.history.replaceState(null, '', `/canvas/${canvasApp}/${file.id}`);
-        } else {
-          // Load existing document from Master Cloud
-          const { file, data } = await CanvasService.loadCanvasDocument(id, canvasApp);
-          setCurrentFile(file);
-          setDocData(data);
-        }
+        const { file, data } = await CanvasService.loadCanvasDocument(id!, canvasApp);
+        setCurrentFile(file);
+        setDocData(data);
       } catch (err: any) {
         console.error('Error loading Canvas document:', err);
         toast.error('Failed to open document: ' + (err.message || 'File error'));
+        setDocData(CanvasService.getDefaultData(canvasApp));
       } finally {
         setLoading(false);
       }
@@ -61,8 +74,15 @@ export function CanvasEditorPage() {
   }, [canvasApp, id]);
 
   const handleSave = async (updatedData: any) => {
-    if (!currentFile) return;
-    const updatedFile = await CanvasService.saveCanvasDocument(currentFile.id, updatedData);
+    let target = currentFileRef.current;
+    if (!target) {
+      const defaultTitle = `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
+      const { file } = await CanvasService.createCanvasDocument(canvasApp, defaultTitle);
+      target = file;
+      setCurrentFile(file);
+      window.history.replaceState(null, '', `/canvas/${canvasApp}/${file.id}`);
+    }
+    const updatedFile = await CanvasService.saveCanvasDocument(target.id, updatedData);
     setCurrentFile(updatedFile);
   };
 

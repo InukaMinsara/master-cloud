@@ -112,7 +112,7 @@ export function SecurityCenterPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto bg-background p-6 sm:p-10 space-y-8 select-none">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
         <div>

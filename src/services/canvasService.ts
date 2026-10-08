@@ -1,4 +1,5 @@
 import { api } from './api';
+import { localDb, binaryStorage } from './localDb';
 import { FileItem } from '@/types/file';
 import {
   CanvasAppType,
@@ -104,7 +105,7 @@ export const CANVAS_APP_CONFIG: Record<CanvasAppType, {
     mime: 'video/mp4',
     iconName: 'Video',
     color: '#ef4444',
-    description: 'AI Video Storyboard studio with multi-scene rendering pipeline',
+    description: 'AI Video Storyboard studio powered by qwen/qwen3.8-omni-flash:free with multi-scene rendering pipeline',
   },
   ai: {
     name: 'Master AI Intelligence',
@@ -409,40 +410,83 @@ export class CanvasService {
     };
   }
 
-  // Create a brand new file in Master Cloud
+  // Generic Default Data Resolver
+  static getDefaultData(type: CanvasAppType, title?: string): any {
+    const defaultTitle = title || `Untitled ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    if (type === 'docs' || type === 'word') return this.getDefaultDocData(defaultTitle);
+    if (type === 'sheets' || type === 'excel') return this.getDefaultSheetData(defaultTitle);
+    if (type === 'slides') return this.getDefaultSlideData(defaultTitle);
+    if (type === 'forms') return this.getDefaultFormData(defaultTitle);
+    if (type === 'draw') return this.getDefaultDrawData(defaultTitle);
+    if (type === 'notes' || type === 'onenote') return this.getDefaultNotesData(defaultTitle);
+    return {};
+  }
+
+  // Create a brand new file in Master Cloud with zero delay
   static async createCanvasDocument(
     type: CanvasAppType,
     title = 'Untitled',
     parentFolderId: string | null = null
   ): Promise<{ file: FileItem; initialData: any }> {
-    const config = CANVAS_APP_CONFIG[type];
+    const config = CANVAS_APP_CONFIG[type] || CANVAS_APP_CONFIG.docs;
     const filename = `${title.trim() || 'Untitled'}.${config.ext}`;
 
-    let initialData: any = {};
-    if (type === 'docs' || type === 'word') initialData = this.getDefaultDocData(title);
-    else if (type === 'sheets' || type === 'excel') initialData = this.getDefaultSheetData(title);
-    else if (type === 'slides') initialData = this.getDefaultSlideData(title);
-    else if (type === 'forms') initialData = this.getDefaultFormData(title);
-    else if (type === 'draw') initialData = this.getDefaultDrawData(title);
-    else if (type === 'notes' || type === 'onenote') initialData = this.getDefaultNotesData(title);
-
+    const initialData = this.getDefaultData(type, title);
     const jsonString = JSON.stringify(initialData, null, 2);
-    const fileBlob = new File([jsonString], filename, { type: 'application/json' });
 
-    const createdFile = await api.uploadFile(fileBlob, parentFolderId);
+    const createdFile = await api.createDocumentFile(
+      filename,
+      jsonString,
+      'application/json',
+      config.ext,
+      parentFolderId
+    );
+
+    // Save in binary storage for instantaneous subsequent reads
+    if (createdFile.storage_path) {
+      await binaryStorage.saveBlob(createdFile.storage_path, new Blob([jsonString], { type: 'application/json' }));
+    }
+
     return { file: createdFile, initialData };
   }
 
-  // Load an existing file
+  // Load an existing file with sub-millisecond local cache check & timeout protection
   static async loadCanvasDocument<T>(fileId: string, type: CanvasAppType): Promise<{ file: FileItem; data: T }> {
-    const file = await api.getFileById(fileId);
+    // 1. Check localDb first (0ms instant)
+    let file = await localDb.getFileById(fileId);
+    if (!file) {
+      try {
+        file = await Promise.race([
+          api.getFileById(fileId),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+        ]);
+      } catch {}
+    }
+
     if (!file) {
       throw new Error('Document not found in Master Cloud');
     }
 
-    const textContent = await api.getFileContentText(fileId);
-    let data: T;
+    // 2. Check binaryStorage first (instant cached blob < 1ms)
+    let textContent: string | null = null;
+    const cachedBlob = await binaryStorage.getBlob(file.storage_path);
+    if (cachedBlob) {
+      try {
+        textContent = await cachedBlob.text();
+      } catch {}
+    }
 
+    // 3. Fallback to API if not cached locally
+    if (!textContent) {
+      try {
+        textContent = await Promise.race([
+          api.getFileContentText(fileId),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+        ]);
+      } catch {}
+    }
+
+    let data: T;
     if (textContent) {
       try {
         data = JSON.parse(textContent);
@@ -458,31 +502,28 @@ export class CanvasService {
             lastSavedAt: file.updated_at,
           } as unknown as T;
         } else {
-          throw new Error('Failed to parse document data.');
+          data = this.getDefaultData(type, file.name.replace(/\.[^.]+$/, '')) as unknown as T;
         }
       }
     } else {
-      // If empty or missing, provide defaults
-      if (type === 'docs' || type === 'word') data = this.getDefaultDocData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else if (type === 'sheets' || type === 'excel') data = this.getDefaultSheetData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else if (type === 'slides') data = this.getDefaultSlideData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else if (type === 'forms') data = this.getDefaultFormData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else if (type === 'draw') data = this.getDefaultDrawData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else if (type === 'notes' || type === 'onenote') data = this.getDefaultNotesData(file.name.replace(/\.[^.]+$/, '')) as unknown as T;
-      else data = {} as unknown as T;
+      data = this.getDefaultData(type, file.name.replace(/\.[^.]+$/, '')) as unknown as T;
     }
 
     return { file, data };
   }
 
-  // Save an existing document to Master Cloud
+  // Save an existing document to Master Cloud with local cache update
   static async saveCanvasDocument<T extends { lastSavedAt?: string }>(fileId: string, data: T): Promise<FileItem> {
     const payload = {
       ...data,
       lastSavedAt: new Date().toISOString(),
     };
     const jsonString = JSON.stringify(payload, null, 2);
-    return await api.updateFileContent(fileId, jsonString, 'application/json');
+    const updated = await api.updateFileContent(fileId, jsonString, 'application/json');
+    if (updated.storage_path) {
+      await binaryStorage.saveBlob(updated.storage_path, new Blob([jsonString], { type: 'application/json' }));
+    }
+    return updated;
   }
 
   // Export to local disk

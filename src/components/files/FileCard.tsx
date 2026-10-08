@@ -11,11 +11,11 @@ import {
   Download,
   Share2,
   Trash2,
-  Edit2,
   Copy,
   Info,
   History,
   Check,
+  Eye,
 } from 'lucide-react';
 import { FileItem } from '@/types/file';
 import { formatBytes, formatDateRelative, getFileCategory } from '@/lib/utils';
@@ -24,8 +24,9 @@ import { useUIStore } from '@/stores/uiStore';
 import { usePreviewStore } from '@/stores/previewStore';
 import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
-
 import { useContextMenuStore } from '@/stores/contextMenuStore';
+
+import { TelegramCloudService } from '@/services/telegramCloudService';
 
 interface FileCardProps {
   file: FileItem;
@@ -40,6 +41,34 @@ export function FileCard({ file, allFiles }: FileCardProps) {
 
   const isSelected = selectedItemIds.includes(file.id);
   const category = getFileCategory(file.mime_type, file.extension);
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    let localBlobUrl: string | null = null;
+
+    if (category === 'image') {
+      if (file.storage_path?.startsWith('zdrive:')) {
+        const rel = file.storage_path.slice('zdrive:'.length);
+        if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+      } else if (file.storage_path?.startsWith('tgcloud:')) {
+        const direct = TelegramCloudService.getDirectStreamUrl(file.storage_path);
+        if (direct && active) setThumbUrl(direct);
+      } else {
+        api.getFileBlob(file.storage_path).then((blob) => {
+          if (blob && active) {
+            localBlobUrl = URL.createObjectURL(blob);
+            setThumbUrl(localBlobUrl);
+          }
+        }).catch(() => {});
+      }
+    }
+
+    return () => {
+      active = false;
+      if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
+    };
+  }, [file.id, file.storage_path, category]);
 
   const getCategoryIcon = () => {
     switch (category) {
@@ -58,13 +87,19 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     }
   };
 
-  const handleDoubleClick = () => {
+  const handleOpenPreview = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     openPreview(file, allFiles || storeFiles);
   };
 
-  const handleSelect = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    selectItem(file.id, e.ctrlKey || e.metaKey || e.shiftKey);
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      e.stopPropagation();
+      selectItem(file.id, true);
+    } else {
+      selectItem(file.id, false);
+      openPreview(file, allFiles || storeFiles);
+    }
   };
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -85,8 +120,8 @@ export function FileCard({ file, allFiles }: FileCardProps) {
 
   return (
     <div
-      onClick={handleSelect}
-      onDoubleClick={handleDoubleClick}
+      onClick={handleCardClick}
+      onDoubleClick={handleOpenPreview}
       onContextMenu={handleContextMenu}
       className={`group relative flex flex-col justify-between rounded-2xl border p-4 transition-all duration-200 select-none cursor-pointer ${
         isSelected
@@ -94,10 +129,13 @@ export function FileCard({ file, allFiles }: FileCardProps) {
           : 'border-border/80 bg-card hover:border-border hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5'
       }`}
     >
-      {/* Top action row: Checkbox, Star, Menu */}
+      {/* Top action row: Checkbox, Star, Eye Preview, Menu */}
       <div className="flex items-center justify-between gap-1 mb-3">
         <div
-          onClick={handleSelect}
+          onClick={(e) => {
+            e.stopPropagation();
+            selectItem(file.id, true);
+          }}
           className={`flex h-5 w-5 items-center justify-center rounded-lg border transition-all ${
             isSelected
               ? 'border-primary bg-primary text-primary-foreground'
@@ -108,6 +146,14 @@ export function FileCard({ file, allFiles }: FileCardProps) {
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={handleOpenPreview}
+            className="rounded-lg p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-primary transition-all"
+            title="Preview file"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -133,8 +179,8 @@ export function FileCard({ file, allFiles }: FileCardProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="right" className="w-48">
-              <DropdownMenuItem onClick={() => openPreview(file, allFiles)}>
-                <Info className="h-4 w-4 mr-2 text-primary" /> Preview
+              <DropdownMenuItem onClick={handleOpenPreview}>
+                <Eye className="h-4 w-4 mr-2 text-primary" /> Preview
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-2 text-emerald-500" /> Download
@@ -161,15 +207,26 @@ export function FileCard({ file, allFiles }: FileCardProps) {
       </div>
 
       {/* Center file icon or thumbnail */}
-      <div className="flex flex-col items-center justify-center py-5">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/60 group-hover:scale-105 transition-transform duration-200">
-          {getCategoryIcon()}
+      <div
+        onClick={handleOpenPreview}
+        className="flex flex-col items-center justify-center py-4 cursor-pointer"
+      >
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/60 group-hover:scale-105 transition-transform duration-200 overflow-hidden shadow-sm">
+          {category === 'image' && thumbUrl ? (
+            <img src={thumbUrl} alt={file.name} loading="lazy" className="w-full h-full object-cover rounded-2xl" />
+          ) : (
+            getCategoryIcon()
+          )}
         </div>
       </div>
 
       {/* Bottom metadata */}
       <div className="mt-2 space-y-1">
-        <h4 className="text-xs font-semibold text-foreground truncate" title={file.name}>
+        <h4
+          onClick={handleOpenPreview}
+          className="text-xs font-semibold text-foreground truncate hover:text-primary transition-colors cursor-pointer"
+          title={file.name}
+        >
           {file.name}
         </h4>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">

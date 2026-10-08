@@ -1,7 +1,7 @@
 import { FileItem } from '@/types/file';
 import { api } from './api';
 import { ApiKeyStore } from './apiKeyStore';
-import { AIGateway } from './aiGateway';
+import { AIGateway, QWEN_OMNI_VIDEO_MODEL, VideoStoryboardResult } from './aiGateway';
 
 
 export interface AIMessage {
@@ -41,7 +41,7 @@ export class AIService {
   static readonly ALIASES = {
     CHAT: 'master-chat',
     IMAGE: 'master-image',
-    VIDEO: 'master-video',
+    VIDEO: QWEN_OMNI_VIDEO_MODEL,
   };
 
   static getSessions(): AIChatSession[] {
@@ -159,5 +159,22 @@ export class AIService {
       requestsCount: d.totalRequests,
       health: d.status === 'online' ? 'healthy' : 'degraded',
     }));
+  }
+
+  /**
+   * Direct multi-scene video storyboard using qwen/qwen3.8-omni-flash:free
+   */
+  static async directVideoStoryboard(
+    concept: string,
+    sceneCount: number = 3
+  ): Promise<VideoStoryboardResult> {
+    return AIGateway.directVideoWithQwen(concept, sceneCount);
+  }
+
+  /**
+   * Enhance video concept prompt using Qwen 3.8 Omni Flash
+   */
+  static async enhanceVideoPrompt(prompt: string): Promise<string> {
+    return AIGateway.enhanceVideoPromptWithQwen(prompt);
   }
 }

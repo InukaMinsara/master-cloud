@@ -168,6 +168,27 @@ export function localDrivePlugin(): Plugin {
         );
       });
 
+function resolveLocalPath(cleanRelPath: string): string | null {
+  const norm = cleanRelPath.replace(/\\/g, '/');
+  const sub = norm.startsWith('Mg/') ? norm.slice(3) : norm;
+  const candidates = [
+    path.join('E:\\Mg', sub),
+    path.join('E:\\Mg', norm),
+    path.join('E:\\', norm),
+    path.join(getDriveRoot(), norm),
+    path.join('D:\\MasterCloudDrive', norm),
+  ];
+  for (const cand of candidates) {
+    try {
+      if (fs.existsSync(cand)) {
+        const st = fs.statSync(cand);
+        if (!st.isDirectory() && st.size > 0) return cand;
+      }
+    } catch {}
+  }
+  return null;
+}
+
       // 2. Read & stream file bytes for preview & download
       server.middlewares.use('/api/local-drive/read', (req, res) => {
         if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -188,7 +209,8 @@ export function localDrivePlugin(): Plugin {
             return;
           }
 
-          const targetPath = path.join(driveRoot, cleanRelPath);
+          const resolvedTarget = resolveLocalPath(cleanRelPath);
+          const targetPath = resolvedTarget || path.join(driveRoot, cleanRelPath);
           if (fs.existsSync(targetPath)) {
             const stat = fs.statSync(targetPath);
             if (stat.isDirectory()) {

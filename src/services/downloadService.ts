@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { FileItem, FolderItem } from '@/types/file';
 import { binaryStorage } from './localDb';
+import { TelegramCloudService } from './telegramCloudService';
 
 export class DownloadService {
   /**
@@ -8,6 +9,44 @@ export class DownloadService {
    */
   static async downloadSingleFile(file: FileItem): Promise<void> {
     try {
+      // 1. Direct stream download for Telegram Cloud + Multi-CDN files
+      if (file.storage_path?.startsWith('tgcloud:')) {
+        const directUrl = TelegramCloudService.getDirectStreamUrl(file.storage_path);
+        if (directUrl) {
+          const a = document.createElement('a');
+          a.href = directUrl;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+
+        const blob = await TelegramCloudService.downloadFile(file.storage_path);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        return;
+      }
+
+      // 2. Direct stream download for Z: drive and local cloud files for real bytes and max speed
+      if (file.storage_path?.startsWith('zdrive:')) {
+        const rel = file.storage_path.slice('zdrive:'.length);
+        const url = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
       let blob: Blob | null = null;
 
       // 1. Try local binary store

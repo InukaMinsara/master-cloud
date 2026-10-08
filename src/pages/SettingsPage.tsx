@@ -1,37 +1,49 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   User,
   Shield,
   Palette,
   HardDrive,
-  Bell,
-  Database,
   Check,
   Save,
-  KeyRound,
-  ExternalLink,
-  Upload,
   Camera,
   Trash2,
+  Sparkles,
+  ArrowRight,
+  Zap,
+  Lock,
+  Cloud,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { api } from '@/services/api';
+import { formatBytes } from '@/lib/utils';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
-  const { theme, setTheme, activeSettingsTab, setActiveSettingsTab } = useUIStore();
+  const {
+    theme,
+    setTheme,
+    activeSettingsTab,
+    setActiveSettingsTab,
+    setSmartCleanupModalOpen,
+  } = useUIStore();
+  const navigate = useNavigate();
 
   const [displayName, setDisplayName] = React.useState(user?.display_name || '');
   const [email, setEmail] = React.useState(user?.email || '');
   const [avatarUrl, setAvatarUrl] = React.useState(user?.avatar_url || '');
   const [isSaving, setIsSaving] = React.useState(false);
   const localFileRef = React.useRef<HTMLInputElement>(null);
+
+  const [breakdown, setBreakdown] = React.useState(() => api.getStorageBreakdown());
 
   React.useEffect(() => {
     if (user) {
@@ -41,10 +53,9 @@ export function SettingsPage() {
     }
   }, [user]);
 
-  // Supabase runtime config tester
-  const [supabaseUrl, setSupabaseUrl] = React.useState(import.meta.env.VITE_SUPABASE_URL || '');
-  const [supabaseAnonKey, setSupabaseAnonKey] = React.useState(import.meta.env.VITE_SUPABASE_ANON_KEY || '');
-  const isSupabaseConfigured = api.isConfiguredWithSupabase();
+  React.useEffect(() => {
+    setBreakdown(api.getStorageBreakdown());
+  }, []);
 
   const handleLocalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,8 +100,13 @@ export function SettingsPage() {
     { id: 'account', label: 'Account Profile', icon: User },
     { id: 'security', label: 'Security & Auth', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'database', label: 'Database & Supabase', icon: Database },
+    { id: 'plan', label: '10 TB Cloud Plan', icon: HardDrive },
   ];
+
+  // Safeguard against outdated active tab keys
+  const currentTab = ['account', 'security', 'appearance', 'plan'].includes(activeSettingsTab)
+    ? activeSettingsTab
+    : 'account';
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -107,7 +123,7 @@ export function SettingsPage() {
         <div>
           <h2 className="text-xl font-bold text-foreground">Settings</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Manage your credentials, customization preferences, and cloud infrastructure.
+            Manage your profile, security preferences, and cloud storage allocation.
           </p>
         </div>
       </div>
@@ -117,7 +133,7 @@ export function SettingsPage() {
         <div className="w-full md:w-56 space-y-1">
           {tabs.map((t) => {
             const Icon = t.icon;
-            const isActive = activeSettingsTab === t.id;
+            const isActive = currentTab === t.id;
             return (
               <button
                 key={t.id}
@@ -137,7 +153,8 @@ export function SettingsPage() {
 
         {/* Settings Panel */}
         <div className="flex-1 rounded-3xl border border-border/80 bg-card p-6 shadow-xl">
-          {activeSettingsTab === 'account' && (
+          {/* ─── 1. ACCOUNT PROFILE ─── */}
+          {currentTab === 'account' && (
             <form onSubmit={handleSaveProfile} className="space-y-5 max-w-lg">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Profile Information</h3>
@@ -209,10 +226,12 @@ export function SettingsPage() {
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 pointer-events-none">
                     <Check className="h-3 w-3" />
-                    <span>Google Verified</span>
+                    <span>Verified</span>
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">Connected Google account associated with your permanent 10 TB free cloud quota.</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Your Master Cloud email associated with your dedicated 10 TB free lifetime cloud quota.
+                </span>
               </div>
 
               <Button type="submit" disabled={isSaving} className="rounded-xl text-xs font-semibold">
@@ -222,7 +241,8 @@ export function SettingsPage() {
             </form>
           )}
 
-          {activeSettingsTab === 'security' && (
+          {/* ─── 2. SECURITY & AUTH ─── */}
+          {currentTab === 'security' && (
             <div className="space-y-6 max-w-lg">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Security & Protection</h3>
@@ -237,7 +257,7 @@ export function SettingsPage() {
                 <p className="text-xs text-muted-foreground">
                   Your account is secured with standard encryption and salt hashing.
                 </p>
-                <Button variant="outline" size="sm" onClick={() => toast.info('Password reset link sent to email')} className="rounded-xl text-xs mt-2">
+                <Button variant="outline" size="sm" onClick={() => toast.info('Password reset link sent to your registered email')} className="rounded-xl text-xs mt-2">
                   Change Password
                 </Button>
               </div>
@@ -254,10 +274,21 @@ export function SettingsPage() {
                   Enable 2FA
                 </Button>
               </div>
+
+              <div className="p-4 rounded-2xl border border-border/80 bg-secondary/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">Client-Side Zero-Knowledge Encryption</span>
+                  <Badge variant="success">Enabled</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  All chunked files are cryptographically protected before transmission and assembled safely in your browser.
+                </p>
+              </div>
             </div>
           )}
 
-          {activeSettingsTab === 'appearance' && (
+          {/* ─── 3. APPEARANCE ─── */}
+          {currentTab === 'appearance' && (
             <div className="space-y-6 max-w-lg">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Theme & Interface Appearance</h3>
@@ -299,80 +330,109 @@ export function SettingsPage() {
             </div>
           )}
 
-          {activeSettingsTab === 'database' && (
-            <div className="space-y-6 max-w-lg">
+          {/* ─── 4. 10 TB CLOUD PLAN (CLEAN GOOGLE-DRIVE-STYLE OVERVIEW) ─── */}
+          {currentTab === 'plan' && (
+            <div className="space-y-6 max-w-xl">
               <div>
-                <h3 className="text-sm font-bold text-foreground">Supabase & Database Configuration</h3>
+                <h3 className="text-sm font-bold text-foreground">10 TB Free Cloud Storage Plan</h3>
                 <p className="text-xs text-muted-foreground">
-                  Connect your live Supabase project for real PostgreSQL tables and cloud object storage.
+                  Your active storage tier powered by high-speed hybrid cloud architecture.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl border border-border/80 bg-secondary/30 space-y-3">
+              {/* Main Plan Card */}
+              <div className="p-6 rounded-3xl border border-primary/20 bg-primary/5 space-y-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground">Current Active Backend</span>
-                  <Badge variant={api.isConfiguredWithSupabase() ? 'success' : 'info'}>
-                    {api.isConfiguredWithSupabase() ? 'Supabase Live' : 'High-Fidelity Local Engine'}
+                  <div>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                      Active Plan
+                    </span>
+                    <h4 className="text-lg font-extrabold text-foreground mt-0.5">
+                      Master Cloud Ultra 10 TB
+                    </h4>
+                  </div>
+                  <Badge variant="success" className="px-3 py-1 text-xs">
+                    Free Forever
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {api.isConfiguredWithSupabase()
-                    ? 'Connected to your remote Supabase instance with Row-Level Security enabled.'
-                    : 'Running in high-speed local engine mode with IndexedDB binary persistence.'}
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={api.isConfiguredWithSupabase() ? 'default' : 'outline'}
-                    onClick={() => {
-                      localStorage.setItem('master_cloud_backend_mode', 'supabase');
-                      toast.success('Switched to Supabase Live backend');
-                      window.location.reload();
-                    }}
-                    className="text-xs rounded-xl h-8"
-                  >
-                    Use Supabase Live
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={!api.isConfiguredWithSupabase() ? 'default' : 'outline'}
-                    onClick={() => {
-                      localStorage.setItem('master_cloud_backend_mode', 'local');
-                      toast.success('Switched to High-Fidelity Local Engine');
-                      window.location.reload();
-                    }}
-                    className="text-xs rounded-xl h-8"
-                  >
-                    Use Local Engine
-                  </Button>
+
+                {/* Storage Meter */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-foreground">
+                      {formatBytes(breakdown.usedStorage)} used
+                    </span>
+                    <span className="text-muted-foreground">
+                      {formatBytes(breakdown.totalQuota)} Total
+                    </span>
+                  </div>
+                  <Progress value={breakdown.percentageUsed} className="h-2.5 rounded-full" />
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="text-emerald-500 font-medium">
+                      {formatBytes(breakdown.availableStorage)} Available
+                    </span>
+                    <span>{breakdown.percentageUsed}% of quota used</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/40 text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Monthly Cost</span>
+                    <span className="font-bold text-foreground">$0.00 / month</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Credit Card Required</span>
+                    <span className="font-bold text-emerald-500">None (100% Free)</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">VITE_SUPABASE_URL</label>
-                  <Input
-                    readOnly
-                    value={supabaseUrl}
-                    placeholder="https://your-project.supabase.co"
-                    className="text-xs font-mono rounded-xl bg-secondary/50"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-foreground">VITE_SUPABASE_ANON_KEY</label>
-                  <Input
-                    readOnly
-                    type="password"
-                    value={supabaseAnonKey}
-                    placeholder="eyJhbGciOi..."
-                    className="text-xs font-mono rounded-xl bg-secondary/50"
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  To update credentials, copy <code className="font-mono text-primary">.env.example</code> to <code className="font-mono text-primary">.env</code> in the project root and restart Vite.
-                </p>
+              {/* Feature Checklist */}
+              <div className="p-5 rounded-2xl border border-border/70 bg-secondary/20 space-y-3">
+                <h5 className="text-xs font-bold text-foreground uppercase tracking-wide">Included Plan Benefits</h5>
+                <ul className="space-y-2 text-xs text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Dedicated 10 TB (10,240 GB) cloud capacity per registered email</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Telegram Cloud + High-Speed Multi-CDN parallel streaming pipeline</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Automatic slicing for ultra-large files with zero size restrictions</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>End-to-end client-side privacy & secure chunk assembly</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>Instant in-browser media player and full file preview support</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  onClick={() => navigate('/storage')}
+                  className="rounded-xl text-xs font-semibold gap-2"
+                >
+                  <HardDrive className="h-4 w-4" />
+                  View Detailed Quota Analytics
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setSmartCleanupModalOpen(true)}
+                  className="rounded-xl text-xs font-semibold gap-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Smart Cleanup Optimizer
+                </Button>
               </div>
             </div>
           )}

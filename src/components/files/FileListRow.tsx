@@ -16,6 +16,7 @@ import {
   History,
   Info,
   Check,
+  Eye,
 } from 'lucide-react';
 import { FileItem, FolderItem } from '@/types/file';
 import { formatBytes, formatDateRelative, getFileCategory } from '@/lib/utils';
@@ -68,11 +69,21 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
   };
 
   const handleRowClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    selectItem(item.id, e.ctrlKey || e.metaKey || e.shiftKey);
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      e.stopPropagation();
+      selectItem(item.id, true);
+    } else {
+      selectItem(item.id, false);
+      if (isFolder && folder) {
+        setCurrentFolderId(folder.id);
+      } else if (file) {
+        openPreview(file, allFiles);
+      }
+    }
   };
 
-  const handleDoubleClick = () => {
+  const handleOpenItem = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (isFolder && folder) {
       setCurrentFolderId(folder.id);
     } else if (file) {
@@ -120,7 +131,6 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
   return (
     <tr
       onClick={handleRowClick}
-      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       className={`group border-b border-border/50 text-xs transition-colors select-none cursor-pointer ${
         isSelected
@@ -147,11 +157,16 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
 
       {/* Name and Icon column */}
       <td className="px-3 py-3">
-        <div className="flex items-center gap-3">
+        <div
+          onClick={handleOpenItem}
+          className="flex items-center gap-3 cursor-pointer group-hover:text-primary transition-colors"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/80 shrink-0">
             {getIcon()}
           </div>
-          <span className="font-semibold text-foreground truncate max-w-md">{item.name}</span>
+          <span className="font-semibold text-foreground truncate max-w-md group-hover:underline">
+            {item.name}
+          </span>
         </div>
       </td>
 
@@ -177,9 +192,19 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
         {isFolder ? `${folder?.item_count ?? 0} items` : formatBytes(file?.size_bytes || 0)}
       </td>
 
-      {/* Star and Menu Actions */}
+      {/* Quick Actions, Star and Menu */}
       <td className="px-3 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
+          {!isFolder && file && (
+            <button
+              onClick={handleOpenItem}
+              className="rounded-lg p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-primary hover:bg-accent transition-all"
+              title="Preview file"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -204,8 +229,8 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="right" className="w-48">
               {!isFolder && file && (
-                <DropdownMenuItem onClick={() => openPreview(file, allFiles)}>
-                  <Info className="h-4 w-4 mr-2 text-primary" /> Preview
+                <DropdownMenuItem onClick={handleOpenItem}>
+                  <Eye className="h-4 w-4 mr-2 text-primary" /> Preview
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={handleDownload}>
@@ -224,8 +249,8 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuItem onClick={() => setActiveDetailsItem({ ...item, isFolder })}>
-                <Info className="h-4 w-4 mr-2" /> Details
+              <DropdownMenuItem onClick={() => setActiveDetailsItem(item)}>
+                <Info className="h-4 w-4 mr-2" /> Details & Activity
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => deleteItem(item.id, isFolder)} destructive>

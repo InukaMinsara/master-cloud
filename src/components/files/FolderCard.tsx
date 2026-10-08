@@ -103,7 +103,13 @@ export function FolderCard({ folder }: FolderCardProps) {
           : 'border-border/80 bg-card hover:border-border hover:shadow-md hover:shadow-black/5'
       }`}
     >
-      <div className="flex items-center gap-3 truncate">
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          setCurrentFolderId(folder.id);
+        }}
+        className="flex items-center gap-3 truncate min-w-0 flex-1 cursor-pointer"
+      >
         {/* Selection Checkbox */}
         <div
           onClick={handleSelect}
@@ -126,7 +132,7 @@ export function FolderCard({ folder }: FolderCardProps) {
 
         {/* Name and Count */}
         <div className="truncate">
-          <h4 className="text-xs font-semibold text-foreground truncate" title={folder.name}>
+          <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors" title={folder.name}>
             {folder.name}
           </h4>
           <p className="text-[11px] text-muted-foreground">

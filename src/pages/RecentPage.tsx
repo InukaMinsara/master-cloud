@@ -3,8 +3,10 @@ import { Clock } from 'lucide-react';
 import { api } from '@/services/api';
 import { FileItem } from '@/types/file';
 import { FileCard } from '@/components/files/FileCard';
+import { useFileStore } from '@/stores/fileStore';
 
 export function RecentPage() {
+  const { files: storeFiles } = useFileStore();
   const [recentFiles, setRecentFiles] = React.useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -13,7 +15,7 @@ export function RecentPage() {
     api.getRecentItems(24)
       .then(setRecentFiles)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [storeFiles]);
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">

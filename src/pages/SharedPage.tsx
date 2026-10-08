@@ -4,8 +4,10 @@ import { api } from '@/services/api';
 import { FileItem, FolderItem } from '@/types/file';
 import { FileCard } from '@/components/files/FileCard';
 import { FolderCard } from '@/components/files/FolderCard';
+import { useFileStore } from '@/stores/fileStore';
 
 export function SharedPage() {
+  const { files: storeFiles, folders: storeFolders } = useFileStore();
   const [sharedFiles, setSharedFiles] = React.useState<FileItem[]>([]);
   const [sharedFolders, setSharedFolders] = React.useState<FolderItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -19,7 +21,7 @@ export function SharedPage() {
         setSharedFiles(files.slice(0, 3));
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [storeFiles, storeFolders]);
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">

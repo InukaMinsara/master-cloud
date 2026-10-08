@@ -98,11 +98,6 @@ export function PublicFooter() {
                   Features Directory
                 </Link>
               </li>
-              <li>
-                <Link to="/canvas" className="hover:text-primary transition-colors">
-                  Master Canvas Suite
-                </Link>
-              </li>
             </ul>
           </div>
 

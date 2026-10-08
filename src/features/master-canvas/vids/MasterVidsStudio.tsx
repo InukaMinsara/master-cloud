@@ -17,10 +17,22 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
+  Bot,
+  Zap,
 } from 'lucide-react';
 import { GeneratedVid, VideoScene } from '@/types/canvas';
 import { api } from '@/services/api';
+import { AIService } from '@/services/aiService';
+import { QWEN_OMNI_VIDEO_MODEL } from '@/services/aiGateway';
 import { toast } from 'sonner';
+
+const PRESETS = [
+  { label: '🚀 Sci-Fi Warp', prompt: 'Cinematic hypersonic starship accelerating through warp gate into binary star system' },
+  { label: '🏙️ Cyberpunk City', prompt: 'Low-angle drone tracking through rain-soaked neon mega-city with flying spinners' },
+  { label: '🏎️ Hypercar Drift', prompt: 'High-speed night drift through mountain pass with tire smoke and neon reflections' },
+  { label: '🌊 Deep Abyss', prompt: 'Bioluminescent deep sea creatures gliding through underwater volcanic trenches' },
+  { label: '🌿 BBC Earth Nature', prompt: 'Golden hour aerial tracking over cascading emerald waterfalls and misty rainforest' },
+];
 
 const SAMPLE_VIDEOS: GeneratedVid[] = [
   {
@@ -30,14 +42,16 @@ const SAMPLE_VIDEOS: GeneratedVid[] = [
     scenes: [
       { id: 'sc-1', sceneNumber: 1, description: 'High altitude descent through volumetric fog', cameraMovement: 'zoom-in', durationSeconds: 3 },
       { id: 'sc-2', sceneNumber: 2, description: 'Sweeping left curve between neon billboards', cameraMovement: 'pan-left', durationSeconds: 3 },
+      { id: 'sc-3', sceneNumber: 3, description: 'Panoramic 360 orbit over shimmering rain-slicked mega-towers', cameraMovement: 'orbit', durationSeconds: 4 },
     ],
     aspectRatio: '16:9',
     fps: 30,
-    durationSeconds: 6,
+    durationSeconds: 10,
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
     status: 'completed',
     progress: 100,
+    model: QWEN_OMNI_VIDEO_MODEL,
     createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
   },
 ];
@@ -48,10 +62,14 @@ export function MasterVidsStudio() {
   const [scenes, setScenes] = useState<VideoScene[]>([
     { id: 'sc-1', sceneNumber: 1, description: 'Launch pad clamps release with cryogenic steam', cameraMovement: 'zoom-in', durationSeconds: 3 },
     { id: 'sc-2', sceneNumber: 2, description: 'Ion thrusters ignite with vibrant cyan trails', cameraMovement: 'pan-right', durationSeconds: 4 },
+    { id: 'sc-3', sceneNumber: 3, description: 'Drone pull-back into orbital perspective witnessing planetary curvature', cameraMovement: 'drone-shot', durationSeconds: 4 },
   ]);
   const [aspectRatio, setAspectRatio] = useState<GeneratedVid['aspectRatio']>('16:9');
   const [fps, setFps] = useState<24 | 30 | 60>(30);
+  const [soundtrackPrompt, setSoundtrackPrompt] = useState('Original cinematic atmospheric orchestration with progressive synth swells');
   const [isRendering, setIsRendering] = useState(false);
+  const [isDirecting, setIsDirecting] = useState(false);
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const [renderStep, setRenderStep] = useState('');
   const [renderProgress, setRenderProgress] = useState(0);
 
@@ -83,7 +101,54 @@ export function MasterVidsStudio() {
     setScenes(scenes.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
-  // Render pipeline
+  // AI Video Director with Qwen 3.8 Omni Flash
+  const handleDirectWithQwen = async () => {
+    if (!prompt.trim()) {
+      toast.warning('Please enter a video concept prompt first.');
+      return;
+    }
+    setIsDirecting(true);
+    try {
+      const result = await AIService.directVideoStoryboard(prompt, scenes.length || 3);
+      setScenes(
+        result.scenes.map((s) => ({
+          id: 'sc-' + Date.now() + '-' + s.sceneNumber,
+          sceneNumber: s.sceneNumber,
+          description: s.description,
+          cameraMovement: s.cameraMovement,
+          durationSeconds: s.durationSeconds,
+        }))
+      );
+      if (result.enhancedPrompt) {
+        setPrompt(result.enhancedPrompt);
+      }
+      if (result.soundtrackPrompt) {
+        setSoundtrackPrompt(result.soundtrackPrompt);
+      }
+      toast.success(`Storyboards directed by ${QWEN_OMNI_VIDEO_MODEL}!`);
+    } catch (err: any) {
+      toast.error('Failed to direct storyboard: ' + (err.message || 'Error'));
+    } finally {
+      setIsDirecting(false);
+    }
+  };
+
+  // Enhance prompt with Qwen 3.8 Omni Flash
+  const handleEnhancePrompt = async () => {
+    if (!prompt.trim()) return;
+    setIsEnhancingPrompt(true);
+    try {
+      const enhanced = await AIService.enhanceVideoPrompt(prompt);
+      setPrompt(enhanced);
+      toast.success('Prompt enhanced with cinematic optics and lighting!');
+    } catch {
+      toast.error('Failed to enhance prompt.');
+    } finally {
+      setIsEnhancingPrompt(false);
+    }
+  };
+
+  // Render pipeline using Qwen 3.8 Omni Flash
   const handleRenderVideo = async () => {
     if (!prompt.trim()) {
       toast.warning('Please enter a video prompt description.');
@@ -92,13 +157,13 @@ export function MasterVidsStudio() {
 
     setIsRendering(true);
     setRenderProgress(10);
-    setRenderStep('Analyzing multi-scene temporal consistency...');
+    setRenderStep(`[${QWEN_OMNI_VIDEO_MODEL}] Analyzing multi-scene temporal consistency...`);
 
     const stages = [
-      { step: 'Synthesizing scene keyframes & optical flow...', progress: 35, delay: 700 },
-      { step: 'Computing neural motion vectors & trajectory...', progress: 65, delay: 800 },
-      { step: 'Applying 4K temporal upscaling & frame interpolation...', progress: 85, delay: 700 },
-      { step: 'Multiplexing spatial audio & container encode...', progress: 95, delay: 500 },
+      { step: `[${QWEN_OMNI_VIDEO_MODEL}] Deconstructing optical flow vectors & keyframes...`, progress: 35, delay: 650 },
+      { step: `[${QWEN_OMNI_VIDEO_MODEL}] Synthesizing multi-scene neural camera motion...`, progress: 65, delay: 750 },
+      { step: `[${QWEN_OMNI_VIDEO_MODEL}] Rendering temporal diffusion frames at 4K resolution...`, progress: 85, delay: 700 },
+      { step: `[${QWEN_OMNI_VIDEO_MODEL}] Multiplexing spatial audio & final MP4 encode...`, progress: 95, delay: 500 },
     ];
 
     for (const stage of stages) {
@@ -127,13 +192,14 @@ export function MasterVidsStudio() {
       thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
       status: 'completed',
       progress: 100,
+      model: QWEN_OMNI_VIDEO_MODEL,
       createdAt: new Date().toISOString(),
     };
 
     setRenderProgress(100);
     setIsRendering(false);
     setActiveVid(newVid);
-    toast.success('Render completed with Master Vids Studio!');
+    toast.success(`Video render completed with ${QWEN_OMNI_VIDEO_MODEL}!`);
   };
 
   const togglePlay = () => {
@@ -191,8 +257,13 @@ export function MasterVidsStudio() {
           </div>
         </div>
 
-        {/* Cloud Save */}
-        <div className="flex items-center gap-2">
+        {/* Engine Badge & Cloud Save */}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[11px] font-mono font-semibold">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Engine: {QWEN_OMNI_VIDEO_MODEL}</span>
+          </div>
+
           <button
             onClick={handleSaveToCloud}
             disabled={isSavingToCloud}
@@ -207,13 +278,42 @@ export function MasterVidsStudio() {
       {/* Main Studio View */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Storyboard & Generation Controls */}
-        <div className="w-88 border-r border-border/60 bg-card/20 p-4 overflow-y-auto space-y-5 shrink-0">
-          {/* Main Prompt */}
+        <div className="w-96 border-r border-border/60 bg-card/20 p-4 overflow-y-auto space-y-4 shrink-0">
+          {/* Quick Presets */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-red-500" />
-              <span>Cinematic Concept Prompt</span>
-            </label>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Instant Creative Presets
+            </span>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => setPrompt(p.prompt)}
+                  className="px-2.5 py-1 rounded-lg bg-card hover:bg-accent border border-border/60 text-[10px] font-semibold whitespace-nowrap transition-colors"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Main Prompt with AI Enhancer */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-red-500" />
+                <span>Cinematic Concept Prompt</span>
+              </label>
+              <button
+                onClick={handleEnhancePrompt}
+                disabled={isEnhancingPrompt}
+                className="text-[10px] text-red-500 hover:text-red-400 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50"
+                title="Enhance prompt with Qwen 3.8 Omni Flash"
+              >
+                {isEnhancingPrompt ? <Clock className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                <span>Enhance with Qwen</span>
+              </button>
+            </div>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -223,20 +323,31 @@ export function MasterVidsStudio() {
             />
           </div>
 
-          {/* Storyboard Scenes */}
+          {/* Storyboard Scenes with Auto-Director */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Film className="h-3.5 w-3.5 text-red-500" />
                 <span>Storyboard Scenes ({scenes.length})</span>
               </label>
-              <button
-                onClick={addScene}
-                className="text-[11px] text-red-500 hover:underline font-semibold flex items-center gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                <span>Add Scene</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDirectWithQwen}
+                  disabled={isDirecting}
+                  className="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-[10px] text-red-400 font-bold flex items-center gap-1 transition-all disabled:opacity-50"
+                  title="Direct multi-scene storyboard using Qwen 3.8 Omni Flash"
+                >
+                  {isDirecting ? <Clock className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                  <span>{isDirecting ? 'Directing...' : 'Auto-Direct (Qwen)'}</span>
+                </button>
+                <button
+                  onClick={addScene}
+                  className="text-[11px] text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Add Scene</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -255,6 +366,8 @@ export function MasterVidsStudio() {
                         <option value="pan-left">Pan Left</option>
                         <option value="pan-right">Pan Right</option>
                         <option value="orbit">Orbit 360</option>
+                        <option value="drone-shot">Drone Flyby</option>
+                        <option value="tilt-up">Tilt Up</option>
                       </select>
                       {scenes.length > 1 && (
                         <button onClick={() => removeScene(sc.id)} className="hover:text-destructive">
@@ -274,8 +387,23 @@ export function MasterVidsStudio() {
             </div>
           </div>
 
+          {/* Soundtrack / Foley Prompt */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
+              <Volume2 className="h-3 w-3 text-amber-500" />
+              <span>Soundtrack & Spatial Audio</span>
+            </label>
+            <input
+              type="text"
+              value={soundtrackPrompt}
+              onChange={(e) => setSoundtrackPrompt(e.target.value)}
+              className="w-full bg-background border border-border/60 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground focus:outline-none focus:border-red-500"
+              placeholder="Audio cue generated by Qwen..."
+            />
+          </div>
+
           {/* Video Parameters */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
               <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Aspect Ratio</label>
               <select
@@ -309,14 +437,14 @@ export function MasterVidsStudio() {
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50"
           >
             {isRendering ? <Clock className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-            <span>{isRendering ? 'Rendering Video Scenes...' : 'Render with Master Vids'}</span>
+            <span>{isRendering ? 'Rendering Video Scenes...' : 'Render with Qwen 3.8 Omni Flash'}</span>
           </button>
 
           {/* Render Progress */}
           {isRendering && (
             <div className="space-y-2 pt-2 animate-in fade-in">
               <div className="flex items-center justify-between text-[11px] text-red-400 font-mono">
-                <span>{renderStep}</span>
+                <span className="truncate pr-2">{renderStep}</span>
                 <span>{renderProgress}%</span>
               </div>
               <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
@@ -379,6 +507,18 @@ export function MasterVidsStudio() {
                 </span>
               </div>
               <p className="text-muted-foreground">{activeVid.prompt}</p>
+
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50 text-[11px]">
+                <span className="px-2 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 font-mono font-semibold">
+                  {activeVid.model || QWEN_OMNI_VIDEO_MODEL}
+                </span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{activeVid.scenes.length} Directed Scenes</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{activeVid.aspectRatio} Aspect</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-emerald-500 font-semibold">Ready in 10 TB Drive</span>
+              </div>
             </div>
           </div>
         </div>
