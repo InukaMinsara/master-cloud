@@ -11,6 +11,22 @@ const path = require('path');
 const fs = require('fs');
 const { VirtualDriveEngine } = require('./engine.cjs');
 
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+// Register custom protocol 'mastercloud://'
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('mastercloud', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('mastercloud');
+}
+
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
@@ -211,6 +227,60 @@ ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.hide();
 });
 
+// Deep Link Processor (e.g. mastercloud://open-drive or mastercloud://auth?token=...)
+function handleDeepLink(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return;
+  try {
+    const url = new URL(rawUrl);
+    const hostOrPath = (url.hostname || url.pathname.replace(/^\/+/, '')).toLowerCase();
+
+    if (hostOrPath === 'open-drive' || url.pathname.includes('open-drive')) {
+      engine.openInExplorer();
+    } else if (hostOrPath === 'sync' || url.pathname.includes('sync')) {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    } else if (hostOrPath === 'auth' || url.pathname.includes('auth')) {
+      const email = url.searchParams.get('email');
+      const token = url.searchParams.get('token');
+      if (email) {
+        const cleanEmail = email.trim().toLowerCase();
+        const session = {
+          email: cleanEmail,
+          displayName: cleanEmail.split('@')[0],
+          token: token || 'mc_' + Date.now(),
+          quotaBytes: 10 * 1024 * 1024 * 1024 * 1024,
+          loggedInAt: new Date().toISOString(),
+        };
+        saveSession(session);
+        engine.start('Z');
+        if (mainWindow) {
+          mainWindow.webContents.send('status-update', engine.getStatus());
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error handling deep link:', err);
+  }
+}
+
+// Second Instance Event (User clicked a mastercloud:// link while app is running)
+app.on('second-instance', (_event, commandLine) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+
+  const deepLink = commandLine.find((arg) => arg.startsWith('mastercloud://'));
+  if (deepLink) {
+    handleDeepLink(deepLink);
+  }
+});
+
 // App Lifecycle
 app.whenReady().then(async () => {
   createWindow();
@@ -220,6 +290,12 @@ app.whenReady().then(async () => {
   const session = loadSession();
   if (session) {
     await engine.start('Z');
+  }
+
+  // Check initial command line args for deep link
+  const initialDeepLink = process.argv.find((arg) => arg.startsWith('mastercloud://'));
+  if (initialDeepLink) {
+    handleDeepLink(initialDeepLink);
   }
 });
 

@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 // ── Official Release Configuration ───────────────────────────────────────────
 const INSTALLER_URL     = '/releases/MasterCloudSetup.exe';
 const INSTALLER_MSI_URL = '/releases/MasterCloudSetup-x64.msi';
-const INSTALLER_SHA256  = 'E3430EEB938EBDBDA85159E134C83A73AE4E4C80FA9462F007C1B8784987A9D5';
+const INSTALLER_SHA256  = 'EEBC1BEF8D5500925473E0E31E13C4836351CFE44CEF2A8E18CC07BCD7B70CFF';
 const INSTALLER_VERSION = '1.0.0';
 const INSTALLER_DATE    = 'October 2026';
 const INSTALLER_SIZE    = '149.5 MB';
@@ -231,6 +231,17 @@ export function DownloadPage() {
           <div className="font-mono text-[10px] text-foreground break-all select-all">
             {INSTALLER_SHA256}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs flex-wrap gap-2">
+          <span className="text-muted-foreground">Already installed Master Cloud?</span>
+          <a
+            href="mastercloud://open-drive"
+            className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline cursor-pointer"
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
+            <span>Open in File Explorer (mastercloud://)</span>
+          </a>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -67,6 +67,14 @@
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Master Cloud"
     },
+    "protocols": [
+      {
+        "name": "Master Cloud",
+        "schemes": [
+          "mastercloud"
+        ]
+      }
+    ],
     "files": [
       "desktop/**/*",
       "scripts/webdav-server.mjs",

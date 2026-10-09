@@ -33,6 +33,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { formatBytes } from '@/lib/utils';
+import { toast } from 'sonner';
 import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -228,12 +229,31 @@ export function Sidebar() {
           <p className="text-[11px] text-muted-foreground">
             {formatBytes(storageBreakdown.usedStorage)} of {formatBytes(storageBreakdown.totalQuota)}
           </p>
-          <NavLink
-            to="/storage"
-            className="block text-center text-xs font-semibold text-primary hover:underline pt-1"
-          >
-            Storage Analytics
-          </NavLink>
+          <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+            <NavLink
+              to="/storage"
+              className="font-semibold text-primary hover:underline"
+            >
+              Analytics
+            </NavLink>
+            <a
+              href="mastercloud://open-drive"
+              onClick={() => {
+                toast.info('Opening MASTER CLOUD (Z:) in File Explorer...', {
+                  description: 'Ensure Master Cloud for Windows is installed.',
+                  action: {
+                    label: 'Get App',
+                    onClick: () => navigate('/download'),
+                  },
+                });
+              }}
+              className="inline-flex items-center gap-1 font-semibold text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer"
+              title="Open Virtual Drive in File Explorer"
+            >
+              <HardDrive className="h-3 w-3" />
+              <span>Open Z:</span>
+            </a>
+          </div>
         </div>
       )}
 
