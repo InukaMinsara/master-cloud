@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 // ── Official Release Configuration ───────────────────────────────────────────
 const INSTALLER_URL     = '/releases/MasterCloudSetup.exe';
 const INSTALLER_MSI_URL = '/releases/MasterCloudSetup-x64.msi';
-const INSTALLER_SHA256  = 'EEBC1BEF8D5500925473E0E31E13C4836351CFE44CEF2A8E18CC07BCD7B70CFF';
+const INSTALLER_SHA256  = 'C421B1206AD5163E8D3E01EA79923C7664D8A1050BF337E9AEC74035DBA6E45D';
 const INSTALLER_VERSION = '1.0.0';
 const INSTALLER_DATE    = 'October 2026';
 const INSTALLER_SIZE    = '149.5 MB';

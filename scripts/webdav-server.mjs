@@ -25,6 +25,7 @@ import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { spawn, spawnSync } from 'child_process';
 import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
@@ -1435,17 +1436,19 @@ function mapDrive() {
 
       unmountDrive();
 
+      const vfsCacheDir = fs.existsSync('D:\\') ? 'D:\\MasterCloudCache' : path.join(os.homedir(), '.mastercloud', 'cache');
+      try { fs.mkdirSync(vfsCacheDir, { recursive: true }); } catch { /* ignore */ }
+
       const mountArgs = [
         'mount',
         'mc_cloud:',
         `${DRIVE_LETTER}:`,
         `--config=${rcloneConfPath}`,
-        `--volname=MASTER CLOUD (10 TB)`,
-        '--network-mode',
+        '--volname=MASTER CLOUD',
         '--file-perms=0777',
         '--dir-perms=0777',
         '--vfs-cache-mode=full',
-        '--cache-dir=D:\\MasterCloudCache',
+        `--cache-dir=${vfsCacheDir}`,
         '--vfs-cache-max-age=72h',
         '--vfs-cache-max-size=25G',
         '--vfs-read-chunk-size=128k',
@@ -1472,7 +1475,12 @@ function mapDrive() {
       rcloneProc.unref();
 
       setTimeout(() => {
-        console.log(`✅ Drive ${DRIVE_LETTER}: mounted (Zero-Disk RAM-Pack + Online Cloud Offloader)!`);
+        try {
+          const driveKey = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\${DRIVE_LETTER}`;
+          spawnSync('reg', ['add', `${driveKey}\\DefaultLabel`, '/ve', '/t', 'REG_SZ', '/d', 'MASTER CLOUD (10 TB)', '/f'], { stdio: 'ignore' });
+          spawnSync('reg', ['add', `${driveKey}\\DefaultIcon`, '/ve', '/t', 'REG_SZ', '/d', 'imageres.dll,-32', '/f'], { stdio: 'ignore' });
+        } catch { /* ignore */ }
+        console.log(`✅ Drive ${DRIVE_LETTER}: mounted as Local Fixed Disk (Zero-Disk RAM-Pack + Online Cloud Offloader)!`);
       }, 1000);
     } catch (e) {
       console.log(`⚠️  Drive mount error: ${e.message}`);
