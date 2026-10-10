@@ -35,7 +35,13 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 // 10 TB in bytes (10 * 1024^4)
 const TEN_TB_BYTES = 10 * 1024 * 1024 * 1024 * 1024; // 10,995,116,277,760
-const MANIFEST_FILE = path.join(__dirname, 'cloud-manifest.json');
+const USER_DATA_DIR = path.join(os.homedir(), '.mastercloud');
+try { fs.mkdirSync(USER_DATA_DIR, { recursive: true }); } catch { /* ignore */ }
+
+let MANIFEST_FILE = path.join(__dirname, 'cloud-manifest.json');
+if (__dirname.includes('app.asar') || !fs.existsSync(path.dirname(MANIFEST_FILE))) {
+  MANIFEST_FILE = path.join(USER_DATA_DIR, 'cloud-manifest.json');
+}
 const CHUNK_LIMIT_BYTES = 180 * 1024 * 1024; // 180 MB per cloud chunk
 
 const args = process.argv.slice(2).reduce((acc, arg) => {
@@ -49,7 +55,8 @@ const args = process.argv.slice(2).reduce((acc, arg) => {
 
 const PORT = parseInt(args.port, 10) || 8766;
 const DRIVE_LETTER = (args.drive || 'Z').toUpperCase().replace(':', '');
-const STORAGE_DIR = args.folder || path.join('D:\\', 'MasterCloudDrive');
+const defaultStorageDir = fs.existsSync('D:\\') ? path.join('D:\\', 'MasterCloudDrive') : path.join(USER_DATA_DIR, 'drive');
+const STORAGE_DIR = args.folder || defaultStorageDir;
 const WEBDAV_URL = `http://127.0.0.1:${PORT}`;
 const RCLONE_RC_URL = 'http://127.0.0.1:5572';
 
@@ -1419,7 +1426,7 @@ function mapDrive() {
   setTimeout(() => {
     try {
       const rcloneExe = findRcloneExe();
-      const rcloneConfPath = path.join(__dirname, 'rclone.conf');
+      const rcloneConfPath = path.join(USER_DATA_DIR, 'rclone.conf');
       const confContent = [
         '[mc_cloud]',
         'type = webdav',

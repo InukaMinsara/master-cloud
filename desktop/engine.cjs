@@ -48,8 +48,8 @@ class VirtualDriveEngine {
 
   getScriptPath() {
     const candidates = [
-      path.join(this.projectRoot, 'scripts', 'webdav-server.mjs'),
       path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'webdav-server.mjs'),
+      path.join(this.projectRoot, 'scripts', 'webdav-server.mjs'),
       path.join(process.resourcesPath || '', 'scripts', 'webdav-server.mjs'),
       path.join(__dirname, 'scripts', 'webdav-server.mjs'),
     ];
