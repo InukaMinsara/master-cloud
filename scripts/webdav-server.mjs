@@ -55,8 +55,24 @@ const args = process.argv.slice(2).reduce((acc, arg) => {
 
 const PORT = parseInt(args.port, 10) || 8766;
 const DRIVE_LETTER = (args.drive || 'Z').toUpperCase().replace(':', '');
-const defaultStorageDir = fs.existsSync('D:\\') ? path.join('D:\\', 'MasterCloudDrive') : path.join(USER_DATA_DIR, 'drive');
+const USER_EMAIL = (args.user || 'immaster2024@gmail.com').trim().toLowerCase();
+const isMasterAdmin = USER_EMAIL === 'immaster2024@gmail.com';
+
+const safeUserKey = USER_EMAIL.replace(/[^a-zA-Z0-9_-]/g, '_');
+let MANIFEST_FILE = isMasterAdmin
+  ? path.join(__dirname, 'cloud-manifest.json')
+  : path.join(USER_DATA_DIR, `cloud-manifest-${safeUserKey}.json`);
+
+if (isMasterAdmin && (__dirname.includes('app.asar') || !fs.existsSync(path.dirname(MANIFEST_FILE)))) {
+  MANIFEST_FILE = path.join(USER_DATA_DIR, 'cloud-manifest.json');
+}
+
+const defaultStorageDir = isMasterAdmin
+  ? (fs.existsSync('D:\\') ? path.join('D:\\', 'MasterCloudDrive') : path.join(USER_DATA_DIR, 'drive'))
+  : path.join(USER_DATA_DIR, 'drive', safeUserKey);
+
 const STORAGE_DIR = args.folder || defaultStorageDir;
+try { fs.mkdirSync(STORAGE_DIR, { recursive: true }); } catch { /* ignore */ }
 const WEBDAV_URL = `http://127.0.0.1:${PORT}`;
 const RCLONE_RC_URL = 'http://127.0.0.1:5572';
 
@@ -909,6 +925,54 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Length': '0' });
     res.end();
     return;
+  }
+
+  // ── Session Bridge API: Auto-Connect Web <-> Desktop ───────────
+  if (relPath === 'api/auth/active-session' || relPath === '__active_session') {
+    const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
+    if (method === 'GET') {
+      let data = {
+        ok: true,
+        session: {
+          email: 'immaster2024@gmail.com',
+          displayName: 'Inuka Minsara',
+          role: 'admin',
+        },
+      };
+      if (fs.existsSync(sessionFile)) {
+        try {
+          data = { ok: true, session: JSON.parse(fs.readFileSync(sessionFile, 'utf8')) };
+        } catch { /* ignore */ }
+      }
+      const out = JSON.stringify(data);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+      res.end(out);
+      return;
+    }
+    if (method === 'POST') {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          fs.writeFileSync(sessionFile, JSON.stringify(body, null, 2), 'utf8');
+          const out = JSON.stringify({ ok: true, saved: true });
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+          res.end(out);
+        } catch {
+          res.writeHead(400, { 'Content-Length': '0' });
+          res.end();
+        }
+      });
+      return;
+    }
+    if (method === 'DELETE') {
+      try { if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile); } catch { /* ignore */ }
+      const out = JSON.stringify({ ok: true, cleared: true });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+      res.end(out);
+      return;
+    }
   }
 
   // POST /__instant_ingest: O(1) 0.001-second Instant Folder/File Move (1,000,000+ files in < 1 second!)

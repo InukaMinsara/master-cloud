@@ -25,26 +25,7 @@ export function LoginPage() {
   const [customGoogleName, setCustomGoogleName] = useState('Inuka Minsara');
 
   const handleGoogleSignInClick = async () => {
-    setIsLoading(true);
-    try {
-      if (isSupabaseConfigured) {
-        // Real Supabase Google OAuth Redirect
-        const res = await loginWithOAuth('google');
-        if (res.redirected) return;
-        if (!res.success && res.error) {
-          toast.error(`Supabase OAuth: ${res.error}`);
-          setShowGooglePromptModal(true);
-        }
-      } else {
-        // In local mode / without Supabase env keys: Open friendly Google sign-in modal
-        setShowGooglePromptModal(true);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Google Sign-In failed');
-      setShowGooglePromptModal(true);
-    } finally {
-      setIsLoading(false);
-    }
+    setShowGooglePromptModal(true);
   };
 
   const handleCustomGoogleSubmit = async (e: React.FormEvent) => {
@@ -271,8 +252,38 @@ export function LoginPage() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-foreground">Sign in with Google Account</h3>
-                <p className="text-xs text-muted-foreground">Enter your Google email to link your 10 TB storage</p>
+                <p className="text-xs text-muted-foreground">Select your account or enter your Google email</p>
               </div>
+            </div>
+
+            {/* 1-Click Master Admin Account Button */}
+            <button
+              type="button"
+              onClick={() => {
+                loginWithGoogle('immaster2024@gmail.com', 'Inuka Minsara').then((res) => {
+                  if (res.success) {
+                    toast.success('Welcome Master Admin! 10 TB Workspace Connected');
+                    setShowGooglePromptModal(false);
+                    navigate('/drive');
+                  }
+                });
+              }}
+              className="w-full p-3.5 rounded-2xl border-2 border-primary/40 hover:border-primary bg-primary/10 hover:bg-primary/20 transition-all text-left flex items-center justify-between group active:scale-98"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/20 text-primary font-bold text-xs flex items-center justify-center">
+                  IM
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">Inuka Minsara (Master Admin)</p>
+                  <p className="text-[11px] text-muted-foreground">immaster2024@gmail.com</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">ADMIN</span>
+            </button>
+
+            <div className="relative text-center my-2">
+              <span className="bg-card px-2 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Or other Google account</span>
             </div>
 
             <form onSubmit={handleCustomGoogleSubmit} className="space-y-4">

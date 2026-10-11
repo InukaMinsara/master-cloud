@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('masterCloudDesktop', {
   logout: () => ipcRenderer.invoke('logout'),
   openDrive: () => ipcRenderer.invoke('open-drive'),
   openWeb: () => ipcRenderer.invoke('open-web'),
+  getWebSession: () => ipcRenderer.invoke('get-web-session'),
   setDriveLetter: (letter) => ipcRenderer.invoke('set-drive-letter', letter),
   minimize: () => ipcRenderer.send('window-minimize'),
   close: () => ipcRenderer.send('window-close'),

@@ -610,6 +610,28 @@ class LocalDatabaseService {
     } else {
       this.currentUser = DEFAULT_USER;
     }
+
+    // Ensure all existing files and folders belong to immaster2024@gmail.com
+    this.folders.forEach(f => {
+      if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+        f.owner_id = DEFAULT_USER.id;
+      }
+    });
+    this.files.forEach(f => {
+      if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+        f.owner_id = DEFAULT_USER.id;
+      }
+    });
+    saveTable('folders', this.folders);
+    saveTable('files', this.files);
+  }
+
+  isItemVisible(ownerId?: string | null): boolean {
+    const isMasterAdmin =
+      this.currentUser.email.toLowerCase() === 'immaster2024@gmail.com' ||
+      this.currentUser.role === 'admin';
+    if (isMasterAdmin) return true;
+    return ownerId === this.currentUser.id;
   }
 
   // --- Auth / Profile ---
@@ -678,7 +700,7 @@ class LocalDatabaseService {
       const res = await fetch('/api/local-drive/list');
       if (!res.ok) return;
       const data = await res.json();
-      if (!data?.ok || !Array.isArray(data.items)) return;
+      if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
 
       const diskItems: Array<{
         relPath: string;
@@ -790,10 +812,11 @@ class LocalDatabaseService {
     return this.folders
       .filter(f => (includeDeleted ? f.deleted_at !== null : f.deleted_at === null))
       .filter(f => (includeDeleted ? true : f.parent_folder_id === parentFolderId))
+      .filter(f => this.isItemVisible(f.owner_id))
       .map(f => ({
         ...f,
-        item_count: this.files.filter(file => file.parent_folder_id === f.id && !file.deleted_at).length +
-          this.folders.filter(sub => sub.parent_folder_id === f.id && !sub.deleted_at).length,
+        item_count: this.files.filter(file => file.parent_folder_id === f.id && !file.deleted_at && this.isItemVisible(file.owner_id)).length +
+          this.folders.filter(sub => sub.parent_folder_id === f.id && !sub.deleted_at && this.isItemVisible(sub.owner_id)).length,
       }));
   }
 
@@ -982,6 +1005,7 @@ class LocalDatabaseService {
     return this.files
       .filter(f => (includeDeleted ? f.deleted_at !== null : f.deleted_at === null))
       .filter(f => (includeDeleted ? true : f.parent_folder_id === parentFolderId))
+      .filter(f => this.isItemVisible(f.owner_id))
       .map(f => ({
         ...f,
         owner: this.currentUser,
@@ -1312,14 +1336,14 @@ class LocalDatabaseService {
 
   // --- Starred & Recent ---
   async getStarredItems(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
-    const files = this.files.filter(f => f.is_starred && !f.deleted_at).map(f => ({ ...f, owner: this.currentUser }));
-    const folders = this.folders.filter(f => f.is_starred && !f.deleted_at).map(f => ({ ...f, owner: this.currentUser }));
+    const files = this.files.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id)).map(f => ({ ...f, owner: this.currentUser }));
+    const folders = this.folders.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id)).map(f => ({ ...f, owner: this.currentUser }));
     return { files, folders };
   }
 
   async getRecentItems(limit: number = 20): Promise<FileItem[]> {
     return this.files
-      .filter(f => !f.deleted_at)
+      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id))
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
       .slice(0, limit)
       .map(f => ({ ...f, owner: this.currentUser }));
@@ -1328,7 +1352,7 @@ class LocalDatabaseService {
   // --- Media Library ---
   async getMediaFiles(type: 'all' | 'image' | 'video' | 'audio' = 'all'): Promise<FileItem[]> {
     return this.files
-      .filter(f => !f.deleted_at)
+      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id))
       .filter(f => {
         const cat = getFileCategory(f.mime_type, f.extension);
         if (type === 'all') return ['image', 'video', 'audio'].includes(cat);
@@ -1639,8 +1663,8 @@ class LocalDatabaseService {
 
   // --- Storage Analytics & Smart Cleanup ---
   getStorageBreakdown(): StorageBreakdown {
-    const activeFiles = this.files.filter(f => f.deleted_at === null);
-    const trashFiles = this.files.filter(f => f.deleted_at !== null);
+    const activeFiles = this.files.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id));
+    const trashFiles = this.files.filter(f => f.deleted_at !== null && this.isItemVisible(f.owner_id));
 
     let imagesBytes = 0;
     let videosBytes = 0;

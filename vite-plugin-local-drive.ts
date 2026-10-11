@@ -151,7 +151,21 @@ export function localDrivePlugin(): Plugin {
           return;
         }
 
-        const driveRoot = getDriveRoot();
+        const isMounted = fs.existsSync('Z:\\');
+        if (!isMounted) {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              ok: true,
+              isMounted: false,
+              driveLetter: null,
+              items: [],
+            })
+          );
+          return;
+        }
+
+        const driveRoot = 'Z:\\';
         const now = Date.now();
         if (now - lastScanTime > SCAN_INTERVAL_MS) {
           triggerBackgroundScan();
@@ -161,7 +175,8 @@ export function localDrivePlugin(): Plugin {
         res.end(
           JSON.stringify({
             ok: true,
-            driveLetter: driveRoot.startsWith('Z') ? 'Z:' : 'D:',
+            isMounted: true,
+            driveLetter: 'Z:',
             drivePath: driveRoot,
             items: cachedItems,
           })

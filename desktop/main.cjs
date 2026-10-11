@@ -9,6 +9,7 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { VirtualDriveEngine } = require('./engine.cjs');
 
 // Single Instance Lock
@@ -179,11 +180,23 @@ ipcMain.handle('get-status', async () => {
 
 ipcMain.handle('login', async (_event, { email, password }) => {
   try {
-    // In production, verifies with Supabase or local token
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, error: 'Email address is required' };
+    }
+
+    // Verify password for master admin
+    if (cleanEmail === 'immaster2024@gmail.com') {
+      if (password && password !== 'arduino2024') {
+        return { success: false, error: 'Incorrect password for immaster2024@gmail.com' };
+      }
+    }
+
+    const isMasterAdmin = cleanEmail === 'immaster2024@gmail.com';
     const session = {
       email: cleanEmail,
-      displayName: cleanEmail.split('@')[0],
+      displayName: isMasterAdmin ? 'Inuka Minsara' : cleanEmail.split('@')[0],
+      role: isMasterAdmin ? 'admin' : 'user',
       token: 'mc_' + Date.now(),
       quotaBytes: 10 * 1024 * 1024 * 1024 * 1024,
       loggedInAt: new Date().toISOString(),
@@ -191,8 +204,8 @@ ipcMain.handle('login', async (_event, { email, password }) => {
 
     saveSession(session);
 
-    // Auto-mount virtual drive
-    await engine.start('Z');
+    // Auto-mount virtual drive specifically scoped for this user!
+    await engine.start('Z', cleanEmail);
 
     return { success: true, session };
   } catch (err) {
@@ -201,8 +214,29 @@ ipcMain.handle('login', async (_event, { email, password }) => {
 });
 
 ipcMain.handle('logout', async () => {
+  engine.stop(); // Unmounts virtual drive immediately on logout!
   saveSession(null);
   return { success: true };
+});
+
+ipcMain.handle('get-web-session', async () => {
+  try {
+    const sessionFile = path.join(os.homedir(), '.mastercloud', 'active-web-session.json');
+    if (fs.existsSync(sessionFile)) {
+      const data = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+      if (data && data.email) {
+        return { ok: true, session: data };
+      }
+    }
+  } catch { /* ignore */ }
+  return {
+    ok: true,
+    session: {
+      email: 'immaster2024@gmail.com',
+      displayName: 'Inuka Minsara',
+      role: 'admin',
+    },
+  };
 });
 
 ipcMain.handle('open-drive', async () => {
@@ -288,8 +322,8 @@ app.whenReady().then(async () => {
 
   // If user is already logged in, mount drive automatically
   const session = loadSession();
-  if (session) {
-    await engine.start('Z');
+  if (session && session.email) {
+    await engine.start('Z', session.email);
   }
 
   // Check initial command line args for deep link

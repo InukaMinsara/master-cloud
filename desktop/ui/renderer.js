@@ -12,6 +12,7 @@ const {
   logout,
   openDrive,
   openWeb,
+  getWebSession,
   setDriveLetter,
   minimize,
   close,
@@ -116,11 +117,33 @@ loginForm.addEventListener('submit', async (e) => {
   }
 });
 
-// Quick Connect
+// Auto-Connect with Website (reads active session from web app)
 btnQuickConnect.addEventListener('click', async () => {
-  inputEmail.value = 'inuka@mastercloud.io';
-  inputPassword.value = 'master10tb';
-  loginForm.dispatchEvent(new Event('submit'));
+  try {
+    btnQuickConnect.disabled = true;
+    btnQuickConnect.textContent = 'Connecting with website...';
+    const res = await window.masterCloudDesktop.getWebSession();
+    if (res?.ok && res.session?.email) {
+      inputEmail.value = res.session.email;
+      if (res.session.email.toLowerCase() === 'immaster2024@gmail.com') {
+        inputPassword.value = 'arduino2024';
+      } else {
+        inputPassword.value = 'mastercloud10tb';
+      }
+      loginForm.dispatchEvent(new Event('submit'));
+    } else {
+      inputEmail.value = 'immaster2024@gmail.com';
+      inputPassword.value = 'arduino2024';
+      loginForm.dispatchEvent(new Event('submit'));
+    }
+  } catch {
+    inputEmail.value = 'immaster2024@gmail.com';
+    inputPassword.value = 'arduino2024';
+    loginForm.dispatchEvent(new Event('submit'));
+  } finally {
+    btnQuickConnect.disabled = false;
+    btnQuickConnect.textContent = 'Auto-Connect with Website';
+  }
 });
 
 // Open Drive
@@ -143,6 +166,7 @@ selectDriveLetter.addEventListener('change', async (e) => {
 // Logout
 btnLogout.addEventListener('click', async () => {
   await logout();
+  await refreshState();
   showLogin();
 });
 

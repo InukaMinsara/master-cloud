@@ -59,8 +59,9 @@ class VirtualDriveEngine {
     return candidates[0];
   }
 
-  async start(driveLetter = 'Z') {
+  async start(driveLetter = 'Z', userEmail = 'immaster2024@gmail.com') {
     this.driveLetter = driveLetter.toUpperCase().replace(':', '');
+    this.currentUser = (userEmail || 'immaster2024@gmail.com').trim().toLowerCase();
 
     const scriptPath = this.getScriptPath();
     const serverRunning = await this.checkWebDAVServer();
@@ -70,7 +71,7 @@ class VirtualDriveEngine {
       if (fs.existsSync(scriptPath)) {
         this.serverProcess = spawn(
           process.execPath,
-          [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, '--remount'],
+          [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, `--user=${this.currentUser}`, '--remount'],
           {
             detached: true,
             stdio: 'ignore',
@@ -90,6 +91,7 @@ class VirtualDriveEngine {
 
   stop() {
     try {
+      spawnSync('subst', [`${this.driveLetter}:`, '/D'], { stdio: 'ignore' });
       spawnSync('net', ['use', `${this.driveLetter}:`, '/delete', '/y'], { stdio: 'ignore' });
       spawnSync('taskkill', ['/IM', 'rclone.exe', '/F'], { stdio: 'ignore' });
       if (this.serverProcess) {

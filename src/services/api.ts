@@ -94,7 +94,7 @@ class UnifiedApiService {
             email: finalEmail,
             display_name: finalDisplayName,
             avatar_url: finalAvatarUrl,
-            role: profile?.role || (finalEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
+            role: profile?.role || (finalEmail.toLowerCase() === 'immaster2024@gmail.com' || finalEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user'),
             created_at: profile?.created_at || user.created_at,
             updated_at: new Date().toISOString(),
           };
@@ -124,6 +124,38 @@ class UnifiedApiService {
     return localDb.getCurrentUser();
   }
 
+  async syncActiveWebSession(user: ProfileRecord | null): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      if (user) {
+        localStorage.setItem('master_cloud_active_session', JSON.stringify({
+          email: user.email,
+          displayName: user.display_name,
+          role: user.role,
+          id: user.id,
+          timestamp: Date.now(),
+        }));
+        fetch('http://127.0.0.1:8766/api/auth/active-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            displayName: user.display_name,
+            role: user.role,
+            id: user.id,
+          }),
+        }).catch(() => {});
+      } else {
+        localStorage.removeItem('master_cloud_active_session');
+        fetch('http://127.0.0.1:8766/api/auth/active-session', {
+          method: 'DELETE',
+        }).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   async loginWithGoogle(
     mockGoogleEmail?: string,
     mockGoogleName?: string,
@@ -135,22 +167,26 @@ class UnifiedApiService {
 
     // Direct Google authentication with explicit email and profile
     const googleEmail = mockGoogleEmail?.trim() || 'immaster2024@gmail.com';
+    const cleanEmail = googleEmail.toLowerCase();
+    const isMasterAdmin = cleanEmail === 'immaster2024@gmail.com';
+
     const googleName =
       mockGoogleName?.trim() ||
-      (googleEmail.toLowerCase().includes('immaster') ? 'Inuka Minsara' : googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()));
+      (isMasterAdmin ? 'Inuka Minsara' : googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()));
     const googleAvatar = mockGoogleAvatar || null;
 
     const user: ProfileRecord = {
-      id: 'google-usr-' + (googleEmail.replace(/[^a-zA-Z0-9]/g, '-')),
+      id: isMasterAdmin ? 'usr-inuka-minsara-master' : ('google-usr-' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '-')),
       email: googleEmail,
       display_name: googleName,
       avatar_url: googleAvatar,
-      role: googleEmail.toLowerCase().startsWith('admin@') ? 'admin' : 'user',
+      role: isMasterAdmin || cleanEmail.startsWith('admin@') ? 'admin' : 'user',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
     localDb.setCurrentUser(user);
+    this.syncActiveWebSession(user);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('master_cloud_backend_mode', 'local');
     }
@@ -175,6 +211,28 @@ class UnifiedApiService {
   }
 
   async login(email: string, password: string): Promise<{ user: ProfileRecord | null; error?: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Guaranteed Master Admin Login for immaster2024@gmail.com
+    if (cleanEmail === 'immaster2024@gmail.com') {
+      if (password !== 'arduino2024') {
+        return { user: null, error: 'Incorrect password for immaster2024@gmail.com' };
+      }
+      const adminUser: ProfileRecord = {
+        id: 'usr-inuka-minsara-master',
+        email: 'immaster2024@gmail.com',
+        display_name: 'Inuka Minsara',
+        avatar_url: null,
+        role: 'admin',
+        created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      localDb.setCurrentUser(adminUser);
+      this.syncActiveWebSession(adminUser);
+      await localDb.logActivity('auth', adminUser.id, adminUser.display_name, 'login', { admin: true });
+      return { user: adminUser };
+    }
+
     if (this.isConfiguredWithSupabase()) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -203,6 +261,7 @@ class UnifiedApiService {
           updated_at: data.user.updated_at || data.user.created_at,
         };
         localDb.setCurrentUser(userObj);
+        this.syncActiveWebSession(userObj);
         return { user: userObj };
       }
     }
@@ -217,6 +276,7 @@ class UnifiedApiService {
       updated_at: new Date().toISOString(),
     };
     localDb.setCurrentUser(user);
+    this.syncActiveWebSession(user);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('master_cloud_backend_mode', 'local');
     }
@@ -310,6 +370,7 @@ class UnifiedApiService {
     if (this.isConfiguredWithSupabase()) {
       await supabase.auth.signOut();
     }
+    await this.syncActiveWebSession(null);
     await localDb.logActivity('auth', null, 'Current User', 'logout', {});
   }
 
