@@ -97,7 +97,7 @@ function createTray() {
       },
       {
         label: '🌐 Open Web Dashboard',
-        click: () => shell.openExternal('http://localhost:5173/dashboard'),
+        click: () => shell.openExternal('https://mastercloud.netlify.app/dashboard'),
       },
       {
         label: '⚙️ Open Desktop App',
@@ -244,7 +244,7 @@ ipcMain.handle('open-drive', async () => {
 });
 
 ipcMain.handle('open-web', async () => {
-  return shell.openExternal('http://localhost:5173/dashboard');
+  return shell.openExternal('https://mastercloud.netlify.app/dashboard');
 });
 
 ipcMain.handle('set-drive-letter', async (_event, letter) => {
@@ -288,7 +288,7 @@ function handleDeepLink(rawUrl) {
           loggedInAt: new Date().toISOString(),
         };
         saveSession(session);
-        engine.start('Z');
+        engine.start('Z', cleanEmail);
         if (mainWindow) {
           mainWindow.webContents.send('status-update', engine.getStatus());
           mainWindow.show();

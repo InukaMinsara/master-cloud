@@ -38,10 +38,6 @@ const TEN_TB_BYTES = 10 * 1024 * 1024 * 1024 * 1024; // 10,995,116,277,760
 const USER_DATA_DIR = path.join(os.homedir(), '.mastercloud');
 try { fs.mkdirSync(USER_DATA_DIR, { recursive: true }); } catch { /* ignore */ }
 
-let MANIFEST_FILE = path.join(__dirname, 'cloud-manifest.json');
-if (__dirname.includes('app.asar') || !fs.existsSync(path.dirname(MANIFEST_FILE))) {
-  MANIFEST_FILE = path.join(USER_DATA_DIR, 'cloud-manifest.json');
-}
 const CHUNK_LIMIT_BYTES = 180 * 1024 * 1024; // 180 MB per cloud chunk
 
 const args = process.argv.slice(2).reduce((acc, arg) => {
@@ -920,6 +916,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, HEAD, PUT, DELETE, MKCOL, PROPFIND, PROPPATCH, MOVE, COPY, LOCK, UNLOCK, POST');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Depth, Destination, Overwrite, Authorization, X-OC-Mtime');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
   if (method === 'OPTIONS') {
     res.writeHead(200, { 'Content-Length': '0' });
