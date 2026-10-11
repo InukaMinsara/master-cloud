@@ -11,17 +11,17 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\Upload]
 @="Upload to Master Cloud (10 TB)"
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\Upload\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/\""
 
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\PinOffline]
 @="Pin for Offline Access"
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\PinOffline\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/offline\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/offline\""
 
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\StreamMode]
 @="Free up Space (Stream Mode)"
 [HKEY_CLASSES_ROOT\*\shell\MasterCloud\shell\StreamMode\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/offline\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/offline\""
 
 ; 2. Context menu for all directories
 [HKEY_CLASSES_ROOT\Directory\shell\MasterCloud]
@@ -32,7 +32,7 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\Upload]
 @="Sync Folder to Master Cloud (10 TB)"
 [HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\Upload\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/\""
 
 [HKEY_CLASSES_ROOT\Directory\shell\MasterCloud\shell\OpenDrive]
 @="Open Master Virtual Drive (Z:)"
@@ -48,14 +48,14 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewDoc]
 @="New Master Document"
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewDoc\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/canvas/docs/new\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/canvas/docs/new\""
 
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewSheet]
 @="New Master Spreadsheet"
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\NewSheet\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/canvas/sheets/new\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/canvas/sheets/new\""
 
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\OpenAI]
 @="Open Master AI Workspace"
 [HKEY_CLASSES_ROOT\Directory\Background\shell\MasterCloud\shell\OpenAI\command]
-@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud.netlify.app/ai\""
+@="\"C:\\Windows\\explorer.exe\" \"https://mastercloud09.netlify.app/ai\""

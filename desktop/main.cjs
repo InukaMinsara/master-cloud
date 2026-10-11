@@ -97,7 +97,7 @@ function createTray() {
       },
       {
         label: '🌐 Open Web Dashboard',
-        click: () => shell.openExternal('https://mastercloud.netlify.app/dashboard'),
+        click: () => shell.openExternal('https://mastercloud09.netlify.app/dashboard'),
       },
       {
         label: '⚙️ Open Desktop App',
@@ -244,7 +244,7 @@ ipcMain.handle('open-drive', async () => {
 });
 
 ipcMain.handle('open-web', async () => {
-  return shell.openExternal('https://mastercloud.netlify.app/dashboard');
+  return shell.openExternal('https://mastercloud09.netlify.app/dashboard');
 });
 
 ipcMain.handle('set-drive-letter', async (_event, letter) => {
