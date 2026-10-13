@@ -70,7 +70,7 @@ class VirtualDriveEngine {
     if (!serverRunning || !driveActive) {
       if (fs.existsSync(scriptPath)) {
         this.serverProcess = spawn(
-          process.execPath,
+          process.env.NODE || 'node',
           [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, `--user=${this.currentUser}`, '--remount'],
           {
             detached: true,

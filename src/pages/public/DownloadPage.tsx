@@ -10,9 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 // ── Official Release Configuration ───────────────────────────────────────────
-const INSTALLER_URL     = '/releases/MasterCloudSetup.exe';
+const INSTALLER_URL     = 'https://github.com/InukaMinsara/master-cloud/releases/download/v1.0.0/MasterCloudSetup.exe';
 const INSTALLER_MSI_URL = '/releases/MasterCloudSetup-x64.msi';
-const INSTALLER_SHA256  = 'E6DA2DBFEAACEBF8DB79799583A75AEBA34573D35697AC2949C62F5A8FB8A072';
+const INSTALLER_SHA256  = '5022153F66B53B0A8A73900AC593E3AB9CD98D4E1D548B757060ACD1D49D8068';
 const INSTALLER_VERSION = '1.0.0';
 const INSTALLER_DATE    = 'October 2026';
 const INSTALLER_SIZE    = '149.5 MB';
@@ -44,12 +44,7 @@ export function DownloadPage() {
   const [copied, setCopied] = React.useState(false);
 
   function handleDownloadExe() {
-    const link = document.createElement('a');
-    link.href     = INSTALLER_URL;
-    link.download = 'MasterCloudSetup.exe';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.location.href = INSTALLER_URL;
     toast.success('Downloading Master Cloud for Windows (MasterCloudSetup.exe)...');
   }
 

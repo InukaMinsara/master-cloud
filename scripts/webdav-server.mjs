@@ -972,6 +972,66 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  // ── Local Drive Listing API: Stream all files & folders to Web App (Netlify & Local) ───
+  if (method === 'GET' && (relPath === 'api/local-drive/list' || relPath === '__local_drive_list')) {
+    const isMounted = fs.existsSync(`${DRIVE_LETTER}:\\`);
+    const items = [];
+
+    // 1. Folders from in-memory manifest
+    const folderKeys = Object.keys(manifest.folders || {});
+    for (const fKey of folderKeys) {
+      const norm = fKey.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+      if (!norm) continue;
+      const parts = norm.split('/');
+      const name = parts[parts.length - 1];
+      const parentRel = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
+      items.push({
+        relPath: norm,
+        name,
+        isDir: true,
+        parentRelPath: parentRel,
+        size: 0,
+        mtime: manifest.folders[fKey]?.mtime || new Date().toISOString(),
+        birthtime: manifest.folders[fKey]?.birthtime || new Date().toISOString(),
+      });
+    }
+
+    // 2. Files from in-memory manifest
+    const fileKeys = Object.keys(manifest.files || {});
+    for (const fKey of fileKeys) {
+      const f = manifest.files[fKey];
+      if (!f) continue;
+      const norm = (f.relPath || fKey).replace(/\\/g, '/').replace(/^\/+/, '');
+      const parts = norm.split('/');
+      const name = f.name || parts[parts.length - 1];
+      const parentRel = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
+      items.push({
+        relPath: norm,
+        name,
+        isDir: false,
+        parentRelPath: parentRel,
+        size: f.size || 0,
+        mtime: f.mtime || new Date().toISOString(),
+        birthtime: f.birthtime || new Date().toISOString(),
+      });
+    }
+
+    const payload = JSON.stringify({
+      ok: true,
+      isMounted,
+      driveLetter: `${DRIVE_LETTER}:`,
+      drivePath: `${DRIVE_LETTER}:\\`,
+      items,
+    });
+
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload),
+    });
+    res.end(payload);
+    return;
+  }
+
   // POST /__instant_ingest: O(1) 0.001-second Instant Folder/File Move (1,000,000+ files in < 1 second!)
   if (method === 'POST' && relPath === '__instant_ingest') {
     const chunks = [];
