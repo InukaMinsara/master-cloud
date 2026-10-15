@@ -55,10 +55,11 @@ function loadSession() {
         const raw = fs.readFileSync(f, 'utf8');
         const data = JSON.parse(raw);
         if (data && data.email) {
+          const isMasterAdmin = data.email.trim().toLowerCase() === 'immaster2024@gmail.com';
           return {
-            email: data.email,
-            displayName: data.displayName || data.name || (data.email === 'immaster2024@gmail.com' ? 'Inuka Minsara' : data.email.split('@')[0]),
-            role: data.role || (data.email === 'immaster2024@gmail.com' ? 'admin' : 'user'),
+            email: data.email.trim().toLowerCase(),
+            displayName: data.displayName || data.name || (isMasterAdmin ? 'Inuka Minsara' : data.email.split('@')[0]),
+            role: data.role || (isMasterAdmin ? 'admin' : 'user'),
             token: data.token || 'mc_' + Date.now(),
             quotaBytes: data.quotaBytes || 10 * 1024 * 1024 * 1024 * 1024,
             loggedInAt: data.loggedInAt || new Date().toISOString(),
@@ -68,28 +69,17 @@ function loadSession() {
     } catch { /* ignore */ }
   }
 
-  // Seamless zero-friction default for owner on fresh installs
-  return {
-    email: 'immaster2024@gmail.com',
-    displayName: 'Inuka Minsara',
-    role: 'admin',
-    token: 'mc_auto_admin',
-    quotaBytes: 10 * 1024 * 1024 * 1024 * 1024,
-    loggedInAt: new Date().toISOString(),
-  };
+  // Return null when logged out - no ghost admin fallback!
+  return null;
 }
 
 function saveSession(session) {
-  const targetFiles = [
-    SESSION_FILE,
-    path.join(os.homedir(), '.mastercloud', 'user-session.json'),
-    path.join(os.homedir(), '.mastercloud', 'active-web-session.json'),
-  ];
+  const targetFiles = getCandidateSessionFiles();
 
   for (const f of targetFiles) {
     try {
-      fs.mkdirSync(path.dirname(f), { recursive: true });
       if (session) {
+        fs.mkdirSync(path.dirname(f), { recursive: true });
         fs.writeFileSync(f, JSON.stringify(session, null, 2), 'utf8');
       } else if (fs.existsSync(f)) {
         fs.unlinkSync(f);
@@ -241,7 +231,7 @@ function createWindow() {
 // IPC Handlers
 ipcMain.handle('get-status', async () => {
   const session = loadSession();
-  const driveStatus = engine.getStatus();
+  const driveStatus = await engine.getStatus();
   return {
     session,
     drive: driveStatus,
@@ -284,7 +274,7 @@ ipcMain.handle('login', async (_event, { email, password }) => {
 });
 
 ipcMain.handle('logout', async () => {
-  engine.stop(); // Unmounts virtual drive immediately on logout!
+  await engine.stop(); // Unmounts virtual drive and stops server on logout!
   saveSession(null);
   return { success: true };
 });
@@ -299,14 +289,7 @@ ipcMain.handle('get-web-session', async () => {
       }
     }
   } catch { /* ignore */ }
-  return {
-    ok: true,
-    session: {
-      email: 'immaster2024@gmail.com',
-      displayName: 'Inuka Minsara',
-      role: 'admin',
-    },
-  };
+  return { ok: true, session: null };
 });
 
 ipcMain.handle('open-drive', async () => {

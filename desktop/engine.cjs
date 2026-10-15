@@ -10,13 +10,13 @@ const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const { pathToFileURL } = require('url');
 
 class VirtualDriveEngine {
   constructor() {
     this.driveLetter = 'Z';
     this.port = 8766;
     this.isMounted = false;
+    this.currentUser = 'immaster2024@gmail.com';
     this.projectRoot = path.resolve(__dirname, '..');
   }
 
@@ -32,15 +32,23 @@ class VirtualDriveEngine {
     }
   }
 
-  async checkWebDAVServer() {
+  async fetchServerStatus() {
     return new Promise((resolve) => {
-      const req = http.get(`http://127.0.0.1:${this.port}/`, { timeout: 1500 }, (res) => {
-        resolve(res.statusCode < 500);
+      const req = http.get(`http://127.0.0.1:${this.port}/api/status`, { timeout: 1500 }, (res) => {
+        let raw = '';
+        res.on('data', (c) => (raw += c));
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(raw));
+          } catch {
+            resolve(null);
+          }
+        });
       });
-      req.on('error', () => resolve(false));
+      req.on('error', () => resolve(null));
       req.on('timeout', () => {
         req.destroy();
-        resolve(false);
+        resolve(null);
       });
     });
   }
@@ -63,30 +71,67 @@ class VirtualDriveEngine {
     this.currentUser = (userEmail || 'immaster2024@gmail.com').trim().toLowerCase();
 
     const scriptPath = this.getScriptPath();
-    const serverRunning = await this.checkWebDAVServer();
+    const serverStatus = await this.fetchServerStatus();
 
-    if (!serverRunning && fs.existsSync(scriptPath)) {
+    if (serverStatus && serverStatus.ok) {
+      // Server is already alive: switch user context dynamically!
+      await new Promise((resolve) => {
+        const payload = JSON.stringify({ user: this.currentUser, drive: this.driveLetter });
+        const req = http.request(
+          {
+            hostname: '127.0.0.1',
+            port: this.port,
+            path: '/api/user/switch',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload),
+            },
+            timeout: 2500,
+          },
+          (res) => {
+            res.on('data', () => {});
+            res.on('end', () => resolve());
+          }
+        );
+        req.on('error', () => resolve());
+        req.on('timeout', () => {
+          req.destroy();
+          resolve();
+        });
+        req.write(payload);
+        req.end();
+      });
+    } else if (fs.existsSync(scriptPath)) {
+      // Spawn fresh server process
       try {
-        process.env.PORT = String(this.port);
-        process.env.DRIVE = this.driveLetter;
-        process.env.USER_EMAIL = this.currentUser;
+        const nodeBinary = process.execPath;
+        const child = spawn(
+          nodeBinary,
+          [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, `--user=${this.currentUser}`],
+          {
+            stdio: 'ignore',
+            windowsHide: true,
+            detached: true,
+            env: {
+              ...process.env,
+              ELECTRON_RUN_AS_NODE: '1',
+              PORT: String(this.port),
+              DRIVE: this.driveLetter,
+              USER_EMAIL: this.currentUser,
+            },
+          }
+        );
+        child.unref();
+      } catch (spawnErr) {
+        console.warn('Process spawn fallback error:', spawnErr.message);
+      }
 
-        // In-process dynamic import: ultra-fast, zero-overhead, 100% reliable
-        const fileUrl = pathToFileURL(scriptPath).href;
-        await import(fileUrl);
-      } catch (importErr) {
-        console.warn('In-process WebDAV import fallback to spawn:', importErr.message);
-        try {
-          spawn(
-            process.env.NODE || process.execPath,
-            [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, `--user=${this.currentUser}`],
-            {
-              stdio: 'ignore',
-              windowsHide: true,
-              env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
-            }
-          );
-        } catch { /* ignore */ }
+      // Wait for server HTTP readiness
+      for (let i = 0; i < 8; i++) {
+        const alive = await this.fetchServerStatus();
+        if (alive && alive.ok) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
     }
 
@@ -102,7 +147,33 @@ class VirtualDriveEngine {
     return this.isMounted;
   }
 
-  stop() {
+  async stop() {
+    try {
+      await new Promise((resolve) => {
+        const req = http.request(
+          {
+            hostname: '127.0.0.1',
+            port: this.port,
+            path: '/api/server/shutdown',
+            method: 'POST',
+            timeout: 1000,
+          },
+          (res) => {
+            res.on('data', () => {});
+            res.on('end', () => resolve());
+          }
+        );
+        req.on('error', () => resolve());
+        req.on('timeout', () => {
+          req.destroy();
+          resolve();
+        });
+        req.end();
+      });
+    } catch {
+      // ignore
+    }
+
     try {
       spawnSync('subst', [`${this.driveLetter}:`, '/D'], { stdio: 'ignore' });
       spawnSync('net', ['use', `${this.driveLetter}:`, '/delete', '/y'], { stdio: 'ignore' });
@@ -123,13 +194,21 @@ class VirtualDriveEngine {
     }
   }
 
-  getStatus() {
+  async getStatus() {
     const isDriveFound = this.isDriveActive();
+    const serverTelemetry = await this.fetchServerStatus();
+    const isMasterAdmin = this.currentUser === 'immaster2024@gmail.com';
+    const usedBytes = serverTelemetry?.usedBytes ?? (isMasterAdmin ? 15691259904 : 0);
+    const fileCount = serverTelemetry?.fileCount ?? (isMasterAdmin ? 94950 : 0);
+
     return {
       isMounted: isDriveFound,
       driveLetter: `${this.driveLetter}:`,
       totalQuotaBytes: 10 * 1024 * 1024 * 1024 * 1024, // 10 TB
-      usedQuotaBytes: 15691259904, // ~14.6 GB (dynamically populated)
+      usedQuotaBytes: usedBytes,
+      fileCount: fileCount,
+      user: this.currentUser,
+      isMasterAdmin: isMasterAdmin,
       storageMode: 'Stream Mode (0-Byte Disk Footprint)',
       serverUrl: `http://127.0.0.1:${this.port}`,
     };

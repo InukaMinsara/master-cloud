@@ -88,8 +88,9 @@ function showDashboard(session, drive) {
   driveLabel.textContent = `MASTER CLOUD (${letter})`;
   selectDriveLetter.value = letter.replace(':', '');
 
-  const used = drive?.usedQuotaBytes || 15691259904;
-  storageUsedText.textContent = `${formatBytes(used)} Used`;
+  const used = Number(drive?.usedQuotaBytes) || 0;
+  const count = drive?.fileCount !== undefined ? ` • ${drive.fileCount.toLocaleString()} items` : '';
+  storageUsedText.textContent = `${formatBytes(used)} Used${count}`;
 }
 
 // Login Handler
@@ -119,6 +120,7 @@ loginForm.addEventListener('submit', async (e) => {
 
 // Auto-Connect with Website (reads active session from web app)
 btnQuickConnect.addEventListener('click', async () => {
+  loginError.classList.add('hidden');
   try {
     btnQuickConnect.disabled = true;
     btnQuickConnect.textContent = 'Connecting with website...';
@@ -132,14 +134,12 @@ btnQuickConnect.addEventListener('click', async () => {
       }
       loginForm.dispatchEvent(new Event('submit'));
     } else {
-      inputEmail.value = 'immaster2024@gmail.com';
-      inputPassword.value = 'arduino2024';
-      loginForm.dispatchEvent(new Event('submit'));
+      loginError.textContent = 'No active website login detected. Please sign in on mastercloud09.netlify.app first, or enter your credentials below.';
+      loginError.classList.remove('hidden');
     }
-  } catch {
-    inputEmail.value = 'immaster2024@gmail.com';
-    inputPassword.value = 'arduino2024';
-    loginForm.dispatchEvent(new Event('submit'));
+  } catch (err) {
+    loginError.textContent = 'Failed to connect with website session: ' + err.message;
+    loginError.classList.remove('hidden');
   } finally {
     btnQuickConnect.disabled = false;
     btnQuickConnect.textContent = 'Auto-Connect with Website';
@@ -165,9 +165,21 @@ selectDriveLetter.addEventListener('change', async (e) => {
 
 // Logout
 btnLogout.addEventListener('click', async () => {
-  await logout();
-  await refreshState();
-  showLogin();
+  try {
+    btnLogout.disabled = true;
+    btnLogout.textContent = 'Logging out...';
+    await logout();
+    inputEmail.value = '';
+    inputPassword.value = '';
+    loginError.classList.add('hidden');
+    showLogin();
+  } catch (err) {
+    console.error('Logout error:', err);
+    showLogin();
+  } finally {
+    btnLogout.disabled = false;
+    btnLogout.textContent = 'Log Out';
+  }
 });
 
 // Initialize on launch

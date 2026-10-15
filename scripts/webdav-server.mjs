@@ -49,12 +49,12 @@ const args = process.argv.slice(2).reduce((acc, arg) => {
   return acc;
 }, {});
 
-const PORT = parseInt(args.port, 10) || 8766;
-const DRIVE_LETTER = (args.drive || 'Z').toUpperCase().replace(':', '');
-const USER_EMAIL = (args.user || 'immaster2024@gmail.com').trim().toLowerCase();
-const isMasterAdmin = USER_EMAIL === 'immaster2024@gmail.com';
+const PORT = parseInt(args.port, 10) || parseInt(process.env.PORT, 10) || 8766;
+let DRIVE_LETTER = (args.drive || process.env.DRIVE || 'Z').toUpperCase().replace(':', '');
+let USER_EMAIL = (args.user || process.env.USER_EMAIL || 'immaster2024@gmail.com').trim().toLowerCase();
+let isMasterAdmin = USER_EMAIL === 'immaster2024@gmail.com';
+let safeUserKey = USER_EMAIL.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-const safeUserKey = USER_EMAIL.replace(/[^a-zA-Z0-9_-]/g, '_');
 let MANIFEST_FILE = isMasterAdmin
   ? path.join(__dirname, 'cloud-manifest.json')
   : path.join(USER_DATA_DIR, `cloud-manifest-${safeUserKey}.json`);
@@ -63,12 +63,42 @@ if (isMasterAdmin && (__dirname.includes('app.asar') || !fs.existsSync(path.dirn
   MANIFEST_FILE = path.join(USER_DATA_DIR, 'cloud-manifest.json');
 }
 
-const defaultStorageDir = isMasterAdmin
+let defaultStorageDir = isMasterAdmin
   ? (fs.existsSync('D:\\') ? path.join('D:\\', 'MasterCloudDrive') : path.join(USER_DATA_DIR, 'drive'))
   : path.join(USER_DATA_DIR, 'drive', safeUserKey);
 
-const STORAGE_DIR = args.folder || defaultStorageDir;
+let STORAGE_DIR = args.folder || defaultStorageDir;
 try { fs.mkdirSync(STORAGE_DIR, { recursive: true }); } catch { /* ignore */ }
+
+function configureUserContext(email, drive) {
+  if (drive) {
+    DRIVE_LETTER = drive.toUpperCase().replace(':', '');
+  }
+  USER_EMAIL = (email || 'immaster2024@gmail.com').trim().toLowerCase();
+  isMasterAdmin = USER_EMAIL === 'immaster2024@gmail.com';
+  safeUserKey = USER_EMAIL.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  if (isMasterAdmin) {
+    const candidates = [
+      path.join(USER_DATA_DIR, 'cloud-manifest.json'),
+      path.join(__dirname, 'cloud-manifest.json'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'cloud-manifest.json'),
+      path.join(PROJECT_ROOT, 'scripts', 'cloud-manifest.json'),
+      path.join(__dirname, 'cloud-manifest.safe-backup.json'),
+    ];
+    let found = null;
+    for (const c of candidates) {
+      if (fs.existsSync(c)) { found = c; break; }
+    }
+    MANIFEST_FILE = found || path.join(USER_DATA_DIR, 'cloud-manifest.json');
+    STORAGE_DIR = fs.existsSync('D:\\') ? path.join('D:\\', 'MasterCloudDrive') : path.join(USER_DATA_DIR, 'drive');
+  } else {
+    MANIFEST_FILE = path.join(USER_DATA_DIR, `cloud-manifest-${safeUserKey}.json`);
+    STORAGE_DIR = path.join(USER_DATA_DIR, 'drive', safeUserKey);
+  }
+  try { fs.mkdirSync(STORAGE_DIR, { recursive: true }); } catch { /* ignore */ }
+}
+
 const WEBDAV_URL = `http://127.0.0.1:${PORT}`;
 const RCLONE_RC_URL = 'http://127.0.0.1:5572';
 
@@ -167,43 +197,103 @@ function rebuildMemoryIndex() {
 }
 
 function loadManifest() {
-  const seedCandidates = [
-    MANIFEST_FILE,
-    path.join(__dirname, 'cloud-manifest.json'),
-    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'cloud-manifest.json'),
-    path.join(PROJECT_ROOT, 'scripts', 'cloud-manifest.json'),
-    path.join(__dirname, 'cloud-manifest.safe-backup.json'),
-    path.join(USER_DATA_DIR, 'cloud-manifest.json'),
-  ];
+  manifest = { files: {}, folders: {} };
+  folderChildren.clear();
+  fileChildren.clear();
+  folderCaseMap.clear();
+  fileCaseMap.clear();
+  totalUsedBytes = 0;
+  inMemoryStagingBuffers.clear();
+  inMemoryStagingBytes = 0;
 
-  let bestData = null;
-  let maxFileCount = -1;
+  if (isMasterAdmin) {
+    const seedCandidates = [
+      MANIFEST_FILE,
+      path.join(USER_DATA_DIR, 'cloud-manifest.json'),
+      path.join(__dirname, 'cloud-manifest.json'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'cloud-manifest.json'),
+      path.join(PROJECT_ROOT, 'scripts', 'cloud-manifest.json'),
+      path.join(__dirname, 'cloud-manifest.safe-backup.json'),
+    ];
 
-  for (const candidate of seedCandidates) {
-    if (!candidate || !fs.existsSync(candidate)) continue;
-    try {
-      const raw = fs.readFileSync(candidate, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        const fileCount = Object.keys(parsed.files || {}).length;
-        if (fileCount > maxFileCount) {
-          maxFileCount = fileCount;
-          bestData = parsed;
+    let bestData = null;
+    let maxFileCount = -1;
+
+    for (const candidate of seedCandidates) {
+      if (!candidate || !fs.existsSync(candidate)) continue;
+      try {
+        const raw = fs.readFileSync(candidate, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          const fileCount = Object.keys(parsed.files || {}).length;
+          if (fileCount > maxFileCount) {
+            maxFileCount = fileCount;
+            bestData = parsed;
+          }
         }
-      }
-    } catch { /* ignore */ }
-  }
+      } catch { /* ignore */ }
+    }
 
-  if (bestData) {
-    manifest.files = bestData.files || {};
-    manifest.folders = bestData.folders || {};
+    if (bestData) {
+      manifest.files = bestData.files || {};
+      manifest.folders = bestData.folders || {};
+      rebuildMemoryIndex();
+
+      try {
+        if (!fs.existsSync(MANIFEST_FILE) || maxFileCount > 0) {
+          fs.mkdirSync(path.dirname(MANIFEST_FILE), { recursive: true });
+          fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest), 'utf8');
+        }
+      } catch { /* ignore */ }
+    }
+  } else {
+    // Non-admin user: STRICT ACCOUNT ISOLATION!
+    // NEVER load admin files or inspect seed candidates!
+    if (fs.existsSync(MANIFEST_FILE)) {
+      try {
+        const raw = fs.readFileSync(MANIFEST_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          manifest.files = parsed.files || {};
+          manifest.folders = parsed.folders || {};
+          rebuildMemoryIndex();
+          return;
+        }
+      } catch (err) {
+        console.warn(`Failed to parse ${MANIFEST_FILE}, resetting to empty starter:`, err.message);
+      }
+    }
+
+    // Fresh user: Initialize clean 10 TB storage with default starter folders
+    const now = new Date().toISOString();
+    manifest = {
+      files: {},
+      folders: {
+        'Work Documents': {
+          relPath: 'Work Documents',
+          name: 'Work Documents',
+          mtime: now,
+          birthtime: now,
+        },
+        'Media & Videos': {
+          relPath: 'Media & Videos',
+          name: 'Media & Videos',
+          mtime: now,
+          birthtime: now,
+        },
+        'Shared Projects': {
+          relPath: 'Shared Projects',
+          name: 'Shared Projects',
+          mtime: now,
+          birthtime: now,
+        },
+      },
+    };
     rebuildMemoryIndex();
 
     try {
-      if (isMasterAdmin && (!fs.existsSync(MANIFEST_FILE) || maxFileCount > 0)) {
-        fs.mkdirSync(path.dirname(MANIFEST_FILE), { recursive: true });
-        fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest), 'utf8');
-      }
+      fs.mkdirSync(path.dirname(MANIFEST_FILE), { recursive: true });
+      fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2), 'utf8');
     } catch { /* ignore */ }
   }
 }
@@ -957,17 +1047,13 @@ const server = http.createServer((req, res) => {
   if (relPath === 'api/auth/active-session' || relPath === '__active_session') {
     const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
     if (method === 'GET') {
-      let data = {
-        ok: true,
-        session: {
-          email: 'immaster2024@gmail.com',
-          displayName: 'Inuka Minsara',
-          role: 'admin',
-        },
-      };
+      let data = { ok: true, session: null };
       if (fs.existsSync(sessionFile)) {
         try {
-          data = { ok: true, session: JSON.parse(fs.readFileSync(sessionFile, 'utf8')) };
+          const parsed = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+          if (parsed && parsed.email) {
+            data = { ok: true, session: parsed };
+          }
         } catch { /* ignore */ }
       }
       const out = JSON.stringify(data);
@@ -982,6 +1068,12 @@ const server = http.createServer((req, res) => {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
           fs.writeFileSync(sessionFile, JSON.stringify(body, null, 2), 'utf8');
+          if (body && body.email && body.email.trim().toLowerCase() !== USER_EMAIL) {
+            console.log(`🌐 Web session sync switching user to: ${body.email}`);
+            configureUserContext(body.email);
+            loadManifest();
+            mapDrive(true);
+          }
           const out = JSON.stringify({ ok: true, saved: true });
           res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
           res.end(out);
@@ -999,6 +1091,75 @@ const server = http.createServer((req, res) => {
       res.end(out);
       return;
     }
+  }
+
+  // ── Switch User Context API: Seamless Multi-User Drive Isolation ──────
+  if (method === 'POST' && (relPath === 'api/user/switch' || relPath === '__user_switch')) {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        const targetEmail = (body.user || body.email || '').trim().toLowerCase();
+        const targetDrive = body.drive || DRIVE_LETTER;
+        if (!targetEmail) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Email is required' }));
+          return;
+        }
+
+        console.log(`🔄 Switching user context from ${USER_EMAIL} to ${targetEmail}`);
+        configureUserContext(targetEmail, targetDrive);
+        loadManifest();
+        mapDrive(true);
+
+        const out = JSON.stringify({
+          ok: true,
+          user: USER_EMAIL,
+          isMasterAdmin,
+          driveLetter: `${DRIVE_LETTER}:`,
+          fileCount: Object.keys(manifest.files || {}).length,
+          folderCount: Object.keys(manifest.folders || {}).length,
+          usedBytes: totalUsedBytes,
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+        res.end(out);
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // ── Telemetry & Status API ─────────────────────────────────────────────
+  if (method === 'GET' && (relPath === 'api/status' || relPath === '__status')) {
+    const out = JSON.stringify({
+      ok: true,
+      isMounted: fs.existsSync(`${DRIVE_LETTER}:\\`),
+      driveLetter: `${DRIVE_LETTER}:`,
+      user: USER_EMAIL,
+      isMasterAdmin,
+      totalQuotaBytes: TEN_TB_BYTES,
+      usedBytes: totalUsedBytes,
+      fileCount: Object.keys(manifest.files || {}).length,
+      folderCount: Object.keys(manifest.folders || {}).length,
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+    res.end(out);
+    return;
+  }
+
+  // ── Graceful Server & Drive Shutdown API ───────────────────────────────
+  if ((method === 'POST' || method === 'GET') && (relPath === 'api/server/shutdown' || relPath === '__shutdown')) {
+    const out = JSON.stringify({ ok: true, message: 'Server and drive shutting down' });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+    res.end(out);
+    unmountDrive();
+    setTimeout(() => {
+      server.close(() => process.exit(0));
+    }, 100);
+    return;
   }
 
   // ── Local Drive Listing API: Stream all files & folders to Web App (Netlify & Local) ───
@@ -1050,6 +1211,11 @@ const server = http.createServer((req, res) => {
       isMounted,
       driveLetter: `${DRIVE_LETTER}:`,
       drivePath: `${DRIVE_LETTER}:\\`,
+      usedBytes: totalUsedBytes,
+      fileCount: Object.keys(manifest.files || {}).length,
+      folderCount: Object.keys(manifest.folders || {}).length,
+      user: USER_EMAIL,
+      isMasterAdmin,
       items,
     });
 
@@ -1572,7 +1738,7 @@ server.on('connection', (socket) => {
 // ── Mount Z: as a Pure 10.0 TB Online Cloud Drive (Zero Disk I/O + 100x RAM) ─
 let rcloneProc = null;
 
-function mapDrive() {
+function mapDrive(forceRemount = false) {
   setTimeout(() => {
     try {
       const rcloneExe = findRcloneExe();
@@ -1586,7 +1752,7 @@ function mapDrive() {
       ].join('\r\n') + '\r\n';
       fs.writeFileSync(rcloneConfPath, confContent, 'utf8');
 
-      if (!args.remount && fs.existsSync(`${DRIVE_LETTER}:\\`)) {
+      if (!args.remount && !forceRemount && fs.existsSync(`${DRIVE_LETTER}:\\`)) {
         console.log(`✅ Drive ${DRIVE_LETTER}: is already mounted and active.`);
         return;
       }

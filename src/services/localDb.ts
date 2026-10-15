@@ -706,8 +706,18 @@ class LocalDatabaseService {
   }
 
   setCurrentUser(user: ProfileRecord): void {
+    const prevEmail = (this.currentUser?.email || '').trim().toLowerCase();
+    const newEmail = (user?.email || '').trim().toLowerCase();
     this.currentUser = user;
     localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
+
+    if (prevEmail && newEmail && prevEmail !== newEmail) {
+      // Clean zdrive synced cache from previous user to guarantee 100% data separation
+      this.files = this.files.filter(f => !f.storage_path.startsWith('zdrive:'));
+      this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-'));
+      saveTable('folders', this.folders);
+      saveTable('files', this.files);
+    }
   }
 
   async updateProfile(updates: Partial<ProfileRecord>): Promise<ProfileRecord> {
@@ -770,9 +780,22 @@ class LocalDatabaseService {
       } catch {
         res = await fetch('/api/local-drive/list');
       }
-      if (!res.ok) return;
       const data = await res.json();
       if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
+
+      const driveUser = (data.user || '').trim().toLowerCase();
+      const currentEmail = (this.currentUser.email || '').trim().toLowerCase();
+      if (driveUser && currentEmail && driveUser !== currentEmail) {
+        // Drive belongs to another user! Request background user switch
+        try {
+          fetch('http://127.0.0.1:8766/api/user/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: currentEmail }),
+          }).catch(() => {});
+        } catch { /* ignore */ }
+        return;
+      }
 
       const diskItems: Array<{
         relPath: string;
