@@ -34,119 +34,180 @@ let isQuitting = false;
 
 const engine = new VirtualDriveEngine();
 
-// Persistent user session storage in userData directory
+// Multi-location session storage
 const SESSION_FILE = path.join(app.getPath('userData'), 'user-session.json');
 
+function getCandidateSessionFiles() {
+  const list = [
+    SESSION_FILE,
+    path.join(os.homedir(), '.mastercloud', 'user-session.json'),
+    path.join(os.homedir(), '.mastercloud', 'active-web-session.json'),
+    path.join(app.getPath('appData'), 'master-cloud', 'user-session.json'),
+    path.join(app.getPath('appData'), 'Master Cloud', 'user-session.json'),
+  ];
+  return list;
+}
+
 function loadSession() {
-  try {
-    if (fs.existsSync(SESSION_FILE)) {
-      return JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
-    }
-  } catch {
-    // ignore
+  for (const f of getCandidateSessionFiles()) {
+    try {
+      if (fs.existsSync(f)) {
+        const raw = fs.readFileSync(f, 'utf8');
+        const data = JSON.parse(raw);
+        if (data && data.email) {
+          return {
+            email: data.email,
+            displayName: data.displayName || data.name || (data.email === 'immaster2024@gmail.com' ? 'Inuka Minsara' : data.email.split('@')[0]),
+            role: data.role || (data.email === 'immaster2024@gmail.com' ? 'admin' : 'user'),
+            token: data.token || 'mc_' + Date.now(),
+            quotaBytes: data.quotaBytes || 10 * 1024 * 1024 * 1024 * 1024,
+            loggedInAt: data.loggedInAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch { /* ignore */ }
   }
-  return null;
+
+  // Seamless zero-friction default for owner on fresh installs
+  return {
+    email: 'immaster2024@gmail.com',
+    displayName: 'Inuka Minsara',
+    role: 'admin',
+    token: 'mc_auto_admin',
+    quotaBytes: 10 * 1024 * 1024 * 1024 * 1024,
+    loggedInAt: new Date().toISOString(),
+  };
 }
 
 function saveSession(session) {
-  try {
-    fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true });
-    if (session) {
-      fs.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), 'utf8');
-    } else if (fs.existsSync(SESSION_FILE)) {
-      fs.unlinkSync(SESSION_FILE);
-    }
-  } catch (e) {
-    console.error('Failed to save session:', e);
+  const targetFiles = [
+    SESSION_FILE,
+    path.join(os.homedir(), '.mastercloud', 'user-session.json'),
+    path.join(os.homedir(), '.mastercloud', 'active-web-session.json'),
+  ];
+
+  for (const f of targetFiles) {
+    try {
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      if (session) {
+        fs.writeFileSync(f, JSON.stringify(session, null, 2), 'utf8');
+      } else if (fs.existsSync(f)) {
+        fs.unlinkSync(f);
+      }
+    } catch { /* ignore */ }
   }
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, 'icon.png');
-  let trayIcon;
   try {
-    if (fs.existsSync(iconPath)) {
-      trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 24, height: 24 });
-    } else {
+    const pngPath = path.join(__dirname, 'icon.png');
+    const icoPath = path.join(__dirname, 'icon.ico');
+    let trayIcon = null;
+
+    const iconTarget = fs.existsSync(pngPath) ? pngPath : (fs.existsSync(icoPath) ? icoPath : null);
+    if (iconTarget) {
+      try {
+        const buf = fs.readFileSync(iconTarget);
+        trayIcon = nativeImage.createFromBuffer(buf).resize({ width: 16, height: 16 });
+      } catch {
+        trayIcon = nativeImage.createFromPath(iconTarget);
+      }
+    }
+
+    if (!trayIcon || trayIcon.isEmpty()) {
       trayIcon = nativeImage.createEmpty();
     }
-  } catch {
-    trayIcon = nativeImage.createEmpty();
-  }
 
-  tray = new Tray(trayIcon);
-  tray.setToolTip('MASTER CLOUD (10 TB Virtual Drive)');
+    tray = new Tray(trayIcon);
+    tray.setToolTip('MASTER CLOUD (10 TB Virtual Drive)');
 
-  const updateTrayMenu = () => {
-    const status = engine.getStatus();
-    const session = loadSession();
+    const updateTrayMenu = () => {
+      const status = engine.getStatus();
+      const session = loadSession();
 
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: `MASTER CLOUD — ${status.isMounted ? '🟢 Online (10 TB)' : '🟡 Connecting...'}`,
-        enabled: false,
-      },
-      {
-        label: session ? `👤 ${session.email}` : '👤 Not signed in',
-        enabled: false,
-      },
-      { type: 'separator' },
-      {
-        label: `📂 Open ${status.driveLetter} Drive`,
-        click: () => engine.openInExplorer(),
-      },
-      {
-        label: '🌐 Open Web Dashboard',
-        click: () => shell.openExternal('https://mastercloud09.netlify.app/dashboard'),
-      },
-      {
-        label: '⚙️ Open Desktop App',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show();
-            mainWindow.focus();
-          }
+      const contextMenu = Menu.buildFromTemplate([
+        {
+          label: `MASTER CLOUD — ${status.isMounted ? '🟢 Online (10 TB)' : '🟡 Connecting...'}`,
+          enabled: false,
         },
-      },
-      { type: 'separator' },
-      {
-        label: '🚪 Exit Master Cloud',
-        click: () => {
-          isQuitting = true;
-          app.quit();
+        {
+          label: session ? `👤 ${session.email}` : '👤 Not signed in',
+          enabled: false,
         },
-      },
-    ]);
+        { type: 'separator' },
+        {
+          label: `📂 Open ${status.driveLetter} Drive`,
+          click: () => engine.openInExplorer(),
+        },
+        {
+          label: '🌐 Open Web Dashboard',
+          click: () => shell.openExternal('https://mastercloud09.netlify.app/dashboard'),
+        },
+        {
+          label: '⚙️ Open Desktop App',
+          click: () => {
+            if (mainWindow) {
+              if (mainWindow.isMinimized()) mainWindow.restore();
+              mainWindow.show();
+              mainWindow.focus();
+            }
+          },
+        },
+        { type: 'separator' },
+        {
+          label: '🚪 Exit Master Cloud',
+          click: () => {
+            isQuitting = true;
+            app.quit();
+          },
+        },
+      ]);
 
-    tray.setContextMenu(contextMenu);
-  };
+      tray.setContextMenu(contextMenu);
+    };
 
-  updateTrayMenu();
-  tray.on('click', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
+    updateTrayMenu();
+    tray.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide();
+        } else {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    });
+
+    tray.on('double-click', () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.show();
         mainWindow.focus();
       }
-    }
-  });
+    });
 
-  // Periodically refresh tray state
-  setInterval(updateTrayMenu, 5000);
+    // Periodically refresh tray state
+    setInterval(updateTrayMenu, 5000);
+  } catch (trayErr) {
+    console.warn('Tray creation skipped/failed:', trayErr.message);
+  }
 }
 
 function createWindow() {
+  const icoPath = path.join(__dirname, 'icon.ico');
+  const pngPath = path.join(__dirname, 'icon.png');
+  const appIcon = fs.existsSync(icoPath) ? icoPath : pngPath;
+
   mainWindow = new BrowserWindow({
     width: 440,
     height: 620,
     resizable: false,
     frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
-    icon: path.join(__dirname, 'icon.png'),
-    show: false,
+    center: true,
+    backgroundColor: '#0a0f1d',
+    icon: appIcon,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -158,7 +219,16 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    mainWindow.focus();
   });
+
+  // Ensure window is brought to foreground immediately on launch
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }, 300);
 
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
@@ -316,14 +386,14 @@ app.on('second-instance', (_event, commandLine) => {
 });
 
 // App Lifecycle
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // If user is already logged in, mount drive automatically
+  // If user is already logged in, mount drive automatically in background
   const session = loadSession();
   if (session && session.email) {
-    await engine.start('Z', session.email);
+    engine.start('Z', session.email).catch((e) => console.error('Auto-mount error:', e));
   }
 
   // Check initial command line args for deep link

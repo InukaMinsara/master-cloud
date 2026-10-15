@@ -167,13 +167,42 @@ function rebuildMemoryIndex() {
 }
 
 function loadManifest() {
-  if (fs.existsSync(MANIFEST_FILE)) {
+  const seedCandidates = [
+    MANIFEST_FILE,
+    path.join(__dirname, 'cloud-manifest.json'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'cloud-manifest.json'),
+    path.join(PROJECT_ROOT, 'scripts', 'cloud-manifest.json'),
+    path.join(__dirname, 'cloud-manifest.safe-backup.json'),
+    path.join(USER_DATA_DIR, 'cloud-manifest.json'),
+  ];
+
+  let bestData = null;
+  let maxFileCount = -1;
+
+  for (const candidate of seedCandidates) {
+    if (!candidate || !fs.existsSync(candidate)) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf8'));
-      if (data && typeof data === 'object') {
-        manifest.files = data.files || {};
-        manifest.folders = data.folders || {};
-        rebuildMemoryIndex();
+      const raw = fs.readFileSync(candidate, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        const fileCount = Object.keys(parsed.files || {}).length;
+        if (fileCount > maxFileCount) {
+          maxFileCount = fileCount;
+          bestData = parsed;
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (bestData) {
+    manifest.files = bestData.files || {};
+    manifest.folders = bestData.folders || {};
+    rebuildMemoryIndex();
+
+    try {
+      if (isMasterAdmin && (!fs.existsSync(MANIFEST_FILE) || maxFileCount > 0)) {
+        fs.mkdirSync(path.dirname(MANIFEST_FILE), { recursive: true });
+        fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest), 'utf8');
       }
     } catch { /* ignore */ }
   }

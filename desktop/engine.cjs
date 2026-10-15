@@ -70,21 +70,25 @@ class VirtualDriveEngine {
     if (!serverRunning || !driveActive) {
       if (fs.existsSync(scriptPath)) {
         this.serverProcess = spawn(
-          process.env.NODE || 'node',
+          process.env.NODE || process.execPath,
           [scriptPath, `--port=${this.port}`, `--drive=${this.driveLetter}`, `--user=${this.currentUser}`, '--remount'],
           {
-            detached: true,
-            stdio: 'ignore',
             windowsHide: true,
             env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
           }
         );
-        this.serverProcess.unref();
+        this.serverProcess.on('error', (err) => console.warn('WebDAV daemon warning:', err.message));
       }
     }
 
-    // Wait briefly for mount
-    await new Promise((r) => setTimeout(r, 2000));
+    // Poll for mount up to 5 seconds
+    for (let i = 0; i < 10; i++) {
+      if (this.isDriveActive()) {
+        this.isMounted = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
     this.isMounted = this.isDriveActive();
     return this.isMounted;
   }

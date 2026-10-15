@@ -58,14 +58,19 @@
       "output": "dist-desktop"
     },
     "win": {
+      "icon": "desktop/icon.png",
       "target": [
         "nsis"
       ]
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Master Cloud"
+      "shortcutName": "Master Cloud",
+      "runAfterFinish": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true
     },
     "protocols": [
       {
@@ -78,6 +83,7 @@
     "files": [
       "desktop/**/*",
       "scripts/webdav-server.mjs",
+      "scripts/cloud-manifest.json",
       "scripts/bin/rclone.exe",
       "public/logo-icon.svg"
     ],
