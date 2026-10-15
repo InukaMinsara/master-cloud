@@ -409,6 +409,27 @@ app.on('activate', () => {
   }
 });
 
+app.on('window-all-closed', (e) => {
+  // Stay running in tray / background like Google Drive
+  if (e && e.preventDefault) e.preventDefault();
+});
+
 app.on('before-quit', () => {
   isQuitting = true;
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  try {
+    const f = path.join(os.homedir(), '.mastercloud', 'crash.log');
+    fs.writeFileSync(f, `Uncaught Exception: ${err.stack || err}\n`);
+  } catch { /* ignore */ }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+  try {
+    const f = path.join(os.homedir(), '.mastercloud', 'crash.log');
+    fs.writeFileSync(f, `Unhandled Rejection: ${reason.stack || reason}\n`);
+  } catch { /* ignore */ }
 });

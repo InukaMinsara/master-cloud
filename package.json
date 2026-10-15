@@ -58,7 +58,7 @@
       "output": "dist-desktop"
     },
     "win": {
-      "icon": "desktop/icon.png",
+      "icon": "desktop/icon.ico",
       "target": [
         "nsis"
       ]
