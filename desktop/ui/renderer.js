@@ -98,6 +98,8 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   loginError.classList.add('hidden');
   btnLogin.disabled = true;
+  const originalText = btnLogin.textContent;
+  btnLogin.textContent = 'Connecting & Mounting Drive...';
 
   const email = inputEmail.value.trim();
   const password = inputPassword.value;
@@ -115,6 +117,7 @@ loginForm.addEventListener('submit', async (e) => {
     loginError.classList.remove('hidden');
   } finally {
     btnLogin.disabled = false;
+    btnLogin.textContent = originalText;
   }
 });
 

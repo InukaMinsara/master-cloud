@@ -265,7 +265,12 @@ ipcMain.handle('login', async (_event, { email, password }) => {
     saveSession(session);
 
     // Auto-mount virtual drive specifically scoped for this user!
-    await engine.start('Z', cleanEmail);
+    const mounted = await engine.start('Z', cleanEmail);
+    if (mounted) {
+      setTimeout(() => {
+        engine.openInExplorer();
+      }, 350);
+    }
 
     return { success: true, session };
   } catch (err) {
@@ -354,12 +359,23 @@ function handleDeepLink(rawUrl) {
   }
 }
 
-// Second Instance Event (User clicked a mastercloud:// link while app is running)
+// Second Instance Event (User clicked a mastercloud:// link or launched app again while running)
 app.on('second-instance', (_event, commandLine) => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
+  }
+
+  const session = loadSession();
+  if (session && session.email) {
+    if (engine.isDriveActive()) {
+      engine.openInExplorer();
+    } else {
+      engine.start('Z', session.email).then((mounted) => {
+        if (mounted) setTimeout(() => engine.openInExplorer(), 350);
+      });
+    }
   }
 
   const deepLink = commandLine.find((arg) => arg.startsWith('mastercloud://'));
@@ -373,10 +389,16 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // If user is already logged in, mount drive automatically in background
+  // If user is already logged in, mount drive automatically and open Explorer
   const session = loadSession();
   if (session && session.email) {
-    engine.start('Z', session.email).catch((e) => console.error('Auto-mount error:', e));
+    engine.start('Z', session.email).then((mounted) => {
+      if (mounted) {
+        setTimeout(() => {
+          engine.openInExplorer();
+        }, 500);
+      }
+    }).catch((e) => console.error('Auto-mount error:', e));
   }
 
   // Check initial command line args for deep link
