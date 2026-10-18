@@ -11,6 +11,8 @@
     "bot:keys": "node scripts/xkiro-bot.mjs",
     "drive:start": "node scripts/webdav-server.mjs",
     "drive:install": "node scripts/webdav-server.mjs --install",
+    "storage:start": "node scripts/local-storage-90tb.mjs",
+    "storage:install": "node scripts/local-storage-90tb.mjs --install",
     "package:zip": "node scripts/build-deployment-package.mjs",
     "preview": "vite preview",
     "desktop:start": "electron desktop/main.cjs",
