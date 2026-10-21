@@ -1799,9 +1799,10 @@ function mapDrive(forceRemount = false) {
 
       setTimeout(() => {
         try {
-          const driveKey = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\DriveIcons\\${DRIVE_LETTER}`;
+          const customIcoPath = path.join(USER_DATA_DIR, 'drive-icon.ico');
+          const iconTarget = fs.existsSync(customIcoPath) ? customIcoPath : 'imageres.dll,-32';
           spawnSync('reg', ['add', `${driveKey}\\DefaultLabel`, '/ve', '/t', 'REG_SZ', '/d', 'MASTER CLOUD (10 TB)', '/f'], { stdio: 'ignore' });
-          spawnSync('reg', ['add', `${driveKey}\\DefaultIcon`, '/ve', '/t', 'REG_SZ', '/d', 'imageres.dll,-32', '/f'], { stdio: 'ignore' });
+          spawnSync('reg', ['add', `${driveKey}\\DefaultIcon`, '/ve', '/t', 'REG_SZ', '/d', iconTarget, '/f'], { stdio: 'ignore' });
         } catch { /* ignore */ }
         console.log(`✅ Drive ${DRIVE_LETTER}: mounted as Local Fixed Disk (Zero-Disk RAM-Pack + Online Cloud Offloader)!`);
       }, 1000);
