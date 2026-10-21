@@ -12,10 +12,10 @@ import { toast } from 'sonner';
 // ── Official Release Configuration ───────────────────────────────────────────
 const INSTALLER_URL     = 'https://github.com/InukaMinsara/master-cloud/releases/download/v1.0.0/MasterCloudSetup.exe';
 const INSTALLER_MSI_URL = '/releases/MasterCloudSetup-x64.msi';
-const INSTALLER_SHA256  = 'AD2417CB7616D7D7310E068E8322CA5BB1589919D1205714B11F7A1378EE4CE6';
+const INSTALLER_SHA256  = '7DF3E462D4A58FB6ADF6702C4B0AC182A4E3EF944323DC39D8F9BEAFF3A6C702';
 const INSTALLER_VERSION = '1.0.0';
 const INSTALLER_DATE    = 'October 2026';
-const INSTALLER_SIZE    = '152.7 MB';
+const INSTALLER_SIZE    = '152.9 MB';
 
 const INSTALL_STEPS = [
   { n: 1, icon: Download,   title: 'Download',           desc: 'MasterCloudSetup.exe (149.5 MB)' },

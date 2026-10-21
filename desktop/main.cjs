@@ -191,11 +191,11 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 440,
-    height: 620,
+    height: 630,
     resizable: false,
     frame: false,
     center: true,
-    backgroundColor: '#0a0f1d',
+    backgroundColor: '#060913',
     icon: appIcon,
     show: true,
     webPreferences: {

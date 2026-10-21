@@ -7,13 +7,18 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- Custom Draggable Titlebar -->
+  <div class="app-container" id="app-card">
+    <!-- Dynamic 3D Ambient Cyber Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Custom Draggable Glass Titlebar -->
     <header class="titlebar">
       <div class="brand">
-        <div class="logo-dot"></div>
+        <div class="logo-orb">
+          <img src="logo.png" alt="Logo" class="mini-logo">
+        </div>
         <span class="title">MASTER CLOUD</span>
-        <span class="badge">10 TB</span>
+        <span class="badge-3d">10 TB</span>
       </div>
       <div class="window-controls">
         <button id="btn-minimize" class="ctrl-btn" title="Minimize">&minus;</button>
@@ -21,108 +26,140 @@
       </div>
     </header>
 
-    <!-- 1. LOGIN SCREEN -->
-    <main id="login-view" class="view">
-      <div class="hero">
-        <div class="logo-box">
-          <svg class="cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-          </svg>
+    <!-- 1. 3D LOGIN SCREEN -->
+    <main id="login-view" class="view login-view">
+      <div class="hero-3d">
+        <!-- 3D Floating Holographic Logo Stage -->
+        <div class="stage-3d" id="logo-stage">
+          <div class="glow-disc"></div>
+          <div class="orbit-ring orbit-1"></div>
+          <div class="orbit-ring orbit-2"></div>
+          <div class="logo-floating-card">
+            <img src="logo.png" alt="Master Cloud 3D" class="logo-3d-img">
+            <div class="logo-specular"></div>
+          </div>
         </div>
-        <h2>Sign In to Master Cloud</h2>
-        <p class="subtitle">Access your permanent 10 TB virtual local drive.</p>
+
+        <div class="hero-text">
+          <h1 class="glow-title">Master Cloud</h1>
+          <div class="pill-3d">
+            <span class="pill-dot"></span>
+            <span>10 TB VIRTUAL STORAGE</span>
+          </div>
+          <p class="subtitle">Your personal cloud drive directly inside Windows.</p>
+        </div>
       </div>
 
-      <form id="login-form" class="form">
-        <div class="input-group">
-          <label for="input-email">Email Address</label>
-          <input type="email" id="input-email" placeholder="you@domain.com" required autocomplete="email">
+      <!-- 3D Glass Form Card -->
+      <form id="login-form" class="form-3d">
+        <div class="input-field">
+          <label for="input-email">Account Email</label>
+          <div class="input-wrapper">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="20" height="16" x="2" y="4" rx="3"/>
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+            <input type="email" id="input-email" placeholder="you@domain.com" required autocomplete="email" spellcheck="false">
+          </div>
         </div>
 
-        <div class="input-group">
-          <label for="input-password">Password</label>
-          <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
+        <div class="input-field">
+          <label for="input-password">Account Password</label>
+          <div class="input-wrapper">
+            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <input type="password" id="input-password" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" id="btn-toggle-pwd" class="pwd-toggle" title="Show/Hide Password">
+              <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div id="login-error" class="error-msg hidden"></div>
+        <div id="login-error" class="error-msg-3d hidden"></div>
 
-        <button type="submit" id="btn-login" class="btn btn-primary">
-          <span class="btn-text">Connect & Mount 10 TB Drive</span>
-          <span class="spinner hidden"></span>
+        <button type="submit" id="btn-login" class="btn-3d btn-primary-3d">
+          <div class="btn-shine"></div>
+          <span class="btn-text">Connect &amp; Mount 10 TB Drive</span>
+          <span class="spinner-3d hidden"></span>
         </button>
 
-        <button type="button" id="btn-quick-connect" class="btn btn-ghost">
-          Auto-Connect with Website
+        <button type="button" id="btn-quick-connect" class="btn-3d btn-glass-3d">
+          <svg class="quick-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Auto-Connect with Website</span>
         </button>
       </form>
 
-      <footer class="footer-note">
-        <span>🔒 Zero-Trust AES-256</span>
-        <span>•</span>
-        <span>⚡ 0-Byte Disk Stream</span>
+      <footer class="footer-badges">
+        <span class="badge-item">🔒 Zero-Trust AES-256</span>
+        <span class="badge-dot">•</span>
+        <span class="badge-item">⚡ 0-Byte Disk Stream</span>
       </footer>
     </main>
 
-    <!-- 2. DASHBOARD SCREEN (LOGGED IN) -->
-    <main id="dashboard-view" class="view hidden">
-      <div class="profile-card">
-        <div class="avatar" id="user-avatar">U</div>
+    <!-- 2. 3D DASHBOARD SCREEN (LOGGED IN) -->
+    <main id="dashboard-view" class="view dashboard-view hidden">
+      <!-- Profile Card -->
+      <div class="card-glass profile-card-3d">
+        <div class="avatar-3d" id="user-avatar">U</div>
         <div class="profile-info">
-          <h3 id="user-name">User</h3>
+          <h3 id="user-name">Inuka Minsara</h3>
           <span id="user-email" class="email">user@domain.com</span>
         </div>
-        <div class="status-indicator online">
+        <div class="status-indicator-3d online">
+          <span class="pulse-ring"></span>
           <span class="dot"></span>
           <span>Mounted</span>
         </div>
       </div>
 
-      <!-- Drive Card -->
-      <div class="drive-card">
-        <div class="drive-header">
-          <div class="drive-icon-box">
-            <svg class="drive-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="20" height="8" x="2" y="14" rx="2"/>
-              <path d="M6 18h.01"/>
-              <path d="M10 18h.01"/>
-              <rect width="20" height="8" x="2" y="2" rx="2"/>
-              <path d="M6 6h.01"/>
-              <path d="M10 6h.01"/>
-            </svg>
+      <!-- Drive Card with 3D Depth -->
+      <div class="card-glass drive-card-3d">
+        <div class="drive-header-3d">
+          <div class="drive-icon-stage">
+            <img src="logo.png" alt="Drive" class="drive-icon-img">
           </div>
-          <div>
+          <div class="drive-titles">
             <div class="drive-title-row">
               <h4 id="drive-label">MASTER CLOUD (Z:)</h4>
-              <span class="mode-tag">Stream Mode</span>
+              <span class="mode-tag-3d">Stream Mode</span>
             </div>
             <span class="drive-sub">Virtual Local Hard Disk</span>
           </div>
         </div>
 
-        <!-- Storage Bar -->
-        <div class="storage-section">
+        <!-- 3D Storage Bar -->
+        <div class="storage-section-3d">
           <div class="storage-labels">
             <span class="used-text" id="storage-used-text">14.6 GB Used</span>
             <span class="total-text">10.0 TB Free Quota</span>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 1.5%;"></div>
+          <div class="progress-track-3d">
+            <div class="progress-fill-3d" style="width: 2%;"></div>
+            <div class="progress-glow"></div>
           </div>
-          <span class="zero-disk-note">0 Bytes consumed on local C:\ or D:\ drive</span>
+          <span class="zero-disk-note">✨ 0 Bytes consumed on local C:\ or D:\ drive</span>
         </div>
       </div>
 
-      <!-- Main Action: Open in File Explorer -->
-      <div class="actions-grid">
-        <button id="btn-open-drive" class="btn btn-primary btn-large">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Action Buttons -->
+      <div class="actions-group-3d">
+        <button id="btn-open-drive" class="btn-3d btn-primary-3d btn-large-3d">
+          <div class="btn-shine"></div>
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
           </svg>
           <span>Open in File Explorer</span>
         </button>
 
-        <button id="btn-open-web" class="btn btn-secondary">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="btn-open-web" class="btn-3d btn-secondary-3d">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
             <path d="M2 12h20"/>
@@ -131,11 +168,11 @@
         </button>
       </div>
 
-      <!-- Settings / Options -->
-      <div class="options-row">
-        <div class="drive-letter-picker">
+      <!-- Options Row -->
+      <div class="options-row-3d">
+        <div class="drive-letter-box">
           <label for="select-drive-letter">Drive Letter:</label>
-          <select id="select-drive-letter">
+          <select id="select-drive-letter" class="glass-select">
             <option value="Z" selected>Z:</option>
             <option value="M">M:</option>
             <option value="X">X:</option>
@@ -143,7 +180,7 @@
           </select>
         </div>
 
-        <button id="btn-logout" class="btn-text-danger">Sign Out</button>
+        <button id="btn-logout" class="btn-danger-link">Sign Out</button>
       </div>
     </main>
   </div>
