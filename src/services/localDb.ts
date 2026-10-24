@@ -15,8 +15,9 @@ import {
 import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/types/file';
 import { calculateFileChecksum, getFileExtension, getFileCategory, generateSecureToken } from '@/lib/utils';
 import { FREE_TEN_TB_BYTES } from '@/lib/constants';
+import { CLOUD_SEED_FOLDERS, CLOUD_SEED_FILES, CLOUD_SEED_STATS } from './cloudSeedData';
 
-const DB_PREFIX = 'master_cloud_';
+const DB_PREFIX = 'master_cloud_v3_';
 
 // IndexedDB for binary storage with in-memory fallback
 class BinaryStorage {
@@ -131,9 +132,12 @@ function loadTable<T>(tableName: string, defaultData: T[]): T[] {
 
 function saveTable<T>(tableName: string, data: T[]): void {
   try {
-    localStorage.setItem(DB_PREFIX + tableName, JSON.stringify(data));
+    const json = JSON.stringify(data);
+    if (json.length < 4 * 1024 * 1024) {
+      localStorage.setItem(DB_PREFIX + tableName, json);
+    }
   } catch (err) {
-    console.error('Failed to save table:', tableName, err);
+    console.warn('Failed to save table:', tableName, err);
   }
 }
 
@@ -148,219 +152,9 @@ export const DEFAULT_USER: ProfileRecord = {
   updated_at: new Date().toISOString(),
 };
 
-// Seed Folders
-const SEED_FOLDERS: FolderRecord[] = [
-  { id: 'f-asphalt', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Asphalt', color: '#3b82f6', is_starred: false, deleted_at: null, created_at: '2026-09-27T19:22:00.000Z', updated_at: '2026-09-27T19:22:00.000Z' },
-  { id: 'f-audioflow', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'AudioFlow Pro', color: '#8b5cf6', is_starred: false, deleted_at: null, created_at: '2026-09-27T19:34:00.000Z', updated_at: '2026-09-27T19:34:00.000Z' },
-  { id: 'f-avengers', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Avengers all', color: '#ef4444', is_starred: false, deleted_at: null, created_at: '2026-09-27T15:05:00.000Z', updated_at: '2026-09-27T15:05:00.000Z' },
-  { id: 'f-codex', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'CODEX', color: '#10b981', is_starred: false, deleted_at: null, created_at: '2026-09-27T15:15:00.000Z', updated_at: '2026-09-27T15:15:00.000Z' },
-  { id: 'f-chatapp', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Chat App', color: '#06b6d4', is_starred: false, deleted_at: null, created_at: '2026-09-28T22:02:00.000Z', updated_at: '2026-09-28T22:02:00.000Z' },
-  { id: 'f-esp32', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'ESP32 V2.0.11', color: '#f59e0b', is_starred: false, deleted_at: null, created_at: '2026-09-27T22:21:00.000Z', updated_at: '2026-09-27T22:21:00.000Z' },
-  { id: 'f-media', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Media & Videos', color: '#ec4899', is_starred: false, deleted_at: null, created_at: '2026-09-27T14:16:00.000Z', updated_at: '2026-09-27T14:16:00.000Z' },
-  { id: 'f-mg', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Mg', color: '#6366f1', is_starred: true, deleted_at: null, created_at: '2026-10-05T18:39:00.000Z', updated_at: '2026-10-05T18:39:00.000Z' },
-  { id: 'f-shared', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Shared Projects', color: '#14b8a6', is_starred: false, deleted_at: null, created_at: '2026-09-27T14:16:00.000Z', updated_at: '2026-09-27T14:16:00.000Z' },
-  { id: 'f-video', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'VIDEO', color: '#f43f5e', is_starred: true, deleted_at: null, created_at: '2026-09-26T22:32:00.000Z', updated_at: '2026-09-26T22:32:00.000Z' },
-  { id: 'f-work', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'Work Documents', color: '#3b82f6', is_starred: true, deleted_at: null, created_at: '2026-09-29T20:24:00.000Z', updated_at: '2026-09-29T20:24:00.000Z' },
-  { id: 'f-capcu', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'capcu v', color: '#a855f7', is_starred: false, deleted_at: null, created_at: '2026-09-28T22:02:00.000Z', updated_at: '2026-09-28T22:02:00.000Z' },
-  { id: 'f-cleanup', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'cleanup', color: '#64748b', is_starred: false, deleted_at: null, created_at: '2026-09-27T15:08:00.000Z', updated_at: '2026-09-27T15:08:00.000Z' },
-  { id: 'f-cursor', owner_id: DEFAULT_USER.id, parent_folder_id: null, name: 'cursor', color: '#0ea5e9', is_starred: false, deleted_at: null, created_at: '2026-09-28T22:03:00.000Z', updated_at: '2026-09-28T22:03:00.000Z' },
-];
-
-// Seed Files
-const SEED_FILES: FileRecord[] = [
-  {
-    id: 'file-sinhala-song',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: '2024 Hit Sinhala Song Collection - 2024 Silun Music - Copy.mp4',
-    storage_path: 'seed/sinhala_song.mp4',
-    mime_type: 'video/mp4',
-    size_bytes: 39183767,
-    extension: 'mp4',
-    checksum: 'sinhala_song_2024_hash',
-    is_starred: true,
-    deleted_at: null,
-    current_version_id: 'ver-s1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-capcut-logo',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: '1664284836cap-cut-logo-png.png',
-    storage_path: 'seed/capcut_logo.png',
-    mime_type: 'image/png',
-    size_bytes: 15281,
-    extension: 'png',
-    checksum: 'capcut_logo_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-c1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-1',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Master Cloud Architecture & Security Overview.pdf',
-    storage_path: 'seed/architecture.pdf',
-    mime_type: 'application/pdf',
-    size_bytes: 4280000,
-    extension: 'pdf',
-    checksum: 'a8b7c6d5e4f3a2b1',
-    is_starred: true,
-    deleted_at: null,
-    current_version_id: 'ver-1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-brand-fig',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Brand Identity Guidelines 2026.fig',
-    storage_path: 'seed/brand.fig',
-    mime_type: 'application/octet-stream',
-    size_bytes: 65,
-    extension: 'fig',
-    checksum: 'brand_fig_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-b1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-6',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Kubernetes Cluster Config.yaml',
-    storage_path: 'seed/cluster.yaml',
-    mime_type: 'text/yaml',
-    size_bytes: 93,
-    extension: 'yaml',
-    checksum: '9876543210abcdef',
-    is_starred: true,
-    deleted_at: null,
-    current_version_id: 'ver-6',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-readme',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'MASTER CLOUD - README.txt',
-    storage_path: 'seed/readme.txt',
-    mime_type: 'text/plain',
-    size_bytes: 455,
-    extension: 'txt',
-    checksum: 'readme_txt_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-r1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-5',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'System Ambient Focus.mp3',
-    storage_path: 'seed/ambient.mp3',
-    mime_type: 'audio/mpeg',
-    size_bytes: 43,
-    extension: 'mp3',
-    checksum: 'b2c3d4e5f6a7b8c9',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-5',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-docs',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Untitled Docs.mdoc',
-    storage_path: 'seed/untitled.mdoc',
-    mime_type: 'application/json',
-    size_bytes: 547,
-    extension: 'mdoc',
-    checksum: 'mdoc_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-doc1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-draw',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Untitled Draw.mdraw',
-    storage_path: 'seed/untitled.mdraw',
-    mime_type: 'application/json',
-    size_bytes: 1119,
-    extension: 'mdraw',
-    checksum: 'mdraw_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-draw1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-forms',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Untitled Forms.mform',
-    storage_path: 'seed/untitled.mform',
-    mime_type: 'application/json',
-    size_bytes: 1411,
-    extension: 'mform',
-    checksum: 'mform_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-form1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-notes',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Untitled Notes.mnote',
-    storage_path: 'seed/untitled.mnote',
-    mime_type: 'application/json',
-    size_bytes: 2386,
-    extension: 'mnote',
-    checksum: 'mnote_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-note1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-  {
-    id: 'file-sheets',
-    owner_id: DEFAULT_USER.id,
-    parent_folder_id: null,
-    name: 'Untitled Sheets.msheet',
-    storage_path: 'seed/untitled.msheet',
-    mime_type: 'application/json',
-    size_bytes: 1803,
-    extension: 'msheet',
-    checksum: 'msheet_hash',
-    is_starred: false,
-    deleted_at: null,
-    current_version_id: 'ver-sheet1',
-    created_at: '2026-10-13T18:57:00.000Z',
-    updated_at: '2026-10-13T18:57:00.000Z',
-  },
-];
+// Seed Folders and Files from Cloud Manifest
+const SEED_FOLDERS: FolderRecord[] = CLOUD_SEED_FOLDERS;
+const SEED_FILES: FileRecord[] = CLOUD_SEED_FILES;
 
 function createSeedBlob(storagePath: string): Blob | null {
   if (storagePath.includes('banner.png') || storagePath.endsWith('.png') || storagePath.endsWith('.jpg')) {
@@ -653,7 +447,16 @@ class LocalDatabaseService {
       },
     ]);
 
-    const savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
+    let savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
+    if (!savedUser) {
+      // Migrate existing session from previous version
+      savedUser = localStorage.getItem('master_cloud_current_user');
+      if (savedUser) {
+        try {
+          localStorage.setItem(DB_PREFIX + 'current_user', savedUser);
+        } catch { /* ignore */ }
+      }
+    }
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
@@ -778,7 +581,13 @@ class LocalDatabaseService {
         res = await fetch('http://127.0.0.1:8766/api/local-drive/list');
         if (!res.ok) throw new Error();
       } catch {
-        res = await fetch('/api/local-drive/list');
+        try {
+          res = await fetch('/api/local-drive/list');
+          if (!res.ok) throw new Error();
+        } catch {
+          // Running on Netlify or offline without local background daemon
+          return;
+        }
       }
       const data = await res.json();
       if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
@@ -1273,6 +1082,16 @@ class LocalDatabaseService {
   }
 
   async getFileBlob(storagePath: string): Promise<Blob | null> {
+    if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
+      try {
+        const res = await fetch(storagePath);
+        if (res.ok) {
+          return await res.blob();
+        }
+      } catch {
+        // Fallback
+      }
+    }
     if (storagePath.startsWith('zdrive:') && typeof fetch !== 'undefined') {
       try {
         const relPath = storagePath.slice('zdrive:'.length);
@@ -1758,6 +1577,10 @@ class LocalDatabaseService {
 
   // --- Storage Analytics & Smart Cleanup ---
   getStorageBreakdown(): StorageBreakdown {
+    const isMasterAdmin =
+      (this.currentUser?.email || '').toLowerCase() === 'immaster2024@gmail.com' ||
+      this.currentUser?.role === 'admin';
+
     const activeFiles = this.files.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id));
     const trashFiles = this.files.filter(f => f.deleted_at !== null && this.isItemVisible(f.owner_id));
 
@@ -1799,9 +1622,23 @@ class LocalDatabaseService {
       trashBytes += f.size_bytes;
     }
 
+    if (isMasterAdmin) {
+      usedStorage = Math.max(usedStorage, CLOUD_SEED_STATS.usedStorage);
+      videosBytes = Math.max(videosBytes, CLOUD_SEED_STATS.videosBytes);
+      codeBytes = Math.max(codeBytes, CLOUD_SEED_STATS.codeBytes);
+      documentsBytes = Math.max(documentsBytes, CLOUD_SEED_STATS.documentsBytes);
+      audioBytes = Math.max(audioBytes, CLOUD_SEED_STATS.audioBytes);
+      imagesBytes = Math.max(imagesBytes, CLOUD_SEED_STATS.imagesBytes);
+      otherBytes = Math.max(otherBytes, CLOUD_SEED_STATS.otherBytes);
+    }
+
     const totalQuota = FREE_TEN_TB_BYTES; // 10 TB FREE
     const availableStorage = Math.max(0, totalQuota - usedStorage);
-    const percentageUsed = Math.min(100, Math.round((usedStorage / totalQuota) * 100));
+    const percentageUsed = Math.min(100, Number(((usedStorage / totalQuota) * 100).toFixed(2)));
+    const fileCount = isMasterAdmin ? Math.max(activeFiles.length, CLOUD_SEED_STATS.fileCount) : activeFiles.length;
+    const folderCount = isMasterAdmin
+      ? Math.max(this.folders.filter(f => f.deleted_at === null).length, CLOUD_SEED_STATS.folderCount)
+      : this.folders.filter(f => f.deleted_at === null).length;
 
     return {
       totalQuota,
@@ -1815,8 +1652,8 @@ class LocalDatabaseService {
       codeBytes,
       otherBytes,
       trashBytes,
-      fileCount: activeFiles.length,
-      folderCount: this.folders.filter(f => f.deleted_at === null).length,
+      fileCount,
+      folderCount,
     };
   }
 
