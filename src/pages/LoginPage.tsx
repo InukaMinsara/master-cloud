@@ -25,7 +25,23 @@ export function LoginPage() {
   const [customGoogleName, setCustomGoogleName] = useState('Inuka Minsara');
 
   const handleGoogleSignInClick = async () => {
-    setShowGooglePromptModal(true);
+    setIsLoading(true);
+    try {
+      const res = await loginWithGoogle();
+      if (res.redirected) {
+        return;
+      }
+      if (res.success) {
+        toast.success('Welcome to Master Cloud!');
+        navigate('/drive');
+      } else if (res.error) {
+        toast.error(res.error);
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      toast.error('Google Sign-In failed: ' + err.message);
+      setIsLoading(false);
+    }
   };
 
   const handleCustomGoogleSubmit = async (e: React.FormEvent) => {
@@ -210,6 +226,16 @@ export function LoginPage() {
             <Link to="/signup" className="font-bold text-primary hover:underline">
               Create Account (10 TB Free)
             </Link>
+          </div>
+
+          <div className="text-center pt-2 border-t border-border/40">
+            <button
+              type="button"
+              onClick={() => setShowGooglePromptModal(true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Offline or test mode? Use direct sign-in
+            </button>
           </div>
         </div>
 

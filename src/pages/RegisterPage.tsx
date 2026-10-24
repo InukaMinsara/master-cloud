@@ -28,20 +28,17 @@ export function RegisterPage() {
   const handleGoogleSignUpClick = async () => {
     setIsLoading(true);
     try {
-      if (isSupabaseConfigured) {
-        const res = await loginWithOAuth('google');
-        if (res.redirected) return;
-        if (!res.success && res.error) {
-          toast.error(`Supabase OAuth: ${res.error}`);
-          setShowGooglePromptModal(true);
-        }
-      } else {
-        setShowGooglePromptModal(true);
+      const res = await loginWithGoogle();
+      if (res.redirected) return;
+      if (res.success) {
+        toast.success('Welcome to Master Cloud! 10 TB Activated');
+        navigate('/drive');
+      } else if (res.error) {
+        toast.error(res.error);
+        setIsLoading(false);
       }
     } catch (err: any) {
       toast.error(err.message || 'Google Sign-Up failed');
-      setShowGooglePromptModal(true);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -233,6 +230,16 @@ export function RegisterPage() {
             <Link to="/login" className="font-bold text-primary hover:underline">
               Sign In
             </Link>
+          </div>
+
+          <div className="text-center pt-2 border-t border-border/40">
+            <button
+              type="button"
+              onClick={() => setShowGooglePromptModal(true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Offline or test mode? Use direct sign-up
+            </button>
           </div>
         </div>
 

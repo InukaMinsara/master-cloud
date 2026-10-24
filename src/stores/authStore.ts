@@ -27,6 +27,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
 
+      // 1. Google OAuth 2.0 Implicit Flow callback check (#access_token=...)
+      if (typeof window !== 'undefined' && (window.location.hash || window.location.search)) {
+        const hash = window.location.hash.startsWith('#')
+          ? window.location.hash.substring(1)
+          : window.location.hash;
+        const search = window.location.search.startsWith('?')
+          ? window.location.search.substring(1)
+          : window.location.search;
+        const params = new URLSearchParams(hash || search);
+        const accessToken = params.get('access_token');
+
+        if (accessToken) {
+          try {
+            const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (googleRes.ok) {
+              const googleProfile = await googleRes.json();
+              if (googleProfile && googleProfile.email) {
+                const res = await api.loginWithGoogle(
+                  googleProfile.email,
+                  googleProfile.name || googleProfile.given_name || undefined,
+                  googleProfile.picture || undefined
+                );
+                if (res.user) {
+                  set({ user: res.user, isAuthenticated: true, isLoading: false });
+                  window.history.replaceState(null, '', window.location.pathname);
+                  return;
+                }
+              }
+            }
+          } catch (gErr) {
+            console.warn('[Google OAuth Callback] Error fetching user profile:', gErr);
+          }
+        }
+      }
+
       // Immediate session check
       if (isSupabaseConfigured) {
         try {

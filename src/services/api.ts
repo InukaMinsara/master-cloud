@@ -161,7 +161,7 @@ class UnifiedApiService {
     mockGoogleName?: string,
     mockGoogleAvatar?: string
   ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (isSupabaseConfigured && !mockGoogleEmail) {
+    if (!mockGoogleEmail) {
       return this.loginWithOAuth('google');
     }
 
@@ -285,11 +285,26 @@ class UnifiedApiService {
   }
 
   async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (!isSupabaseConfigured) {
-      if (provider === 'google') {
-        return this.loginWithGoogle();
+    if (provider === 'google') {
+      try {
+        const clientId = '739036515145-gns7unmv2mstv8tb3qmfoils19ipov0k.apps.googleusercontent.com';
+        const redirectUri = `${window.location.origin}/drive`;
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&response_type=token&scope=${encodeURIComponent(
+          'openid email profile'
+        )}&prompt=select_account`;
+
+        window.location.href = googleAuthUrl;
+        return { user: null, redirected: true };
+      } catch (err: any) {
+        console.error(`[Google OAuth Exception]:`, err);
+        return { user: null, error: err.message || `Failed to sign in with Google` };
       }
-      return { user: null, error: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.' };
+    }
+
+    if (!isSupabaseConfigured) {
+      return { user: null, error: 'Supabase is not configured for provider: ' + provider };
     }
 
     try {
