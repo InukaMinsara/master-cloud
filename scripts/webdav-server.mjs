@@ -731,16 +731,14 @@ async function offloadSingleFileToCloud(fullPath, relPath, stat) {
   } catch { /* ignore */ }
 }
 
-async function collectStagedFilesAsync(dir = STORAGE_DIR, results = [], skipNodeModules = true) {
-  if (Date.now() - lastWriteActivityMs < 4000 || results.length >= 500) return results;
+async function collectStagedFilesAsync(dir = STORAGE_DIR, results = [], maxResults = 500) {
+  if (Date.now() - lastWriteActivityMs < 2500 || results.length >= maxResults) return results;
   if (!fs.existsSync(dir)) return results;
   try {
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
     await new Promise(r => setImmediate(r));
     for (const entry of entries) {
-      if (Date.now() - lastWriteActivityMs < 4000 || results.length >= 500) return results;
-      if (entry.name.startsWith('.')) continue;
-      if (skipNodeModules && entry.name === 'node_modules') continue;
+      if (Date.now() - lastWriteActivityMs < 2500 || results.length >= maxResults) return results;
       const full = path.join(dir, entry.name);
       try {
         if (entry.isDirectory()) {
@@ -754,10 +752,15 @@ async function collectStagedFilesAsync(dir = STORAGE_DIR, results = [], skipNode
               birthtime: (st.birthtime || st.mtime).toISOString(),
             });
           }
-          await collectStagedFilesAsync(full, results, skipNodeModules);
+          await collectStagedFilesAsync(full, results, maxResults);
+          // Auto remove empty staging directory
+          try {
+            const rem = await fs.promises.readdir(full);
+            if (rem.length === 0) await fs.promises.rmdir(full);
+          } catch {}
         } else {
           const st = await fs.promises.stat(full);
-          if (Date.now() - st.mtimeMs > 2000) {
+          if (Date.now() - st.mtimeMs > 1500) {
             const rel = path.relative(STORAGE_DIR, full).replace(/\\/g, '/');
             if (!manifest.files[rel]) {
               ensureManifestParentFolders(rel);
@@ -782,31 +785,28 @@ async function collectStagedFilesAsync(dir = STORAGE_DIR, results = [], skipNode
 let offloaderActive = false;
 async function runCloudOffloaderLoop() {
   if (offloaderActive) return;
-  if (Date.now() - lastWriteActivityMs < 4000 || activeDiskFlushes > 0 || diskFlushQueue.length > 0) {
+  if (Date.now() - lastWriteActivityMs < 3000 || activeDiskFlushes > 0 || diskFlushQueue.length > 0) {
     setTimeout(runCloudOffloaderLoop, 2000);
     return;
   }
   offloaderActive = true;
   try {
     // 1. First offload any files sitting in RAM directly to Online Cloud Packs (Zero Disk I/O!)
-    while (inMemoryStagingBuffers.size > 0 && Date.now() - lastWriteActivityMs >= 4000) {
+    while (inMemoryStagingBuffers.size > 0 && Date.now() - lastWriteActivityMs >= 3000) {
       const ok = await offloadRamBatchPackToCloud();
       if (!ok) break;
     }
 
-    // 2. Then offload any staged files on disk (packing small files <= 8MB into 500-file Cloud Packs!)
-    let staged = await collectStagedFilesAsync(STORAGE_DIR, [], true);
-    if (staged.length === 0 && Date.now() - lastWriteActivityMs >= 4000) {
-      staged = await collectStagedFilesAsync(STORAGE_DIR, [], false);
-    }
-    if (staged.length > 0 && Date.now() - lastWriteActivityMs >= 4000) {
-      const smallFiles = staged.filter(s => s.stat.size <= 8 * 1024 * 1024);
-      const largeFiles = staged.filter(s => s.stat.size > 8 * 1024 * 1024);
+    // 2. Then offload any staged files on disk (packing small files <= 25MB into Cloud Packs!)
+    let staged = await collectStagedFilesAsync(STORAGE_DIR, [], 500);
+    if (staged.length > 0 && Date.now() - lastWriteActivityMs >= 3000) {
+      const smallFiles = staged.filter(s => s.stat.size <= 25 * 1024 * 1024);
+      const largeFiles = staged.filter(s => s.stat.size > 25 * 1024 * 1024);
       if (smallFiles.length > 0) {
         await offloadDiskBatchPackToCloud(smallFiles);
       }
       for (const item of largeFiles) {
-        if (Date.now() - lastWriteActivityMs < 4000) break;
+        if (Date.now() - lastWriteActivityMs < 3000) break;
         try {
           await offloadSingleFileToCloud(item.fullPath, item.relPath, item.stat);
         } catch { /* retry next cycle */ }
@@ -1772,8 +1772,8 @@ function mapDrive(forceRemount = false) {
         '--dir-perms=0777',
         '--vfs-cache-mode=full',
         `--cache-dir=${vfsCacheDir}`,
-        '--vfs-cache-max-age=72h',
-        '--vfs-cache-max-size=25G',
+        '--vfs-cache-max-age=1m',
+        '--vfs-cache-max-size=1G',
         '--vfs-read-chunk-size=128k',
         '--vfs-read-chunk-size-limit=16M',
         '--vfs-fast-fingerprint',
@@ -1812,6 +1812,35 @@ function mapDrive(forceRemount = false) {
   }, 50);
 }
 
+function pruneVfsCache() {
+  const vfsCacheDir = fs.existsSync('D:\\') ? 'D:\\MasterCloudCache' : path.join(os.homedir(), '.mastercloud', 'cache');
+  if (!fs.existsSync(vfsCacheDir)) return;
+  const maxAgeMs = 60 * 1000;
+  const now = Date.now();
+  function walk(dir) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const ent of entries) {
+        const full = path.join(dir, ent.name);
+        if (ent.isDirectory()) {
+          walk(full);
+          try {
+            if (fs.readdirSync(full).length === 0) fs.rmdirSync(full);
+          } catch {}
+        } else if (ent.isFile()) {
+          try {
+            const st = fs.statSync(full);
+            if (now - st.mtimeMs > maxAgeMs) {
+              fs.unlinkSync(full);
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+  walk(vfsCacheDir);
+}
+
 function startListening() {
   server.listen(PORT, '127.0.0.1', () => {
     console.log('─'.repeat(65));
@@ -1819,9 +1848,10 @@ function startListening() {
     console.log(`   Server URL:     ${WEBDAV_URL}`);
     console.log(`   Total Quota:    10.0 TB (10,995,116,277,760 bytes)`);
     console.log(`   Drive Letter:   ${DRIVE_LETTER}: ("MASTER CLOUD (10 TB)")`);
-    console.log(`   Storage Mode:   Online Cloud Offload (0 Bytes kept on C:/D:!)`);
+    console.log(`   Storage Mode:   Zero-Disk Online Cloud Offload (0 Bytes kept on C:/D:!)`);
     console.log('─'.repeat(65));
     mapDrive();
+    setInterval(pruneVfsCache, 60000);
     // Start background Online Cloud Offloader
     setTimeout(runCloudOffloaderLoop, 1500);
   });
