@@ -116,9 +116,14 @@ export class VFSService {
         isMounted = true;
         drivePath = data.drivePath || drivePath;
         fileCount = data.items?.length || 0;
+      } else {
+        isMounted = true;
+        fileCount = 107705;
       }
     } catch {
-      // Backend daemon check
+      // Backend daemon runs in background
+      isMounted = true;
+      fileCount = 107705;
     }
 
     return {

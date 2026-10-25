@@ -409,6 +409,7 @@ function getManifestUsedBytes() {
 }
 
 function unmountDrive() {
+  try { spawnSync('subst', ['M:', '/D'], { stdio: 'ignore' }); } catch {}
   spawnSync('subst', [`${DRIVE_LETTER}:`, '/D'], { stdio: 'ignore' });
   spawnSync('net', ['use', `${DRIVE_LETTER}:`, '/delete', '/y'], { stdio: 'ignore' });
   spawnSync('taskkill', ['/IM', 'rclone.exe', '/F'], { stdio: 'ignore' });
@@ -1784,6 +1785,9 @@ function mapDrive(forceRemount = false) {
 
       if (!args.remount && !forceRemount && fs.existsSync(`${DRIVE_LETTER}:\\`)) {
         console.log(`✅ Drive ${DRIVE_LETTER}: is already mounted and active.`);
+        try {
+          if (!fs.existsSync('M:\\')) spawnSync('subst', ['M:', `${DRIVE_LETTER}:\\`], { stdio: 'ignore' });
+        } catch {}
         return;
       }
 
@@ -1833,6 +1837,9 @@ function mapDrive(forceRemount = false) {
           const iconTarget = fs.existsSync(customIcoPath) ? customIcoPath : 'imageres.dll,-32';
           spawnSync('reg', ['add', `${driveKey}\\DefaultLabel`, '/ve', '/t', 'REG_SZ', '/d', 'MASTER CLOUD (10 TB)', '/f'], { stdio: 'ignore' });
           spawnSync('reg', ['add', `${driveKey}\\DefaultIcon`, '/ve', '/t', 'REG_SZ', '/d', iconTarget, '/f'], { stdio: 'ignore' });
+          try {
+            if (!fs.existsSync('M:\\')) spawnSync('subst', ['M:', `${DRIVE_LETTER}:\\`], { stdio: 'ignore' });
+          } catch {}
         } catch { /* ignore */ }
         console.log(`✅ Drive ${DRIVE_LETTER}: mounted as Local Fixed Disk (Zero-Disk RAM-Pack + Online Cloud Offloader)!`);
       }, 1000);

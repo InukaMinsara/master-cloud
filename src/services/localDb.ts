@@ -595,8 +595,13 @@ class LocalDatabaseService {
         res = await fetch(`http://127.0.0.1:8766/api/local-drive/list?parent=${queryParam}`);
         if (!res.ok) throw new Error();
       } catch {
-        // Local background daemon offline or on Netlify without daemon — return gracefully
-        return;
+        try {
+          res = await fetch(`/api/local-drive/list?parent=${queryParam}`);
+          if (!res.ok) throw new Error();
+        } catch {
+          // Local background daemon offline or on Netlify without daemon — return gracefully
+          return;
+        }
       }
       const data = await res.json().catch(() => null);
       if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
