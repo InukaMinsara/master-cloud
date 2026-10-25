@@ -286,11 +286,13 @@ ipcMain.handle('logout', async () => {
 
 ipcMain.handle('get-web-session', async () => {
   try {
-    const sessionFile = path.join(os.homedir(), '.mastercloud', 'active-web-session.json');
-    if (fs.existsSync(sessionFile)) {
-      const data = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
-      if (data && data.email) {
-        return { ok: true, session: data };
+    const list = getCandidateSessionFiles();
+    for (const f of list) {
+      if (fs.existsSync(f)) {
+        const data = JSON.parse(fs.readFileSync(f, 'utf8'));
+        if (data && data.email) {
+          return { ok: true, session: data };
+        }
       }
     }
   } catch { /* ignore */ }
@@ -367,6 +369,12 @@ app.on('second-instance', (_event, commandLine) => {
     mainWindow.focus();
   }
 
+  const deepLink = commandLine.find((arg) => typeof arg === 'string' && arg.startsWith('mastercloud://'));
+  if (deepLink) {
+    handleDeepLink(deepLink);
+    return;
+  }
+
   const session = loadSession();
   if (session && session.email) {
     if (engine.isDriveActive()) {
@@ -377,11 +385,6 @@ app.on('second-instance', (_event, commandLine) => {
       });
     }
   }
-
-  const deepLink = commandLine.find((arg) => arg.startsWith('mastercloud://'));
-  if (deepLink) {
-    handleDeepLink(deepLink);
-  }
 });
 
 // App Lifecycle
@@ -389,22 +392,22 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // If user is already logged in, mount drive automatically and open Explorer
-  const session = loadSession();
-  if (session && session.email) {
-    engine.start('Z', session.email).then((mounted) => {
-      if (mounted) {
-        setTimeout(() => {
-          engine.openInExplorer();
-        }, 500);
-      }
-    }).catch((e) => console.error('Auto-mount error:', e));
-  }
-
   // Check initial command line args for deep link
-  const initialDeepLink = process.argv.find((arg) => arg.startsWith('mastercloud://'));
+  const initialDeepLink = process.argv.find((arg) => typeof arg === 'string' && arg.startsWith('mastercloud://'));
   if (initialDeepLink) {
     handleDeepLink(initialDeepLink);
+  } else {
+    // If user is already logged in, mount drive automatically and open Explorer
+    const session = loadSession();
+    if (session && session.email) {
+      engine.start('Z', session.email).then((mounted) => {
+        if (mounted) {
+          setTimeout(() => {
+            engine.openInExplorer();
+          }, 500);
+        }
+      }).catch((e) => console.error('Auto-mount error:', e));
+    }
   }
 });
 

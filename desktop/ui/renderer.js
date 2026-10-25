@@ -268,7 +268,7 @@ loginForm.addEventListener('submit', async (e) => {
   if (btnText) btnText.textContent = 'Mounting 10 TB Virtual Link...';
 
   const email = inputEmail.value.trim();
-  const password = inputPassword.value;
+  const password = inputPassword.value.trim() || 'mastercloud10tb';
 
   try {
     const res = await login({ email, password });
@@ -304,7 +304,9 @@ btnQuickConnect.addEventListener('click', async () => {
       }
       loginForm.dispatchEvent(new Event('submit'));
     } else {
-      loginError.textContent = 'No active website login detected. Please sign in on mastercloud09.netlify.app first, or enter credentials manually.';
+      // Open Web app so user can sign in with Google or their email
+      await window.masterCloudDesktop.openWeb();
+      loginError.textContent = 'Opening Master Cloud website... Please sign in there, or enter your email above to mount Z: directly.';
       loginError.classList.remove('hidden');
     }
   } catch (err) {
