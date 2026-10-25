@@ -432,34 +432,31 @@ class UnifiedApiService {
   }
 
   async getFolders(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FolderItem[]> {
-    const localFolders = await localDb.getFolders(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
-        let query = supabase.from('folders').select('*, owner:profiles(*)');
-        if (includeDeleted) {
-          query = query.not('deleted_at', 'is', null);
-        } else {
-          query = query.is('deleted_at', null);
-          if (parentFolderId === null) {
-            query = query.is('parent_folder_id', null);
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          let query = supabase.from('folders').select('*, owner:profiles(*)');
+          if (includeDeleted) {
+            query = query.not('deleted_at', 'is', null);
           } else {
-            query = query.eq('parent_folder_id', parentFolderId);
+            query = query.is('deleted_at', null);
+            if (parentFolderId === null) {
+              query = query.is('parent_folder_id', null);
+            } else {
+              query = query.eq('parent_folder_id', parentFolderId);
+            }
           }
-        }
-        const { data, error } = await query.order('name');
-        if (!error && data && data.length > 0) {
-          const map = new Map<string, FolderItem>();
-          for (const f of data as FolderItem[]) map.set(f.name.toLowerCase(), f);
-          for (const lf of localFolders) {
-            if (!map.has(lf.name.toLowerCase())) map.set(lf.name.toLowerCase(), lf);
+          const { data, error } = await query.order('name');
+          if (!error && Array.isArray(data)) {
+            return data as FolderItem[];
           }
-          return Array.from(map.values());
         }
       } catch (err) {
         console.warn('Supabase getFolders fallback:', err);
       }
     }
-    return localFolders;
+    return localDb.getFolders(parentFolderId, includeDeleted);
   }
 
   async getFolderById(id: string): Promise<FolderRecord | null> {
@@ -480,6 +477,18 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
+          // Ensure profile exists in Supabase
+          const meta = user.user_metadata || {};
+          const displayName = meta.full_name || meta.name || user.email?.split('@')[0] || 'User';
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            email: user.email || '',
+            display_name: displayName,
+            avatar_url: meta.avatar_url || meta.picture || null,
+            role: user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' }).catch(() => {});
+
           const { data, error } = await supabase
             .from('folders')
             .insert({
@@ -559,34 +568,31 @@ class UnifiedApiService {
 
   // --- Files ---
   async getFiles(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FileItem[]> {
-    const localFiles = await localDb.getFiles(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
-        let query = supabase.from('files').select('*, owner:profiles(*)');
-        if (includeDeleted) {
-          query = query.not('deleted_at', 'is', null);
-        } else {
-          query = query.is('deleted_at', null);
-          if (parentFolderId === null) {
-            query = query.is('parent_folder_id', null);
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          let query = supabase.from('files').select('*, owner:profiles(*)');
+          if (includeDeleted) {
+            query = query.not('deleted_at', 'is', null);
           } else {
-            query = query.eq('parent_folder_id', parentFolderId);
+            query = query.is('deleted_at', null);
+            if (parentFolderId === null) {
+              query = query.is('parent_folder_id', null);
+            } else {
+              query = query.eq('parent_folder_id', parentFolderId);
+            }
           }
-        }
-        const { data, error } = await query.order('name');
-        if (!error && data && data.length > 0) {
-          const map = new Map<string, FileItem>();
-          for (const f of data as FileItem[]) map.set(f.name.toLowerCase(), f);
-          for (const lf of localFiles) {
-            if (!map.has(lf.name.toLowerCase())) map.set(lf.name.toLowerCase(), lf);
+          const { data, error } = await query.order('created_at', { ascending: false });
+          if (!error && Array.isArray(data)) {
+            return data as FileItem[];
           }
-          return Array.from(map.values());
         }
       } catch (err) {
         console.warn('Supabase getFiles fallback:', err);
       }
     }
-    return localFiles;
+    return localDb.getFiles(parentFolderId, includeDeleted);
   }
 
   async getFileById(id: string): Promise<FileItem | null> {
@@ -611,6 +617,24 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
+          // Ensure profile & quota row exist in Supabase
+          const meta = user.user_metadata || {};
+          const displayName = meta.full_name || meta.name || user.email?.split('@')[0] || 'User';
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            email: user.email || '',
+            display_name: displayName,
+            avatar_url: meta.avatar_url || meta.picture || null,
+            role: user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' }).catch(() => {});
+
+          await supabase.from('storage_quotas').upsert({
+            user_id: user.id,
+            total_quota_bytes: 10995116277760,
+            used_storage_bytes: 0,
+          }, { onConflict: 'user_id' }).catch(() => {});
+
           // Server-side Quota Enforcement: Verify (used + incoming) <= 10 TB
           const { data: quota } = await supabase
             .from('storage_quotas')
@@ -667,6 +691,9 @@ class UnifiedApiService {
                 .eq('user_id', user.id);
             }
             return fileData as FileItem;
+          }
+          if (dbErr) {
+            console.error('Supabase files.insert error:', dbErr);
           }
         }
       } catch (err: any) {
@@ -854,15 +881,73 @@ class UnifiedApiService {
 
   // --- Starred & Recent ---
   async getStarredItems(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const [filesRes, foldersRes] = await Promise.all([
+            supabase.from('files').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
+            supabase.from('folders').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
+          ]);
+          return {
+            files: (filesRes.data || []) as FileItem[],
+            folders: (foldersRes.data || []) as FolderItem[],
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase getStarredItems fallback:', err);
+      }
+    }
     return localDb.getStarredItems();
   }
 
   async getRecentItems(limit: number = 20): Promise<FileItem[]> {
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const { data, error } = await supabase
+            .from('files')
+            .select('*, owner:profiles(*)')
+            .is('deleted_at', null)
+            .order('updated_at', { ascending: false })
+            .limit(limit);
+          if (!error && Array.isArray(data)) {
+            return data as FileItem[];
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase getRecentItems fallback:', err);
+      }
+    }
     return localDb.getRecentItems(limit);
   }
 
   // --- Media ---
   async getMediaFiles(type: 'all' | 'image' | 'video' | 'audio' = 'all'): Promise<FileItem[]> {
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const { data, error } = await supabase
+            .from('files')
+            .select('*, owner:profiles(*)')
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false });
+
+          if (!error && Array.isArray(data)) {
+            const mediaFiles = (data as FileItem[]).filter(f => {
+              const cat = getFileCategory(f.mime_type, f.extension);
+              if (type === 'all') return ['image', 'video', 'audio'].includes(cat);
+              return cat === type;
+            });
+            return mediaFiles;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase getMediaFiles fallback:', err);
+      }
+    }
     return localDb.getMediaFiles(type);
   }
 

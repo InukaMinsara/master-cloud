@@ -304,13 +304,9 @@ export class TelegramCloudService {
       const desc: CloudFileDescriptor = JSON.parse(storagePath.slice('tgcloud:'.length));
       if (desc.chunks.length === 1) {
         const c = desc.chunks[0];
+        // Only return direct CDN streaming for providers with inline headers (Catbox).
+        // Telegram sends 'content-disposition: attachment' which breaks HTML5 video/audio playback and previews in browsers.
         if (c.provider === 'catbox' && c.url) return c.url;
-        if (c.provider === 'telegram' && c.filePath) {
-          const { botToken } = this.getCredentials();
-          if (botToken) {
-            return `https://api.telegram.org/file/bot${botToken}/${c.filePath}`;
-          }
-        }
       }
     } catch {}
     return null;
