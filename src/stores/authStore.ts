@@ -76,6 +76,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Immediate session check via Supabase
       if (isSupabaseConfigured) {
         try {
+          if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (code) {
+              await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          }
+
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const meta = session.user.user_metadata || {};
