@@ -100,6 +100,22 @@ function configureUserContext(email, drive) {
   try { fs.mkdirSync(STORAGE_DIR, { recursive: true }); } catch { /* ignore */ }
 }
 
+let lastUserSwitchMs = 0;
+function switchUserContext(targetEmail, targetDrive = null) {
+  const clean = (targetEmail || '').trim().toLowerCase();
+  if (!clean || clean === USER_EMAIL) return;
+  if (Date.now() - lastUserSwitchMs < 1000) return;
+  lastUserSwitchMs = Date.now();
+
+  console.log(`🔄 Switching user context from ${USER_EMAIL} to ${clean}`);
+  configureUserContext(clean, targetDrive);
+  loadManifest();
+  notifyRcloneRefresh();
+  if (!fs.existsSync(`${DRIVE_LETTER}:\\`)) {
+    mapDrive(false);
+  }
+}
+
 const WEBDAV_URL = `http://127.0.0.1:${PORT}`;
 const RCLONE_RC_URL = 'http://127.0.0.1:5572';
 
@@ -1092,11 +1108,11 @@ const server = http.createServer((req, res) => {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
           fs.writeFileSync(sessionFile, JSON.stringify(body, null, 2), 'utf8');
-          if (body && body.email && body.email.trim().toLowerCase() !== USER_EMAIL) {
-            console.log(`🌐 Web session sync switching user to: ${body.email}`);
-            configureUserContext(body.email);
-            loadManifest();
-            mapDrive(true);
+          if (body && body.email) {
+            const em = body.email.trim().toLowerCase();
+            if (em !== USER_EMAIL) {
+              switchUserContext(em);
+            }
           }
           const out = JSON.stringify({ ok: true, saved: true });
           res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
@@ -1132,25 +1148,9 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        if (targetEmail === USER_EMAIL) {
-          const out = JSON.stringify({
-            ok: true,
-            user: USER_EMAIL,
-            isMasterAdmin,
-            driveLetter: `${DRIVE_LETTER}:`,
-            fileCount: Object.keys(manifest.files || {}).length,
-            folderCount: Object.keys(manifest.folders || {}).length,
-            usedBytes: totalUsedBytes,
-          });
-          res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
-          res.end(out);
-          return;
+        if (targetEmail !== USER_EMAIL) {
+          switchUserContext(targetEmail, targetDrive);
         }
-
-        console.log(`🔄 Switching user context from ${USER_EMAIL} to ${targetEmail}`);
-        configureUserContext(targetEmail, targetDrive);
-        loadManifest();
-        mapDrive(true);
 
         const out = JSON.stringify({
           ok: true,
@@ -2161,38 +2161,36 @@ async function runSupabaseSyncLoop() {
   try {
     const sb = await getSupabaseSyncClient();
     if (sb) {
-      // Check all candidate session locations for active user session
+      // Pick the session file with the newest mtime
       const candidateFiles = [
         path.join(USER_DATA_DIR, 'active-web-session.json'),
-        path.join(os.homedir(), '.mastercloud', 'active-web-session.json'),
         path.join(USER_DATA_DIR, 'user-session.json'),
-        path.join(os.homedir(), '.mastercloud', 'user-session.json'),
       ];
 
       let userToken = null;
       let userId = null;
       let activeEmail = null;
+      let newestMtime = 0;
 
       for (const cf of candidateFiles) {
         if (fs.existsSync(cf)) {
           try {
-            const s = JSON.parse(fs.readFileSync(cf, 'utf8'));
-            if (s && s.email) {
-              activeEmail = s.email.trim().toLowerCase();
-              if (s.accessToken) userToken = s.accessToken;
-              if (s.id) userId = s.id;
-              break;
+            const st = fs.statSync(cf);
+            if (st.mtimeMs > newestMtime) {
+              const s = JSON.parse(fs.readFileSync(cf, 'utf8'));
+              if (s && s.email) {
+                newestMtime = st.mtimeMs;
+                activeEmail = s.email.trim().toLowerCase();
+                userToken = s.accessToken || null;
+                userId = s.id || null;
+              }
             }
           } catch {}
         }
       }
 
-      // If active email differs from current server context, switch immediately!
       if (activeEmail && activeEmail !== USER_EMAIL) {
-        console.log(`🔄 Sync detected user change to: ${activeEmail}`);
-        configureUserContext(activeEmail);
-        loadManifest();
-        mapDrive(true);
+        switchUserContext(activeEmail);
       }
 
       if (userToken) {

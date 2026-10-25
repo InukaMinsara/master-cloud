@@ -495,12 +495,14 @@ class LocalDatabaseService {
     saveTable('files', this.files);
   }
 
-  isItemVisible(ownerId?: string | null): boolean {
+  isItemVisible(ownerId?: string | null, storagePath?: string): boolean {
     const isMasterAdmin =
       this.currentUser.email.toLowerCase() === 'immaster2024@gmail.com' ||
       this.currentUser.role === 'admin';
     if (isMasterAdmin) return true;
-    return ownerId === this.currentUser.id;
+    if (storagePath && storagePath.startsWith('zdrive:')) return true;
+    if (!ownerId) return true;
+    return ownerId === this.currentUser.id || Boolean(ownerId && ownerId.includes(this.currentUser.email.split('@')[0]));
   }
 
   // --- Auth / Profile ---
@@ -923,7 +925,7 @@ class LocalDatabaseService {
     return this.files
       .filter(f => (includeDeleted ? f.deleted_at !== null : f.deleted_at === null))
       .filter(f => (includeDeleted ? true : f.parent_folder_id === parentFolderId))
-      .filter(f => this.isItemVisible(f.owner_id))
+      .filter(f => this.isItemVisible(f.owner_id, f.storage_path))
       .map(f => ({
         ...f,
         owner: this.currentUser,
