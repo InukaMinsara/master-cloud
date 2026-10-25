@@ -14,17 +14,11 @@ import { SmartCleanupDialog } from '@/components/cleanup/SmartCleanupDialog';
 import { NewFolderModal } from '@/components/files/NewFolderModal';
 import { Toaster } from 'sonner';
 import { useFileStore } from '@/stores/fileStore';
-import { useAuthStore } from '@/stores/authStore';
 import { ContextMenu } from '@/components/context-menu/ContextMenu';
 
 
 export function AppLayout() {
   const { activeDetailsItem } = useFileStore();
-  const { init } = useAuthStore();
-
-  React.useEffect(() => {
-    init();
-  }, [init]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground antialiased">

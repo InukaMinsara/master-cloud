@@ -573,23 +573,32 @@ class LocalDatabaseService {
     return map[ext.toLowerCase()] || 'application/octet-stream';
   }
 
-  async syncWithLocalDrive(): Promise<void> {
+  private syncCacheTimestamps = new Map<string, number>();
+
+  async syncWithLocalDrive(parentFolderId: string | null = null): Promise<void> {
     if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+
+    const cacheKey = parentFolderId || '__root__';
+    const now = Date.now();
+    const lastSync = this.syncCacheTimestamps.get(cacheKey) || 0;
+    if (now - lastSync < 3000) {
+      return;
+    }
+    this.syncCacheTimestamps.set(cacheKey, now);
+
     try {
+      const parentRel = this.getFolderRelPath(parentFolderId);
+      const queryParam = parentRel ? encodeURIComponent(parentRel) : '__root__';
+
       let res: Response | null = null;
       try {
-        res = await fetch('http://127.0.0.1:8766/api/local-drive/list');
+        res = await fetch(`http://127.0.0.1:8766/api/local-drive/list?parent=${queryParam}`);
         if (!res.ok) throw new Error();
       } catch {
-        try {
-          res = await fetch('/api/local-drive/list');
-          if (!res.ok) throw new Error();
-        } catch {
-          // Running on Netlify or offline without local background daemon
-          return;
-        }
+        // Local background daemon offline or on Netlify without daemon — return gracefully
+        return;
       }
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
 
       const driveUser = (data.user || '').trim().toLowerCase();
@@ -616,62 +625,57 @@ class LocalDatabaseService {
         birthtime: string;
       }> = data.items;
 
-      const seenDiskFolderPaths = new Set<string>();
-      const seenDiskFilePaths = new Set<string>();
+      // Fast O(1) indexed sync for this folder only
+      const currentFolderId = parentFolderId;
+
+      const existingFolderMap = new Map<string, FolderRecord>();
+      for (const f of this.folders) {
+        if (!f.deleted_at && f.parent_folder_id === currentFolderId) {
+          existingFolderMap.set(f.name.toLowerCase(), f);
+        }
+      }
+
+      const existingFileMap = new Map<string, FileRecord>();
+      for (const f of this.files) {
+        if (!f.deleted_at && f.parent_folder_id === currentFolderId) {
+          existingFileMap.set(f.name.toLowerCase(), f);
+        }
+      }
+
       let changed = false;
 
-      // 1. Sync folders from Z:\ in topological order (parents before children)
-      const dirItems = diskItems
-        .filter(i => i.isDir)
-        .sort((a, b) => a.relPath.split('/').length - b.relPath.split('/').length);
-
-      for (const d of dirItems) {
-        seenDiskFolderPaths.add(d.relPath);
-        const parentId = d.parentRelPath
-          ? (this.folders.find(f => !f.deleted_at && this.getFolderRelPath(f.id) === d.parentRelPath)?.id ?? null)
-          : null;
-
-        const existing = this.folders.find(
-          f => !f.deleted_at && f.parent_folder_id === parentId && f.name.toLowerCase() === d.name.toLowerCase()
-        );
+      // 1. Sync folders in this directory
+      for (const item of diskItems.filter(i => i.isDir)) {
+        const existing = existingFolderMap.get(item.name.toLowerCase());
         if (!existing) {
-          this.folders.push({
-            id: 'zfolder-' + d.relPath.replace(/[^a-zA-Z0-9_-]/g, '_'),
+          const newFolder: FolderRecord = {
+            id: 'zfolder-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_'),
             owner_id: this.currentUser.id,
-            parent_folder_id: parentId,
-            name: d.name,
+            parent_folder_id: currentFolderId,
+            name: item.name,
             color: '#3b82f6',
             is_starred: false,
             deleted_at: null,
-            created_at: d.birthtime,
-            updated_at: d.mtime,
-          });
+            created_at: item.birthtime,
+            updated_at: item.mtime,
+          };
+          this.folders.push(newFolder);
+          existingFolderMap.set(item.name.toLowerCase(), newFolder);
           changed = true;
         }
       }
 
-      // 2. Sync files from Z:\
-      const fileItems = diskItems.filter(i => !i.isDir);
-      for (const item of fileItems) {
+      // 2. Sync files in this directory
+      for (const item of diskItems.filter(i => !i.isDir)) {
+        const ext = getFileExtension(item.name);
         const zStoragePath = `zdrive:${item.relPath}`;
-        seenDiskFilePaths.add(zStoragePath);
-
-        const parentId = item.parentRelPath
-          ? (this.folders.find(f => !f.deleted_at && this.getFolderRelPath(f.id) === item.parentRelPath)?.id ?? null)
-          : null;
-
-        const existing = this.files.find(
-          f => !f.deleted_at && (f.storage_path === zStoragePath || (f.parent_folder_id === parentId && f.name.toLowerCase() === item.name.toLowerCase()))
-        );
+        const existing = existingFileMap.get(item.name.toLowerCase());
 
         if (!existing) {
-          const ext = getFileExtension(item.name);
-          const fileId = 'zfile-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_');
-          const verId = 'zver-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
-          this.files.push({
-            id: fileId,
+          const newFile: FileRecord = {
+            id: 'zfile-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_'),
             owner_id: this.currentUser.id,
-            parent_folder_id: parentId,
+            parent_folder_id: currentFolderId,
             name: item.name,
             storage_path: zStoragePath,
             mime_type: this.guessMimeType(ext),
@@ -680,26 +684,19 @@ class LocalDatabaseService {
             checksum: `z-${item.size}-${new Date(item.mtime).getTime()}`,
             is_starred: false,
             deleted_at: null,
-            current_version_id: verId,
+            current_version_id: 'zver-' + Date.now(),
             created_at: item.birthtime,
             updated_at: item.mtime,
-          });
+          };
+          this.files.push(newFile);
+          existingFileMap.set(item.name.toLowerCase(), newFile);
           changed = true;
-        } else if (existing.storage_path.startsWith('zdrive:') && existing.size_bytes !== item.size) {
+        } else if (existing.size_bytes !== item.size) {
           existing.size_bytes = item.size;
           existing.updated_at = item.mtime;
           changed = true;
         }
       }
-
-      // 3. Remove any zdrive-synced items that were deleted from Windows Explorer (Z:\)
-      const beforeFilesLen = this.files.length;
-      this.files = this.files.filter(f => !f.storage_path.startsWith('zdrive:') || seenDiskFilePaths.has(f.storage_path));
-      if (this.files.length !== beforeFilesLen) changed = true;
-
-      const beforeFoldersLen = this.folders.length;
-      this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-') || seenDiskFolderPaths.has(this.getFolderRelPath(f.id)));
-      if (this.folders.length !== beforeFoldersLen) changed = true;
 
       if (changed) {
         saveTable('folders', this.folders);
@@ -712,16 +709,29 @@ class LocalDatabaseService {
 
   // --- Folders ---
   async getFolders(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FolderItem[]> {
-    await this.syncWithLocalDrive();
-    return this.folders
+    await this.syncWithLocalDrive(parentFolderId);
+    const targetFolders = this.folders
       .filter(f => (includeDeleted ? f.deleted_at !== null : f.deleted_at === null))
       .filter(f => (includeDeleted ? true : f.parent_folder_id === parentFolderId))
-      .filter(f => this.isItemVisible(f.owner_id))
-      .map(f => ({
-        ...f,
-        item_count: this.files.filter(file => file.parent_folder_id === f.id && !file.deleted_at && this.isItemVisible(file.owner_id)).length +
-          this.folders.filter(sub => sub.parent_folder_id === f.id && !sub.deleted_at && this.isItemVisible(sub.owner_id)).length,
-      }));
+      .filter(f => this.isItemVisible(f.owner_id));
+
+    // Fast O(N) pre-aggregated counts
+    const counts = new Map<string, number>();
+    for (const f of this.files) {
+      if (!f.deleted_at && f.parent_folder_id && this.isItemVisible(f.owner_id)) {
+        counts.set(f.parent_folder_id, (counts.get(f.parent_folder_id) || 0) + 1);
+      }
+    }
+    for (const s of this.folders) {
+      if (!s.deleted_at && s.parent_folder_id && this.isItemVisible(s.owner_id)) {
+        counts.set(s.parent_folder_id, (counts.get(s.parent_folder_id) || 0) + 1);
+      }
+    }
+
+    return targetFolders.map(f => ({
+      ...f,
+      item_count: counts.get(f.id) || 0,
+    }));
   }
 
   async getFolderById(id: string): Promise<FolderRecord | null> {
@@ -905,7 +915,7 @@ class LocalDatabaseService {
 
   // --- Files ---
   async getFiles(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FileItem[]> {
-    await this.syncWithLocalDrive();
+    await this.syncWithLocalDrive(parentFolderId);
     return this.files
       .filter(f => (includeDeleted ? f.deleted_at !== null : f.deleted_at === null))
       .filter(f => (includeDeleted ? true : f.parent_folder_id === parentFolderId))

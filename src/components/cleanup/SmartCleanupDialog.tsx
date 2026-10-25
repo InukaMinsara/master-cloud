@@ -22,7 +22,7 @@ export function SmartCleanupDialog() {
   const { smartCleanupModalOpen, setSmartCleanupModalOpen } = useUIStore();
   const { fetchItems } = useFileStore();
 
-  const [suggestions, setSuggestions] = React.useState(() => api.getStorageCleanupSuggestions());
+  const [suggestions, setSuggestions] = React.useState<ReturnType<typeof api.getStorageCleanupSuggestions> | null>(null);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [activeTab, setActiveTab] = React.useState<'large' | 'duplicates' | 'old' | 'trash'>('large');
 
@@ -33,7 +33,7 @@ export function SmartCleanupDialog() {
     }
   }, [smartCleanupModalOpen]);
 
-  if (!smartCleanupModalOpen) return null;
+  if (!smartCleanupModalOpen || !suggestions) return null;
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);

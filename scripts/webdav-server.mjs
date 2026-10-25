@@ -1162,10 +1162,21 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // ── Local Drive Listing API: Stream all files & folders to Web App (Netlify & Local) ───
+  // ── Local Drive Listing API: Stream files & folders to Web App (Netlify & Local) ───
   if (method === 'GET' && (relPath === 'api/local-drive/list' || relPath === '__local_drive_list')) {
     const isMounted = fs.existsSync(`${DRIVE_LETTER}:\\`);
     const items = [];
+
+    const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const searchParams = new URLSearchParams(rawQuery);
+    const parentParam = searchParams.get('parent');
+    const isAll = searchParams.get('all') === 'true';
+
+    // targetParent: null means root. string means that specific relative folder path.
+    let targetParent = null;
+    if (parentParam && parentParam !== '__root__' && parentParam !== 'null' && parentParam !== '') {
+      targetParent = parentParam.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    }
 
     // 1. Folders from in-memory manifest
     const folderKeys = Object.keys(manifest.folders || {});
@@ -1175,15 +1186,17 @@ const server = http.createServer((req, res) => {
       const parts = norm.split('/');
       const name = parts[parts.length - 1];
       const parentRel = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
-      items.push({
-        relPath: norm,
-        name,
-        isDir: true,
-        parentRelPath: parentRel,
-        size: 0,
-        mtime: manifest.folders[fKey]?.mtime || new Date().toISOString(),
-        birthtime: manifest.folders[fKey]?.birthtime || new Date().toISOString(),
-      });
+      if (isAll || parentRel === targetParent) {
+        items.push({
+          relPath: norm,
+          name,
+          isDir: true,
+          parentRelPath: parentRel,
+          size: 0,
+          mtime: manifest.folders[fKey]?.mtime || new Date().toISOString(),
+          birthtime: manifest.folders[fKey]?.birthtime || new Date().toISOString(),
+        });
+      }
     }
 
     // 2. Files from in-memory manifest
@@ -1195,15 +1208,17 @@ const server = http.createServer((req, res) => {
       const parts = norm.split('/');
       const name = f.name || parts[parts.length - 1];
       const parentRel = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
-      items.push({
-        relPath: norm,
-        name,
-        isDir: false,
-        parentRelPath: parentRel,
-        size: f.size || 0,
-        mtime: f.mtime || new Date().toISOString(),
-        birthtime: f.birthtime || new Date().toISOString(),
-      });
+      if (isAll || parentRel === targetParent) {
+        items.push({
+          relPath: norm,
+          name,
+          isDir: false,
+          parentRelPath: parentRel,
+          size: f.size || 0,
+          mtime: f.mtime || new Date().toISOString(),
+          birthtime: f.birthtime || new Date().toISOString(),
+        });
+      }
     }
 
     const payload = JSON.stringify({

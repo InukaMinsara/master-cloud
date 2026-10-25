@@ -27,6 +27,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
 
+      // Subscribe to Supabase auth changes once
+      if (isSupabaseConfigured && !isAuthListenerInitialized) {
+        isAuthListenerInitialized = true;
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (session?.user) {
+            const meta = session.user.user_metadata || {};
+            const identityMeta = session.user.identities?.[0]?.identity_data || {};
+            const realEmail = session.user.email || meta.email || identityMeta.email || '';
+            const realName =
+              meta.full_name ||
+              meta.name ||
+              identityMeta.full_name ||
+              identityMeta.name ||
+              meta.display_name ||
+              (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
+            const realAvatar =
+              meta.avatar_url ||
+              meta.picture ||
+              identityMeta.avatar_url ||
+              identityMeta.picture ||
+              null;
+
+            const role = (realEmail.toLowerCase() === 'immaster2024@gmail.com' || realEmail.toLowerCase().startsWith('admin@')) ? 'admin' : 'user';
+            const immediateUser: ProfileRecord = {
+              id: session.user.id,
+              email: realEmail,
+              display_name: realEmail.toLowerCase() === 'immaster2024@gmail.com' ? 'Inuka Minsara' : realName,
+              avatar_url: realAvatar,
+              role,
+              created_at: session.user.created_at,
+              updated_at: new Date().toISOString(),
+            };
+            localDb.setCurrentUser(immediateUser);
+            api.syncActiveWebSession(immediateUser);
+            set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+
+            const currentUser = await api.getCurrentUser();
+            if (currentUser) {
+              set({ user: currentUser, isAuthenticated: true, isLoading: false });
+            }
+          } else if (event === 'SIGNED_OUT') {
+            set({ user: null, isAuthenticated: false, isLoading: false });
+          }
+        });
+      }
+
       // Immediate session check via Supabase
       if (isSupabaseConfigured) {
         try {
@@ -78,52 +124,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: Boolean(user && user.email),
         isLoading: false,
       });
-
-      // Subscribe to Supabase auth changes once
-      if (isSupabaseConfigured && !isAuthListenerInitialized) {
-        isAuthListenerInitialized = true;
-        supabase.auth.onAuthStateChange(async (event, session) => {
-          if (session?.user) {
-            const meta = session.user.user_metadata || {};
-            const identityMeta = session.user.identities?.[0]?.identity_data || {};
-            const realEmail = session.user.email || meta.email || identityMeta.email || '';
-            const realName =
-              meta.full_name ||
-              meta.name ||
-              identityMeta.full_name ||
-              identityMeta.name ||
-              meta.display_name ||
-              (realEmail ? realEmail.split('@')[0] : 'Master Cloud User');
-            const realAvatar =
-              meta.avatar_url ||
-              meta.picture ||
-              identityMeta.avatar_url ||
-              identityMeta.picture ||
-              null;
-
-            const role = (realEmail.toLowerCase() === 'immaster2024@gmail.com' || realEmail.toLowerCase().startsWith('admin@')) ? 'admin' : 'user';
-            const immediateUser: ProfileRecord = {
-              id: session.user.id,
-              email: realEmail,
-              display_name: realEmail.toLowerCase() === 'immaster2024@gmail.com' ? 'Inuka Minsara' : realName,
-              avatar_url: realAvatar,
-              role,
-              created_at: session.user.created_at,
-              updated_at: new Date().toISOString(),
-            };
-            localDb.setCurrentUser(immediateUser);
-            api.syncActiveWebSession(immediateUser);
-            set({ user: immediateUser, isAuthenticated: true, isLoading: false });
-
-            const currentUser = await api.getCurrentUser();
-            if (currentUser) {
-              set({ user: currentUser, isAuthenticated: true, isLoading: false });
-            }
-          } else if (event === 'SIGNED_OUT') {
-            set({ user: null, isAuthenticated: false, isLoading: false });
-          }
-        });
-      }
     } catch (err) {
       console.error('Auth init error:', err);
       set({ user: null, isAuthenticated: false, isLoading: false });
