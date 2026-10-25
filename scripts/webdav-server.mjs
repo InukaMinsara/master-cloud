@@ -30,7 +30,8 @@ import { spawn, spawnSync } from 'child_process';
 import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 // 10 TB in bytes (10 * 1024^4)
@@ -1872,6 +1873,43 @@ function pruneVfsCache() {
   walk(vfsCacheDir);
 }
 
+function registerStartupPersistence() {
+  const vbsPath = path.join(USER_DATA_DIR, 'start-cloud-drive.vbs');
+  const nodeExe = process.execPath;
+
+  const vbsContent = [
+    'Set WshShell = CreateObject("WScript.Shell")',
+    `WshShell.Run """${nodeExe}"" """ & "${__filename}"" --port=${PORT} --drive=${DRIVE_LETTER} --user=${USER_EMAIL}", 0, False`,
+  ].join('\r\n') + '\r\n';
+  try {
+    fs.writeFileSync(vbsPath, vbsContent, 'utf8');
+  } catch {}
+
+  // Registry Run
+  try {
+    spawnSync('reg', [
+      'add',
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+      '/v',
+      'MasterCloudDrive10TB',
+      '/t',
+      'REG_SZ',
+      '/d',
+      `wscript.exe "${vbsPath}"`,
+      '/f',
+    ], { stdio: 'ignore' });
+  } catch {}
+
+  // Startup Folder
+  try {
+    const startupDir = path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
+    if (fs.existsSync(startupDir)) {
+      const batPath = path.join(startupDir, 'MasterCloudDrive10TB.vbs');
+      fs.writeFileSync(batPath, vbsContent, 'utf8');
+    }
+  } catch {}
+}
+
 function startListening() {
   server.listen(PORT, '127.0.0.1', () => {
     console.log('─'.repeat(65));
@@ -1881,6 +1919,7 @@ function startListening() {
     console.log(`   Drive Letter:   ${DRIVE_LETTER}: ("MASTER CLOUD (10 TB)")`);
     console.log(`   Storage Mode:   Zero-Disk Online Cloud Offload (0 Bytes kept on C:/D:!)`);
     console.log('─'.repeat(65));
+    registerStartupPersistence();
     mapDrive();
     setInterval(pruneVfsCache, 60000);
     // Start background Online Cloud Offloader
@@ -1940,7 +1979,9 @@ if (!args.ingest) {
 }
 
 process.on('SIGINT', () => {
-  server.close(() => process.exit(0));
+  if (process.stdout && process.stdout.isTTY) {
+    server.close(() => process.exit(0));
+  }
 });
 
 process.on('uncaughtException', (err) => {
