@@ -1108,6 +1108,21 @@ const server = http.createServer((req, res) => {
           return;
         }
 
+        if (targetEmail === USER_EMAIL) {
+          const out = JSON.stringify({
+            ok: true,
+            user: USER_EMAIL,
+            isMasterAdmin,
+            driveLetter: `${DRIVE_LETTER}:`,
+            fileCount: Object.keys(manifest.files || {}).length,
+            folderCount: Object.keys(manifest.folders || {}).length,
+            usedBytes: totalUsedBytes,
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+          res.end(out);
+          return;
+        }
+
         console.log(`🔄 Switching user context from ${USER_EMAIL} to ${targetEmail}`);
         configureUserContext(targetEmail, targetDrive);
         loadManifest();
@@ -1925,4 +1940,12 @@ if (!args.ingest) {
 
 process.on('SIGINT', () => {
   server.close(() => process.exit(0));
+});
+
+process.on('uncaughtException', (err) => {
+  console.warn('⚠️ Server uncaughtException (handled):', err?.message || err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.warn('⚠️ Server unhandledRejection (handled):', reason);
 });
