@@ -432,6 +432,7 @@ class UnifiedApiService {
   }
 
   async getFolders(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FolderItem[]> {
+    const localFolders = await localDb.getFolders(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
@@ -449,14 +450,21 @@ class UnifiedApiService {
           }
           const { data, error } = await query.order('name');
           if (!error && Array.isArray(data)) {
-            return data as FolderItem[];
+            const remoteMap = new Map((data as FolderItem[]).map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...(data as FolderItem[])];
+            for (const lf of localFolders) {
+              if (!remoteMap.has(lf.name.toLowerCase())) {
+                merged.push(lf);
+              }
+            }
+            return merged;
           }
         }
       } catch (err) {
         console.warn('Supabase getFolders fallback:', err);
       }
     }
-    return localDb.getFolders(parentFolderId, includeDeleted);
+    return localFolders;
   }
 
   async getFolderById(id: string): Promise<FolderRecord | null> {
@@ -568,6 +576,7 @@ class UnifiedApiService {
 
   // --- Files ---
   async getFiles(parentFolderId: string | null = null, includeDeleted: boolean = false): Promise<FileItem[]> {
+    const localFiles = await localDb.getFiles(parentFolderId, includeDeleted);
     if (this.isConfiguredWithSupabase()) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
@@ -585,14 +594,21 @@ class UnifiedApiService {
           }
           const { data, error } = await query.order('created_at', { ascending: false });
           if (!error && Array.isArray(data)) {
-            return data as FileItem[];
+            const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...(data as FileItem[])];
+            for (const lf of localFiles) {
+              if (!remoteMap.has(lf.name.toLowerCase())) {
+                merged.push(lf);
+              }
+            }
+            return merged;
           }
         }
       } catch (err) {
         console.warn('Supabase getFiles fallback:', err);
       }
     }
-    return localDb.getFiles(parentFolderId, includeDeleted);
+    return localFiles;
   }
 
   async getFileById(id: string): Promise<FileItem | null> {
