@@ -48,15 +48,31 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     let localBlobUrl: string | null = null;
 
     if (category === 'image') {
-      if (file.storage_path?.startsWith('zdrive:')) {
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (file.storage_path?.startsWith('zdrive:') && isLocal) {
         const rel = file.storage_path.slice('zdrive:'.length);
         if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+        api.getFileBlob(file.storage_path).then((blob) => {
+          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+            localBlobUrl = URL.createObjectURL(blob);
+            setThumbUrl(localBlobUrl);
+          }
+        }).catch(() => {});
       } else if (file.storage_path?.startsWith('tgcloud:')) {
         const direct = TelegramCloudService.getDirectStreamUrl(file.storage_path);
-        if (direct && active) setThumbUrl(direct);
+        if (direct && active) {
+          setThumbUrl(direct);
+        } else {
+          api.getFileBlob(file.storage_path).then((blob) => {
+            if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+              localBlobUrl = URL.createObjectURL(blob);
+              setThumbUrl(localBlobUrl);
+            }
+          }).catch(() => {});
+        }
       } else {
         api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active) {
+          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
             setThumbUrl(localBlobUrl);
           }

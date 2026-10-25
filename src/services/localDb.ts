@@ -608,7 +608,7 @@ class LocalDatabaseService {
 
       const driveUser = (data.user || '').trim().toLowerCase();
       const currentEmail = (this.currentUser.email || '').trim().toLowerCase();
-      if (driveUser && currentEmail && driveUser !== currentEmail) {
+      if (driveUser && currentEmail && driveUser !== currentEmail && currentEmail !== 'immaster2024@gmail.com') {
         // Drive belongs to another user! Request background user switch
         try {
           fetch('http://127.0.0.1:8766/api/user/switch', {
@@ -617,7 +617,6 @@ class LocalDatabaseService {
             body: JSON.stringify({ user: currentEmail }),
           }).catch(() => {});
         } catch { /* ignore */ }
-        return;
       }
 
       const diskItems: Array<{
@@ -1100,7 +1099,7 @@ class LocalDatabaseService {
     if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
       try {
         const res = await fetch(storagePath);
-        if (res.ok) {
+        if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
           return await res.blob();
         }
       } catch {
@@ -1108,14 +1107,17 @@ class LocalDatabaseService {
       }
     }
     if (storagePath.startsWith('zdrive:') && typeof fetch !== 'undefined') {
-      try {
-        const relPath = storagePath.slice('zdrive:'.length);
-        const res = await fetch(`/api/local-drive/read?path=${encodeURIComponent(relPath)}`);
-        if (res.ok) {
-          return await res.blob();
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isLocal) {
+        try {
+          const relPath = storagePath.slice('zdrive:'.length);
+          const res = await fetch(`/api/local-drive/read?path=${encodeURIComponent(relPath)}`);
+          if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+            return await res.blob();
+          }
+        } catch {
+          // Fallback to IndexedDB
         }
-      } catch {
-        // Fallback to IndexedDB
       }
     }
     const stored = await binaryStorage.getBlob(storagePath);

@@ -71,21 +71,24 @@ export function FilePreviewModal() {
         const category = getFileCategory(activeFile.mime_type, activeFile.extension);
         const ext = activeFile.extension.toLowerCase();
 
-        // 1. Instant Zero-Delay Direct Stream for Z: drive / Local Disk media
+        // 1. Instant Zero-Delay Direct Stream for Z: drive / Local Disk media (when running locally)
         if (activeFile.storage_path?.startsWith('zdrive:')) {
           const rel = activeFile.storage_path.slice('zdrive:'.length);
-          const directStreamUrl = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+          const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+          if (isLocal) {
+            const directStreamUrl = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
 
-          if (
-            category === 'video' ||
-            category === 'audio' ||
-            category === 'image' ||
-            ext === 'pdf' ||
-            activeFile.mime_type.includes('pdf')
-          ) {
-            setBlobUrl(directStreamUrl);
-            setIsLoading(false);
-            return;
+            if (
+              category === 'video' ||
+              category === 'audio' ||
+              category === 'image' ||
+              ext === 'pdf' ||
+              activeFile.mime_type.includes('pdf')
+            ) {
+              setBlobUrl(directStreamUrl);
+              setIsLoading(false);
+              return;
+            }
           }
         }
 

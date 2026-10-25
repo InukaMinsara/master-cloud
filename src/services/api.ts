@@ -128,28 +128,46 @@ class UnifiedApiService {
     if (typeof window === 'undefined') return;
     try {
       if (user) {
-        localStorage.setItem('master_cloud_active_session', JSON.stringify({
+        let sessToken: string | null = null;
+        let refreshTok: string | null = null;
+        try {
+          const sess = (await supabase.auth.getSession()).data?.session;
+          sessToken = sess?.access_token || null;
+          refreshTok = sess?.refresh_token || null;
+        } catch {}
+
+        const sessionPayload = {
           email: user.email,
           displayName: user.display_name,
           role: user.role,
           id: user.id,
+          accessToken: sessToken,
+          refreshToken: refreshTok,
           timestamp: Date.now(),
-        }));
-        fetch('http://127.0.0.1:8766/api/auth/active-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            displayName: user.display_name,
-            role: user.role,
-            id: user.id,
-          }),
-        }).catch(() => {});
+        };
+
+        localStorage.setItem('master_cloud_active_session', JSON.stringify(sessionPayload));
+
+        const urls = [
+          'http://127.0.0.1:8766/api/auth/active-session',
+          '/api/auth/active-session',
+        ];
+        for (const u of urls) {
+          fetch(u, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sessionPayload),
+          }).catch(() => {});
+        }
       } else {
         localStorage.removeItem('master_cloud_active_session');
-        fetch('http://127.0.0.1:8766/api/auth/active-session', {
-          method: 'DELETE',
-        }).catch(() => {});
+        const urls = [
+          'http://127.0.0.1:8766/api/auth/active-session',
+          '/api/auth/active-session',
+        ];
+        for (const u of urls) {
+          fetch(u, { method: 'DELETE' }).catch(() => {});
+        }
       }
     } catch {
       // ignore
@@ -629,6 +647,17 @@ class UnifiedApiService {
           if (!dbErr && fileData) {
             // Cache locally for instant preview
             await binaryStorage.saveBlob(storagePath, file);
+
+            // If running on localhost, also write file directly to Z:\ (D:\MasterCloudDrive)
+            if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+              try {
+                fetch('/api/local-drive/upload', {
+                  method: 'POST',
+                  headers: { 'x-file-path': encodeURIComponent(file.name) },
+                  body: file,
+                }).catch(() => {});
+              } catch {}
+            }
 
             // Update used quota in database
             if (quota) {

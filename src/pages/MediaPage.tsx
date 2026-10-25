@@ -21,10 +21,17 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
     let localBlobUrl: string | null = null;
 
     const loadThumb = async () => {
-      // 1. Z-drive direct stream
-      if (file.storage_path?.startsWith('zdrive:')) {
+      // 1. Z-drive direct stream (only on localhost)
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (file.storage_path?.startsWith('zdrive:') && isLocal) {
         const rel = file.storage_path.slice('zdrive:'.length);
         if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+        api.getFileBlob(file.storage_path).then((blob) => {
+          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+            localBlobUrl = URL.createObjectURL(blob);
+            setThumbUrl(localBlobUrl);
+          }
+        }).catch(() => {});
         return;
       }
 
@@ -40,7 +47,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
       // 3. Cached or dynamically generated Blob
       try {
         const blob = await api.getFileBlob(file.storage_path);
-        if (blob && active) {
+        if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
           localBlobUrl = URL.createObjectURL(blob);
           setThumbUrl(localBlobUrl);
         }

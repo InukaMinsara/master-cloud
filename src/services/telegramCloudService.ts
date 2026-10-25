@@ -40,8 +40,8 @@ export class TelegramCloudService {
    * Central platform keys ensure users never configure infrastructure keys.
    */
   static getCredentials(): { botToken: string; chatId: string } {
-    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
-    const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID || '';
+    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '***REMOVED***';
+    const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID || '***REMOVED***';
     return { botToken: botToken.trim(), chatId: chatId.trim() };
   }
 
@@ -308,9 +308,7 @@ export class TelegramCloudService {
         if (c.provider === 'telegram' && c.filePath) {
           const { botToken } = this.getCredentials();
           if (botToken) {
-            return typeof window !== 'undefined'
-              ? `/api/telegram-proxy/file/bot${botToken}/${c.filePath}`
-              : `https://api.telegram.org/file/bot${botToken}/${c.filePath}`;
+            return `https://api.telegram.org/file/bot${botToken}/${c.filePath}`;
           }
         }
       }
