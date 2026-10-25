@@ -1259,6 +1259,200 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Local Drive Upload API: Direct Site -> Z:\ Disk & Manifest ──────
+  if (method === 'POST' && (relPath === 'api/local-drive/upload' || relPath === '__local_drive_upload')) {
+    const encodedRel = req.headers['x-file-path'] || '';
+    const rawRel = decodeURIComponent(String(encodedRel)).replace(/^[/\\]+/, '').replace(/\\/g, '/');
+    if (!rawRel || rawRel.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid path' }));
+      return;
+    }
+
+    const targetPath = path.join(STORAGE_DIR, rawRel);
+    const targetDir = path.dirname(targetPath);
+    try { fs.mkdirSync(targetDir, { recursive: true }); } catch {}
+
+    const writeStream = fs.createWriteStream(targetPath);
+    req.pipe(writeStream);
+
+    writeStream.on('finish', () => {
+      lastWriteActivityMs = Date.now();
+      const st = fs.statSync(targetPath);
+      const nowIso = st.mtime.toISOString();
+      ensureManifestParentFolders(rawRel);
+      setManifestFile(rawRel, {
+        relPath: rawRel,
+        name: path.basename(rawRel),
+        size: st.size,
+        mtime: nowIso,
+        birthtime: (st.birthtime || st.mtime).toISOString(),
+        cloudUrls: [],
+      });
+      saveManifestDebounced();
+      notifyRcloneRefresh();
+      const out = JSON.stringify({ ok: true, relPath: rawRel, size: st.size });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+      res.end(out);
+    });
+
+    writeStream.on('error', (err) => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    });
+    return;
+  }
+
+  // ── Local Drive Read API: Stream Z:\ media bytes for browser preview & download ───
+  if ((method === 'GET' || method === 'HEAD') && (relPath === 'api/local-drive/read' || relPath === '__local_drive_read')) {
+    const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const searchParams = new URLSearchParams(rawQuery);
+    const targetRel = (searchParams.get('path') || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+    if (!targetRel || targetRel.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid path parameter' }));
+      return;
+    }
+
+    // 1. Check in RAM buffer
+    const ramBuf = inMemoryStagingBuffers.get(targetRel);
+    if (ramBuf) {
+      const mime = mimeType(targetRel);
+      res.writeHead(200, {
+        'Content-Type': mime,
+        'Content-Length': ramBuf.length,
+        'Cache-Control': 'public, max-age=3600',
+        'Accept-Ranges': 'bytes',
+      });
+      if (method === 'HEAD') { res.end(); return; }
+      res.end(ramBuf);
+      return;
+    }
+
+    // 2. Check on disk (STORAGE_DIR)
+    const localPath = path.join(STORAGE_DIR, targetRel);
+    if (fs.existsSync(localPath)) {
+      const st = fs.statSync(localPath);
+      if (!st.isDirectory()) {
+        const mime = mimeType(targetRel);
+        const range = req.headers.range;
+        if (range) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : st.size - 1;
+          const chunkSize = end - start + 1;
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${st.size}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': mime,
+            'Cache-Control': 'public, max-age=3600',
+          });
+          if (method === 'HEAD') { res.end(); return; }
+          fs.createReadStream(localPath, { start, end }).pipe(res);
+          return;
+        }
+        res.writeHead(200, {
+          'Content-Type': mime,
+          'Content-Length': st.size,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=3600',
+        });
+        if (method === 'HEAD') { res.end(); return; }
+        fs.createReadStream(localPath).pipe(res);
+        return;
+      }
+    }
+
+    // 3. Check manifest cloudUrls
+    const fileEntry = manifest.files[targetRel] || manifest.files[fileCaseMap.get(targetRel.toLowerCase())];
+    if (fileEntry && fileEntry.cloudUrls && fileEntry.cloudUrls.length > 0) {
+      const firstUrl = fileEntry.cloudUrls[0];
+      if (firstUrl && firstUrl.startsWith('http')) {
+        res.writeHead(302, { Location: firstUrl });
+        res.end();
+        return;
+      }
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: 'File not found on drive' }));
+    return;
+  }
+
+  // ── Local Drive FS Operations API (Rename, Delete, Mkdir) ───────────────
+  if (method === 'POST' && (relPath === 'api/local-drive/fs-op' || relPath === '__local_drive_fs_op')) {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        const { op, relPath: opRel, newRelPath, name } = body;
+        if (op === 'delete' && opRel) {
+          deleteManifestFile(opRel);
+          deleteManifestFolder(opRel);
+          const localPath = path.join(STORAGE_DIR, opRel);
+          try { fs.rmSync(localPath, { recursive: true, force: true }); } catch {}
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (op === 'mkdir' && opRel) {
+          const folderRel = opRel.replace(/^[/\\]+/, '').replace(/\\/g, '/');
+          ensureManifestParentFolders(folderRel);
+          setManifestFolder(folderRel, {
+            relPath: folderRel,
+            name: name || path.basename(folderRel),
+            mtime: new Date().toISOString(),
+            birthtime: new Date().toISOString(),
+          });
+          const localDir = path.join(STORAGE_DIR, folderRel);
+          try { fs.mkdirSync(localDir, { recursive: true }); } catch {}
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (op === 'rename' && opRel && newRelPath) {
+          const oldEntry = manifest.files[opRel];
+          if (oldEntry) {
+            deleteManifestFile(opRel);
+            oldEntry.relPath = newRelPath;
+            oldEntry.name = path.basename(newRelPath);
+            setManifestFile(newRelPath, oldEntry);
+          }
+          const oldFolder = manifest.folders[opRel];
+          if (oldFolder) {
+            deleteManifestFolder(opRel);
+            oldFolder.relPath = newRelPath;
+            oldFolder.name = path.basename(newRelPath);
+            setManifestFolder(newRelPath, oldFolder);
+          }
+          const oldLocal = path.join(STORAGE_DIR, opRel);
+          const newLocal = path.join(STORAGE_DIR, newRelPath);
+          try {
+            fs.mkdirSync(path.dirname(newLocal), { recursive: true });
+            fs.renameSync(oldLocal, newLocal);
+          } catch {}
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Unknown op' }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
   // POST /__instant_ingest: O(1) 0.001-second Instant Folder/File Move (1,000,000+ files in < 1 second!)
   if (method === 'POST' && relPath === '__instant_ingest') {
     const chunks = [];
@@ -1580,7 +1774,12 @@ const server = http.createServer((req, res) => {
         if (buf.length > 0) {
           inMemoryStagingBuffers.set(relPath, buf);
           inMemoryStagingBytes += buf.length;
-          // Only spill to disk if RAM buffer exceeds 450 MB; otherwise offload directly from RAM to Online Cloud!
+          // Persist bytes to STORAGE_DIR staging so file is never lost on restart
+          try {
+            const diskTarget = path.join(STORAGE_DIR, relPath);
+            fs.mkdirSync(path.dirname(diskTarget), { recursive: true });
+            fs.writeFileSync(diskTarget, buf);
+          } catch {}
           if (inMemoryStagingBytes > 450 * 1024 * 1024) {
             diskFlushQueue.push(relPath);
             pumpDiskFlushQueue();
@@ -1879,7 +2078,7 @@ function registerStartupPersistence() {
 
   const vbsContent = [
     'Set WshShell = CreateObject("WScript.Shell")',
-    `WshShell.Run """${nodeExe}"" """ & "${__filename}"" --port=${PORT} --drive=${DRIVE_LETTER} --user=${USER_EMAIL}", 0, False`,
+    `WshShell.Run """${nodeExe}"" ""${__filename}"" --port=${PORT} --drive=${DRIVE_LETTER} --user=${USER_EMAIL}", 0, False`,
   ].join('\r\n') + '\r\n';
   try {
     fs.writeFileSync(vbsPath, vbsContent, 'utf8');
@@ -1910,6 +2109,100 @@ function registerStartupPersistence() {
   } catch {}
 }
 
+// ── Supabase Bidirectional Cloud Sync Bridge ──────────────────────────────────
+let supabaseSyncActive = false;
+let supabaseSyncClient = null;
+
+async function getSupabaseSyncClient() {
+  if (supabaseSyncClient) return supabaseSyncClient;
+  try {
+    const envPath = path.join(PROJECT_ROOT, '.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const sbUrl = content.match(/VITE_SUPABASE_URL=([^\r\n]+)/)?.[1]?.trim();
+      const sbKey = content.match(/VITE_SUPABASE_ANON_KEY=([^\r\n]+)/)?.[1]?.trim();
+      if (sbUrl && sbKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        supabaseSyncClient = createClient(sbUrl, sbKey, { auth: { persistSession: false } });
+      }
+    }
+  } catch (err) {
+    // Supabase module might not be available or network offline
+  }
+  return supabaseSyncClient;
+}
+
+async function runSupabaseSyncLoop() {
+  if (supabaseSyncActive) return;
+  supabaseSyncActive = true;
+
+  try {
+    const sb = await getSupabaseSyncClient();
+    if (sb) {
+      const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
+      let userToken = null;
+      let userId = null;
+      if (fs.existsSync(sessionFile)) {
+        try {
+          const s = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+          if (s && s.accessToken) userToken = s.accessToken;
+          if (s && s.id) userId = s.id;
+        } catch {}
+      }
+
+      if (userToken) {
+        await sb.auth.setSession({ access_token: userToken, refresh_token: '' }).catch(() => {});
+
+        // 1. Pull remote files uploaded from Netlify site into Z:
+        const { data: remoteFiles, error: rErr } = await sb
+          .from('files')
+          .select('*')
+          .is('deleted_at', null)
+          .limit(100);
+
+        if (!rErr && Array.isArray(remoteFiles)) {
+          let updatedManifest = false;
+          for (const rf of remoteFiles) {
+            const rel = rf.name;
+            if (!manifest.files[rel] && !manifest.files[fileCaseMap.get(rel.toLowerCase())]) {
+              let directUrl = null;
+              if (rf.storage_path?.startsWith('tgcloud:')) {
+                try {
+                  const desc = JSON.parse(rf.storage_path.slice('tgcloud:'.length));
+                  if (desc.chunks?.[0]?.provider === 'catbox') {
+                    directUrl = desc.chunks[0].url;
+                  }
+                } catch {}
+              } else if (rf.storage_path?.startsWith('http')) {
+                directUrl = rf.storage_path;
+              }
+
+              setManifestFile(rel, {
+                relPath: rel,
+                name: rf.name,
+                size: rf.size_bytes || 0,
+                mtime: rf.created_at || new Date().toISOString(),
+                birthtime: rf.created_at || new Date().toISOString(),
+                cloudUrls: directUrl ? [directUrl] : [],
+              });
+              updatedManifest = true;
+            }
+          }
+          if (updatedManifest) {
+            saveManifestDebounced();
+            notifyRcloneRefresh();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // network or auth error
+  } finally {
+    supabaseSyncActive = false;
+    setTimeout(runSupabaseSyncLoop, 10000);
+  }
+}
+
 function startListening() {
   server.listen(PORT, '127.0.0.1', () => {
     console.log('─'.repeat(65));
@@ -1925,32 +2218,100 @@ function startListening() {
     // Start background Online Cloud Offloader
     setTimeout(runCloudOffloaderLoop, 1500);
 
-    // Start OAuth Bounce listener on port 3000 in case Supabase sends redirects to localhost:3000
+    // Start background Supabase bidirectional sync
+    setTimeout(runSupabaseSyncLoop, 2000);
+
+    // Start Web Application server on port 3000 (Production React App + Direct API Proxy)
     try {
-      const bouncer = http.createServer((bReq, bRes) => {
-        bRes.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        bRes.end(`<!DOCTYPE html>
-<html>
-<head><title>Connecting to Master Cloud...</title></head>
-<body style="font-family:system-ui,sans-serif;background:#090d16;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-  <div style="text-align:center;padding:24px;border:1px solid rgba(255,255,255,0.1);border-radius:20px;background:rgba(15,23,42,0.8);max-width:400px;">
-    <h2 style="margin:0 0 8px 0;font-size:18px;">Connecting to Master Cloud...</h2>
-    <p style="margin:0;color:#94a3b8;font-size:13px;">Forwarding authenticated session to your workspace...</p>
-  </div>
-  <script>
-    const hash = window.location.hash || '';
-    const search = window.location.search || '';
-    const target = 'https://mastercloud09.netlify.app/drive' + hash + (search ? (hash ? '&' + search.slice(1) : search) : '');
-    window.location.replace(target);
-  </script>
-</body>
-</html>`);
+      const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
+      const webAppServer = http.createServer((wReq, wRes) => {
+        const parsedUrl = new URL(wReq.url, `http://${wReq.headers.host || 'localhost:3000'}`);
+        const pathname = decodeURIComponent(parsedUrl.pathname);
+
+        // 1. Route /api/* and /__* directly to WebDAV/API server
+        if (pathname.startsWith('/api/') || pathname.startsWith('/__')) {
+          server.emit('request', wReq, wRes);
+          return;
+        }
+
+        // 2. Serve static production assets from dist/
+        if (fs.existsSync(DIST_DIR)) {
+          let filePath = path.join(DIST_DIR, pathname.replace(/^\/+/, ''));
+          if (!filePath.startsWith(DIST_DIR)) {
+            wRes.writeHead(403);
+            wRes.end();
+            return;
+          }
+
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+            filePath = path.join(filePath, 'index.html');
+          }
+
+          if (fs.existsSync(filePath) && !fs.statSync(filePath).isDirectory()) {
+            const ext = path.extname(filePath).toLowerCase();
+            const mimeMap = {
+              '.html': 'text/html; charset=utf-8',
+              '.js': 'application/javascript; charset=utf-8',
+              '.css': 'text/css; charset=utf-8',
+              '.json': 'application/json; charset=utf-8',
+              '.png': 'image/png',
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.svg': 'image/svg+xml',
+              '.ico': 'image/x-icon',
+              '.webp': 'image/webp',
+              '.woff': 'font/woff',
+              '.woff2': 'font/woff2',
+              '.ttf': 'font/ttf',
+            };
+            const contentType = mimeMap[ext] || 'application/octet-stream';
+            wRes.writeHead(200, {
+              'Content-Type': contentType,
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
+            });
+            fs.createReadStream(filePath).pipe(wRes);
+            return;
+          }
+
+          // 3. Single Page Application (SPA) Fallback for client-side routing & OAuth tokens
+          const indexPath = path.join(DIST_DIR, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            wRes.writeHead(200, {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'no-cache',
+            });
+            fs.createReadStream(indexPath).pipe(wRes);
+            return;
+          }
+        }
+
+        // 4. Fallback redirect to Netlify
+        wRes.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        wRes.end(`<!DOCTYPE html><html><head><title>Master Cloud</title></head><body><script>window.location.replace('https://mastercloud09.netlify.app' + window.location.pathname + window.location.hash + window.location.search);</script></body></html>`);
       });
-      bouncer.listen(3000, '127.0.0.1', () => {
-        console.log('   Auth Bouncer:   http://localhost:3000 -> https://mastercloud09.netlify.app/drive');
+
+      // Kill any stray process holding port 3000
+      try {
+        const r3000 = spawnSync('cmd', ['/c', 'netstat -ano | findstr :3000'], { encoding: 'utf8' });
+        const pids = [...new Set(
+          (r3000.stdout || '').split('\n')
+            .map(l => l.trim().split(/\s+/).pop())
+            .filter(p => p && /^\d+$/.test(p) && p !== '0' && Number(p) !== process.pid)
+        )];
+        for (const pid of pids) spawnSync('taskkill', ['/PID', pid, '/F'], { stdio: 'ignore' });
+      } catch {}
+
+      webAppServer.listen(3000, '0.0.0.0', () => {
+        console.log('   Web Application: http://localhost:3000 (Local Drive Direct Access + Fast Preview)');
       });
-      bouncer.on('error', () => {});
-    } catch {}
+      webAppServer.on('error', (err) => {
+        console.warn('⚠️ Web app server on port 3000 warning:', err.message);
+      });
+    } catch (e) {
+      console.warn('⚠️ Web app server setup warning:', e.message);
+    }
   });
 }
 

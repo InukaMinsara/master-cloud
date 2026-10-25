@@ -12,7 +12,7 @@ const scriptPath = path.join(__dirname, 'webdav-server.mjs');
 
 const vbsContent = [
   'Set WshShell = CreateObject("WScript.Shell")',
-  `WshShell.Run """${nodeExe}"" """ & "${scriptPath}"" --port=8766 --drive=Z --user=immaster2024@gmail.com", 0, False`,
+  `WshShell.Run """${nodeExe}"" ""${scriptPath}"" --port=8766 --drive=Z --user=immaster2024@gmail.com", 0, False`,
 ].join('\r\n') + '\r\n';
 
 fs.writeFileSync(vbsPath, vbsContent, 'utf8');

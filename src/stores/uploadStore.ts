@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UploadProgressItem } from '@/types/file';
 import { api } from '@/services/api';
+import { useFileStore } from '@/stores/fileStore';
 
 interface UploadState {
   queue: UploadProgressItem[];
@@ -98,6 +99,11 @@ export const useUploadStore = create<UploadState>((set, get) => ({
             : q
         ),
       }));
+
+      // Immediately refresh the file listing in Drive and Media library
+      try {
+        useFileStore.getState().fetchItems().catch(() => {});
+      } catch {}
     } catch (err: any) {
       console.error('Upload failed for item:', itemId, err);
       set(state => ({

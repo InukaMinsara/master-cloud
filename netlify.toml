@@ -7,6 +7,12 @@
 
 # SPA fallback — all routes served by index.html
 [[redirects]]
+  from = "/api/telegram-proxy/*"
+  to = "https://api.telegram.org/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
