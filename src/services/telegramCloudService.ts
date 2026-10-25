@@ -240,15 +240,24 @@ export class TelegramCloudService {
       }
 
       if (filePath && botToken) {
-        const urlsToTry = [
-          typeof window !== 'undefined' ? `/api/telegram-proxy/file/bot${botToken}/${filePath}` : null,
-          `https://api.telegram.org/file/bot${botToken}/${filePath}`,
-        ].filter(Boolean) as string[];
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const urlsToTry: string[] = [];
+
+        // Direct Telegram API works with CORS in all modern browsers
+        urlsToTry.push(`https://api.telegram.org/file/bot${botToken}/${filePath}`);
+
+        // On local dev server, local proxy is also available
+        if (isLocal) {
+          urlsToTry.push(`/api/telegram-proxy/file/bot${botToken}/${filePath}`);
+        }
 
         for (const url of urlsToTry) {
           try {
             const res = await fetch(url);
-            if (res.ok) return await res.blob();
+            // Ensure response is valid binary, not Netlify SPA fallback HTML!
+            if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+              return await res.blob();
+            }
           } catch (err) {
             console.warn(`[Telegram Cloud] Fetch chunk attempt failed on ${url}:`, err);
           }
@@ -259,7 +268,9 @@ export class TelegramCloudService {
       // Catbox / Multi-CDN
       if (!chunk.url) throw new Error(`Missing Multi-CDN URL for chunk ${chunk.index}`);
       const res = await fetch(chunk.url);
-      if (!res.ok) throw new Error(`Multi-CDN fetch error ${res.status}`);
+      if (!res.ok || res.headers.get('content-type')?.includes('text/html')) {
+        throw new Error(`Multi-CDN fetch error ${res.status}`);
+      }
       return await res.blob();
     }
   }
@@ -304,9 +315,14 @@ export class TelegramCloudService {
       const desc: CloudFileDescriptor = JSON.parse(storagePath.slice('tgcloud:'.length));
       if (desc.chunks.length === 1) {
         const c = desc.chunks[0];
-        // Only return direct CDN streaming for providers with inline headers (Catbox).
-        // Telegram sends 'content-disposition: attachment' which breaks HTML5 video/audio playback and previews in browsers.
+        // 1. Providers with inline headers (Catbox) work for all media types
         if (c.provider === 'catbox' && c.url) return c.url;
+
+        // 2. Direct Telegram file URL can be used for images (<img> tags are unaffected by Content-Disposition: attachment)
+        if (c.provider === 'telegram' && c.filePath && (desc.mimeType?.startsWith('image/') || desc.name?.match(/\.(png|jpe?g|gif|webp|svg)$/i))) {
+          const { botToken } = this.getCredentials();
+          return `https://api.telegram.org/file/bot${botToken}/${c.filePath}`;
+        }
       }
     } catch {}
     return null;

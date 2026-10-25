@@ -2161,15 +2161,38 @@ async function runSupabaseSyncLoop() {
   try {
     const sb = await getSupabaseSyncClient();
     if (sb) {
-      const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
+      // Check all candidate session locations for active user session
+      const candidateFiles = [
+        path.join(USER_DATA_DIR, 'active-web-session.json'),
+        path.join(os.homedir(), '.mastercloud', 'active-web-session.json'),
+        path.join(USER_DATA_DIR, 'user-session.json'),
+        path.join(os.homedir(), '.mastercloud', 'user-session.json'),
+      ];
+
       let userToken = null;
       let userId = null;
-      if (fs.existsSync(sessionFile)) {
-        try {
-          const s = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
-          if (s && s.accessToken) userToken = s.accessToken;
-          if (s && s.id) userId = s.id;
-        } catch {}
+      let activeEmail = null;
+
+      for (const cf of candidateFiles) {
+        if (fs.existsSync(cf)) {
+          try {
+            const s = JSON.parse(fs.readFileSync(cf, 'utf8'));
+            if (s && s.email) {
+              activeEmail = s.email.trim().toLowerCase();
+              if (s.accessToken) userToken = s.accessToken;
+              if (s.id) userId = s.id;
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      // If active email differs from current server context, switch immediately!
+      if (activeEmail && activeEmail !== USER_EMAIL) {
+        console.log(`🔄 Sync detected user change to: ${activeEmail}`);
+        configureUserContext(activeEmail);
+        loadManifest();
+        mapDrive(true);
       }
 
       if (userToken) {
@@ -2184,19 +2207,36 @@ async function runSupabaseSyncLoop() {
 
         if (!rErr && Array.isArray(remoteFiles)) {
           let updatedManifest = false;
+          const botToken = '8992063083:AAHRMMHQeBJMddsacx8F3KOEnr7_GIi6M6k';
+
           for (const rf of remoteFiles) {
             const rel = rf.name;
             if (!manifest.files[rel] && !manifest.files[fileCaseMap.get(rel.toLowerCase())]) {
-              let directUrl = null;
+              const urls = [];
+
               if (rf.storage_path?.startsWith('tgcloud:')) {
                 try {
                   const desc = JSON.parse(rf.storage_path.slice('tgcloud:'.length));
-                  if (desc.chunks?.[0]?.provider === 'catbox') {
-                    directUrl = desc.chunks[0].url;
+                  for (const c of desc.chunks || []) {
+                    if (c.provider === 'catbox' && c.url) {
+                      urls.push(c.url);
+                    } else if (c.provider === 'telegram') {
+                      let fp = c.filePath;
+                      if (!fp && c.fileId) {
+                        try {
+                          const r = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${c.fileId}`);
+                          const j = await r.json();
+                          fp = j.result?.file_path;
+                        } catch {}
+                      }
+                      if (fp) {
+                        urls.push(`https://api.telegram.org/file/bot${botToken}/${fp}`);
+                      }
+                    }
                   }
                 } catch {}
               } else if (rf.storage_path?.startsWith('http')) {
-                directUrl = rf.storage_path;
+                urls.push(rf.storage_path);
               }
 
               setManifestFile(rel, {
@@ -2205,14 +2245,43 @@ async function runSupabaseSyncLoop() {
                 size: rf.size_bytes || 0,
                 mtime: rf.created_at || new Date().toISOString(),
                 birthtime: rf.created_at || new Date().toISOString(),
-                cloudUrls: directUrl ? [directUrl] : [],
+                cloudUrls: urls,
               });
               updatedManifest = true;
             }
           }
+
           if (updatedManifest) {
             saveManifestDebounced();
             notifyRcloneRefresh();
+          }
+
+          // 2. Push local files created on Z: drive up to Supabase
+          if (userId) {
+            const remoteNameSet = new Set(remoteFiles.map((rf) => (rf.name || '').toLowerCase()));
+            for (const [relPath, fileInfo] of Object.entries(manifest.files || {})) {
+              if (
+                fileInfo &&
+                fileInfo.name &&
+                !remoteNameSet.has(fileInfo.name.toLowerCase()) &&
+                fileInfo.cloudUrls &&
+                fileInfo.cloudUrls.length > 0 &&
+                fileInfo.cloudUrls[0] !== 'data:empty'
+              ) {
+                const ext = path.extname(fileInfo.name).replace(/^\./, '').toLowerCase();
+                const storagePath = fileInfo.cloudUrls[0];
+                const fileMime = mimeType(fileInfo.name);
+
+                await sb.from('files').insert({
+                  owner_id: userId,
+                  name: fileInfo.name,
+                  storage_path: storagePath,
+                  mime_type: fileMime,
+                  size_bytes: fileInfo.size || 0,
+                  extension: ext,
+                }).catch(() => {});
+              }
+            }
           }
         }
       }
@@ -2221,7 +2290,7 @@ async function runSupabaseSyncLoop() {
     // network or auth error
   } finally {
     supabaseSyncActive = false;
-    setTimeout(runSupabaseSyncLoop, 10000);
+    setTimeout(runSupabaseSyncLoop, 8000);
   }
 }
 

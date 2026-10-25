@@ -13,6 +13,7 @@ import {
   Cloud,
   CheckCircle2,
   AlertCircle,
+  HardDrive,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -143,6 +144,18 @@ export function AppHeader() {
           <span>Cleanup</span>
         </Button>
 
+        {/* Connect Z: Virtual Drive Button */}
+        {user?.email && (
+          <a
+            href={`mastercloud://auth?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(user.id)}`}
+            title="Connect local Windows Explorer Z: Drive directly to this account"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold transition-all shadow-sm shadow-blue-500/5 cursor-pointer"
+          >
+            <HardDrive className="h-3.5 w-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Connect Z: Drive</span>
+          </a>
+        )}
+
         {/* Notifications Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -233,6 +246,11 @@ export function AppHeader() {
             <DropdownMenuItem onClick={() => navigate('/storage')}>
               <Cloud className="h-4 w-4 mr-2" /> Storage Quota (10 TB)
             </DropdownMenuItem>
+            {user?.email && (
+              <DropdownMenuItem onClick={() => { window.location.href = `mastercloud://auth?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(user.id)}`; }}>
+                <HardDrive className="h-4 w-4 mr-2 text-blue-400" /> Connect Local Z: Drive
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} destructive>
               <LogOut className="h-4 w-4 mr-2" /> Sign Out

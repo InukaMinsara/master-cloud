@@ -747,6 +747,19 @@ class UnifiedApiService {
   }
 
   async getFileBlob(storagePath: string): Promise<Blob | null> {
+    if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
+      try {
+        const res = await fetch(storagePath);
+        if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+          const blob = await res.blob();
+          await binaryStorage.saveBlob(storagePath, blob);
+          return blob;
+        }
+      } catch (err) {
+        console.warn('Direct HTTP fetch error:', err);
+      }
+    }
+
     if (storagePath.startsWith('zdrive:')) {
       return localDb.getFileBlob(storagePath);
     }
