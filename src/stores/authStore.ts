@@ -27,93 +27,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      // 1. Google OAuth 2.0 Implicit Flow callback check (#access_token=...)
-      if (typeof window !== 'undefined' && (window.location.hash || window.location.search)) {
-        const hash = window.location.hash.startsWith('#')
-          ? window.location.hash.substring(1)
-          : window.location.hash;
-        const search = window.location.search.startsWith('?')
-          ? window.location.search.substring(1)
-          : window.location.search;
-        const params = new URLSearchParams(hash || search);
-        const accessToken = params.get('access_token');
-        const code = params.get('code');
-
-        if (code) {
-          const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-          const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
-          if (clientId && clientSecret) {
-            try {
-              const redirectUri = `${window.location.origin}/drive`;
-
-              const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                  grant_type: 'authorization_code',
-                  code,
-                  client_id: clientId,
-                  client_secret: clientSecret,
-                  redirect_uri: redirectUri,
-                }).toString(),
-              });
-
-              if (tokenRes.ok) {
-                const tokens = await tokenRes.json();
-                if (tokens.access_token) {
-                  const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { Authorization: `Bearer ${tokens.access_token}` },
-                  });
-                  if (googleRes.ok) {
-                    const googleProfile = await googleRes.json();
-                    if (googleProfile && googleProfile.email) {
-                      const res = await api.loginWithGoogle(
-                        googleProfile.email,
-                        googleProfile.name || googleProfile.given_name || undefined,
-                        googleProfile.picture || undefined
-                      );
-                      if (res.user) {
-                        set({ user: res.user, isAuthenticated: true, isLoading: false });
-                        window.history.replaceState(null, '', window.location.pathname);
-                        return;
-                      }
-                    }
-                  }
-                }
-              }
-            } catch (codeErr) {
-              console.warn('[Google OAuth Code Callback] Exchange error:', codeErr);
-            }
-          }
-        }
-
-        if (accessToken) {
-          try {
-            const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
-            if (googleRes.ok) {
-              const googleProfile = await googleRes.json();
-              if (googleProfile && googleProfile.email) {
-                const res = await api.loginWithGoogle(
-                  googleProfile.email,
-                  googleProfile.name || googleProfile.given_name || undefined,
-                  googleProfile.picture || undefined
-                );
-                if (res.user) {
-                  set({ user: res.user, isAuthenticated: true, isLoading: false });
-                  window.history.replaceState(null, '', window.location.pathname);
-                  return;
-                }
-              }
-            }
-          } catch (gErr) {
-            console.warn('[Google OAuth Callback] Error fetching user profile:', gErr);
-          }
-        }
-      }
-
-      // Immediate session check
+      // Immediate session check via Supabase
       if (isSupabaseConfigured) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -145,7 +59,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               created_at: session.user.created_at,
               updated_at: new Date().toISOString(),
             };
+            localDb.setCurrentUser(immediateUser);
+            api.syncActiveWebSession(immediateUser);
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+            if (typeof window !== 'undefined' && window.location.hash) {
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+            return;
           }
         } catch {
           // Fallback to api.getCurrentUser()
@@ -191,6 +111,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               created_at: session.user.created_at,
               updated_at: new Date().toISOString(),
             };
+            localDb.setCurrentUser(immediateUser);
+            api.syncActiveWebSession(immediateUser);
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
 
             const currentUser = await api.getCurrentUser();
