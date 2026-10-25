@@ -25,7 +25,11 @@ export function RegisterPage() {
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
 
-  const handleGoogleSignUpClick = async () => {
+  const handleGoogleSignUpClick = () => {
+    setShowGooglePromptModal(true);
+  };
+
+  const handleOfficialGoogleOAuthRedirect = async () => {
     setIsLoading(true);
     try {
       const res = await loginWithOAuth('google');
@@ -431,6 +435,15 @@ export function RegisterPage() {
                   className="rounded-xl text-xs h-9 px-5"
                 >
                   Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleOfficialGoogleOAuthRedirect}
+                  className="rounded-xl text-xs h-9 px-3 text-muted-foreground hover:text-foreground"
+                  title="Redirect to accounts.google.com"
+                >
+                  Browser OAuth Redirect
                 </Button>
               </div>
             </div>
