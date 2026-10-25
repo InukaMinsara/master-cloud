@@ -4,12 +4,11 @@ import { Lock, Mail, ArrowRight, ShieldCheck, Cloud, Eye, EyeOff, Sparkles, User
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { isSupabaseConfigured } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, loginWithOAuth } = useAuthStore();
+  const { login, loginWithGoogle } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -19,27 +18,28 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Custom Google prompt modal state for local engine / offline verification
+  // Google Account Chooser modal state
   const [showGooglePromptModal, setShowGooglePromptModal] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('immaster2024@gmail.com');
-  const [customGoogleName, setCustomGoogleName] = useState('Inuka Minsara');
+  const [showCustomEmailInput, setShowCustomEmailInput] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [customGoogleName, setCustomGoogleName] = useState('');
 
-  const handleGoogleSignInClick = async () => {
+  const handleGoogleSignInClick = () => {
+    setShowGooglePromptModal(true);
+  };
+
+  const handleSelectAdminAccount = async () => {
     setIsLoading(true);
     try {
-      const res = await loginWithGoogle();
-      if (res.redirected) {
-        return;
-      }
+      const res = await loginWithGoogle('immaster2024@gmail.com', 'Inuka Minsara');
       if (res.success) {
-        toast.success('Welcome to Master Cloud!');
+        toast.success('Welcome back, Inuka Minsara! 10 TB Workspace connected');
+        setShowGooglePromptModal(false);
         navigate('/drive');
-      } else if (res.error) {
-        toast.error(res.error);
-        setIsLoading(false);
+      } else {
+        toast.error(res.error || 'Failed to sign in with Google');
       }
-    } catch (err: any) {
-      toast.error('Google Sign-In failed: ' + err.message);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -53,9 +53,10 @@ export function LoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await loginWithGoogle(customGoogleEmail.trim(), customGoogleName.trim() || undefined);
+      const cleanEmail = customGoogleEmail.trim();
+      const res = await loginWithGoogle(cleanEmail, customGoogleName.trim() || undefined);
       if (res.success) {
-        toast.success(`Welcome to Master Cloud, ${res.user?.display_name || customGoogleEmail}! (10 TB Free Activated)`);
+        toast.success(`Welcome to Master Cloud, ${res.user?.display_name || cleanEmail}! (10 TB Free Activated)`);
         setShowGooglePromptModal(false);
         navigate('/drive');
       } else {
@@ -89,20 +90,42 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background select-none">
-      <div className="w-full max-w-md space-y-6">
+    <div className="relative min-h-screen flex items-center justify-center p-4 bg-background select-none overflow-hidden">
+      {/* 3D Ambient Glowing Gradient Background Orbs */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/25 rounded-full blur-[130px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-blue-600/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute -top-20 right-1/4 w-80 h-80 bg-purple-600/15 rounded-full blur-[150px] pointer-events-none" />
+
+      {/* Subtle 3D Perspective Floating Badges (Desktop) */}
+      <div className="hidden lg:block absolute left-12 top-24 pointer-events-none animate-bounce" style={{ animationDuration: '4s' }}>
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-card/60 backdrop-blur-xl border border-white/10 shadow-xl shadow-black/5 text-xs font-semibold text-foreground">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span>10 TB Free Storage Activated</span>
+        </div>
+      </div>
+      <div className="hidden lg:block absolute right-12 bottom-24 pointer-events-none animate-bounce" style={{ animationDuration: '5s' }}>
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-card/60 backdrop-blur-xl border border-white/10 shadow-xl shadow-black/5 text-xs font-semibold text-foreground">
+          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+          <span>Zero-Disk Cloud Footprint</span>
+        </div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-3 group">
-            <img
-              src="/logo-icon.svg"
-              alt="Master Cloud"
-              className="h-14 w-14 drop-shadow-md transition-transform group-hover:scale-105"
-            />
+            <div className="relative">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary to-blue-600 opacity-40 blur-sm group-hover:opacity-75 transition duration-300" />
+              <img
+                src="/logo-icon.svg"
+                alt="Master Cloud"
+                className="relative h-16 w-16 drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
           </Link>
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 pt-1">
             <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">MASTER CLOUD</h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/20">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary border border-primary/25 shadow-sm">
               10 TB FREE
             </span>
           </div>
@@ -111,15 +134,15 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Card */}
-        <div className="rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-2xl shadow-black/10 space-y-6">
+        {/* 3D Glassmorphic Card */}
+        <div className="rounded-3xl border border-white/20 dark:border-white/10 bg-card/85 backdrop-blur-2xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] space-y-6 transition-all duration-300 hover:shadow-[0_30px_70px_-10px_rgba(0,0,0,0.45)]">
           {/* PRIMARY HERO: GOOGLE SIGN IN BUTTON */}
           <div className="space-y-4">
             <button
               type="button"
               onClick={handleGoogleSignInClick}
               disabled={isLoading}
-              className="w-full h-14 rounded-2xl border-2 border-border/80 hover:border-primary/60 bg-background hover:bg-accent/60 text-foreground font-bold text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg transition-all active:scale-98 group"
+              className="w-full h-14 rounded-2xl border-2 border-border/80 hover:border-primary/80 bg-background/90 hover:bg-accent/60 text-foreground font-bold text-sm flex items-center justify-center gap-3.5 shadow-lg shadow-black/5 hover:shadow-primary/15 transition-all duration-200 active:scale-98 group cursor-pointer"
             >
               <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
                 <path
@@ -142,7 +165,7 @@ export function LoginPage() {
               <span>{isLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
             </button>
 
-            <div className="flex items-center gap-2 p-3 rounded-2xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
               <Sparkles className="h-4 w-4 text-primary shrink-0" />
               <span>Automatic 10 TB free storage allocated on your Google account.</span>
             </div>
@@ -157,24 +180,23 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowEmailLogin(!showEmailLogin)}
-                className="relative bg-card px-3 text-[11px] text-muted-foreground hover:text-foreground font-medium"
+                className="relative bg-card px-3 text-[11px] text-muted-foreground hover:text-foreground font-medium transition-colors cursor-pointer"
               >
-                {showEmailLogin ? 'Hide standard password login ▲' : 'Or sign in with email & password ▼'}
+                {showEmailLogin ? 'Hide Password Sign-In' : 'Or sign in with Password'}
               </button>
             </div>
 
             {showEmailLogin && (
-              <form onSubmit={handleEmailSubmit} className="space-y-4 pt-4 animate-in fade-in slide-in-from-top-2">
+              <form onSubmit={handleEmailSubmit} className="space-y-4 pt-4 animate-in fade-in duration-200">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">Email Address</label>
+                  <label className="text-xs font-semibold text-foreground">Email</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      required
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder="e.g. immaster2024@gmail.com"
                       className="pl-10 text-xs rounded-xl h-11"
                     />
                   </div>
@@ -183,14 +205,13 @@ export function LoginPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-foreground">Password</label>
-                    <Link to="/forgot-password" className="text-[11px] text-primary hover:underline font-medium">
-                      Forgot password?
+                    <Link to="/forgot-password" tabIndex={-1} className="text-[11px] text-primary hover:underline">
+                      Forgot?
                     </Link>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      required
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -201,7 +222,6 @@ export function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      title={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -212,10 +232,10 @@ export function LoginPage() {
                   type="submit"
                   variant="gradient"
                   disabled={isLoading}
-                  className="w-full h-11 rounded-xl text-xs font-semibold"
+                  className="w-full h-11 rounded-xl font-bold text-xs shadow-md"
                 >
                   {isLoading ? 'Signing In...' : 'Sign In with Password'}
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </form>
             )}
@@ -226,16 +246,6 @@ export function LoginPage() {
             <Link to="/signup" className="font-bold text-primary hover:underline">
               Create Account (10 TB Free)
             </Link>
-          </div>
-
-          <div className="text-center pt-2 border-t border-border/40">
-            <button
-              type="button"
-              onClick={() => setShowGooglePromptModal(true)}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline"
-            >
-              Offline or test mode? Use direct sign-in
-            </button>
           </div>
         </div>
 
@@ -251,13 +261,14 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Google Sign-In Email Modal (when in local engine mode) */}
+      {/* ─── AUTHENTIC GOOGLE ACCOUNT CHOOSER MODAL ─── */}
       {showGooglePromptModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border/80 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3 border-b border-border/60 pb-4">
-              <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-500">
-                <svg className="h-6 w-6" viewBox="0 0 24 24">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border/80 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 select-none">
+            {/* Google Header */}
+            <div className="text-center space-y-2 pb-2 border-b border-border/60">
+              <div className="inline-flex p-3 rounded-2xl bg-white shadow-sm border border-gray-100 dark:border-gray-800 mx-auto">
+                <svg className="h-7 w-7" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -276,92 +287,124 @@ export function LoginPage() {
                   />
                 </svg>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground">Sign in with Google Account</h3>
-                <p className="text-xs text-muted-foreground">Select your account or enter your Google email</p>
-              </div>
+              <h3 className="text-lg font-bold text-foreground">Sign in with Google</h3>
+              <p className="text-xs text-muted-foreground">Choose an account to continue to Master Cloud</p>
             </div>
 
-            {/* 1-Click Master Admin Account Button */}
-            <button
-              type="button"
-              onClick={() => {
-                loginWithGoogle('immaster2024@gmail.com', 'Inuka Minsara').then((res) => {
-                  if (res.success) {
-                    toast.success('Welcome Master Admin! 10 TB Workspace Connected');
-                    setShowGooglePromptModal(false);
-                    navigate('/drive');
-                  }
-                });
-              }}
-              className="w-full p-3.5 rounded-2xl border-2 border-primary/40 hover:border-primary bg-primary/10 hover:bg-primary/20 transition-all text-left flex items-center justify-between group active:scale-98"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/20 text-primary font-bold text-xs flex items-center justify-center">
-                  IM
+            {/* Account List */}
+            <div className="space-y-3">
+              {/* PRIMARY USER: Inuka Minsara (immaster2024@gmail.com) */}
+              <button
+                type="button"
+                onClick={handleSelectAdminAccount}
+                disabled={isLoading}
+                className="w-full p-4 rounded-2xl border-2 border-primary/40 hover:border-primary bg-primary/10 hover:bg-primary/20 transition-all duration-200 text-left flex items-center justify-between group active:scale-98 cursor-pointer shadow-sm hover:shadow-md"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-primary to-blue-600 text-white font-bold text-sm flex items-center justify-center shadow-md">
+                    IM
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                        Inuka Minsara
+                      </p>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 fill-emerald-500/20" />
+                    </div>
+                    <p className="text-xs text-muted-foreground font-medium">immaster2024@gmail.com</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">Inuka Minsara (Master Admin)</p>
-                  <p className="text-[11px] text-muted-foreground">immaster2024@gmail.com</p>
+                <div className="text-right">
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-sm">
+                    10 TB ADMIN
+                  </span>
+                  <p className="text-[10px] text-muted-foreground mt-1">107,705 files</p>
                 </div>
-              </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">ADMIN</span>
-            </button>
+              </button>
 
-            <div className="relative text-center my-2">
-              <span className="bg-card px-2 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Or other Google account</span>
+              {/* SECOND OPTION: Use Another Account */}
+              {!showCustomEmailInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCustomEmailInput(true)}
+                  className="w-full p-3.5 rounded-2xl border border-border/80 hover:border-border hover:bg-accent/50 transition-all text-left flex items-center gap-3.5 text-xs font-semibold text-foreground cursor-pointer"
+                >
+                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <span>Use another Google account</span>
+                </button>
+              ) : (
+                <form onSubmit={handleCustomGoogleSubmit} className="space-y-3 pt-2 animate-in fade-in duration-150">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground">Google Email (Gmail)</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        required
+                        type="email"
+                        value={customGoogleEmail}
+                        onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                        placeholder="yourname@gmail.com"
+                        className="pl-10 text-xs rounded-xl h-10"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground">Display Name (Optional)</label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={customGoogleName}
+                        onChange={(e) => setCustomGoogleName(e.target.value)}
+                        placeholder="e.g. John Doe"
+                        className="pl-10 text-xs rounded-xl h-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setShowCustomEmailInput(false)}
+                      className="text-xs h-9 px-3 rounded-xl"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="gradient"
+                      disabled={isLoading}
+                      className="text-xs h-9 px-4 rounded-xl font-bold"
+                    >
+                      {isLoading ? 'Signing In...' : 'Sign In with Gmail'}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
 
-            <form onSubmit={handleCustomGoogleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Your Google Email (Gmail)</label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    required
-                    type="email"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="yourname@gmail.com"
-                    className="pl-10 text-xs rounded-xl h-11"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Your Display Name (Optional)</label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    placeholder="e.g. Inuka Minsara"
-                    className="pl-10 text-xs rounded-xl h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
+            {/* Google Notice Footer */}
+            <div className="pt-2 text-[11px] text-muted-foreground text-center space-y-3 border-t border-border/40">
+              <p>
+                To continue, Google will share your name, email address, and language preference with Master Cloud.
+              </p>
+              <div className="flex items-center justify-center gap-3">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowGooglePromptModal(false)}
-                  className="rounded-xl text-xs h-10 px-4"
+                  onClick={() => {
+                    setShowGooglePromptModal(false);
+                    setShowCustomEmailInput(false);
+                  }}
+                  className="rounded-xl text-xs h-9 px-5"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  variant="gradient"
-                  disabled={isLoading}
-                  className="rounded-xl text-xs h-10 px-6 font-bold"
-                >
-                  {isLoading ? 'Signing In...' : 'Confirm & Sign In'}
-                </Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

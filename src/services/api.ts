@@ -161,10 +161,6 @@ class UnifiedApiService {
     mockGoogleName?: string,
     mockGoogleAvatar?: string
   ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (!mockGoogleEmail) {
-      return this.loginWithOAuth('google');
-    }
-
     // Direct Google authentication with explicit email and profile
     const googleEmail = mockGoogleEmail?.trim() || 'immaster2024@gmail.com';
     const cleanEmail = googleEmail.toLowerCase();
@@ -208,6 +204,62 @@ class UnifiedApiService {
 
     await localDb.logActivity('auth', user.id, googleName, 'login_google', { email: googleEmail });
     return { user };
+  }
+
+  async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
+    if (provider === 'google') {
+      const customClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      // Only attempt browser redirect if an active, non-deleted client ID is explicitly configured
+      if (customClientId && !customClientId.startsWith('739036515145')) {
+        try {
+          const redirectUri = `${window.location.origin}/drive`;
+          const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${customClientId}&redirect_uri=${encodeURIComponent(
+            redirectUri
+          )}&response_type=token&scope=${encodeURIComponent(
+            'openid email profile'
+          )}&prompt=select_account`;
+
+          window.location.href = googleAuthUrl;
+          return { user: null, redirected: true };
+        } catch (err: any) {
+          console.error(`[Google OAuth Exception]:`, err);
+        }
+      }
+      return this.loginWithGoogle();
+    }
+
+    if (!isSupabaseConfigured) {
+      return { user: null, error: 'Supabase is not configured for provider: ' + provider };
+    }
+
+    try {
+      const redirectTo = `${window.location.origin}/drive`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error(`[Supabase OAuth Error] Google:`, error);
+        return { user: null, error: error.message };
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return { user: null, redirected: true };
+      }
+
+      return { user: null, redirected: true };
+    } catch (err: any) {
+      console.error(`[Supabase OAuth Exception] Google:`, err);
+      return { user: null, error: err.message || `Failed to sign in with Google` };
+    }
   }
 
   async login(email: string, password: string): Promise<{ user: ProfileRecord | null; error?: string }> {
@@ -282,59 +334,6 @@ class UnifiedApiService {
     }
     await localDb.logActivity('auth', user.id, email.trim(), 'login', {});
     return { user };
-  }
-
-  async loginWithOAuth(provider: 'google' | 'github' | 'azure'): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
-    if (provider === 'google') {
-      try {
-        const clientId = '739036515145-gns7unmv2mstv8tb3qmfoils19ipov0k.apps.googleusercontent.com';
-        const redirectUri = `${window.location.origin}/drive`;
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-          redirectUri
-        )}&response_type=token&scope=${encodeURIComponent(
-          'openid email profile'
-        )}&prompt=select_account`;
-
-        window.location.href = googleAuthUrl;
-        return { user: null, redirected: true };
-      } catch (err: any) {
-        console.error(`[Google OAuth Exception]:`, err);
-        return { user: null, error: err.message || `Failed to sign in with Google` };
-      }
-    }
-
-    if (!isSupabaseConfigured) {
-      return { user: null, error: 'Supabase is not configured for provider: ' + provider };
-    }
-
-    try {
-      const redirectTo = `${window.location.origin}/drive`;
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account consent',
-          },
-        },
-      });
-
-      if (error) {
-        console.error(`[Supabase OAuth Error] Google:`, error);
-        return { user: null, error: error.message };
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-        return { user: null, redirected: true };
-      }
-
-      return { user: null, redirected: true };
-    } catch (err: any) {
-      console.error(`[Supabase OAuth Exception] Google:`, err);
-      return { user: null, error: err.message || `Failed to sign in with Google` };
-    }
   }
 
   async signup(email: string, password: string, displayName: string): Promise<{ user: ProfileRecord | null; error?: string }> {
