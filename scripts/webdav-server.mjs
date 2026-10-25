@@ -1869,6 +1869,33 @@ function startListening() {
     setInterval(pruneVfsCache, 60000);
     // Start background Online Cloud Offloader
     setTimeout(runCloudOffloaderLoop, 1500);
+
+    // Start OAuth Bounce listener on port 3000 in case Supabase sends redirects to localhost:3000
+    try {
+      const bouncer = http.createServer((bReq, bRes) => {
+        bRes.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        bRes.end(`<!DOCTYPE html>
+<html>
+<head><title>Connecting to Master Cloud...</title></head>
+<body style="font-family:system-ui,sans-serif;background:#090d16;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+  <div style="text-align:center;padding:24px;border:1px solid rgba(255,255,255,0.1);border-radius:20px;background:rgba(15,23,42,0.8);max-width:400px;">
+    <h2 style="margin:0 0 8px 0;font-size:18px;">Connecting to Master Cloud...</h2>
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Forwarding authenticated session to your workspace...</p>
+  </div>
+  <script>
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const target = 'https://mastercloud09.netlify.app/drive' + hash + (search ? (hash ? '&' + search.slice(1) : search) : '');
+    window.location.replace(target);
+  </script>
+</body>
+</html>`);
+      });
+      bouncer.listen(3000, '127.0.0.1', () => {
+        console.log('   Auth Bouncer:   http://localhost:3000 -> https://mastercloud09.netlify.app/drive');
+      });
+      bouncer.on('error', () => {});
+    } catch {}
   });
 }
 
