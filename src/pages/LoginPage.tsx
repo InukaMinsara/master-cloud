@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle } = useAuthStore();
+  const { login, loginWithGoogle, loginWithOAuth } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -24,8 +24,23 @@ export function LoginPage() {
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
 
-  const handleGoogleSignInClick = () => {
-    setShowGooglePromptModal(true);
+  const handleGoogleSignInClick = async () => {
+    setIsLoading(true);
+    try {
+      const res = await loginWithOAuth('google');
+      if (res.redirected) {
+        return;
+      }
+      if (res.success) {
+        navigate('/drive');
+      } else if (res.error) {
+        toast.error(res.error);
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      toast.error('Google Sign-In failed: ' + err.message);
+      setIsLoading(false);
+    }
   };
 
   const handleSelectAdminAccount = async () => {
@@ -246,6 +261,16 @@ export function LoginPage() {
             <Link to="/signup" className="font-bold text-primary hover:underline">
               Create Account (10 TB Free)
             </Link>
+          </div>
+
+          <div className="text-center pt-2 border-t border-border/40">
+            <button
+              type="button"
+              onClick={() => setShowGooglePromptModal(true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline cursor-pointer"
+            >
+              Having redirect issues? Quick Google Sign-In
+            </button>
           </div>
         </div>
 

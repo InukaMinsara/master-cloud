@@ -37,6 +37,55 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           : window.location.search;
         const params = new URLSearchParams(hash || search);
         const accessToken = params.get('access_token');
+        const code = params.get('code');
+
+        if (code) {
+          const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+          const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
+          if (clientId && clientSecret) {
+            try {
+              const redirectUri = `${window.location.origin}/drive`;
+
+              const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                  grant_type: 'authorization_code',
+                  code,
+                  client_id: clientId,
+                  client_secret: clientSecret,
+                  redirect_uri: redirectUri,
+                }).toString(),
+              });
+
+              if (tokenRes.ok) {
+                const tokens = await tokenRes.json();
+                if (tokens.access_token) {
+                  const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokens.access_token}` },
+                  });
+                  if (googleRes.ok) {
+                    const googleProfile = await googleRes.json();
+                    if (googleProfile && googleProfile.email) {
+                      const res = await api.loginWithGoogle(
+                        googleProfile.email,
+                        googleProfile.name || googleProfile.given_name || undefined,
+                        googleProfile.picture || undefined
+                      );
+                      if (res.user) {
+                        set({ user: res.user, isAuthenticated: true, isLoading: false });
+                        window.history.replaceState(null, '', window.location.pathname);
+                        return;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (codeErr) {
+              console.warn('[Google OAuth Code Callback] Exchange error:', codeErr);
+            }
+          }
+        }
 
         if (accessToken) {
           try {

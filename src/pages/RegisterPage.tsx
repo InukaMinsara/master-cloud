@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { signup, loginWithGoogle } = useAuthStore();
+  const { signup, loginWithGoogle, loginWithOAuth } = useAuthStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailSignup, setShowEmailSignup] = useState(false);
@@ -25,8 +25,21 @@ export function RegisterPage() {
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [customGoogleName, setCustomGoogleName] = useState('');
 
-  const handleGoogleSignUpClick = () => {
-    setShowGooglePromptModal(true);
+  const handleGoogleSignUpClick = async () => {
+    setIsLoading(true);
+    try {
+      const res = await loginWithOAuth('google');
+      if (res.redirected) return;
+      if (res.success) {
+        navigate('/drive');
+      } else if (res.error) {
+        toast.error(res.error);
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      toast.error('Google Sign-Up failed: ' + err.message);
+      setIsLoading(false);
+    }
   };
 
   const handleSelectAdminAccount = async () => {
@@ -252,6 +265,16 @@ export function RegisterPage() {
             <Link to="/login" className="font-bold text-primary hover:underline">
               Sign In
             </Link>
+          </div>
+
+          <div className="text-center pt-2 border-t border-border/40">
+            <button
+              type="button"
+              onClick={() => setShowGooglePromptModal(true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline cursor-pointer"
+            >
+              Having redirect issues? Quick Google Sign-Up
+            </button>
           </div>
         </div>
 
