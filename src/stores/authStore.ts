@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ProfileRecord } from '@/types/database';
 import { api } from '@/services/api';
+import { localDb } from '@/services/localDb';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 interface AuthState {

@@ -1045,6 +1045,28 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Telegram Cloud Proxy API ──────────────────────────────────────────
+  if (req.url.startsWith('/api/telegram-proxy/') || req.url.startsWith('/telegram-proxy/')) {
+    const targetPath = req.url.replace(/^\/(?:api\/)?telegram-proxy/, '');
+    const proxyUrl = `https://api.telegram.org${targetPath}`;
+    const proxyReq = https.request(proxyUrl, {
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: 'api.telegram.org',
+      },
+    }, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    });
+    proxyReq.on('error', (e) => {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Telegram proxy error: ' + e.message }));
+    });
+    req.pipe(proxyReq);
+    return;
+  }
+
   // ── Session Bridge API: Auto-Connect Web <-> Desktop ───────────
   if (relPath === 'api/auth/active-session' || relPath === '__active_session') {
     const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
