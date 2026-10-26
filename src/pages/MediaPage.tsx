@@ -14,18 +14,22 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
   const { openPreview } = usePreviewStore();
   const { openContextMenu } = useContextMenuStore();
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
+  const [thumbError, setThumbError] = React.useState(false);
   const cat = getFileCategory(file.mime_type, file.extension);
 
   React.useEffect(() => {
     let active = true;
     let localBlobUrl: string | null = null;
+    setThumbError(false);
 
     const loadThumb = async () => {
       // 1. Z-drive direct stream (only on localhost)
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (file.storage_path?.startsWith('zdrive:') && isLocal) {
-        const rel = file.storage_path.slice('zdrive:'.length);
-        if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+      if (file.storage_path?.startsWith('zdrive:')) {
+        if (isLocal) {
+          const rel = file.storage_path.slice('zdrive:'.length);
+          if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+        }
         api.getFileBlob(file.storage_path).then((blob) => {
           if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
@@ -40,8 +44,14 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
         const direct = TelegramCloudService.getDirectStreamUrl(file.storage_path);
         if (direct) {
           if (active) setThumbUrl(direct);
-          return;
         }
+        api.getFileBlob(file.storage_path).then((blob) => {
+          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+            localBlobUrl = URL.createObjectURL(blob);
+            setThumbUrl(localBlobUrl);
+          }
+        }).catch(() => {});
+        return;
       }
 
       // 3. Cached or dynamically generated Blob
@@ -81,11 +91,12 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
     >
       <div className="aspect-square bg-secondary/40 flex items-center justify-center relative overflow-hidden">
         {cat === 'image' ? (
-          thumbUrl ? (
+          thumbUrl && !thumbError ? (
             <img
               src={thumbUrl}
               alt={file.name}
               loading="lazy"
+              onError={() => setThumbError(true)}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           ) : (

@@ -27,6 +27,8 @@ import { NotificationRecord } from '@/types/database';
 import { formatDateRelative } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -62,6 +64,34 @@ export function AppHeader() {
   const handleSignOut = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleConnectZDrive = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!user?.email) return;
+    const cleanEmail = user.email.trim().toLowerCase();
+    let token = user.id;
+    let accessToken = '';
+    try {
+      const sess = (await supabase.auth.getSession()).data.session;
+      if (sess?.access_token) accessToken = sess.access_token;
+    } catch {}
+
+    // 1. Direct background user switch for local daemon
+    try {
+      fetch('http://127.0.0.1:8766/api/user/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: cleanEmail, accessToken, id: token }),
+      }).catch(() => {});
+    } catch {}
+
+    // 2. Deep link protocol activation
+    const deepLink = `mastercloud://auth?email=${encodeURIComponent(cleanEmail)}&token=${encodeURIComponent(token)}&accessToken=${encodeURIComponent(accessToken)}`;
+    window.location.href = deepLink;
+    toast.success('Connecting local Z: Drive...', {
+      description: `MASTER CLOUD (Z:) connected to ${cleanEmail}`,
+    });
   };
 
   const categories = [
@@ -146,14 +176,14 @@ export function AppHeader() {
 
         {/* Connect Z: Virtual Drive Button */}
         {user?.email && (
-          <a
-            href={`mastercloud://auth?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(user.id)}`}
+          <button
+            onClick={handleConnectZDrive}
             title="Connect local Windows Explorer Z: Drive directly to this account"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold transition-all shadow-sm shadow-blue-500/5 cursor-pointer"
           >
             <HardDrive className="h-3.5 w-3.5 text-blue-400" />
             <span className="hidden sm:inline">Connect Z: Drive</span>
-          </a>
+          </button>
         )}
 
         {/* Notifications Dropdown */}
@@ -247,7 +277,7 @@ export function AppHeader() {
               <Cloud className="h-4 w-4 mr-2" /> Storage Quota (10 TB)
             </DropdownMenuItem>
             {user?.email && (
-              <DropdownMenuItem onClick={() => { window.location.href = `mastercloud://auth?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(user.id)}`; }}>
+              <DropdownMenuItem onClick={handleConnectZDrive}>
                 <HardDrive className="h-4 w-4 mr-2 text-blue-400" /> Connect Local Z: Drive
               </DropdownMenuItem>
             )}

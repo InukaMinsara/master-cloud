@@ -50,11 +50,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               identityMeta.picture ||
               null;
 
-            const role = (realEmail.toLowerCase() === 'immaster2024@gmail.com' || realEmail.toLowerCase().startsWith('admin@')) ? 'admin' : 'user';
+            const role = (realEmail.toLowerCase().startsWith('admin@') || realEmail.toLowerCase() === 'immaster2024@gmail.com') ? 'admin' : 'user';
             const immediateUser: ProfileRecord = {
               id: session.user.id,
               email: realEmail,
-              display_name: realEmail.toLowerCase() === 'immaster2024@gmail.com' ? 'Inuka Minsara' : realName,
+              display_name: realName,
               avatar_url: realAvatar,
               role,
               created_at: session.user.created_at,
@@ -121,11 +121,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               identityMeta.picture ||
               null;
 
-            const role = (realEmail.toLowerCase() === 'immaster2024@gmail.com' || realEmail.toLowerCase().startsWith('admin@')) ? 'admin' : 'user';
+            const role = (realEmail.toLowerCase().startsWith('admin@') || realEmail.toLowerCase() === 'immaster2024@gmail.com') ? 'admin' : 'user';
             const immediateUser: ProfileRecord = {
               id: session.user.id,
               email: realEmail,
-              display_name: realEmail.toLowerCase() === 'immaster2024@gmail.com' ? 'Inuka Minsara' : realName,
+              display_name: realName,
               avatar_url: realAvatar,
               role,
               created_at: session.user.created_at,

@@ -42,16 +42,20 @@ export function FileCard({ file, allFiles }: FileCardProps) {
   const isSelected = selectedItemIds.includes(file.id);
   const category = getFileCategory(file.mime_type, file.extension);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
+  const [thumbError, setThumbError] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
     let localBlobUrl: string | null = null;
+    setThumbError(false);
 
     if (category === 'image') {
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (file.storage_path?.startsWith('zdrive:') && isLocal) {
-        const rel = file.storage_path.slice('zdrive:'.length);
-        if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+      if (file.storage_path?.startsWith('zdrive:')) {
+        if (isLocal) {
+          const rel = file.storage_path.slice('zdrive:'.length);
+          if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+        }
         api.getFileBlob(file.storage_path).then((blob) => {
           if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
@@ -62,14 +66,15 @@ export function FileCard({ file, allFiles }: FileCardProps) {
         const direct = TelegramCloudService.getDirectStreamUrl(file.storage_path);
         if (direct && active) {
           setThumbUrl(direct);
-        } else {
-          api.getFileBlob(file.storage_path).then((blob) => {
-            if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
-              localBlobUrl = URL.createObjectURL(blob);
-              setThumbUrl(localBlobUrl);
-            }
-          }).catch(() => {});
         }
+        api.getFileBlob(file.storage_path).then((blob) => {
+          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+            localBlobUrl = URL.createObjectURL(blob);
+            setThumbUrl(localBlobUrl);
+          }
+        }).catch(() => {});
+      } else if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        if (active) setThumbUrl(file.storage_path);
       } else {
         api.getFileBlob(file.storage_path).then((blob) => {
           if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
@@ -78,6 +83,8 @@ export function FileCard({ file, allFiles }: FileCardProps) {
           }
         }).catch(() => {});
       }
+    } else {
+      setThumbUrl(null);
     }
 
     return () => {
@@ -228,8 +235,14 @@ export function FileCard({ file, allFiles }: FileCardProps) {
         className="flex flex-col items-center justify-center py-4 cursor-pointer"
       >
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/60 group-hover:scale-105 transition-transform duration-200 overflow-hidden shadow-sm">
-          {category === 'image' && thumbUrl ? (
-            <img src={thumbUrl} alt={file.name} loading="lazy" className="w-full h-full object-cover rounded-2xl" />
+          {category === 'image' && thumbUrl && !thumbError ? (
+            <img
+              src={thumbUrl}
+              alt={file.name}
+              loading="lazy"
+              onError={() => setThumbError(true)}
+              className="w-full h-full object-cover rounded-2xl"
+            />
           ) : (
             getCategoryIcon()
           )}

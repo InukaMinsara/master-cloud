@@ -41,6 +41,20 @@ export function FilePreviewModal() {
   const [rotation, setRotation] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isCopied, setIsCopied] = React.useState(false);
+  const [mediaError, setMediaError] = React.useState(false);
+
+  const handleMediaError = async () => {
+    if (activeFile && !mediaError) {
+      setMediaError(true);
+      try {
+        const blob = await api.getFileBlob(activeFile.storage_path);
+        if (blob) {
+          const freshUrl = URL.createObjectURL(blob);
+          setBlobUrl(freshUrl);
+        }
+      } catch {}
+    }
+  };
 
   // Keyboard navigation: Escape, Left Arrow, Right Arrow
   React.useEffect(() => {
@@ -65,6 +79,7 @@ export function FilePreviewModal() {
     setZoom(1);
     setRotation(0);
     setIsLoading(true);
+    setMediaError(false);
 
     const loadData = async () => {
       try {
@@ -297,6 +312,7 @@ export function FilePreviewModal() {
               <img
                 src={blobUrl}
                 alt={activeFile.name}
+                onError={handleMediaError}
                 className="max-h-[80vh] max-w-[85vw] object-contain rounded-xl shadow-2xl transition-transform duration-200"
                 style={{
                   transform: `scale(${zoom}) rotate(${rotation}deg)`,
@@ -326,6 +342,7 @@ export function FilePreviewModal() {
                 controls
                 autoPlay
                 playsInline
+                onError={handleMediaError}
                 className="h-full w-full object-contain"
               />
             ) : (
@@ -354,7 +371,7 @@ export function FilePreviewModal() {
               <p className="text-xs text-white/60">{formatBytes(activeFile.size_bytes)} • High-Fidelity Audio</p>
             </div>
             {blobUrl ? (
-              <audio src={blobUrl} controls autoPlay className="w-full rounded-xl" />
+              <audio src={blobUrl} controls autoPlay onError={handleMediaError} className="w-full rounded-xl" />
             ) : (
               <Button variant="default" onClick={handleDownload} className="rounded-xl text-xs">
                 <Download className="h-3.5 w-3.5 mr-1.5" /> Download Audio
