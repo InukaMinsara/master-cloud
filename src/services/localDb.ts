@@ -495,14 +495,9 @@ class LocalDatabaseService {
     saveTable('files', this.files);
   }
 
-  isItemVisible(ownerId?: string | null, storagePath?: string): boolean {
-    const isMasterAdmin =
-      this.currentUser.email.toLowerCase() === 'immaster2024@gmail.com' ||
-      this.currentUser.role === 'admin';
-    if (isMasterAdmin) return true;
-    if (storagePath && storagePath.startsWith('zdrive:')) return true;
-    if (!ownerId) return true;
-    return ownerId === this.currentUser.id || Boolean(ownerId && ownerId.includes(this.currentUser.email.split('@')[0]));
+  isItemVisible(_ownerId?: string | null, _storagePath?: string): boolean {
+    // Universal access: All workspace files, local Z: drive files, and uploads are accessible to the active user
+    return true;
   }
 
   // --- Auth / Profile ---
@@ -610,7 +605,7 @@ class LocalDatabaseService {
 
       const driveUser = (data.user || '').trim().toLowerCase();
       const currentEmail = (this.currentUser.email || '').trim().toLowerCase();
-      if (driveUser && currentEmail && driveUser !== currentEmail && currentEmail !== 'immaster2024@gmail.com') {
+      if (driveUser && currentEmail && driveUser !== currentEmail) {
         // Drive belongs to another user! Request background user switch
         try {
           fetch('http://127.0.0.1:8766/api/user/switch', {
@@ -1596,9 +1591,7 @@ class LocalDatabaseService {
 
   // --- Storage Analytics & Smart Cleanup ---
   getStorageBreakdown(): StorageBreakdown {
-    const isMasterAdmin =
-      (this.currentUser?.email || '').toLowerCase() === 'immaster2024@gmail.com' ||
-      this.currentUser?.role === 'admin';
+    const isMasterAdmin = true;
 
     const activeFiles = this.files.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id));
     const trashFiles = this.files.filter(f => f.deleted_at !== null && this.isItemVisible(f.owner_id));

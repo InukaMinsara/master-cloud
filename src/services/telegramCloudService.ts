@@ -263,6 +263,26 @@ export class TelegramCloudService {
           }
         }
       }
+
+      // If initial fetch failed or filePath expired, refresh directly via getFile
+      if (chunk.fileId && botToken) {
+        try {
+          const pathRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${chunk.fileId}`);
+          if (pathRes.ok) {
+            const pathData = await pathRes.json();
+            const freshPath = pathData.result?.file_path;
+            if (freshPath) {
+              chunk.filePath = freshPath;
+              const res = await fetch(`https://api.telegram.org/file/bot${botToken}/${freshPath}`);
+              if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+                return await res.blob();
+              }
+            }
+          }
+        } catch (refreshErr) {
+          console.warn(`[Telegram Cloud] Failed to refresh expired file_path for chunk ${chunk.index}:`, refreshErr);
+        }
+      }
       throw new Error(`Failed to fetch chunk ${chunk.index} from Telegram`);
     } else {
       // Catbox / Multi-CDN

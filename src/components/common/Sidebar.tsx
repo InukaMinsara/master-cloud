@@ -8,23 +8,11 @@ import {
   Star,
   Trash2,
   Film,
-  PieChart,
-  Settings,
-  Activity,
-  Laptop,
   Plus,
   FolderPlus,
   Upload,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
-  Sparkles,
-  Bot,
-  ArrowRightLeft,
-  WifiOff,
-  FileText,
-  FileSpreadsheet,
-  Presentation,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
@@ -69,17 +57,6 @@ export function Sidebar() {
     { label: 'Starred', path: '/starred', icon: Star },
     { label: 'Media Library', path: '/media', icon: Film },
     { label: 'Trash', path: '/trash', icon: Trash2 },
-  ];
-
-  const systemItems = [
-    { label: 'Sync Center', path: '/sync', icon: ArrowRightLeft },
-    { label: 'Offline Center', path: '/offline', icon: WifiOff },
-    { label: 'Security Center', path: '/security-center', icon: ShieldCheck },
-    { label: 'System Diagnostics', path: '/diagnostics', icon: Activity },
-    { label: 'Storage Analytics', path: '/storage', icon: PieChart },
-    { label: 'Device Center', path: '/devices', icon: Laptop },
-    { label: 'Admin Console', path: '/admin', icon: ShieldCheck },
-    { label: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (
@@ -186,33 +163,6 @@ export function Sidebar() {
                   )}
                 </div>
               )}
-            </NavLink>
-          ))}
-        </div>
-
-        <div className="my-3 border-t border-border/60" />
-
-        <div className="space-y-0.5">
-          {!sidebarCollapsed && (
-            <span className="px-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Management
-            </span>
-          )}
-          {systemItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-                } ${sidebarCollapsed ? 'justify-center px-0' : ''}`
-              }
-              title={sidebarCollapsed ? item.label : undefined}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {!sidebarCollapsed && <span>{item.label}</span>}
             </NavLink>
           ))}
         </div>

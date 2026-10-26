@@ -1148,6 +1148,22 @@ const server = http.createServer((req, res) => {
           return;
         }
 
+        if (body.accessToken || body.token || body.id) {
+          const sessionFile = path.join(USER_DATA_DIR, 'active-web-session.json');
+          try {
+            let cur = {};
+            if (fs.existsSync(sessionFile)) cur = JSON.parse(fs.readFileSync(sessionFile, 'utf8') || '{}');
+            fs.writeFileSync(sessionFile, JSON.stringify({
+              ...cur,
+              email: targetEmail,
+              accessToken: body.accessToken || cur.accessToken || null,
+              id: body.id || cur.id || null,
+              displayName: targetEmail.split('@')[0],
+              loggedInAt: new Date().toISOString(),
+            }, null, 2), 'utf8');
+          } catch {}
+        }
+
         if (targetEmail !== USER_EMAIL) {
           switchUserContext(targetEmail, targetDrive);
         }
@@ -1283,6 +1299,45 @@ const server = http.createServer((req, res) => {
 
   // ── Local Drive Upload API: Direct Site -> Z:\ Disk & Manifest ──────
   if (method === 'POST' && (relPath === 'api/local-drive/upload' || relPath === '__local_drive_upload')) {
+    const isJson = req.headers['content-type']?.includes('application/json');
+    if (isJson) {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+          const name = (body.name || '').trim();
+          if (!name) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Name is required' }));
+            return;
+          }
+          const parent = (body.parentRelPath || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+          const rawRel = parent ? `${parent}/${name}` : name;
+          ensureManifestParentFolders(rawRel);
+          const now = new Date().toISOString();
+          const cloudUrls = body.cloudUrl ? [body.cloudUrl] : [];
+          setManifestFile(rawRel, {
+            relPath: rawRel,
+            name,
+            size: Number(body.size) || 0,
+            mtime: now,
+            birthtime: now,
+            cloudUrls,
+          });
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          const out = JSON.stringify({ ok: true, relPath: rawRel, registered: true });
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(out) });
+          res.end(out);
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: err.message }));
+        }
+      });
+      return;
+    }
+
     const encodedRel = req.headers['x-file-path'] || '';
     const rawRel = decodeURIComponent(String(encodedRel)).replace(/^[/\\]+/, '').replace(/\\/g, '/');
     if (!rawRel || rawRel.includes('..')) {
@@ -1394,6 +1449,17 @@ const server = http.createServer((req, res) => {
         res.writeHead(302, { Location: firstUrl });
         res.end();
         return;
+      }
+      if (firstUrl && firstUrl.startsWith('tgcloud:')) {
+        try {
+          const desc = JSON.parse(firstUrl.slice('tgcloud:'.length));
+          const c = desc.chunks && desc.chunks.length === 1 ? desc.chunks[0] : null;
+          if (c && c.provider === 'catbox' && c.url) {
+            res.writeHead(302, { Location: c.url });
+            res.end();
+            return;
+          }
+        } catch {}
       }
     }
 

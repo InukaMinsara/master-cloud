@@ -180,13 +180,13 @@ class UnifiedApiService {
     mockGoogleAvatar?: string
   ): Promise<{ user: ProfileRecord | null; redirected?: boolean; error?: string }> {
     // Direct Google authentication with explicit email and profile
-    const googleEmail = mockGoogleEmail?.trim() || 'immaster2024@gmail.com';
+    const googleEmail = mockGoogleEmail?.trim() || 'user@mastercloud.io';
     const cleanEmail = googleEmail.toLowerCase();
-    const isMasterAdmin = cleanEmail === 'immaster2024@gmail.com';
+    const isMasterAdmin = cleanEmail === 'immaster2024@gmail.com' || cleanEmail.startsWith('admin@');
 
     const googleName =
       mockGoogleName?.trim() ||
-      (isMasterAdmin ? 'Inuka Minsara' : googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()));
+      googleEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     const googleAvatar = mockGoogleAvatar || null;
 
     const user: ProfileRecord = {
@@ -194,7 +194,7 @@ class UnifiedApiService {
       email: googleEmail,
       display_name: googleName,
       avatar_url: googleAvatar,
-      role: isMasterAdmin || cleanEmail.startsWith('admin@') ? 'admin' : 'user',
+      role: isMasterAdmin ? 'admin' : 'user',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -493,7 +493,7 @@ class UnifiedApiService {
             email: user.email || '',
             display_name: displayName,
             avatar_url: meta.avatar_url || meta.picture || null,
-            role: user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
+            role: user.email?.toLowerCase().startsWith('admin@') || user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' }).catch(() => {});
 
@@ -641,7 +641,7 @@ class UnifiedApiService {
             email: user.email || '',
             display_name: displayName,
             avatar_url: meta.avatar_url || meta.picture || null,
-            role: user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
+            role: user.email?.toLowerCase().startsWith('admin@') || user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' }).catch(() => {});
 
