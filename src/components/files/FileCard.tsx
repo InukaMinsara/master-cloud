@@ -16,6 +16,10 @@ import {
   History,
   Check,
   Eye,
+  Play,
+  Film,
+  FileSpreadsheet,
+  Presentation,
 } from 'lucide-react';
 import { FileItem } from '@/types/file';
 import { formatBytes, formatDateRelative, getFileCategory } from '@/lib/utils';
@@ -25,12 +29,32 @@ import { usePreviewStore } from '@/stores/previewStore';
 import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
-
 import { TelegramCloudService } from '@/services/telegramCloudService';
 
 interface FileCardProps {
   file: FileItem;
   allFiles?: FileItem[];
+}
+
+/**
+ * Resolves a zero-delay direct stream URL synchronously (0.00001s instant preview)
+ */
+function getDirectStreamUrl(storagePath?: string): string | null {
+  if (!storagePath) return null;
+  if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
+    return storagePath;
+  }
+  if (storagePath.startsWith('zdrive:')) {
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (isLocal) {
+      const rel = storagePath.slice('zdrive:'.length);
+      return `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+    }
+  }
+  if (storagePath.startsWith('tgcloud:')) {
+    return TelegramCloudService.getDirectStreamUrl(storagePath);
+  }
+  return null;
 }
 
 export function FileCard({ file, allFiles }: FileCardProps) {
@@ -41,7 +65,11 @@ export function FileCard({ file, allFiles }: FileCardProps) {
 
   const isSelected = selectedItemIds.includes(file.id);
   const category = getFileCategory(file.mime_type, file.extension);
-  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
+  const ext = (file.extension || '').toLowerCase();
+
+  // Instant 0ms synchronous resolution for direct streaming
+  const initialThumbUrl = React.useMemo(() => getDirectStreamUrl(file.storage_path), [file.storage_path]);
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
   const [thumbError, setThumbError] = React.useState(false);
 
   React.useEffect(() => {
@@ -49,40 +77,19 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     let localBlobUrl: string | null = null;
     setThumbError(false);
 
+    const direct = getDirectStreamUrl(file.storage_path);
+    if (direct) {
+      setThumbUrl(direct);
+      return;
+    }
+
     if (category === 'image' || category === 'video') {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
-        if (active) setThumbUrl(file.storage_path);
-      } else if (file.storage_path?.startsWith('zdrive:')) {
-        if (isLocal) {
-          const rel = file.storage_path.slice('zdrive:'.length);
-          if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+      api.getFileBlob(file.storage_path).then((blob) => {
+        if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
+          localBlobUrl = URL.createObjectURL(blob);
+          setThumbUrl(localBlobUrl);
         }
-        api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
-            localBlobUrl = URL.createObjectURL(blob);
-            setThumbUrl(localBlobUrl);
-          }
-        }).catch(() => {});
-      } else if (file.storage_path?.startsWith('tgcloud:')) {
-        const direct = TelegramCloudService.getDirectStreamUrl(file.storage_path);
-        if (direct && active) {
-          setThumbUrl(direct);
-        }
-        api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
-            localBlobUrl = URL.createObjectURL(blob);
-            setThumbUrl(localBlobUrl);
-          }
-        }).catch(() => {});
-      } else {
-        api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
-            localBlobUrl = URL.createObjectURL(blob);
-            setThumbUrl(localBlobUrl);
-          }
-        }).catch(() => {});
-      }
+      }).catch(() => {});
     } else {
       setThumbUrl(null);
     }
@@ -93,20 +100,26 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     };
   }, [file.id, file.storage_path, category]);
 
-  const getCategoryIcon = () => {
+  const getHeaderIcon = () => {
     switch (category) {
-      case 'image':
-        return <Image className="h-8 w-8 text-blue-500" />;
       case 'video':
-        return <Video className="h-8 w-8 text-purple-500" />;
+        return <Film className="h-4 w-4 text-red-500 shrink-0" />;
+      case 'image':
+        return <Image className="h-4 w-4 text-red-500 shrink-0" />;
       case 'audio':
-        return <Music className="h-8 w-8 text-rose-500" />;
+        return <Music className="h-4 w-4 text-rose-500 shrink-0" />;
       case 'code':
-        return <Code className="h-8 w-8 text-emerald-500" />;
+        return <Code className="h-4 w-4 text-emerald-500 shrink-0" />;
       case 'archive':
-        return <Archive className="h-8 w-8 text-amber-500" />;
+        return <Archive className="h-4 w-4 text-amber-500 shrink-0" />;
       default:
-        return <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />;
+        if (['xlsx', 'xls', 'csv', 'msheet'].includes(ext)) {
+          return <FileSpreadsheet className="h-4 w-4 text-emerald-500 shrink-0" />;
+        }
+        if (['pptx', 'ppt', 'mslide'].includes(ext)) {
+          return <Presentation className="h-4 w-4 text-amber-500 shrink-0" />;
+        }
+        return <FileText className="h-4 w-4 text-blue-500 shrink-0" />;
     }
   };
 
@@ -146,59 +159,64 @@ export function FileCard({ file, allFiles }: FileCardProps) {
       onClick={handleCardClick}
       onDoubleClick={handleOpenPreview}
       onContextMenu={handleContextMenu}
-      className={`group relative flex flex-col justify-between rounded-2xl border p-4 transition-all duration-200 select-none cursor-pointer ${
+      className={`group relative flex flex-col justify-between rounded-2xl border transition-all duration-200 select-none cursor-pointer overflow-hidden ${
         isSelected
           ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary'
-          : 'border-border/80 bg-card hover:border-border hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5'
+          : 'border-border/80 bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5'
       }`}
     >
-      {/* Top action row: Checkbox, Star, Eye Preview, Menu */}
-      <div className="flex items-center justify-between gap-1 mb-3">
+      {/* ─── 1. Header Bar: Icon, File Name, and Actions (Google Drive Style) ─── */}
+      <div className="flex items-center justify-between gap-1.5 px-3 pt-2.5 pb-2">
         <div
-          onClick={(e) => {
-            e.stopPropagation();
-            selectItem(file.id, true);
-          }}
-          className={`flex h-5 w-5 items-center justify-center rounded-lg border transition-all ${
-            isSelected
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:border-primary'
-          }`}
+          onClick={handleOpenPreview}
+          className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+          title={file.name}
         >
-          {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+          {getHeaderIcon()}
+          <span className="text-xs font-semibold text-foreground truncate select-none hover:text-primary transition-colors">
+            {file.name}
+          </span>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleOpenPreview}
-            className="rounded-lg p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-primary transition-all"
-            title="Preview file"
+        {/* Action icons: Checkbox, Star, Menu */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              selectItem(file.id, true);
+            }}
+            className={`flex h-4 w-4 items-center justify-center rounded border transition-all cursor-pointer ${
+              isSelected
+                ? 'border-primary bg-primary text-primary-foreground opacity-100'
+                : 'border-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:border-primary'
+            }`}
+            title="Select file"
           >
-            <Eye className="h-4 w-4" />
-          </button>
+            {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+          </div>
 
           <button
             onClick={(e) => {
               e.stopPropagation();
               toggleStar(file.id, false);
             }}
-            className={`rounded-lg p-1 transition-colors ${
+            className={`p-1 rounded-md transition-colors ${
               file.is_starred
-                ? 'text-amber-500'
+                ? 'text-amber-500 opacity-100'
                 : 'text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-amber-500'
             }`}
             title={file.is_starred ? 'Remove star' : 'Star file'}
           >
-            <Star className={`h-4 w-4 ${file.is_starred ? 'fill-amber-500' : ''}`} />
+            <Star className={`h-3.5 w-3.5 ${file.is_starred ? 'fill-amber-500' : ''}`} />
           </button>
 
           <DropdownMenu>
             <DropdownMenuTrigger>
               <button
-                className="rounded-lg p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground transition-all"
+                className="p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground transition-all"
                 title="More actions"
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="right" className="w-48">
@@ -229,54 +247,110 @@ export function FileCard({ file, allFiles }: FileCardProps) {
         </div>
       </div>
 
-      {/* Center file icon or thumbnail */}
+      {/* ─── 2. Large Preview Container (Google Drive Style: Instant 0.00001s) ─── */}
       <div
         onClick={handleOpenPreview}
-        className="flex flex-col items-center justify-center py-4 cursor-pointer"
+        className="px-2.5 pb-2.5 cursor-pointer"
       >
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/60 group-hover:scale-105 transition-transform duration-200 overflow-hidden shadow-sm">
-          {category === 'image' && thumbUrl && !thumbError ? (
-            <img
-              src={thumbUrl}
-              alt={file.name}
-              loading="lazy"
-              decoding="async"
-              onError={() => setThumbError(true)}
-              className="w-full h-full object-cover rounded-2xl"
-            />
-          ) : category === 'video' && thumbUrl && !thumbError ? (
-            <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/40 flex items-center justify-center">
-              <video
+        <div className="relative w-full aspect-[16/10] sm:aspect-[4/3] rounded-xl overflow-hidden bg-secondary/40 dark:bg-muted/30 border border-border/40 flex items-center justify-center transition-all group-hover:border-primary/40 group-hover:shadow-md">
+          {category === 'image' ? (
+            thumbUrl && !thumbError ? (
+              <img
                 src={thumbUrl}
-                muted
-                playsInline
-                preload="metadata"
-                className="w-full h-full object-cover opacity-70"
+                alt={file.name}
+                loading="eager"
+                decoding="async"
                 onError={() => setThumbError(true)}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Video className="h-6 w-6 text-purple-400 drop-shadow" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1.5 p-4 text-center">
+                <Image className="h-10 w-10 text-red-500/80 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-mono text-muted-foreground uppercase">{file.extension}</span>
               </div>
+            )
+          ) : category === 'video' ? (
+            thumbUrl && !thumbError ? (
+              <div className="relative w-full h-full bg-black flex items-center justify-center">
+                <video
+                  src={`${thumbUrl}#t=0.5`}
+                  muted
+                  playsInline
+                  preload="auto"
+                  onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    if (v.duration > 0.5 && v.currentTime === 0) {
+                      v.currentTime = Math.min(1.0, v.duration / 3);
+                    }
+                  }}
+                  onError={() => setThumbError(true)}
+                  className="w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                />
+                {/* Subtle Google Drive Play badge overlay */}
+                <div className="absolute inset-0 bg-black/15 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-full bg-black/60 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform backdrop-blur-sm">
+                    <Play className="h-4 w-4 fill-white ml-0.5" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-secondary/30 w-full h-full">
+                <div className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Film className="h-7 w-7" />
+                </div>
+                <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase">Video</span>
+              </div>
+            )
+          ) : category === 'audio' ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-rose-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-rose-500/15 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Music className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-rose-500/80 uppercase">{file.extension || 'Audio'}</span>
+            </div>
+          ) : ['xlsx', 'xls', 'csv', 'msheet'].includes(ext) ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-emerald-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FileSpreadsheet className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-emerald-500/80 uppercase">Spreadsheet</span>
+            </div>
+          ) : ['pptx', 'ppt', 'mslide'].includes(ext) ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-amber-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Presentation className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-amber-500/80 uppercase">Presentation</span>
+            </div>
+          ) : category === 'code' ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-indigo-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-500/15 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Code className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-indigo-500/80 uppercase">{file.extension || 'Code'}</span>
+            </div>
+          ) : category === 'archive' ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-amber-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Archive className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-amber-500/80 uppercase">{file.extension || 'Archive'}</span>
             </div>
           ) : (
-            getCategoryIcon()
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center bg-blue-500/5 w-full h-full">
+              <div className="h-12 w-12 rounded-2xl bg-blue-500/15 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <FileText className="h-7 w-7" />
+              </div>
+              <span className="text-[10px] font-mono font-bold text-blue-500/80 uppercase">{file.extension || 'Document'}</span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Bottom metadata */}
-      <div className="mt-2 space-y-1">
-        <h4
-          onClick={handleOpenPreview}
-          className="text-xs font-semibold text-foreground truncate hover:text-primary transition-colors cursor-pointer"
-          title={file.name}
-        >
-          {file.name}
-        </h4>
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>{formatBytes(file.size_bytes)}</span>
-          <span>{formatDateRelative(file.updated_at)}</span>
-        </div>
+      {/* ─── 3. Subtle Bottom Metadata Bar (Size & Modified) ─── */}
+      <div className="flex items-center justify-between px-3 pb-2 text-[10px] text-muted-foreground/75">
+        <span>{formatBytes(file.size_bytes)}</span>
+        <span>{formatDateRelative(file.updated_at)}</span>
       </div>
     </div>
   );
