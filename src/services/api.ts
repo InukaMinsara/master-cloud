@@ -770,6 +770,18 @@ class UnifiedApiService {
   }
 
   async getFileBlob(storagePath: string): Promise<Blob | null> {
+    if (storagePath.startsWith('zdrive:')) {
+      return localDb.getFileBlob(storagePath);
+    }
+
+    if (storagePath.startsWith('seed/')) {
+      return localDb.getFileBlob(storagePath);
+    }
+
+    // Check local binary cache first for instant high-speed preview
+    const cached = await binaryStorage.getBlob(storagePath);
+    if (cached) return cached;
+
     if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
       try {
         const res = await fetch(storagePath);
@@ -782,18 +794,6 @@ class UnifiedApiService {
         console.warn('Direct HTTP fetch error:', err);
       }
     }
-
-    if (storagePath.startsWith('zdrive:')) {
-      return localDb.getFileBlob(storagePath);
-    }
-
-    if (storagePath.startsWith('seed/')) {
-      return localDb.getFileBlob(storagePath);
-    }
-
-    // Check local binary cache first for instant high-speed preview
-    const cached = await binaryStorage.getBlob(storagePath);
-    if (cached) return cached;
 
     if (storagePath.startsWith('tgcloud:')) {
       try {

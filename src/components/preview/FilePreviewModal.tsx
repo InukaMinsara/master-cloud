@@ -86,6 +86,36 @@ export function FilePreviewModal() {
         const category = getFileCategory(activeFile.mime_type, activeFile.extension);
         const ext = activeFile.extension.toLowerCase();
 
+        // 0. Ultra-Fast Zero-Delay Instant Direct Stream for HTTP / HTTPS (Catbox, Cloud URLs)
+        if (activeFile.storage_path?.startsWith('http://') || activeFile.storage_path?.startsWith('https://')) {
+          if (
+            category === 'video' ||
+            category === 'audio' ||
+            category === 'image' ||
+            ext === 'pdf' ||
+            activeFile.mime_type.includes('pdf')
+          ) {
+            setBlobUrl(activeFile.storage_path);
+            setIsLoading(false);
+            return;
+          }
+          if (
+            category === 'code' ||
+            category === 'document' ||
+            ['txt', 'json', 'yaml', 'yml', 'csv', 'md', 'xml'].includes(ext)
+          ) {
+            try {
+              const res = await fetch(activeFile.storage_path);
+              const text = await res.text();
+              setTextContent(text);
+              setIsLoading(false);
+              return;
+            } catch (e) {
+              console.warn('Direct HTTP text fetch failed, falling back:', e);
+            }
+          }
+        }
+
         // 1. Instant Zero-Delay Direct Stream for Z: drive / Local Disk media (when running locally)
         if (activeFile.storage_path?.startsWith('zdrive:')) {
           const rel = activeFile.storage_path.slice('zdrive:'.length);
@@ -312,6 +342,8 @@ export function FilePreviewModal() {
               <img
                 src={blobUrl}
                 alt={activeFile.name}
+                loading="eager"
+                decoding="async"
                 onError={handleMediaError}
                 className="max-h-[80vh] max-w-[85vw] object-contain rounded-xl shadow-2xl transition-transform duration-200"
                 style={{
@@ -342,6 +374,7 @@ export function FilePreviewModal() {
                 controls
                 autoPlay
                 playsInline
+                preload="auto"
                 onError={handleMediaError}
                 className="h-full w-full object-contain"
               />
@@ -371,7 +404,7 @@ export function FilePreviewModal() {
               <p className="text-xs text-white/60">{formatBytes(activeFile.size_bytes)} • High-Fidelity Audio</p>
             </div>
             {blobUrl ? (
-              <audio src={blobUrl} controls autoPlay onError={handleMediaError} className="w-full rounded-xl" />
+              <audio src={blobUrl} controls autoPlay preload="auto" onError={handleMediaError} className="w-full rounded-xl" />
             ) : (
               <Button variant="default" onClick={handleDownload} className="rounded-xl text-xs">
                 <Download className="h-3.5 w-3.5 mr-1.5" /> Download Audio
