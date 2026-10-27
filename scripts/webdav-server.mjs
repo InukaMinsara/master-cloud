@@ -250,7 +250,7 @@ function loadManifest() {
     for (const candidate of seedCandidates) {
       if (!candidate || !fs.existsSync(candidate)) continue;
       try {
-        const raw = fs.readFileSync(candidate, 'utf8');
+        const raw = fs.readFileSync(candidate, 'utf8').replace(/^\uFEFF/, '');
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           const fileCount = Object.keys(parsed.files || {}).length;
@@ -279,7 +279,7 @@ function loadManifest() {
     // NEVER load admin files or inspect seed candidates!
     if (fs.existsSync(MANIFEST_FILE)) {
       try {
-        const raw = fs.readFileSync(MANIFEST_FILE, 'utf8');
+        const raw = fs.readFileSync(MANIFEST_FILE, 'utf8').replace(/^\uFEFF/, '');
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           manifest.files = parsed.files || {};
@@ -2239,7 +2239,7 @@ async function runSupabaseSyncLoop() {
           try {
             const st = fs.statSync(cf);
             if (st.mtimeMs > newestMtime) {
-              const s = JSON.parse(fs.readFileSync(cf, 'utf8'));
+              const s = JSON.parse(fs.readFileSync(cf, 'utf8').replace(/^\uFEFF/, ''));
               if (s && s.email) {
                 newestMtime = st.mtimeMs;
                 activeEmail = s.email.trim().toLowerCase();
