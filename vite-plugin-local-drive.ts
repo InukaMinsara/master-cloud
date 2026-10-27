@@ -317,6 +317,12 @@ function resolveLocalPath(cleanRelPath: string): string | null {
               }
 
               const stream = fs.createReadStream(targetPath, { start, end });
+              stream.on('error', (err) => {
+                if (!res.headersSent) {
+                  res.statusCode = 500;
+                }
+                res.end();
+              });
               stream.pipe(res);
               return;
             }
@@ -333,6 +339,12 @@ function resolveLocalPath(cleanRelPath: string): string | null {
             }
 
             const stream = fs.createReadStream(targetPath);
+            stream.on('error', (err) => {
+              if (!res.headersSent) {
+                res.statusCode = 500;
+              }
+              res.end();
+            });
             stream.pipe(res);
             return;
           }
