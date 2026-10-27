@@ -49,15 +49,17 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     let localBlobUrl: string | null = null;
     setThumbError(false);
 
-    if (category === 'image') {
+    if (category === 'image' || category === 'video') {
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (file.storage_path?.startsWith('zdrive:')) {
+      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        if (active) setThumbUrl(file.storage_path);
+      } else if (file.storage_path?.startsWith('zdrive:')) {
         if (isLocal) {
           const rel = file.storage_path.slice('zdrive:'.length);
           if (active) setThumbUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
         }
         api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
             setThumbUrl(localBlobUrl);
           }
@@ -68,16 +70,14 @@ export function FileCard({ file, allFiles }: FileCardProps) {
           setThumbUrl(direct);
         }
         api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
             setThumbUrl(localBlobUrl);
           }
         }).catch(() => {});
-      } else if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
-        if (active) setThumbUrl(file.storage_path);
       } else {
         api.getFileBlob(file.storage_path).then((blob) => {
-          if (blob && active && (blob.type.startsWith('image/') || blob.size > 0)) {
+          if (blob && active && (blob.type.startsWith('image/') || blob.type.startsWith('video/') || blob.size > 0)) {
             localBlobUrl = URL.createObjectURL(blob);
             setThumbUrl(localBlobUrl);
           }
@@ -240,9 +240,24 @@ export function FileCard({ file, allFiles }: FileCardProps) {
               src={thumbUrl}
               alt={file.name}
               loading="lazy"
+              decoding="async"
               onError={() => setThumbError(true)}
               className="w-full h-full object-cover rounded-2xl"
             />
+          ) : category === 'video' && thumbUrl && !thumbError ? (
+            <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/40 flex items-center justify-center">
+              <video
+                src={thumbUrl}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover opacity-70"
+                onError={() => setThumbError(true)}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Video className="h-6 w-6 text-purple-400 drop-shadow" />
+              </div>
+            </div>
           ) : (
             getCategoryIcon()
           )}

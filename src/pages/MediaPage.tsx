@@ -23,6 +23,12 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
     setThumbError(false);
 
     const loadThumb = async () => {
+      // 0. HTTP/HTTPS Direct Stream (Catbox, Cloud URLs) - 0ms instant preview
+      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        if (active) setThumbUrl(file.storage_path);
+        return;
+      }
+
       // 1. Z-drive direct stream (only on localhost)
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       if (file.storage_path?.startsWith('zdrive:')) {
@@ -96,6 +102,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
               src={thumbUrl}
               alt={file.name}
               loading="lazy"
+              decoding="async"
               onError={() => setThumbError(true)}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -112,6 +119,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
                 src={thumbUrl}
                 muted
                 playsInline
+                preload="metadata"
                 className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
               />
             )}
