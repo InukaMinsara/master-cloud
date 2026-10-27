@@ -119,10 +119,22 @@ class BinaryStorage {
 
 export const binaryStorage = new BinaryStorage();
 
-// Storage helper
+// Storage helper with strict user partitioning
+let currentDbUserEmail: string = 'immaster2024@gmail.com';
+
+function getUserDbPrefix(email?: string | null): string {
+  const clean = (email || currentDbUserEmail || '').trim().toLowerCase();
+  if (!clean || clean === 'immaster2024@gmail.com') {
+    return 'master_cloud_v3_master_';
+  }
+  const safe = clean.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `master_cloud_v3_user_${safe}_`;
+}
+
 function loadTable<T>(tableName: string, defaultData: T[]): T[] {
   try {
-    const saved = localStorage.getItem(DB_PREFIX + tableName);
+    const prefix = getUserDbPrefix(currentDbUserEmail);
+    const saved = localStorage.getItem(prefix + tableName);
     if (saved) return JSON.parse(saved);
   } catch (err) {
     console.error('Failed to load table:', tableName, err);
@@ -132,9 +144,10 @@ function loadTable<T>(tableName: string, defaultData: T[]): T[] {
 
 function saveTable<T>(tableName: string, data: T[]): void {
   try {
+    const prefix = getUserDbPrefix(currentDbUserEmail);
     const json = JSON.stringify(data);
     if (json.length < 4 * 1024 * 1024) {
-      localStorage.setItem(DB_PREFIX + tableName, json);
+      localStorage.setItem(prefix + tableName, json);
     }
   } catch (err) {
     console.warn('Failed to save table:', tableName, err);
@@ -468,31 +481,41 @@ class LocalDatabaseService {
           !(parsed.avatar_url && parsed.avatar_url.includes('unsplash.com'))
         ) {
           this.currentUser = parsed;
+          currentDbUserEmail = parsed.email;
         } else {
           localStorage.removeItem(DB_PREFIX + 'current_user');
           this.currentUser = DEFAULT_USER;
+          currentDbUserEmail = DEFAULT_USER.email;
         }
       } catch {
         localStorage.removeItem(DB_PREFIX + 'current_user');
         this.currentUser = DEFAULT_USER;
+        currentDbUserEmail = DEFAULT_USER.email;
       }
     } else {
       this.currentUser = DEFAULT_USER;
+      currentDbUserEmail = DEFAULT_USER.email;
     }
 
-    // Ensure all existing files and folders belong to immaster2024@gmail.com
-    this.folders.forEach(f => {
-      if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
-        f.owner_id = DEFAULT_USER.id;
-      }
-    });
-    this.files.forEach(f => {
-      if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
-        f.owner_id = DEFAULT_USER.id;
-      }
-    });
-    saveTable('folders', this.folders);
-    saveTable('files', this.files);
+    const isMaster = currentDbUserEmail.toLowerCase() === 'immaster2024@gmail.com';
+    this.files = loadTable('files', isMaster ? SEED_FILES : []);
+    this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
+
+    if (isMaster) {
+      // Ensure all existing master files and folders belong to immaster2024@gmail.com
+      this.folders.forEach(f => {
+        if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+          f.owner_id = DEFAULT_USER.id;
+        }
+      });
+      this.files.forEach(f => {
+        if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+          f.owner_id = DEFAULT_USER.id;
+        }
+      });
+      saveTable('folders', this.folders);
+      saveTable('files', this.files);
+    }
   }
 
   isItemVisible(ownerId?: string | null, storagePath?: string): boolean {
@@ -524,10 +547,9 @@ class LocalDatabaseService {
     const currentPrefix = activeEmail.split('@')[0].toLowerCase();
     if (ownerId && currentPrefix && ownerId.toLowerCase().includes(currentPrefix)) return true;
 
-    // Local Z: drive files (zdrive:...) are visible if they match the user's active drive
+    // Local Z: drive files (zdrive:...) are visible if they belong to this user
     if (storagePath && storagePath.startsWith('zdrive:')) {
-      if (ownerId && ownerId !== activeUserId && !ownerId.includes(currentPrefix)) return false;
-      return true;
+      return Boolean(ownerId && (ownerId === activeUserId || ownerId.toLowerCase().includes(currentPrefix)));
     }
 
     return false;
@@ -538,23 +560,33 @@ class LocalDatabaseService {
     return this.currentUser;
   }
 
-  setCurrentUser(user: ProfileRecord): void {
-    const prevEmail = (this.currentUser?.email || '').trim().toLowerCase();
-    const newEmail = (user?.email || '').trim().toLowerCase();
+  setCurrentUser(user: ProfileRecord | null): void {
+    if (!user || !user.email) {
+      this.currentUser = null as any;
+      currentDbUserEmail = '';
+      localStorage.removeItem(DB_PREFIX + 'current_user');
+      this.files = [];
+      this.folders = [];
+      return;
+    }
+
+    const newEmail = (user.email || '').trim().toLowerCase();
+    currentDbUserEmail = newEmail;
     this.currentUser = user;
     localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
 
-    if (prevEmail && newEmail && prevEmail !== newEmail) {
-      // 100% Strict Account Isolation: Purge any zdrive cache & previous user's files
-      this.files = this.files.filter(f => !f.storage_path.startsWith('zdrive:'));
-      this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-'));
-      if (newEmail !== 'immaster2024@gmail.com') {
-        this.files = this.files.filter(f => this.isItemVisible(f.owner_id, f.storage_path));
-        this.folders = this.folders.filter(f => this.isItemVisible(f.owner_id));
-      }
-      saveTable('folders', this.folders);
-      saveTable('files', this.files);
-    }
+    // Reload tables for this user from their isolated localStorage partition!
+    const isMaster = newEmail === 'immaster2024@gmail.com';
+    this.files = loadTable('files', isMaster ? SEED_FILES : []);
+    this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
+    this.versions = loadTable('versions', []);
+    this.shares = loadTable('shares', []);
+    this.shareLinks = loadTable('share_links', []);
+    this.fileRequests = loadTable('file_requests', []);
+    this.comments = loadTable('comments', []);
+    this.activityLogs = loadTable('activity_logs', []);
+    this.notifications = loadTable('notifications', []);
+    this.devices = loadTable('devices', []);
   }
 
   async updateProfile(updates: Partial<ProfileRecord>): Promise<ProfileRecord> {
@@ -623,14 +655,16 @@ class LocalDatabaseService {
     try {
       const parentRel = this.getFolderRelPath(parentFolderId);
       const queryParam = parentRel ? encodeURIComponent(parentRel) : '__root__';
+      const currentEmail = (this.currentUser?.email || '').trim().toLowerCase();
+      if (!currentEmail) return;
 
       let res: Response | null = null;
       try {
-        res = await fetch(`http://127.0.0.1:8766/api/local-drive/list?parent=${queryParam}`);
+        res = await fetch(`http://127.0.0.1:8766/api/local-drive/list?parent=${queryParam}&user=${encodeURIComponent(currentEmail)}`);
         if (!res.ok) throw new Error();
       } catch {
         try {
-          res = await fetch(`/api/local-drive/list?parent=${queryParam}`);
+          res = await fetch(`/api/local-drive/list?parent=${queryParam}&user=${encodeURIComponent(currentEmail)}`);
           if (!res.ok) throw new Error();
         } catch {
           // Local background daemon offline or on Netlify without daemon — return gracefully
@@ -641,9 +675,8 @@ class LocalDatabaseService {
       if (!data?.ok || data?.isMounted === false || !Array.isArray(data.items)) return;
 
       const driveUser = (data.user || '').trim().toLowerCase();
-      const currentEmail = (this.currentUser.email || '').trim().toLowerCase();
-      if (driveUser && currentEmail && driveUser !== currentEmail) {
-        // Drive belongs to another user! Request background user switch
+      if (!driveUser || driveUser !== currentEmail) {
+        // Drive does not match this user! Request background user switch
         try {
           fetch('http://127.0.0.1:8766/api/user/switch', {
             method: 'POST',

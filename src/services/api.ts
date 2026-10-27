@@ -380,10 +380,11 @@ class UnifiedApiService {
 
   async logout(): Promise<void> {
     if (this.isConfiguredWithSupabase()) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut().catch(() => {});
     }
     await this.syncActiveWebSession(null);
-    await localDb.logActivity('auth', null, 'Current User', 'logout', {});
+    localDb.setCurrentUser(null as any);
+    await localDb.logActivity('auth', null, 'Current User', 'logout', {}).catch(() => {});
   }
 
   async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
@@ -455,8 +456,7 @@ class UnifiedApiService {
             const currentEmail = (user.email || '').trim().toLowerCase();
             for (const lf of localFolders) {
               const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
-              const isLocalZDrive = Boolean(lf.id?.startsWith('zfolder-'));
-              if (!remoteMap.has(lf.name.toLowerCase()) && (isUserOwned || isLocalZDrive)) {
+              if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
                 merged.push(lf);
               }
             }
@@ -602,8 +602,7 @@ class UnifiedApiService {
             const currentEmail = (user.email || '').trim().toLowerCase();
             for (const lf of localFiles) {
               const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
-              const isLocalZDrive = Boolean(lf.storage_path?.startsWith('zdrive:'));
-              if (!remoteMap.has(lf.name.toLowerCase()) && (isUserOwned || isLocalZDrive)) {
+              if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
                 merged.push(lf);
               }
             }

@@ -42,7 +42,7 @@ export function PublicNavbar() {
 
   const navLinks = [
     { label: 'Cloud Storage', path: '/cloud', icon: Cloud },
-    { label: 'Local Drive (M:)', path: '/local-drive', icon: Laptop },
+    { label: 'Local Drive (Z:)', path: '/local-drive', icon: Laptop },
     { label: 'Download App', path: '/download', icon: Download },
     { label: 'Security', path: '/security', icon: Shield },
     { label: 'All Features', path: '/features', icon: Grid },

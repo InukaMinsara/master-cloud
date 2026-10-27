@@ -114,6 +114,17 @@ function switchUserContext(targetEmail, targetDrive = null) {
   if (!fs.existsSync(`${DRIVE_LETTER}:\\`)) {
     mapDrive(false);
   }
+
+  // Synchronize both session files to guarantee 100% account isolation and prevent ping-pong loops
+  try {
+    const sObj = {
+      email: clean,
+      displayName: clean.split('@')[0],
+      loggedInAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(path.join(USER_DATA_DIR, 'active-web-session.json'), JSON.stringify(sObj, null, 2), 'utf8');
+    fs.writeFileSync(path.join(USER_DATA_DIR, 'user-session.json'), JSON.stringify(sObj, null, 2), 'utf8');
+  } catch {}
 }
 
 const WEBDAV_URL = `http://127.0.0.1:${PORT}`;
@@ -281,30 +292,10 @@ function loadManifest() {
       }
     }
 
-    // Fresh user: Initialize clean 10 TB storage with default starter folders
-    const now = new Date().toISOString();
+    // Fresh user: Initialize clean 10 TB storage with 0 items (100% strict account isolation)
     manifest = {
       files: {},
-      folders: {
-        'Work Documents': {
-          relPath: 'Work Documents',
-          name: 'Work Documents',
-          mtime: now,
-          birthtime: now,
-        },
-        'Media & Videos': {
-          relPath: 'Media & Videos',
-          name: 'Media & Videos',
-          mtime: now,
-          birthtime: now,
-        },
-        'Shared Projects': {
-          relPath: 'Shared Projects',
-          name: 'Shared Projects',
-          mtime: now,
-          birthtime: now,
-        },
-      },
+      folders: {},
     };
     rebuildMemoryIndex();
 
@@ -1224,6 +1215,11 @@ const server = http.createServer((req, res) => {
 
     const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
     const searchParams = new URLSearchParams(rawQuery);
+    const userParam = searchParams.get('user');
+    if (userParam && userParam.trim().toLowerCase() !== USER_EMAIL) {
+      switchUserContext(userParam.trim().toLowerCase());
+    }
+
     const parentParam = searchParams.get('parent');
     const isAll = searchParams.get('all') === 'true';
 
@@ -2262,12 +2258,19 @@ async function runSupabaseSyncLoop() {
       if (userToken) {
         await sb.auth.setSession({ access_token: userToken, refresh_token: '' }).catch(() => {});
 
-        // 1. Pull remote files uploaded from Netlify site into Z:
-        const { data: remoteFiles, error: rErr } = await sb
+        // 1. Pull remote files uploaded from Netlify site into Z (Strict user isolation):
+        let rQuery = sb
           .from('files')
           .select('*')
-          .is('deleted_at', null)
-          .limit(100);
+          .is('deleted_at', null);
+
+        if (userId) {
+          rQuery = rQuery.eq('owner_id', userId);
+        } else if (!isMasterAdmin) {
+          rQuery = rQuery.eq('owner_id', 'none');
+        }
+
+        const { data: remoteFiles, error: rErr } = await rQuery.limit(100);
 
         if (!rErr && Array.isArray(remoteFiles)) {
           let updatedManifest = false;

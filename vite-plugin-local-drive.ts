@@ -143,13 +143,24 @@ export function localDrivePlugin(): Plugin {
       // Trigger background scan on server startup
       triggerBackgroundScan();
 
-      // 1. List files & folders from local drive (Z:\ or D:\MasterCloudDrive)
+      // 1. List files & folders from local drive (Z:\ or D:\MasterCloudDrive) with strict account isolation
       server.middlewares.use('/api/local-drive/list', (req, res) => {
         if (req.method !== 'GET') {
           res.statusCode = 405;
           res.end();
           return;
         }
+
+        const urlObj = new URL(req.url || '', 'http://localhost');
+        let requestedUser = urlObj.searchParams.get('user')?.trim().toLowerCase();
+        const sessionFile = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'active-web-session.json');
+        if (!requestedUser && fs.existsSync(sessionFile)) {
+          try {
+            const s = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
+            if (s && s.email) requestedUser = s.email.trim().toLowerCase();
+          } catch {}
+        }
+        if (!requestedUser) requestedUser = 'immaster2024@gmail.com';
 
         const isMounted = fs.existsSync('Z:\\');
         if (!isMounted) {
@@ -159,7 +170,55 @@ export function localDrivePlugin(): Plugin {
               ok: true,
               isMounted: false,
               driveLetter: null,
+              user: requestedUser,
               items: [],
+            })
+          );
+          return;
+        }
+
+        // Non-admin user isolation: Do not leak admin files from Z: or D:\MasterCloudDrive
+        if (requestedUser !== 'immaster2024@gmail.com') {
+          const safeKey = requestedUser.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const userManifestPath = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', `cloud-manifest-${safeKey}.json`);
+          let userItems: any[] = [];
+          if (fs.existsSync(userManifestPath)) {
+            try {
+              const uManifest = JSON.parse(fs.readFileSync(userManifestPath, 'utf8'));
+              for (const [rel, f] of Object.entries((uManifest.files || {}) as Record<string, any>)) {
+                userItems.push({
+                  relPath: f.relPath || rel,
+                  name: f.name || rel,
+                  isDir: false,
+                  parentRelPath: null,
+                  size: f.size || 0,
+                  mtime: f.mtime || new Date().toISOString(),
+                  birthtime: f.birthtime || new Date().toISOString(),
+                });
+              }
+              for (const [rel, fd] of Object.entries((uManifest.folders || {}) as Record<string, any>)) {
+                userItems.push({
+                  relPath: fd.relPath || rel,
+                  name: fd.name || rel,
+                  isDir: true,
+                  parentRelPath: null,
+                  size: 0,
+                  mtime: fd.mtime || new Date().toISOString(),
+                  birthtime: fd.birthtime || new Date().toISOString(),
+                });
+              }
+            } catch {}
+          }
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              ok: true,
+              isMounted: true,
+              driveLetter: 'Z:',
+              drivePath: 'Z:\\',
+              user: requestedUser,
+              items: userItems,
             })
           );
           return;
@@ -178,6 +237,7 @@ export function localDrivePlugin(): Plugin {
             isMounted: true,
             driveLetter: 'Z:',
             drivePath: driveRoot,
+            user: requestedUser,
             items: cachedItems,
           })
         );

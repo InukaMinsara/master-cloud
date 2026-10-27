@@ -207,7 +207,7 @@ export function DashboardPage() {
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/40">
                 <div className="flex items-center gap-2">
                   <Laptop className="h-4 w-4 text-purple-500" />
-                  <span className="font-semibold text-foreground">Windows Drive (M:)</span>
+                  <span className="font-semibold text-foreground">Windows Drive (Z:)</span>
                 </div>
                 <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
                   Stream Mode
