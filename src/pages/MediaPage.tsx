@@ -13,14 +13,33 @@ import { Button } from '@/components/ui/button';
 function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] }) {
   const { openPreview } = usePreviewStore();
   const { openContextMenu } = useContextMenuStore();
-  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
-  const [thumbError, setThumbError] = React.useState(false);
   const cat = getFileCategory(file.mime_type, file.extension);
+
+  const initialThumbUrl = React.useMemo(() => {
+    if (!file.storage_path) return null;
+    if (file.storage_path.startsWith('http://') || file.storage_path.startsWith('https://')) return file.storage_path;
+    if (file.storage_path.startsWith('zdrive:')) {
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isLocal) {
+        return `/api/local-drive/read?path=${encodeURIComponent(file.storage_path.slice('zdrive:'.length))}`;
+      }
+    }
+    if (file.storage_path.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+    return null;
+  }, [file.storage_path]);
+
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
+  const [thumbError, setThumbError] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
     let localBlobUrl: string | null = null;
     setThumbError(false);
+
+    if (initialThumbUrl) {
+      setThumbUrl(initialThumbUrl);
+      return;
+    }
 
     const loadThumb = async () => {
       // 0. HTTP/HTTPS Direct Stream (Catbox, Cloud URLs) - 0ms instant preview
@@ -116,11 +135,17 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
           <div className="relative w-full h-full flex items-center justify-center bg-black/40">
             {thumbUrl && (
               <video
-                src={thumbUrl}
+                src={`${thumbUrl}#t=0.5`}
                 muted
                 playsInline
-                preload="metadata"
-                className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+                preload="auto"
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  if (v.duration > 0.5 && v.currentTime === 0) {
+                    v.currentTime = Math.min(1.0, v.duration / 3);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full object-cover opacity-75 pointer-events-none group-hover:scale-105 transition-transform duration-300"
               />
             )}
             <div className="relative z-10 flex flex-col items-center justify-center gap-2">
