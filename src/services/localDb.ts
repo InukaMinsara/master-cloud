@@ -502,6 +502,12 @@ class LocalDatabaseService {
     this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
 
     if (isMaster) {
+      if (!this.files || this.files.length === 0) {
+        this.files = [...SEED_FILES];
+      }
+      if (!this.folders || this.folders.length === 0) {
+        this.folders = [...SEED_FOLDERS];
+      }
       // Ensure all existing master files and folders belong to immaster2024@gmail.com
       this.folders.forEach(f => {
         if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
@@ -528,16 +534,9 @@ class LocalDatabaseService {
     // Is the active user the master account?
     const isMasterUser = activeEmail === 'immaster2024@gmail.com';
 
-    // Does this item belong to the master admin account / seed template?
-    const isMasterItem =
-      ownerId === 'usr-inuka-minsara-master' ||
-      ownerId === 'usr-1' ||
-      ownerId === 'usr-local' ||
-      Boolean(ownerId && ownerId.includes('immaster2024'));
-
-    if (isMasterItem) {
-      // STRICT ISOLATION: Master admin files MUST ONLY be visible to immaster2024@gmail.com!
-      return isMasterUser;
+    // Master account sees all master files, seed items, and drive files
+    if (isMasterUser) {
+      return true;
     }
 
     // Direct ownership match
@@ -579,6 +578,27 @@ class LocalDatabaseService {
     const isMaster = newEmail === 'immaster2024@gmail.com';
     this.files = loadTable('files', isMaster ? SEED_FILES : []);
     this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
+
+    if (isMaster) {
+      if (!this.files || this.files.length === 0) {
+        this.files = [...SEED_FILES];
+      }
+      if (!this.folders || this.folders.length === 0) {
+        this.folders = [...SEED_FOLDERS];
+      }
+      this.folders.forEach(f => {
+        if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+          f.owner_id = DEFAULT_USER.id;
+        }
+      });
+      this.files.forEach(f => {
+        if (!f.owner_id || f.owner_id === 'usr-1' || f.owner_id === 'usr-local') {
+          f.owner_id = DEFAULT_USER.id;
+        }
+      });
+      saveTable('folders', this.folders);
+      saveTable('files', this.files);
+    }
     this.versions = loadTable('versions', []);
     this.shares = loadTable('shares', []);
     this.shareLinks = loadTable('share_links', []);
@@ -1355,6 +1375,7 @@ class LocalDatabaseService {
 
   // --- Media Library ---
   async getMediaFiles(type: 'all' | 'image' | 'video' | 'audio' = 'all'): Promise<FileItem[]> {
+    await this.syncWithLocalDrive(null);
     return this.files
       .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path))
       .filter(f => {
