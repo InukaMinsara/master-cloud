@@ -495,9 +495,42 @@ class LocalDatabaseService {
     saveTable('files', this.files);
   }
 
-  isItemVisible(_ownerId?: string | null, _storagePath?: string): boolean {
-    // Universal access: All workspace files, local Z: drive files, and uploads are accessible to the active user
-    return true;
+  isItemVisible(ownerId?: string | null, storagePath?: string): boolean {
+    const activeUserId = this.currentUser?.id;
+    const activeEmail = (this.currentUser?.email || '').trim().toLowerCase();
+
+    // If no active user, hide
+    if (!activeUserId) return false;
+
+    // Is the active user the master account?
+    const isMasterUser = activeEmail === 'immaster2024@gmail.com';
+
+    // Does this item belong to the master admin account / seed template?
+    const isMasterItem =
+      ownerId === 'usr-inuka-minsara-master' ||
+      ownerId === 'usr-1' ||
+      ownerId === 'usr-local' ||
+      Boolean(ownerId && ownerId.includes('immaster2024'));
+
+    if (isMasterItem) {
+      // STRICT ISOLATION: Master admin files MUST ONLY be visible to immaster2024@gmail.com!
+      return isMasterUser;
+    }
+
+    // Direct ownership match
+    if (ownerId && ownerId === activeUserId) return true;
+
+    // Email prefix match for this user
+    const currentPrefix = activeEmail.split('@')[0].toLowerCase();
+    if (ownerId && currentPrefix && ownerId.toLowerCase().includes(currentPrefix)) return true;
+
+    // Local Z: drive files (zdrive:...) are visible if they match the user's active drive
+    if (storagePath && storagePath.startsWith('zdrive:')) {
+      if (ownerId && ownerId !== activeUserId && !ownerId.includes(currentPrefix)) return false;
+      return true;
+    }
+
+    return false;
   }
 
   // --- Auth / Profile ---
@@ -512,9 +545,13 @@ class LocalDatabaseService {
     localStorage.setItem(DB_PREFIX + 'current_user', JSON.stringify(user));
 
     if (prevEmail && newEmail && prevEmail !== newEmail) {
-      // Clean zdrive synced cache from previous user to guarantee 100% data separation
+      // 100% Strict Account Isolation: Purge any zdrive cache & previous user's files
       this.files = this.files.filter(f => !f.storage_path.startsWith('zdrive:'));
       this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-'));
+      if (newEmail !== 'immaster2024@gmail.com') {
+        this.files = this.files.filter(f => this.isItemVisible(f.owner_id, f.storage_path));
+        this.folders = this.folders.filter(f => this.isItemVisible(f.owner_id));
+      }
       saveTable('folders', this.folders);
       saveTable('files', this.files);
     }
@@ -614,6 +651,12 @@ class LocalDatabaseService {
             body: JSON.stringify({ user: currentEmail }),
           }).catch(() => {});
         } catch { /* ignore */ }
+        // STRICT ACCOUNT ISOLATION: Purge stale zdrive items and DO NOT ingest items from other user!
+        this.files = this.files.filter(f => !f.storage_path.startsWith('zdrive:'));
+        this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-'));
+        saveTable('folders', this.folders);
+        saveTable('files', this.files);
+        return;
       }
 
       const diskItems: Array<{
@@ -1264,14 +1307,14 @@ class LocalDatabaseService {
 
   // --- Starred & Recent ---
   async getStarredItems(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
-    const files = this.files.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id)).map(f => ({ ...f, owner: this.currentUser }));
+    const files = this.files.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path)).map(f => ({ ...f, owner: this.currentUser }));
     const folders = this.folders.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id)).map(f => ({ ...f, owner: this.currentUser }));
     return { files, folders };
   }
 
   async getRecentItems(limit: number = 20): Promise<FileItem[]> {
     return this.files
-      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id))
+      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path))
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
       .slice(0, limit)
       .map(f => ({ ...f, owner: this.currentUser }));
@@ -1280,7 +1323,7 @@ class LocalDatabaseService {
   // --- Media Library ---
   async getMediaFiles(type: 'all' | 'image' | 'video' | 'audio' = 'all'): Promise<FileItem[]> {
     return this.files
-      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id))
+      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path))
       .filter(f => {
         const cat = getFileCategory(f.mime_type, f.extension);
         if (type === 'all') return ['image', 'video', 'audio'].includes(cat);
@@ -1591,10 +1634,10 @@ class LocalDatabaseService {
 
   // --- Storage Analytics & Smart Cleanup ---
   getStorageBreakdown(): StorageBreakdown {
-    const isMasterAdmin = true;
+    const isMasterAdmin = (this.currentUser?.email || '').trim().toLowerCase() === 'immaster2024@gmail.com';
 
-    const activeFiles = this.files.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id));
-    const trashFiles = this.files.filter(f => f.deleted_at !== null && this.isItemVisible(f.owner_id));
+    const activeFiles = this.files.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id, f.storage_path));
+    const trashFiles = this.files.filter(f => f.deleted_at !== null && this.isItemVisible(f.owner_id, f.storage_path));
 
     let imagesBytes = 0;
     let videosBytes = 0;

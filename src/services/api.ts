@@ -452,8 +452,11 @@ class UnifiedApiService {
           if (!error && Array.isArray(data)) {
             const remoteMap = new Map((data as FolderItem[]).map((f) => [f.name.toLowerCase(), f]));
             const merged = [...(data as FolderItem[])];
+            const currentEmail = (user.email || '').trim().toLowerCase();
             for (const lf of localFolders) {
-              if (!remoteMap.has(lf.name.toLowerCase())) {
+              const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
+              const isLocalZDrive = Boolean(lf.id?.startsWith('zfolder-'));
+              if (!remoteMap.has(lf.name.toLowerCase()) && (isUserOwned || isLocalZDrive)) {
                 merged.push(lf);
               }
             }
@@ -596,8 +599,11 @@ class UnifiedApiService {
           if (!error && Array.isArray(data)) {
             const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
             const merged = [...(data as FileItem[])];
+            const currentEmail = (user.email || '').trim().toLowerCase();
             for (const lf of localFiles) {
-              if (!remoteMap.has(lf.name.toLowerCase())) {
+              const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
+              const isLocalZDrive = Boolean(lf.storage_path?.startsWith('zdrive:'));
+              if (!remoteMap.has(lf.name.toLowerCase()) && (isUserOwned || isLocalZDrive)) {
                 merged.push(lf);
               }
             }
