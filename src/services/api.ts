@@ -454,8 +454,9 @@ class UnifiedApiService {
             const remoteMap = new Map((data as FolderItem[]).map((f) => [f.name.toLowerCase(), f]));
             const merged = [...(data as FolderItem[])];
             const currentEmail = (user.email || '').trim().toLowerCase();
+            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
             for (const lf of localFolders) {
-              const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
+              const isUserOwned = isMasterAccount ? true : (lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0])));
               if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
                 merged.push(lf);
               }
@@ -600,8 +601,9 @@ class UnifiedApiService {
             const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
             const merged = [...(data as FileItem[])];
             const currentEmail = (user.email || '').trim().toLowerCase();
+            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
             for (const lf of localFiles) {
-              const isUserOwned = lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0]));
+              const isUserOwned = isMasterAccount ? true : (lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0])));
               if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
                 merged.push(lf);
               }
@@ -959,6 +961,7 @@ class UnifiedApiService {
 
   // --- Media ---
   async getMediaFiles(type: 'all' | 'image' | 'video' | 'audio' = 'all'): Promise<FileItem[]> {
+    const localMedia = await localDb.getMediaFiles(type);
     if (this.isConfiguredWithSupabase()) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
@@ -970,19 +973,29 @@ class UnifiedApiService {
             .order('created_at', { ascending: false });
 
           if (!error && Array.isArray(data)) {
+            const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
             const mediaFiles = (data as FileItem[]).filter(f => {
               const cat = getFileCategory(f.mime_type, f.extension);
               if (type === 'all') return ['image', 'video', 'audio'].includes(cat);
               return cat === type;
             });
-            return mediaFiles;
+            const merged = [...mediaFiles];
+            const currentEmail = (user.email || '').trim().toLowerCase();
+            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
+            for (const lm of localMedia) {
+              const isUserOwned = isMasterAccount ? true : (lm.owner_id === user.id || Boolean(lm.owner_id && lm.owner_id.includes(currentEmail.split('@')[0])));
+              if (!remoteMap.has(lm.name.toLowerCase()) && isUserOwned) {
+                merged.push(lm);
+              }
+            }
+            return merged;
           }
         }
       } catch (err) {
         console.warn('Supabase getMediaFiles fallback:', err);
       }
     }
-    return localDb.getMediaFiles(type);
+    return localMedia;
   }
 
   // --- Versions ---
