@@ -2,7 +2,58 @@ import type { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { spawnSync } from 'child_process';
+import { spawn } from 'child_process';
+
+const ongoingGenerations = new Map<string, Promise<boolean>>();
+
+function generateThumbAsync(inputSource: string, outputPath: string): Promise<boolean> {
+  if (ongoingGenerations.has(outputPath)) {
+    return ongoingGenerations.get(outputPath)!;
+  }
+
+  const p = new Promise<boolean>((resolve) => {
+    try {
+      const proc = spawn('ffmpeg', [
+        '-y',
+        '-nostdin',
+        '-ss', '00:00:00',
+        '-i', inputSource,
+        '-an',
+        '-sn',
+        '-vframes', '1',
+        '-q:v', '3',
+        '-vf', 'scale=480:-1',
+        outputPath
+      ], { stdio: 'ignore' });
+
+      const timer = setTimeout(() => {
+        try { proc.kill('SIGKILL'); } catch {}
+        resolve(false);
+      }, 6000);
+
+      proc.on('close', (code) => {
+        clearTimeout(timer);
+        try {
+          resolve(code === 0 && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0);
+        } catch {
+          resolve(false);
+        }
+      });
+
+      proc.on('error', () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
+  }).finally(() => {
+    ongoingGenerations.delete(outputPath);
+  });
+
+  ongoingGenerations.set(outputPath, p);
+  return p;
+}
 
 const DRIVE_PATHS = ['Z:\\', 'D:\\MasterCloudDrive'];
 
@@ -266,7 +317,7 @@ function resolveLocalPath(cleanRelPath: string): string | null {
 }
 
       // 2. Ultra-Fast Video / Image Thumbnail Endpoint (via FFmpeg + Local Cache)
-      server.middlewares.use('/api/local-drive/thumbnail', (req, res) => {
+      server.middlewares.use('/api/local-drive/thumbnail', async (req, res) => {
         if (req.method !== 'GET' && req.method !== 'HEAD') {
           res.statusCode = 405;
           res.end();
@@ -313,22 +364,40 @@ function resolveLocalPath(cleanRelPath: string): string | null {
 
           // 2. Locate target file on disk (search Z:\VIDEO, Z:\Media & Videos, Z:\Mg, Z:\capcu v, Z:\)
           let targetPath: string | null = null;
-          const searchRoots = [
-            'Z:\\VIDEO',
-            'Z:\\Media & Videos',
-            'Z:\\Mg',
-            'Z:\\capcu v',
-            'Z:\\',
-            getDriveRoot(),
-            'E:\\Mg',
-          ];
 
+          // Check file index cache first for instant O(1) lookup
           if (fileName) {
-            for (const root of searchRoots) {
-              const cand = path.join(root, fileName);
-              if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
-                targetPath = cand;
-                break;
+            try {
+              const indexPath = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'file_index.json');
+              if (fs.existsSync(indexPath)) {
+                const idx = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+                const hit = idx[fileName.toLowerCase().trim()];
+                if (hit && fs.existsSync(hit)) {
+                  targetPath = hit;
+                }
+              }
+            } catch {}
+          }
+
+          if (!targetPath) {
+            const searchRoots = [
+              'Z:\\capcu v',
+              'Z:\\VIDEO',
+              'Z:\\Media & Videos',
+              'Z:\\Mg',
+              'Z:\\Avengers all',
+              'Z:\\',
+              getDriveRoot(),
+              'E:\\Mg',
+            ];
+
+            if (fileName) {
+              for (const root of searchRoots) {
+                const cand = path.join(root, fileName);
+                if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
+                  targetPath = cand;
+                  break;
+                }
               }
             }
           }
@@ -367,17 +436,34 @@ function resolveLocalPath(cleanRelPath: string): string | null {
 
           if (isVideo) {
             try {
-              const ffmpegArgs = [
-                '-y',
-                '-ss', '00:00:01',
-                '-i', inputSource,
-                '-vframes', '1',
-                '-q:v', '3',
-                '-vf', 'scale=480:-1',
-                cachedThumbPath
-              ];
-              spawnSync('ffmpeg', ffmpegArgs, { timeout: 8000, stdio: 'ignore' });
-              if (fs.existsSync(cachedThumbPath)) {
+              let ok = await generateThumbAsync(inputSource, cachedThumbPath);
+              if (!ok || !fs.existsSync(cachedThumbPath) || fs.statSync(cachedThumbPath).size === 0) {
+                // Generate a sleek cinematic gradient poster so thumbnail NEVER fails!
+                const colors = [
+                  ['0x0f172a', '0x1e1b4b'],
+                  ['0x0f172a', '0x311042'],
+                  ['0x022c22', '0x0f172a'],
+                  ['0x1e293b', '0x0f172a'],
+                  ['0x172554', '0x1e1b4b'],
+                ];
+                const charCode = (fileName || 'video').charCodeAt(0) % colors.length;
+                const [c0, c1] = colors[charCode];
+                await new Promise((resolve) => {
+                  const proc = spawn('ffmpeg', [
+                    '-y', '-nostdin',
+                    '-f', 'lavfi',
+                    '-i', `gradients=c0=${c0}:c1=${c1}:s=480x270:type=linear`,
+                    '-vframes', '1',
+                    '-q:v', '2',
+                    cachedThumbPath
+                  ], { stdio: 'ignore' });
+                  proc.on('close', resolve);
+                  proc.on('error', resolve);
+                });
+                ok = fs.existsSync(cachedThumbPath) && fs.statSync(cachedThumbPath).size > 0;
+              }
+
+              if (ok && fs.existsSync(cachedThumbPath)) {
                 const stat = fs.statSync(cachedThumbPath);
                 if (stat.size > 0) {
                   res.statusCode = 200;
