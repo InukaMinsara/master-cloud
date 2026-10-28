@@ -1386,6 +1386,37 @@ class LocalDatabaseService {
       .map(f => ({ ...f, owner: this.currentUser }));
   }
 
+  // --- Global Search across all folders and files ---
+  async search(query: string, category: string = 'all'): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    const q = (query || '').toLowerCase().trim();
+    if (!q) return { files: [], folders: [] };
+
+    await this.syncWithLocalDrive(null);
+
+    const matchedFiles = this.files
+      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path))
+      .filter(f => {
+        if (category && category !== 'all') {
+          const cat = getFileCategory(f.mime_type, f.extension);
+          if (cat !== category) return false;
+        }
+        return (
+          f.name.toLowerCase().includes(q) ||
+          f.extension.toLowerCase().includes(q) ||
+          (f.storage_path && f.storage_path.toLowerCase().includes(q))
+        );
+      })
+      .map(f => ({ ...f, owner: this.currentUser }));
+
+    const matchedFolders = (!category || category === 'all')
+      ? this.folders
+          .filter(fd => !fd.deleted_at && this.isItemVisible(fd.owner_id))
+          .filter(fd => fd.name.toLowerCase().includes(q))
+      : [];
+
+    return { files: matchedFiles, folders: matchedFolders };
+  }
+
   // --- Version History ---
   async getFileVersions(fileId: string): Promise<FileVersionRecord[]> {
     return this.versions

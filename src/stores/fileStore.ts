@@ -72,9 +72,14 @@ export const useFileStore = create<FileState>((set, get) => ({
   },
 
   fetchItems: async () => {
-    const { currentFolderId } = get();
+    const { currentFolderId, searchQuery, categoryFilter } = get();
     set({ isLoading: true });
     try {
+      if (searchQuery.trim()) {
+        const results = await api.search(searchQuery, categoryFilter);
+        set({ folders: results.folders, files: results.files, isLoading: false });
+        return;
+      }
       const [folders, files] = await Promise.all([
         api.getFolders(currentFolderId, false),
         api.getFiles(currentFolderId, false),
@@ -92,8 +97,14 @@ export const useFileStore = create<FileState>((set, get) => ({
   },
 
   setSort: (sortField, sortOrder) => set({ sortField, sortOrder }),
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setCategoryFilter: (categoryFilter) => set({ categoryFilter }),
+  setSearchQuery: (searchQuery) => {
+    set({ searchQuery });
+    get().fetchItems();
+  },
+  setCategoryFilter: (categoryFilter) => {
+    set({ categoryFilter });
+    get().fetchItems();
+  },
 
   selectItem: (id, isMulti) => {
     set(state => {
