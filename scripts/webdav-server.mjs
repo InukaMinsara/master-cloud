@@ -1377,6 +1377,57 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+const ongoingWebdavThumbGen = new Map();
+
+function generateThumbAsync(inputSource, outputPath) {
+  if (ongoingWebdavThumbGen.has(outputPath)) {
+    return ongoingWebdavThumbGen.get(outputPath);
+  }
+
+  const p = new Promise((resolve) => {
+    try {
+      const proc = spawn('ffmpeg', [
+        '-y',
+        '-nostdin',
+        '-ss', '00:00:00',
+        '-i', inputSource,
+        '-an',
+        '-sn',
+        '-vframes', '1',
+        '-q:v', '3',
+        '-vf', 'scale=480:-1',
+        outputPath
+      ], { stdio: 'ignore' });
+
+      const timer = setTimeout(() => {
+        try { proc.kill('SIGKILL'); } catch {}
+        resolve(false);
+      }, 6000);
+
+      proc.on('close', (code) => {
+        clearTimeout(timer);
+        try {
+          resolve(code === 0 && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0);
+        } catch {
+          resolve(false);
+        }
+      });
+
+      proc.on('error', () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
+  }).finally(() => {
+    ongoingWebdavThumbGen.delete(outputPath);
+  });
+
+  ongoingWebdavThumbGen.set(outputPath, p);
+  return p;
+}
+
   // ── Local Drive Thumbnail API: Ultra-Fast Video & Image Thumbnail via FFmpeg ───
   if ((method === 'GET' || method === 'HEAD') && (relPath === 'api/local-drive/thumbnail' || relPath === '__local_drive_thumbnail')) {
     const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
@@ -1418,10 +1469,11 @@ const server = http.createServer((req, res) => {
 
     // 2. Find local file
     const localCandidates = [
+      path.join(`${DRIVE_LETTER}:\\capcu v`, fileName),
       path.join(`${DRIVE_LETTER}:\\VIDEO`, fileName),
       path.join(`${DRIVE_LETTER}:\\Media & Videos`, fileName),
       path.join(`${DRIVE_LETTER}:\\Mg`, fileName),
-      path.join(`${DRIVE_LETTER}:\\capcu v`, fileName),
+      path.join(`${DRIVE_LETTER}:\\Avengers all`, fileName),
       path.join(`${DRIVE_LETTER}:\\`, fileName),
       path.join(`${DRIVE_LETTER}:\\`, targetRel),
       path.join(STAGING_DIR, targetRel),
@@ -1461,9 +1513,33 @@ const server = http.createServer((req, res) => {
       }
 
       if (isVideo) {
-        try {
-          spawnSync('ffmpeg', ['-y', '-ss', '00:00:01', '-i', inputSource, '-vframes', '1', '-q:v', '3', '-vf', 'scale=480:-1', cachedThumbPath], { timeout: 8000, stdio: 'ignore' });
-          if (fs.existsSync(cachedThumbPath)) {
+        generateThumbAsync(inputSource, cachedThumbPath).then(async (ok) => {
+          if (!ok || !fs.existsSync(cachedThumbPath) || fs.statSync(cachedThumbPath).size === 0) {
+            const colors = [
+              ['0x0f172a', '0x1e1b4b'],
+              ['0x0f172a', '0x311042'],
+              ['0x022c22', '0x0f172a'],
+              ['0x1e293b', '0x0f172a'],
+              ['0x172554', '0x1e1b4b'],
+            ];
+            const charCode = (fileName || 'video').charCodeAt(0) % colors.length;
+            const [c0, c1] = colors[charCode];
+            await new Promise((resolve) => {
+              const proc = spawn('ffmpeg', [
+                '-y', '-nostdin',
+                '-f', 'lavfi',
+                '-i', `gradients=c0=${c0}:c1=${c1}:s=480x270:type=linear`,
+                '-vframes', '1',
+                '-q:v', '2',
+                cachedThumbPath
+              ], { stdio: 'ignore' });
+              proc.on('close', resolve);
+              proc.on('error', resolve);
+            });
+            ok = fs.existsSync(cachedThumbPath) && fs.statSync(cachedThumbPath).size > 0;
+          }
+
+          if (ok && fs.existsSync(cachedThumbPath)) {
             const stat = fs.statSync(cachedThumbPath);
             if (stat.size > 0) {
               res.writeHead(200, {
@@ -1478,7 +1554,17 @@ const server = http.createServer((req, res) => {
               return;
             }
           }
-        } catch {}
+          if (!res.headersSent) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Thumbnail unavailable' }));
+          }
+        }).catch(() => {
+          if (!res.headersSent) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Thumbnail generation error' }));
+          }
+        });
+        return;
       }
     }
 
