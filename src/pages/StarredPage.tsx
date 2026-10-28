@@ -8,7 +8,7 @@ import { FolderCard } from '@/components/files/FolderCard';
 import { useFileStore } from '@/stores/fileStore';
 
 export function StarredPage() {
-  const { files: storeFiles, folders: storeFolders } = useFileStore();
+  const { files: storeFiles, folders: storeFolders, searchQuery } = useFileStore();
   const [starredFiles, setStarredFiles] = React.useState<FileItem[]>([]);
   const [starredFolders, setStarredFolders] = React.useState<FolderItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -23,7 +23,19 @@ export function StarredPage() {
       .finally(() => setIsLoading(false));
   }, [storeFiles, storeFolders]);
 
-  const isEmpty = starredFiles.length === 0 && starredFolders.length === 0;
+  const displayedFiles = React.useMemo(() => {
+    if (!searchQuery.trim()) return starredFiles;
+    const q = searchQuery.toLowerCase().trim();
+    return starredFiles.filter(f => f.name.toLowerCase().includes(q) || f.extension.toLowerCase().includes(q));
+  }, [starredFiles, searchQuery]);
+
+  const displayedFolders = React.useMemo(() => {
+    if (!searchQuery.trim()) return starredFolders;
+    const q = searchQuery.toLowerCase().trim();
+    return starredFolders.filter(f => f.name.toLowerCase().includes(q));
+  }, [starredFolders, searchQuery]);
+
+  const isEmpty = displayedFiles.length === 0 && displayedFolders.length === 0;
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -48,27 +60,27 @@ export function StarredPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {starredFolders.length > 0 && (
+          {displayedFolders.length > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Starred Folders
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {starredFolders.map((folder) => (
+                {displayedFolders.map((folder) => (
                   <FolderCard key={folder.id} folder={folder} />
                 ))}
               </div>
             </div>
           )}
 
-          {starredFiles.length > 0 && (
+          {displayedFiles.length > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Starred Files
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {starredFiles.map((file) => (
-                  <FileCard key={file.id} file={file} allFiles={starredFiles} />
+                {displayedFiles.map((file) => (
+                  <FileCard key={file.id} file={file} allFiles={displayedFiles} />
                 ))}
               </div>
             </div>

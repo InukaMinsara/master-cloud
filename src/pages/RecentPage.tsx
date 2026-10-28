@@ -6,7 +6,7 @@ import { FileCard } from '@/components/files/FileCard';
 import { useFileStore } from '@/stores/fileStore';
 
 export function RecentPage() {
-  const { files: storeFiles } = useFileStore();
+  const { files: storeFiles, searchQuery } = useFileStore();
   const [recentFiles, setRecentFiles] = React.useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -16,6 +16,12 @@ export function RecentPage() {
       .then(setRecentFiles)
       .finally(() => setIsLoading(false));
   }, [storeFiles]);
+
+  const displayedFiles = React.useMemo(() => {
+    if (!searchQuery.trim()) return recentFiles;
+    const q = searchQuery.toLowerCase().trim();
+    return recentFiles.filter(f => f.name.toLowerCase().includes(q) || f.extension.toLowerCase().includes(q));
+  }, [recentFiles, searchQuery]);
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -28,20 +34,22 @@ export function RecentPage() {
         </div>
       </div>
 
-      {recentFiles.length === 0 && !isLoading ? (
+      {displayedFiles.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center flex-1 my-16 text-center">
           <div className="h-16 w-16 rounded-3xl bg-secondary/80 flex items-center justify-center text-muted-foreground mb-3">
             <Clock className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="text-base font-bold text-foreground">No recent activity</h3>
+          <h3 className="text-base font-bold text-foreground">
+            {searchQuery ? `No files matching "${searchQuery}"` : 'No recent activity'}
+          </h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            Files you interact with will automatically be listed here for fast access.
+            {searchQuery ? 'Try checking your spelling or clearing the search query.' : 'Files you interact with will automatically be listed here for fast access.'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {recentFiles.map((file) => (
-            <FileCard key={file.id} file={file} allFiles={recentFiles} />
+          {displayedFiles.map((file) => (
+            <FileCard key={file.id} file={file} allFiles={displayedFiles} />
           ))}
         </div>
       )}

@@ -200,7 +200,7 @@ export function MediaPage() {
   const [files, setFiles] = React.useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const { openContextMenu } = useContextMenuStore();
-  const { files: storeFiles } = useFileStore();
+  const { files: storeFiles, searchQuery } = useFileStore();
   const { addFiles } = useUploadStore();
   const uploadInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -210,6 +210,12 @@ export function MediaPage() {
       .then(setFiles)
       .finally(() => setIsLoading(false));
   }, [mediaType, storeFiles]);
+
+  const displayedFiles = React.useMemo(() => {
+    if (!searchQuery.trim()) return files;
+    const q = searchQuery.toLowerCase().trim();
+    return files.filter(f => f.name.toLowerCase().includes(q) || f.extension.toLowerCase().includes(q));
+  }, [files, searchQuery]);
 
   const handleEmptyContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -298,20 +304,22 @@ export function MediaPage() {
         </div>
       </div>
 
-      {files.length === 0 && !isLoading ? (
+      {displayedFiles.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center flex-1 my-16 text-center">
           <div className="h-16 w-16 rounded-3xl bg-secondary/80 flex items-center justify-center text-muted-foreground mb-3">
             <Film className="h-8 w-8 text-purple-500" />
           </div>
-          <h3 className="text-base font-bold text-foreground">No media assets found</h3>
+          <h3 className="text-base font-bold text-foreground">
+            {searchQuery ? `No media assets matching "${searchQuery}"` : 'No media assets found'}
+          </h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            Upload images, video clips, or audio tracks to view them in your media hub.
+            {searchQuery ? 'Try checking your spelling or clearing the search query.' : 'Upload images, video clips, or audio tracks to view them in your media hub.'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {files.map((file) => (
-            <MediaCard key={file.id} file={file} allFiles={files} />
+          {displayedFiles.map((file) => (
+            <MediaCard key={file.id} file={file} allFiles={displayedFiles} />
           ))}
         </div>
       )}

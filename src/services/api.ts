@@ -3,6 +3,7 @@ import { localDb, binaryStorage } from './localDb';
 import { DownloadService } from './downloadService';
 import { TelegramCloudService } from './telegramCloudService';
 import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/types/file';
+import { getFileCategory } from '@/lib/utils';
 import {
   ProfileRecord,
   FolderRecord,
@@ -996,6 +997,39 @@ class UnifiedApiService {
       }
     }
     return localMedia;
+  }
+
+  // --- Global Search across all folders & files ---
+  async search(query: string, category: string = 'all'): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    const localResults = await localDb.search(query, category);
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+          const q = query.trim();
+          let fileQuery = supabase
+            .from('files')
+            .select('*, owner:profiles(*)')
+            .is('deleted_at', null)
+            .ilike('name', `%${q}%`);
+
+          const { data: remoteFiles } = await fileQuery.limit(100);
+          if (remoteFiles && Array.isArray(remoteFiles)) {
+            const map = new Map((remoteFiles as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...(remoteFiles as FileItem[])];
+            for (const lf of localResults.files) {
+              if (!map.has(lf.name.toLowerCase())) {
+                merged.push(lf);
+              }
+            }
+            localResults.files = merged;
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase search fallback:', err);
+      }
+    }
+    return localResults;
   }
 
   // --- Versions ---
