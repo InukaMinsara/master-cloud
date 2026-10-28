@@ -1382,7 +1382,9 @@ const server = http.createServer((req, res) => {
     const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
     const searchParams = new URLSearchParams(rawQuery);
     const targetRel = (searchParams.get('path') || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
-    if (!targetRel || targetRel.includes('..')) {
+    const fileName = (searchParams.get('name') || path.basename(targetRel)).trim();
+
+    if (!targetRel && !fileName) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: 'Invalid path parameter' }));
       return;
@@ -1393,7 +1395,8 @@ const server = http.createServer((req, res) => {
       try { fs.mkdirSync(thumbDir, { recursive: true }); } catch {}
     }
 
-    const hash = crypto.createHash('md5').update(targetRel).digest('hex');
+    const hashKey = (fileName || targetRel).toLowerCase().trim();
+    const hash = crypto.createHash('md5').update(hashKey).digest('hex');
     const cachedThumbPath = path.join(thumbDir, `${hash}.jpg`);
 
     // 1. If thumbnail is cached, serve in 0.00001s
@@ -1415,6 +1418,11 @@ const server = http.createServer((req, res) => {
 
     // 2. Find local file
     const localCandidates = [
+      path.join(`${DRIVE_LETTER}:\\VIDEO`, fileName),
+      path.join(`${DRIVE_LETTER}:\\Media & Videos`, fileName),
+      path.join(`${DRIVE_LETTER}:\\Mg`, fileName),
+      path.join(`${DRIVE_LETTER}:\\capcu v`, fileName),
+      path.join(`${DRIVE_LETTER}:\\`, fileName),
       path.join(`${DRIVE_LETTER}:\\`, targetRel),
       path.join(STAGING_DIR, targetRel),
       path.join(PROJECT_ROOT, targetRel),
@@ -1422,18 +1430,23 @@ const server = http.createServer((req, res) => {
     ];
     let foundPath = null;
     for (const cand of localCandidates) {
-      if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
-        foundPath = cand;
-        break;
-      }
+      try {
+        if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
+          foundPath = cand;
+          break;
+        }
+      } catch {}
     }
 
-    if (foundPath) {
-      const ext = path.extname(foundPath).toLowerCase().replace(/^\./, '');
-      const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv'].includes(ext);
+    const isRemote = !foundPath && (targetRel.startsWith('http://') || targetRel.startsWith('https://'));
+    const inputSource = foundPath || (isRemote ? targetRel : null);
+
+    if (inputSource) {
+      const ext = path.extname(fileName || targetRel).toLowerCase().replace(/^\./, '');
+      const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv'].includes(ext) || isRemote;
       const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
 
-      if (isImage) {
+      if (foundPath && isImage) {
         const stat = fs.statSync(foundPath);
         res.writeHead(200, {
           'Content-Type': mimeType(foundPath),
@@ -1449,7 +1462,7 @@ const server = http.createServer((req, res) => {
 
       if (isVideo) {
         try {
-          spawnSync('ffmpeg', ['-y', '-ss', '00:00:01', '-i', foundPath, '-vframes', '1', '-q:v', '3', '-vf', 'scale=480:-1', cachedThumbPath], { timeout: 8000, stdio: 'ignore' });
+          spawnSync('ffmpeg', ['-y', '-ss', '00:00:01', '-i', inputSource, '-vframes', '1', '-q:v', '3', '-vf', 'scale=480:-1', cachedThumbPath], { timeout: 8000, stdio: 'ignore' });
           if (fs.existsSync(cachedThumbPath)) {
             const stat = fs.statSync(cachedThumbPath);
             if (stat.size > 0) {
