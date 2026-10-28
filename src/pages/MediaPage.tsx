@@ -17,13 +17,13 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
 
   const initialThumbUrl = React.useMemo(() => {
     if (!file.storage_path) return null;
-    if (file.storage_path.startsWith('http://') || file.storage_path.startsWith('https://')) return file.storage_path;
     if (file.storage_path.startsWith('zdrive:')) {
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       if (isLocal) {
-        return `/api/local-drive/read?path=${encodeURIComponent(file.storage_path.slice('zdrive:'.length))}`;
+        return `/api/local-drive/thumbnail?path=${encodeURIComponent(file.storage_path.slice('zdrive:'.length))}`;
       }
     }
+    if (file.storage_path.startsWith('http://') || file.storage_path.startsWith('https://')) return file.storage_path;
     if (file.storage_path.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
     return null;
   }, [file.storage_path]);
@@ -115,46 +115,40 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
       className="group relative rounded-2xl border border-border/80 bg-card overflow-hidden hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer select-none"
     >
       <div className="aspect-square bg-secondary/40 flex items-center justify-center relative overflow-hidden">
-        {cat === 'image' ? (
+        {cat === 'image' || cat === 'video' ? (
           thumbUrl && !thumbError ? (
-            <img
-              src={thumbUrl}
-              alt={file.name}
-              loading="lazy"
-              decoding="async"
-              onError={() => setThumbError(true)}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
+            <div className="relative w-full h-full overflow-hidden bg-black/40">
+              <img
+                src={thumbUrl}
+                alt={file.name}
+                loading="lazy"
+                decoding="async"
+                onError={() => setThumbError(true)}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              {cat === 'video' && (
+                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center">
+                  <div className="h-11 w-11 rounded-full bg-black/60 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform backdrop-blur-md border border-white/20">
+                    <Play className="h-5 w-5 fill-white ml-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : cat === 'video' ? (
+            <div className="relative w-full h-full flex items-center justify-center bg-black/40">
+              <div className="relative z-10 flex flex-col items-center justify-center gap-2">
+                <div className="h-12 w-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform backdrop-blur-sm shadow-md">
+                  <Play className="h-5 w-5 fill-current ml-0.5" />
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground uppercase font-bold">Video</span>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
               <ImageIcon className="h-8 w-8 text-blue-500/80 group-hover:scale-110 transition-transform" />
               <span className="text-[10px] font-mono text-muted-foreground uppercase">{file.extension}</span>
             </div>
           )
-        ) : cat === 'video' ? (
-          <div className="relative w-full h-full flex items-center justify-center bg-black/40">
-            {thumbUrl && (
-              <video
-                src={`${thumbUrl}#t=0.5`}
-                muted
-                playsInline
-                preload="auto"
-                onLoadedMetadata={(e) => {
-                  const v = e.currentTarget;
-                  if (v.duration > 0.5 && v.currentTime === 0) {
-                    v.currentTime = Math.min(1.0, v.duration / 3);
-                  }
-                }}
-                className="absolute inset-0 w-full h-full object-cover opacity-75 pointer-events-none group-hover:scale-105 transition-transform duration-300"
-              />
-            )}
-            <div className="relative z-10 flex flex-col items-center justify-center gap-2">
-              <div className="h-12 w-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform backdrop-blur-sm shadow-md">
-                <Play className="h-5 w-5 fill-current ml-0.5" />
-              </div>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase font-bold">Video</span>
-            </div>
-          </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="h-12 w-12 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">

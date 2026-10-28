@@ -26,6 +26,7 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import crypto from 'crypto';
 import { spawn, spawnSync } from 'child_process';
 import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
@@ -1373,6 +1374,103 @@ const server = http.createServer((req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
     });
+    return;
+  }
+
+  // ── Local Drive Thumbnail API: Ultra-Fast Video & Image Thumbnail via FFmpeg ───
+  if ((method === 'GET' || method === 'HEAD') && (relPath === 'api/local-drive/thumbnail' || relPath === '__local_drive_thumbnail')) {
+    const rawQuery = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const searchParams = new URLSearchParams(rawQuery);
+    const targetRel = (searchParams.get('path') || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+    if (!targetRel || targetRel.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid path parameter' }));
+      return;
+    }
+
+    const thumbDir = path.join(USER_DATA_DIR, 'thumbnails');
+    if (!fs.existsSync(thumbDir)) {
+      try { fs.mkdirSync(thumbDir, { recursive: true }); } catch {}
+    }
+
+    const hash = crypto.createHash('md5').update(targetRel).digest('hex');
+    const cachedThumbPath = path.join(thumbDir, `${hash}.jpg`);
+
+    // 1. If thumbnail is cached, serve in 0.00001s
+    if (fs.existsSync(cachedThumbPath)) {
+      const stat = fs.statSync(cachedThumbPath);
+      if (stat.size > 0) {
+        res.writeHead(200, {
+          'Content-Type': 'image/jpeg',
+          'Content-Length': stat.size,
+          'Cache-Control': 'public, max-age=604800',
+        });
+        if (method === 'HEAD') { res.end(); return; }
+        const stream = fs.createReadStream(cachedThumbPath);
+        stream.on('error', () => { if (!res.headersSent) res.writeHead(500); res.end(); });
+        stream.pipe(res);
+        return;
+      }
+    }
+
+    // 2. Find local file
+    const localCandidates = [
+      path.join(`${DRIVE_LETTER}:\\`, targetRel),
+      path.join(STAGING_DIR, targetRel),
+      path.join(PROJECT_ROOT, targetRel),
+      path.join('E:\\Mg', targetRel.startsWith('Mg/') ? targetRel.slice(3) : targetRel),
+    ];
+    let foundPath = null;
+    for (const cand of localCandidates) {
+      if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
+        foundPath = cand;
+        break;
+      }
+    }
+
+    if (foundPath) {
+      const ext = path.extname(foundPath).toLowerCase().replace(/^\./, '');
+      const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv'].includes(ext);
+      const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
+
+      if (isImage) {
+        const stat = fs.statSync(foundPath);
+        res.writeHead(200, {
+          'Content-Type': mimeType(foundPath),
+          'Content-Length': stat.size,
+          'Cache-Control': 'public, max-age=604800',
+        });
+        if (method === 'HEAD') { res.end(); return; }
+        const stream = fs.createReadStream(foundPath);
+        stream.on('error', () => { if (!res.headersSent) res.writeHead(500); res.end(); });
+        stream.pipe(res);
+        return;
+      }
+
+      if (isVideo) {
+        try {
+          spawnSync('ffmpeg', ['-y', '-ss', '00:00:01', '-i', foundPath, '-vframes', '1', '-q:v', '3', '-vf', 'scale=480:-1', cachedThumbPath], { timeout: 8000, stdio: 'ignore' });
+          if (fs.existsSync(cachedThumbPath)) {
+            const stat = fs.statSync(cachedThumbPath);
+            if (stat.size > 0) {
+              res.writeHead(200, {
+                'Content-Type': 'image/jpeg',
+                'Content-Length': stat.size,
+                'Cache-Control': 'public, max-age=604800',
+              });
+              if (method === 'HEAD') { res.end(); return; }
+              const stream = fs.createReadStream(cachedThumbPath);
+              stream.on('error', () => { if (!res.headersSent) res.writeHead(500); res.end(); });
+              stream.pipe(res);
+              return;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: 'Thumbnail not found' }));
     return;
   }
 
