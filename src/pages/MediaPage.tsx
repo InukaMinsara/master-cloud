@@ -16,17 +16,33 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
   const cat = getFileCategory(file.mime_type, file.extension);
 
   const initialThumbUrl = React.useMemo(() => {
-    if (!file.storage_path) return null;
-    if (file.storage_path.startsWith('zdrive:')) {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (!file) return null;
+    const cat = getFileCategory(file.mime_type, file.extension);
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    if (cat === 'image') {
       if (isLocal) {
-        return `/api/local-drive/thumbnail?path=${encodeURIComponent(file.storage_path.slice('zdrive:'.length))}`;
+        return `/api/local-drive/thumbnail?name=${encodeURIComponent(file.name)}&path=${encodeURIComponent(file.storage_path || '')}`;
       }
+      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        return file.storage_path;
+      }
+      if (file.storage_path?.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
     }
-    if (file.storage_path.startsWith('http://') || file.storage_path.startsWith('https://')) return file.storage_path;
-    if (file.storage_path.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+
+    if (cat === 'video') {
+      if (isLocal) {
+        return `/api/local-drive/thumbnail?name=${encodeURIComponent(file.name)}&path=${encodeURIComponent(file.storage_path || '')}`;
+      }
+      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        return file.storage_path;
+      }
+      if (file.storage_path?.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+    }
+
+    if (file.storage_path?.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
     return null;
-  }, [file.storage_path]);
+  }, [file.id, file.name, file.storage_path, file.mime_type, file.extension]);
 
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
   const [thumbError, setThumbError] = React.useState(false);

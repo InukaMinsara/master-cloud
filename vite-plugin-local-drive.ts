@@ -276,8 +276,10 @@ function resolveLocalPath(cleanRelPath: string): string | null {
         try {
           const urlObj = new URL(req.url || '', 'http://localhost');
           const rawRelPath = urlObj.searchParams.get('path') || '';
+          const fileName = urlObj.searchParams.get('name') || path.basename(rawRelPath);
           const cleanRelPath = rawRelPath.replace(/^[/\\]+/, '').replace(/\\/g, '/');
-          if (!cleanRelPath || cleanRelPath.includes('..')) {
+
+          if (!cleanRelPath && !fileName) {
             res.statusCode = 400;
             res.end('Invalid path');
             return;
@@ -288,10 +290,12 @@ function resolveLocalPath(cleanRelPath: string): string | null {
             try { fs.mkdirSync(thumbDir, { recursive: true }); } catch {}
           }
 
-          const hash = crypto.createHash('md5').update(cleanRelPath).digest('hex');
+          // Use fileName or cleanRelPath for hash
+          const hashKey = (fileName || cleanRelPath).toLowerCase().trim();
+          const hash = crypto.createHash('md5').update(hashKey).digest('hex');
           const cachedThumbPath = path.join(thumbDir, `${hash}.jpg`);
 
-          // 1. If already cached, serve instantly in 0.00001s
+          // 1. If already cached, serve instantly in 0.00001s!
           if (fs.existsSync(cachedThumbPath)) {
             const stat = fs.statSync(cachedThumbPath);
             if (stat.size > 0) {
@@ -299,10 +303,7 @@ function resolveLocalPath(cleanRelPath: string): string | null {
               res.setHeader('Content-Type', 'image/jpeg');
               res.setHeader('Content-Length', stat.size);
               res.setHeader('Cache-Control', 'public, max-age=604800');
-              if (req.method === 'HEAD') {
-                res.end();
-                return;
-              }
+              if (req.method === 'HEAD') { res.end(); return; }
               const stream = fs.createReadStream(cachedThumbPath);
               stream.on('error', () => { if (!res.headersSent) res.statusCode = 500; res.end(); });
               stream.pipe(res);
@@ -310,19 +311,48 @@ function resolveLocalPath(cleanRelPath: string): string | null {
             }
           }
 
-          // 2. Locate target file on disk
-          const targetPath = resolveLocalPath(cleanRelPath) || path.join(getDriveRoot(), cleanRelPath);
-          if (!fs.existsSync(targetPath)) {
+          // 2. Locate target file on disk (search Z:\VIDEO, Z:\Media & Videos, Z:\Mg, Z:\capcu v, Z:\)
+          let targetPath: string | null = null;
+          const searchRoots = [
+            'Z:\\VIDEO',
+            'Z:\\Media & Videos',
+            'Z:\\Mg',
+            'Z:\\capcu v',
+            'Z:\\',
+            getDriveRoot(),
+            'E:\\Mg',
+          ];
+
+          if (fileName) {
+            for (const root of searchRoots) {
+              const cand = path.join(root, fileName);
+              if (fs.existsSync(cand) && !fs.statSync(cand).isDirectory()) {
+                targetPath = cand;
+                break;
+              }
+            }
+          }
+
+          if (!targetPath && cleanRelPath && !cleanRelPath.startsWith('http')) {
+            targetPath = resolveLocalPath(cleanRelPath) || path.join(getDriveRoot(), cleanRelPath);
+            if (!fs.existsSync(targetPath)) targetPath = null;
+          }
+
+          // If not on local disk, but is an HTTP/HTTPS URL
+          const isRemote = !targetPath && (rawRelPath.startsWith('http://') || rawRelPath.startsWith('https://'));
+          const inputSource = targetPath || (isRemote ? rawRelPath : null);
+
+          if (!inputSource) {
             res.statusCode = 404;
             res.end('File not found');
             return;
           }
 
-          const ext = path.extname(cleanRelPath).toLowerCase().replace(/^\./, '');
-          const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv', '3gp'].includes(ext);
+          const ext = path.extname(fileName || cleanRelPath).toLowerCase().replace(/^\./, '');
+          const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv', '3gp'].includes(ext) || isRemote;
           const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
 
-          if (isImage) {
+          if (targetPath && isImage) {
             const stat = fs.statSync(targetPath);
             res.statusCode = 200;
             res.setHeader('Content-Type', guessMimeType(ext));
@@ -340,7 +370,7 @@ function resolveLocalPath(cleanRelPath: string): string | null {
               const ffmpegArgs = [
                 '-y',
                 '-ss', '00:00:01',
-                '-i', targetPath,
+                '-i', inputSource,
                 '-vframes', '1',
                 '-q:v', '3',
                 '-vf', 'scale=480:-1',

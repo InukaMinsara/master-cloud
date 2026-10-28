@@ -39,20 +39,37 @@ interface FileCardProps {
 /**
  * Resolves a zero-delay direct stream URL synchronously (0.00001s instant preview)
  */
-function getDirectStreamUrl(storagePath?: string): string | null {
-  if (!storagePath) return null;
-  if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
-    return storagePath;
-  }
-  if (storagePath.startsWith('zdrive:')) {
-    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+function getDirectStreamUrl(file: FileItem): string | null {
+  if (!file) return null;
+  const category = getFileCategory(file.mime_type, file.extension);
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (category === 'image') {
     if (isLocal) {
-      const rel = storagePath.slice('zdrive:'.length);
-      return `/api/local-drive/thumbnail?path=${encodeURIComponent(rel)}`;
+      return `/api/local-drive/thumbnail?name=${encodeURIComponent(file.name)}&path=${encodeURIComponent(file.storage_path || '')}`;
+    }
+    if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+      return file.storage_path;
+    }
+    if (file.storage_path?.startsWith('tgcloud:')) {
+      return TelegramCloudService.getDirectStreamUrl(file.storage_path);
     }
   }
-  if (storagePath.startsWith('tgcloud:')) {
-    return TelegramCloudService.getDirectStreamUrl(storagePath);
+
+  if (category === 'video') {
+    if (isLocal) {
+      return `/api/local-drive/thumbnail?name=${encodeURIComponent(file.name)}&path=${encodeURIComponent(file.storage_path || '')}`;
+    }
+    if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+      return file.storage_path;
+    }
+    if (file.storage_path?.startsWith('tgcloud:')) {
+      return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+    }
+  }
+
+  if (file.storage_path?.startsWith('tgcloud:')) {
+    return TelegramCloudService.getDirectStreamUrl(file.storage_path);
   }
   return null;
 }
@@ -68,7 +85,7 @@ export function FileCard({ file, allFiles }: FileCardProps) {
   const ext = (file.extension || '').toLowerCase();
 
   // Instant 0ms synchronous resolution for direct streaming
-  const initialThumbUrl = React.useMemo(() => getDirectStreamUrl(file.storage_path), [file.storage_path]);
+  const initialThumbUrl = React.useMemo(() => getDirectStreamUrl(file), [file.id, file.name, file.storage_path, file.mime_type, file.extension]);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
   const [thumbError, setThumbError] = React.useState(false);
 
@@ -77,7 +94,7 @@ export function FileCard({ file, allFiles }: FileCardProps) {
     let localBlobUrl: string | null = null;
     setThumbError(false);
 
-    const direct = getDirectStreamUrl(file.storage_path);
+    const direct = getDirectStreamUrl(file);
     if (direct) {
       setThumbUrl(direct);
       return;
