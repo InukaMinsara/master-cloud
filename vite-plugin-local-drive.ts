@@ -1,6 +1,8 @@
 import type { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import { spawnSync } from 'child_process';
 
 const DRIVE_PATHS = ['Z:\\', 'D:\\MasterCloudDrive'];
 
@@ -133,8 +135,7 @@ function triggerBackgroundScan() {
     });
 }
 
-// Initial scan trigger on load
-triggerBackgroundScan();
+// Initial scan trigger on dev server configureServer only
 
 export function localDrivePlugin(): Plugin {
   return {
@@ -263,6 +264,115 @@ function resolveLocalPath(cleanRelPath: string): string | null {
   }
   return null;
 }
+
+      // 2. Ultra-Fast Video / Image Thumbnail Endpoint (via FFmpeg + Local Cache)
+      server.middlewares.use('/api/local-drive/thumbnail', (req, res) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+
+        try {
+          const urlObj = new URL(req.url || '', 'http://localhost');
+          const rawRelPath = urlObj.searchParams.get('path') || '';
+          const cleanRelPath = rawRelPath.replace(/^[/\\]+/, '').replace(/\\/g, '/');
+          if (!cleanRelPath || cleanRelPath.includes('..')) {
+            res.statusCode = 400;
+            res.end('Invalid path');
+            return;
+          }
+
+          const thumbDir = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'thumbnails');
+          if (!fs.existsSync(thumbDir)) {
+            try { fs.mkdirSync(thumbDir, { recursive: true }); } catch {}
+          }
+
+          const hash = crypto.createHash('md5').update(cleanRelPath).digest('hex');
+          const cachedThumbPath = path.join(thumbDir, `${hash}.jpg`);
+
+          // 1. If already cached, serve instantly in 0.00001s
+          if (fs.existsSync(cachedThumbPath)) {
+            const stat = fs.statSync(cachedThumbPath);
+            if (stat.size > 0) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'image/jpeg');
+              res.setHeader('Content-Length', stat.size);
+              res.setHeader('Cache-Control', 'public, max-age=604800');
+              if (req.method === 'HEAD') {
+                res.end();
+                return;
+              }
+              const stream = fs.createReadStream(cachedThumbPath);
+              stream.on('error', () => { if (!res.headersSent) res.statusCode = 500; res.end(); });
+              stream.pipe(res);
+              return;
+            }
+          }
+
+          // 2. Locate target file on disk
+          const targetPath = resolveLocalPath(cleanRelPath) || path.join(getDriveRoot(), cleanRelPath);
+          if (!fs.existsSync(targetPath)) {
+            res.statusCode = 404;
+            res.end('File not found');
+            return;
+          }
+
+          const ext = path.extname(cleanRelPath).toLowerCase().replace(/^\./, '');
+          const isVideo = ['mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv', '3gp'].includes(ext);
+          const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext);
+
+          if (isImage) {
+            const stat = fs.statSync(targetPath);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', guessMimeType(ext));
+            res.setHeader('Content-Length', stat.size);
+            res.setHeader('Cache-Control', 'public, max-age=604800');
+            if (req.method === 'HEAD') { res.end(); return; }
+            const stream = fs.createReadStream(targetPath);
+            stream.on('error', () => { if (!res.headersSent) res.statusCode = 500; res.end(); });
+            stream.pipe(res);
+            return;
+          }
+
+          if (isVideo) {
+            try {
+              const ffmpegArgs = [
+                '-y',
+                '-ss', '00:00:01',
+                '-i', targetPath,
+                '-vframes', '1',
+                '-q:v', '3',
+                '-vf', 'scale=480:-1',
+                cachedThumbPath
+              ];
+              spawnSync('ffmpeg', ffmpegArgs, { timeout: 8000, stdio: 'ignore' });
+              if (fs.existsSync(cachedThumbPath)) {
+                const stat = fs.statSync(cachedThumbPath);
+                if (stat.size > 0) {
+                  res.statusCode = 200;
+                  res.setHeader('Content-Type', 'image/jpeg');
+                  res.setHeader('Content-Length', stat.size);
+                  res.setHeader('Cache-Control', 'public, max-age=604800');
+                  if (req.method === 'HEAD') { res.end(); return; }
+                  const stream = fs.createReadStream(cachedThumbPath);
+                  stream.on('error', () => { if (!res.headersSent) res.statusCode = 500; res.end(); });
+                  stream.pipe(res);
+                  return;
+                }
+              }
+            } catch (e) {
+              console.warn('FFmpeg thumbnail generation failed:', e);
+            }
+          }
+
+          res.statusCode = 404;
+          res.end('Thumbnail unavailable');
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.end('Failed: ' + err.message);
+        }
+      });
 
       // 2. Read & stream file bytes for preview & download
       server.middlewares.use('/api/local-drive/read', (req, res) => {

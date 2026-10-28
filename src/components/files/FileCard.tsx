@@ -48,7 +48,7 @@ function getDirectStreamUrl(storagePath?: string): string | null {
     const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     if (isLocal) {
       const rel = storagePath.slice('zdrive:'.length);
-      return `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+      return `/api/local-drive/thumbnail?path=${encodeURIComponent(rel)}`;
     }
   }
   if (storagePath.startsWith('tgcloud:')) {
@@ -271,24 +271,18 @@ export function FileCard({ file, allFiles }: FileCardProps) {
             )
           ) : category === 'video' ? (
             thumbUrl && !thumbError ? (
-              <div className="relative w-full h-full bg-black flex items-center justify-center">
-                <video
-                  src={`${thumbUrl}#t=0.5`}
-                  muted
-                  playsInline
-                  preload="auto"
-                  onLoadedMetadata={(e) => {
-                    const v = e.currentTarget;
-                    if (v.duration > 0.5 && v.currentTime === 0) {
-                      v.currentTime = Math.min(1.0, v.duration / 3);
-                    }
-                  }}
+              <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+                <img
+                  src={thumbUrl}
+                  alt={file.name}
+                  loading="lazy"
+                  decoding="async"
                   onError={() => setThumbError(true)}
-                  className="w-full h-full object-cover pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 {/* Subtle Google Drive Play badge overlay */}
-                <div className="absolute inset-0 bg-black/15 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                  <div className="h-9 w-9 rounded-full bg-black/60 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform backdrop-blur-sm">
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-full bg-black/60 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform backdrop-blur-sm border border-white/20">
                     <Play className="h-4 w-4 fill-white ml-0.5" />
                   </div>
                 </div>
