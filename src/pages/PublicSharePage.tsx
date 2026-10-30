@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Download,
   Lock,
@@ -9,6 +9,8 @@ import {
   Eye,
   ShieldCheck,
   AlertCircle,
+  Cloud,
+  Check,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { DownloadCenter } from '@/components/download/DownloadCenter';
@@ -18,8 +20,11 @@ import { formatBytes, formatDateTime, getFileCategory } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/authStore';
 
 export function PublicSharePage() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const dParam = searchParams.get('d');
@@ -29,6 +34,8 @@ export function PublicSharePage() {
   const [isUnlocked, setIsUnlocked] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaved, setIsSaved] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (!token) return;
@@ -48,6 +55,15 @@ export function PublicSharePage() {
       .finally(() => setIsLoading(false));
   }, [token, dParam]);
 
+  React.useEffect(() => {
+    if (linkData?.item && user) {
+      // Auto-register into user's "Shared with me" section
+      api.recordSharedAccess(linkData.item, linkData.link);
+      // Check if already saved in personal drive
+      api.isItemInMyDrive(linkData.item.id).then(setIsSaved).catch(() => {});
+    }
+  }, [linkData, user]);
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkData) return;
@@ -65,6 +81,26 @@ export function PublicSharePage() {
       await api.downloadFile(linkData.item as FileItem);
     } else {
       await api.downloadFolder(linkData.item as FolderItem);
+    }
+  };
+
+  const handleSaveToDrive = async () => {
+    if (!user) {
+      toast.info('Please sign in to save this file to your Master Cloud drive.');
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
+
+    if (!linkData) return;
+    setIsSaving(true);
+    try {
+      await api.saveSharedItemToDrive(linkData.item, linkData.link.resource_type === 'folder');
+      setIsSaved(true);
+      toast.success(`"${linkData.item.name}" saved to your My Drive!`);
+    } catch (err: any) {
+      toast.error(`Save failed: ${err.message || 'Error'}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -109,11 +145,29 @@ export function PublicSharePage() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <Link to="/login">
-            <Button variant="outline" size="sm" className="rounded-xl text-xs">
-              Sign In
-            </Button>
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold border border-primary/20">
+                  {user.display_name ? user.display_name[0].toUpperCase() : 'U'}
+                </div>
+                <span className="text-xs font-medium text-foreground hidden sm:inline">
+                  {user.display_name || user.email}
+                </span>
+              </div>
+              <Link to="/drive">
+                <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 hover:border-primary/50">
+                  <Folder className="h-3.5 w-3.5 text-primary" /> Open My Drive
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <Link to={`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`}>
+              <Button variant="outline" size="sm" className="rounded-xl text-xs font-medium">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 
@@ -200,20 +254,37 @@ export function PublicSharePage() {
             )}
 
             {/* Actions */}
-            <div className="pt-2">
-              {link.allow_download ? (
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              {link.allow_download && (
                 <Button
                   variant="gradient"
                   onClick={handleDownload}
-                  className="w-full h-12 rounded-2xl text-sm font-semibold"
+                  className="flex-1 h-12 rounded-2xl text-sm font-semibold shadow-md"
                 >
                   <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
                 </Button>
-              ) : (
-                <p className="text-center text-xs text-muted-foreground">
-                  The owner has restricted direct downloads for this public link.
-                </p>
               )}
+
+              <Button
+                variant="outline"
+                onClick={handleSaveToDrive}
+                disabled={isSaved || isSaving}
+                className={`flex-1 sm:flex-initial sm:min-w-[180px] h-12 rounded-2xl text-sm font-semibold transition-all ${
+                  isSaved
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : 'hover:border-primary/50'
+                }`}
+              >
+                {isSaved ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2 text-emerald-500" /> Saved to Drive
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-4 w-4 mr-2 text-primary" /> {isSaving ? 'Saving...' : 'Save to My Drive'}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         )}
