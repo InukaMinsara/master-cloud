@@ -24,7 +24,9 @@ export class NativeMobileService {
     try {
       // 1. Status Bar styling
       await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setBackgroundColor({ color: '#090d16' });
+      if (this.getPlatform() === 'android') {
+        await StatusBar.setBackgroundColor({ color: '#090d16' });
+      }
     } catch (e) {
       console.warn('StatusBar init error:', e);
     }

@@ -98,7 +98,7 @@ export function HomePage() {
           {/* Top Pill */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wide shadow-sm animate-in fade-in zoom-in duration-500">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>10 TB Permanent Free Storage • Windows &amp; Android Apps Available</span>
+            <span>10 TB Permanent Free Storage • Windows, Android &amp; iPhone Apps</span>
           </div>
 
           {/* Headline */}
@@ -594,17 +594,23 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+          <div className="flex flex-wrap gap-3 shrink-0">
             <Link to="/download">
               <Button variant="gradient" size="lg" className="rounded-2xl text-xs font-bold gap-2 shrink-0">
                 <Laptop className="h-4 w-4" />
-                <span>Windows Desktop Client</span>
+                <span>Windows Client</span>
               </Button>
             </Link>
             <Link to="/download">
               <Button variant="outline" size="lg" className="rounded-2xl text-xs font-bold gap-2 shrink-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10">
                 <Smartphone className="h-4 w-4 text-emerald-500" />
-                <span>Android Mobile App</span>
+                <span>Android App</span>
+              </Button>
+            </Link>
+            <Link to="/download">
+              <Button variant="outline" size="lg" className="rounded-2xl text-xs font-bold gap-2 shrink-0 border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10">
+                <Download className="h-4 w-4 text-purple-500" />
+                <span>Apple iPhone (iOS)</span>
               </Button>
             </Link>
           </div>
@@ -712,7 +718,7 @@ export function HomePage() {
               Ready to claim your 10 TB free cloud?
             </h2>
             <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-              Create your account in 30 seconds. Mount your Windows drive, install on Android, or start collaborating on the web.
+              Create your account in 30 seconds. Mount your Windows drive, install on Android or iPhone, or start collaborating on the web.
             </p>
           </div>
 
@@ -733,7 +739,7 @@ export function HomePage() {
                 className="h-14 px-8 rounded-2xl border-white/40 text-white hover:bg-white/10 font-bold text-sm hover:scale-105 transition-transform"
               >
                 <Download className="h-4 w-4 mr-2" />
-                <span>Download Apps (Windows &amp; Android)</span>
+                <span>Download Apps (PC, Android &amp; iPhone)</span>
               </Button>
             </Link>
           </div>
