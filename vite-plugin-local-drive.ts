@@ -195,6 +195,51 @@ export function localDrivePlugin(): Plugin {
       // Trigger background scan on server startup
       triggerBackgroundScan();
 
+      // Active web session sync endpoint
+      server.middlewares.use('/api/auth/active-session', (req, res) => {
+        const sessionFile = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'active-web-session.json');
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', chunk => { body += chunk.toString(); });
+          req.on('end', () => {
+            try {
+              const sessionDir = path.dirname(sessionFile);
+              if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+              fs.writeFileSync(sessionFile, body, 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: true }));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ ok: false, error: err.message }));
+            }
+          });
+          return;
+        }
+        if (req.method === 'DELETE') {
+          try {
+            if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
+          } catch {}
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        if (req.method === 'GET') {
+          if (fs.existsSync(sessionFile)) {
+            try {
+              const data = fs.readFileSync(sessionFile, 'utf8');
+              res.setHeader('Content-Type', 'application/json');
+              res.end(data);
+              return;
+            } catch {}
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ email: null }));
+          return;
+        }
+        res.statusCode = 405;
+        res.end();
+      });
+
       // 1. List files & folders from local drive (Z:\ or D:\MasterCloudDrive) with strict account isolation
       server.middlewares.use('/api/local-drive/list', (req, res) => {
         if (req.method !== 'GET') {
@@ -242,10 +287,12 @@ export function localDrivePlugin(): Plugin {
                   relPath: f.relPath || rel,
                   name: f.name || rel,
                   isDir: false,
-                  parentRelPath: null,
+                  parentRelPath: f.parentRelPath || null,
                   size: f.size || 0,
                   mtime: f.mtime || new Date().toISOString(),
                   birthtime: f.birthtime || new Date().toISOString(),
+                  cloudUrls: f.cloudUrls || [],
+                  storagePath: (f.cloudUrls && f.cloudUrls[0]) || f.storagePath || null,
                 });
               }
               for (const [rel, fd] of Object.entries((uManifest.folders || {}) as Record<string, any>)) {
@@ -253,7 +300,7 @@ export function localDrivePlugin(): Plugin {
                   relPath: fd.relPath || rel,
                   name: fd.name || rel,
                   isDir: true,
-                  parentRelPath: null,
+                  parentRelPath: fd.parentRelPath || null,
                   size: 0,
                   mtime: fd.mtime || new Date().toISOString(),
                   birthtime: fd.birthtime || new Date().toISOString(),

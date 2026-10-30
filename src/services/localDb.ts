@@ -15,7 +15,7 @@ import {
 import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/types/file';
 import { calculateFileChecksum, getFileExtension, getFileCategory, generateSecureToken } from '@/lib/utils';
 import { FREE_TEN_TB_BYTES } from '@/lib/constants';
-import { CLOUD_SEED_FOLDERS, CLOUD_SEED_FILES, CLOUD_SEED_STATS } from './cloudSeedData';
+import { CLOUD_SEED_FOLDERS, CLOUD_SEED_FILES, CLOUD_SEED_STATS, USER_SEED_DATA } from './cloudSeedData';
 
 const DB_PREFIX = 'master_cloud_v3_';
 
@@ -498,8 +498,13 @@ class LocalDatabaseService {
     }
 
     const isMaster = currentDbUserEmail.toLowerCase() === 'immaster2024@gmail.com';
-    this.files = loadTable('files', isMaster ? SEED_FILES : []);
-    this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
+    const currentPrefix = currentDbUserEmail.split('@')[0].toLowerCase();
+    const userSeed = USER_SEED_DATA[currentDbUserEmail.toLowerCase()] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null);
+    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : []);
+    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : []);
+
+    this.files = loadTable('files', initialFiles);
+    this.folders = loadTable('folders', initialFolders);
 
     if (isMaster) {
       if (!this.files || this.files.length === 0) {
@@ -521,6 +526,15 @@ class LocalDatabaseService {
       });
       saveTable('folders', this.folders);
       saveTable('files', this.files);
+    } else if (userSeed) {
+      if (!this.files || this.files.length === 0) {
+        this.files = [...initialFiles];
+      }
+      if (!this.folders || this.folders.length === 0) {
+        this.folders = [...initialFolders];
+      }
+      saveTable('folders', this.folders);
+      saveTable('files', this.files);
     }
   }
 
@@ -540,15 +554,23 @@ class LocalDatabaseService {
     }
 
     // Direct ownership match
-    if (ownerId && ownerId === activeUserId) return true;
+    if (ownerId && (ownerId === activeUserId || ownerId === this.currentUser?.id)) return true;
 
-    // Email prefix match for this user
+    // Email or prefix match for this user
     const currentPrefix = activeEmail.split('@')[0].toLowerCase();
-    if (ownerId && currentPrefix && ownerId.toLowerCase().includes(currentPrefix)) return true;
+    if (ownerId) {
+      const lowerOwner = ownerId.toLowerCase();
+      if (lowerOwner.includes(activeEmail) || (currentPrefix && lowerOwner.includes(currentPrefix))) return true;
+    }
+
+    // Cloud files belonging to this user
+    if (storagePath && (storagePath.startsWith('http://') || storagePath.startsWith('https://') || storagePath.startsWith('tgcloud:'))) {
+      if (ownerId && (ownerId === activeUserId || (currentPrefix && ownerId.toLowerCase().includes(currentPrefix)))) return true;
+    }
 
     // Local Z: drive files (zdrive:...) are visible if they belong to this user
     if (storagePath && storagePath.startsWith('zdrive:')) {
-      return Boolean(ownerId && (ownerId === activeUserId || ownerId.toLowerCase().includes(currentPrefix)));
+      return Boolean(ownerId && (ownerId === activeUserId || (currentPrefix && ownerId.toLowerCase().includes(currentPrefix))));
     }
 
     return false;
@@ -576,8 +598,48 @@ class LocalDatabaseService {
 
     // Reload tables for this user from their isolated localStorage partition!
     const isMaster = newEmail === 'immaster2024@gmail.com';
-    this.files = loadTable('files', isMaster ? SEED_FILES : []);
-    this.folders = loadTable('folders', isMaster ? SEED_FOLDERS : []);
+    const currentPrefix = newEmail.split('@')[0].toLowerCase();
+    const userSeed = USER_SEED_DATA[newEmail] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null);
+
+    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : []);
+    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : [
+      {
+        id: `f-${currentPrefix}-work`,
+        owner_id: user.id,
+        parent_folder_id: null,
+        name: 'Work Documents',
+        color: '#3b82f6',
+        is_starred: false,
+        deleted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: `f-${currentPrefix}-media`,
+        owner_id: user.id,
+        parent_folder_id: null,
+        name: 'Media & Videos',
+        color: '#ec4899',
+        is_starred: false,
+        deleted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: `f-${currentPrefix}-shared`,
+        owner_id: user.id,
+        parent_folder_id: null,
+        name: 'Shared Projects',
+        color: '#14b8a6',
+        is_starred: false,
+        deleted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
+    this.files = loadTable('files', initialFiles);
+    this.folders = loadTable('folders', initialFolders);
 
     if (isMaster) {
       if (!this.files || this.files.length === 0) {
@@ -598,6 +660,26 @@ class LocalDatabaseService {
       });
       saveTable('folders', this.folders);
       saveTable('files', this.files);
+    } else {
+      if (!this.folders || this.folders.length === 0) {
+        this.folders = [...initialFolders];
+      }
+      if (userSeed && (!this.files || this.files.length === 0)) {
+        this.files = [...initialFiles];
+      }
+      // Guarantee ownership for active user
+      this.folders.forEach(f => {
+        if (!f.owner_id || f.owner_id.includes(currentPrefix)) {
+          f.owner_id = user.id;
+        }
+      });
+      this.files.forEach(f => {
+        if (!f.owner_id || f.owner_id.includes(currentPrefix)) {
+          f.owner_id = user.id;
+        }
+      });
+      saveTable('folders', this.folders);
+      saveTable('files', this.files);
     }
     this.versions = loadTable('versions', []);
     this.shares = loadTable('shares', []);
@@ -607,6 +689,9 @@ class LocalDatabaseService {
     this.activityLogs = loadTable('activity_logs', []);
     this.notifications = loadTable('notifications', []);
     this.devices = loadTable('devices', []);
+
+    this.syncCacheTimestamps.clear();
+    this.syncWithLocalDrive(null).catch(() => {});
   }
 
   async updateProfile(updates: Partial<ProfileRecord>): Promise<ProfileRecord> {
@@ -778,8 +863,8 @@ class LocalDatabaseService {
       // 2. Sync all files across the drive
       const diskFiles = diskItems.filter(i => !i.isDir);
       for (const item of diskFiles) {
-        const zStoragePath = `zdrive:${item.relPath}`;
-        const existing = existingFileByPath.get(zStoragePath);
+        const itemStoragePath = (item as any).storagePath || ((item as any).cloudUrls && (item as any).cloudUrls[0]) || `zdrive:${item.relPath}`;
+        const existing = existingFileByPath.get(itemStoragePath) || existingFileByPath.get(`zdrive:${item.relPath}`);
         const parentFolderRel = item.parentRelPath || '';
         const parentFid = parentFolderRel ? (folderMapByRel.get(parentFolderRel) || null) : null;
 
@@ -790,7 +875,7 @@ class LocalDatabaseService {
             owner_id: this.currentUser.id,
             parent_folder_id: parentFid,
             name: item.name,
-            storage_path: zStoragePath,
+            storage_path: itemStoragePath,
             mime_type: this.guessMimeType(ext),
             size_bytes: item.size,
             extension: ext,
@@ -802,12 +887,16 @@ class LocalDatabaseService {
             updated_at: item.mtime || new Date().toISOString(),
           };
           this.files.push(newFile);
-          existingFileByPath.set(zStoragePath, newFile);
+          existingFileByPath.set(itemStoragePath, newFile);
           changed = true;
         } else {
           if (existing.size_bytes !== item.size) {
             existing.size_bytes = item.size;
             existing.updated_at = item.mtime;
+            changed = true;
+          }
+          if (existing.storage_path !== itemStoragePath && itemStoragePath.startsWith('http')) {
+            existing.storage_path = itemStoragePath;
             changed = true;
           }
           if (existing.parent_folder_id !== parentFid) {

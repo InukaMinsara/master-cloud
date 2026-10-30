@@ -884,14 +884,23 @@ class UnifiedApiService {
   }
 
   async softDeleteFile(id: string): Promise<void> {
+    if (this.isConfiguredWithSupabase()) {
+      await supabase.from('files').update({ deleted_at: new Date().toISOString() }).eq('id', id).catch(() => {});
+    }
     return localDb.softDeleteFile(id);
   }
 
   async restoreFile(id: string): Promise<void> {
+    if (this.isConfiguredWithSupabase()) {
+      await supabase.from('files').update({ deleted_at: null }).eq('id', id).catch(() => {});
+    }
     return localDb.restoreFile(id);
   }
 
   async permanentDeleteFile(id: string): Promise<void> {
+    if (this.isConfiguredWithSupabase()) {
+      await supabase.from('files').delete().eq('id', id).catch(() => {});
+    }
     return localDb.permanentDeleteFile(id);
   }
 
