@@ -1253,6 +1253,44 @@ class UnifiedApiService {
     return localDb.revokeShareLink(linkId);
   }
 
+  async getSharedWithMe(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    return localDb.getSharedWithMe();
+  }
+
+  async recordSharedAccess(item: FileItem | FolderItem, link: ShareLinkRecord): Promise<void> {
+    return localDb.recordSharedAccess(item, link);
+  }
+
+  async isItemInMyDrive(itemId: string): Promise<boolean> {
+    return localDb.isItemInMyDrive(itemId);
+  }
+
+  async saveSharedItemToDrive(item: FileItem | FolderItem, isFolder: boolean): Promise<FileItem | FolderItem> {
+    const saved = await localDb.saveSharedItemToDrive(item, isFolder);
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user && !isFolder) {
+          const file = saved as FileItem;
+          await supabase.from('files').upsert({
+            id: file.id,
+            owner_id: user.id,
+            parent_folder_id: null,
+            name: file.name,
+            storage_path: file.storage_path,
+            mime_type: file.mime_type,
+            size_bytes: file.size_bytes,
+            extension: file.extension,
+            updated_at: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Supabase saveSharedItemToDrive sync error:', err);
+      }
+    }
+    return saved;
+  }
+
   // --- File Requests ---
   async getFileRequests(): Promise<FileRequestRecord[]> {
     return localDb.getFileRequests();

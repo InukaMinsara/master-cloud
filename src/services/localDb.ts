@@ -413,6 +413,14 @@ class LocalDatabaseService {
   private versions: FileVersionRecord[];
   private shares: ShareRecord[];
   private shareLinks: ShareLinkRecord[];
+  public sharedWithMe: Array<{
+    id: string;
+    item_id: string;
+    user_id: string;
+    resource_type: 'file' | 'folder';
+    item: FileItem | FolderItem;
+    accessed_at: string;
+  }>;
   private fileRequests: FileRequestRecord[];
   private comments: CommentRecord[];
   private activityLogs: ActivityLogRecord[];
@@ -479,6 +487,7 @@ class LocalDatabaseService {
         created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
       },
     ]);
+    this.sharedWithMe = loadTable('shared_with_me', []);
     this.fileRequests = loadTable('file_requests', [
       {
         id: 'req-1',
@@ -631,6 +640,7 @@ class LocalDatabaseService {
 
     this.files = loadTable('files', initialFiles);
     this.folders = loadTable('folders', initialFolders);
+    this.sharedWithMe = loadTable('shared_with_me', []);
 
     if (isMaster) {
       if (!this.files || this.files.length === 0) {
@@ -735,6 +745,7 @@ class LocalDatabaseService {
 
     this.files = loadTable('files', initialFiles);
     this.folders = loadTable('folders', initialFolders);
+    this.sharedWithMe = loadTable('shared_with_me', []);
 
     if (isMaster) {
       if (!this.files || this.files.length === 0) {
@@ -1977,6 +1988,126 @@ class LocalDatabaseService {
     if (link) {
       link.is_active = false;
       saveTable('share_links', this.shareLinks);
+    }
+  }
+
+  async recordSharedAccess(item: FileItem | FolderItem, link: ShareLinkRecord): Promise<void> {
+    const activeUserId = this.currentUser?.id;
+    if (!activeUserId) return;
+
+    // Do not mark item as "Shared with me" if it belongs to current user
+    if (item.owner_id === activeUserId || (this.currentUser?.email && item.owner_id?.toLowerCase().includes(this.currentUser.email.toLowerCase()))) {
+      return;
+    }
+
+    const existingIdx = this.sharedWithMe.findIndex(s => s.item_id === item.id && s.user_id === activeUserId);
+    const entry = {
+      id: `swm-${item.id}-${activeUserId}`,
+      item_id: item.id,
+      user_id: activeUserId,
+      resource_type: link.resource_type,
+      item: { ...item, owner: item.owner || { display_name: 'Collaborator', email: '' } },
+      accessed_at: new Date().toISOString(),
+    };
+
+    if (existingIdx >= 0) {
+      this.sharedWithMe[existingIdx] = entry;
+    } else {
+      this.sharedWithMe.unshift(entry);
+    }
+    saveTable('shared_with_me', this.sharedWithMe);
+  }
+
+  async getSharedWithMe(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    await this.syncWithLocalDrive(null);
+    const activeUserId = this.currentUser?.id;
+    const activeEmail = (this.currentUser?.email || '').trim().toLowerCase();
+
+    const resultFiles: FileItem[] = [];
+    const resultFolders: FolderItem[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. Explicit email shares (ShareDialog invite)
+    const matchingShares = this.shares.filter(s =>
+      (s.grantee_email && s.grantee_email.toLowerCase() === activeEmail) ||
+      (s.grantee_id && s.grantee_id === activeUserId)
+    );
+
+    for (const sh of matchingShares) {
+      if (sh.resource_type === 'file') {
+        const f = this.files.find(item => item.id === sh.resource_id) ||
+                  CLOUD_SEED_FILES.find(item => item.id === sh.resource_id);
+        if (f && !seenIds.has(f.id)) {
+          seenIds.add(f.id);
+          resultFiles.push({ ...f, owner: f.owner || { display_name: 'Collaborator' } });
+        }
+      } else {
+        const fd = this.folders.find(item => item.id === sh.resource_id) ||
+                   CLOUD_SEED_FOLDERS.find(item => item.id === sh.resource_id);
+        if (fd && !seenIds.has(fd.id)) {
+          seenIds.add(fd.id);
+          resultFolders.push({ ...fd, owner: fd.owner || { display_name: 'Collaborator' } });
+        }
+      }
+    }
+
+    // 2. Shared links accessed while signed in
+    for (const record of this.sharedWithMe) {
+      if (record.user_id === activeUserId && record.item && !seenIds.has(record.item.id)) {
+        seenIds.add(record.item.id);
+        if (record.resource_type === 'file') {
+          resultFiles.push(record.item as FileItem);
+        } else {
+          resultFolders.push(record.item as FolderItem);
+        }
+      }
+    }
+
+    return { files: resultFiles, folders: resultFolders };
+  }
+
+  async isItemInMyDrive(itemId: string): Promise<boolean> {
+    const activeUserId = this.currentUser?.id;
+    if (!activeUserId) return false;
+    return this.files.some(f => !f.deleted_at && (f.id === itemId || f.name === itemId) && f.owner_id === activeUserId) ||
+           this.folders.some(fd => !fd.deleted_at && (fd.id === itemId || fd.name === itemId) && fd.owner_id === activeUserId);
+  }
+
+  async saveSharedItemToDrive(item: FileItem | FolderItem, isFolder: boolean): Promise<FileItem | FolderItem> {
+    const activeUserId = this.currentUser?.id || 'usr-master';
+
+    if (isFolder) {
+      const existing = this.folders.find(f => !f.deleted_at && f.name.toLowerCase() === item.name.toLowerCase() && f.owner_id === activeUserId);
+      if (existing) return existing;
+
+      const newFolder = await this.createFolder(item.name, null, (item as FolderItem).color);
+      return newFolder;
+    } else {
+      const file = item as FileItem;
+      const existing = this.files.find(f => !f.deleted_at && (f.storage_path === file.storage_path || f.name === file.name) && f.owner_id === activeUserId);
+      if (existing) return existing;
+
+      const newFile: FileRecord = {
+        id: 'f-saved-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        owner_id: activeUserId,
+        parent_folder_id: null,
+        name: file.name,
+        storage_path: file.storage_path,
+        mime_type: file.mime_type,
+        size_bytes: file.size_bytes,
+        extension: file.extension,
+        is_starred: false,
+        deleted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner: this.currentUser,
+      };
+
+      this.files.unshift(newFile);
+      saveTable('files', this.files);
+      await this.logActivity('file', newFile.id, newFile.name, 'upload', { source: 'shared_import' });
+      this.notifyStorageUpdated();
+      return newFile;
     }
   }
 
