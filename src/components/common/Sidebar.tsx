@@ -61,7 +61,7 @@ export function Sidebar() {
     { label: 'Recent', path: '/recent', icon: Clock },
     { label: 'Starred', path: '/starred', icon: Star },
     { label: 'Media Library', path: '/media', icon: Film },
-    { label: 'Storage & Quota Analytics', path: '/storage', icon: PieChart },
+    { label: 'Storage Analytics', path: '/storage', icon: PieChart },
     { label: 'Trash', path: '/trash', icon: Trash2 },
   ];
 

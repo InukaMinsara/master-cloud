@@ -80,7 +80,7 @@ export function DashboardPage() {
 
   const quickShortcuts = [
     { label: 'My Drive', path: '/drive', icon: HardDrive, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Storage & Quota Analytics', path: '/storage', icon: PieChart, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Storage Analytics', path: '/storage', icon: PieChart, color: 'text-rose-500', bg: 'bg-rose-500/10' },
     { label: 'Shared with me', path: '/shared', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Media Library', path: '/media', icon: Film, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Recent Files', path: '/recent', icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
@@ -330,7 +330,7 @@ export function DashboardPage() {
               }`}
             >
               <PieChart className="h-3.5 w-3.5 inline-block mr-1.5" />
-              Storage & Quota Analytics
+              Storage Analytics
             </button>
           </div>
 
@@ -390,7 +390,7 @@ export function DashboardPage() {
           <div className="p-6 rounded-3xl border border-border/80 bg-card/60 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-foreground">Storage & Quota Analytics Overview</h3>
+                <h3 className="text-base font-bold text-foreground">Storage Analytics Overview</h3>
                 <p className="text-xs text-muted-foreground">
                   Real-time breakdown of your 10 TB free storage usage and category distribution
                 </p>
