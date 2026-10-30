@@ -240,6 +240,99 @@ export function localDrivePlugin(): Plugin {
         res.end();
       });
 
+      // 0.1 Public Shares Registry & Sync (Works across all browsers & tabs)
+      server.middlewares.use('/api/shares/create', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+          try {
+            const payload = JSON.parse(body || '{}');
+            const sharesFile = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'public-shares.json');
+            let shares: Record<string, any> = {};
+            if (fs.existsSync(sharesFile)) {
+              try { shares = JSON.parse(fs.readFileSync(sharesFile, 'utf8')); } catch {}
+            }
+            if (payload.token) {
+              shares[payload.token] = { link: payload.link, item: payload.item, updatedAt: Date.now() };
+              fs.writeFileSync(sharesFile, JSON.stringify(shares, null, 2), 'utf8');
+            }
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true }));
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+      });
+
+      server.middlewares.use('/api/shares/get', (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        try {
+          const urlObj = new URL(req.url || '', 'http://localhost');
+          const token = urlObj.searchParams.get('token') || '';
+          const sharesFile = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'public-shares.json');
+          if (fs.existsSync(sharesFile) && token) {
+            const shares = JSON.parse(fs.readFileSync(sharesFile, 'utf8'));
+            if (shares[token]) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: true, data: shares[token] }));
+              return;
+            }
+          }
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: false, error: 'Share link not found' }));
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      server.middlewares.use('/api/shares/revoke', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+          try {
+            const { linkId, token } = JSON.parse(body || '{}');
+            const sharesFile = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'public-shares.json');
+            if (fs.existsSync(sharesFile)) {
+              const shares = JSON.parse(fs.readFileSync(sharesFile, 'utf8'));
+              for (const t of Object.keys(shares)) {
+                if (t === token || (shares[t].link && shares[t].link.id === linkId)) {
+                  shares[t].link.is_active = false;
+                }
+              }
+              fs.writeFileSync(sharesFile, JSON.stringify(shares, null, 2), 'utf8');
+            }
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true }));
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+      });
+
       // 1. List files & folders from local drive (Z:\ or D:\MasterCloudDrive) with strict account isolation
       server.middlewares.use('/api/local-drive/list', (req, res) => {
         if (req.method !== 'GET') {

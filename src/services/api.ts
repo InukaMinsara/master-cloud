@@ -1075,17 +1075,18 @@ class UnifiedApiService {
   async createShareLink(options: {
     resourceType: 'file' | 'folder';
     resourceId: string;
+    item?: FileItem | FolderItem;
     permission?: 'viewer' | 'editor';
     hasPassword?: boolean;
     password?: string;
     allowDownload?: boolean;
     expiresAt?: string | null;
-  }): Promise<ShareLinkRecord> {
+  }): Promise<ShareLinkRecord & { share_url?: string; encoded_data?: string }> {
     return localDb.createShareLink(options);
   }
 
-  async getShareLinkByToken(token: string): Promise<{ link: ShareLinkRecord; item: FileItem | FolderItem } | null> {
-    return localDb.getShareLinkByToken(token);
+  async getShareLinkByToken(token: string, encodedData?: string | null): Promise<{ link: ShareLinkRecord; item: FileItem | FolderItem } | null> {
+    return localDb.getShareLinkByToken(token, encodedData);
   }
 
   async revokeShareLink(linkId: string): Promise<void> {

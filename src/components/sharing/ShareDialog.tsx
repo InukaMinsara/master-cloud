@@ -74,6 +74,7 @@ export function ShareDialog() {
     const newLink = await api.createShareLink({
       resourceType: isFolder ? 'folder' : 'file',
       resourceId: item.id,
+      item,
       permission: 'viewer',
       hasPassword,
       password: hasPassword ? password : '',
@@ -116,10 +117,14 @@ export function ShareDialog() {
     toast.success('Access removed');
   };
 
-  const copyToClipboard = (token: string) => {
-    const fullUrl = `${window.location.origin}/share/${token}`;
+  const getFullShareUrl = (link: ShareLinkRecord) => {
+    return (link as any).share_url || `${window.location.origin}/share/${link.token}${(link as any).encoded_data ? `?d=${(link as any).encoded_data}` : ''}`;
+  };
+
+  const copyToClipboard = (link: ShareLinkRecord) => {
+    const fullUrl = getFullShareUrl(link);
     navigator.clipboard.writeText(fullUrl);
-    setCopiedToken(token);
+    setCopiedToken(link.token);
     toast.success('Link copied to clipboard!');
     setTimeout(() => setCopiedToken(null), 2500);
   };
@@ -165,7 +170,7 @@ export function ShareDialog() {
                 Active Public Links
               </h5>
               {links.map((link) => {
-                const fullUrl = `${window.location.origin}/share/${link.token}`;
+                const fullUrl = getFullShareUrl(link);
                 return (
                   <div key={link.id} className="p-3 rounded-xl border border-border bg-secondary/30 space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -178,7 +183,7 @@ export function ShareDialog() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => copyToClipboard(link.token)}
+                          onClick={() => copyToClipboard(link)}
                           className="h-8 rounded-lg text-xs"
                         >
                           {copiedToken === link.token ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}

@@ -281,6 +281,132 @@ Total 2026,$1,860,000,$67,000,$1,793,000,194,000,+78% Avg`;
   return null;
 }
 
+const GLOBAL_PUBLIC_SHARES_KEY = 'master_cloud_v3_public_shares_registry';
+
+function getGlobalPublicShares(): Record<string, { link: ShareLinkRecord; item: FileItem | FolderItem }> {
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(GLOBAL_PUBLIC_SHARES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveGlobalPublicShare(token: string, link: ShareLinkRecord, item: FileItem | FolderItem): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const all = getGlobalPublicShares();
+    all[token] = { link, item };
+    localStorage.setItem(GLOBAL_PUBLIC_SHARES_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+function encodeSharePayload(item: FileItem | FolderItem, link: ShareLinkRecord): string {
+  const isFolder = link.resource_type === 'folder';
+  const file = isFolder ? null : (item as FileItem);
+  const payload = {
+    t: link.token,
+    rt: link.resource_type,
+    id: item.id,
+    n: item.name,
+    sz: isFolder ? 0 : (file?.size_bytes || 0),
+    ext: isFolder ? 'folder' : (file?.extension || ''),
+    m: isFolder ? 'application/x-directory' : (file?.mime_type || 'application/octet-stream'),
+    p: isFolder ? '' : (file?.storage_path || ''),
+    o: item.owner?.display_name || 'MASTER CLOUD User',
+    h: link.password_hash || undefined,
+    hp: link.has_password ? 1 : 0,
+    dl: link.allow_download ? 1 : 0,
+    exp: link.expires_at ? new Date(link.expires_at).getTime() : null,
+    c: new Date(link.created_at).getTime(),
+  };
+  try {
+    return btoa(encodeURIComponent(JSON.stringify(payload)));
+  } catch {
+    return '';
+  }
+}
+
+function decodeSharePayload(encoded: string): { link: ShareLinkRecord; item: FileItem | FolderItem } | null {
+  try {
+    const raw = decodeURIComponent(atob(encoded));
+    const p = JSON.parse(raw);
+    if (!p || !p.t || !p.n) return null;
+
+    const isFolder = p.rt === 'folder';
+    const link: ShareLinkRecord = {
+      id: 'link-' + p.t,
+      resource_type: p.rt,
+      resource_id: p.id,
+      creator_id: 'usr-share-creator',
+      token: p.t,
+      permission: 'viewer',
+      password_hash: p.h || null,
+      has_password: Boolean(p.hp && p.h),
+      allow_download: p.dl !== 0,
+      expires_at: p.exp ? new Date(p.exp).toISOString() : null,
+      max_downloads: null,
+      download_count: 0,
+      view_count: 1,
+      is_active: true,
+      created_at: p.c ? new Date(p.c).toISOString() : new Date().toISOString(),
+    };
+
+    const item: FileItem | FolderItem = isFolder
+      ? {
+          id: p.id,
+          name: p.n,
+          owner_id: 'usr-share-creator',
+          parent_folder_id: null,
+          color: '#3b82f6',
+          is_starred: false,
+          deleted_at: null,
+          created_at: link.created_at,
+          updated_at: link.created_at,
+          owner: {
+            id: 'usr-share-creator',
+            email: '',
+            display_name: p.o || 'MASTER CLOUD User',
+            avatar_url: null,
+            role: 'user',
+            created_at: link.created_at,
+            updated_at: link.created_at,
+          },
+        }
+      : {
+          id: p.id,
+          name: p.n,
+          owner_id: 'usr-share-creator',
+          parent_folder_id: null,
+          storage_path: p.p,
+          mime_type: p.m,
+          size_bytes: p.sz,
+          extension: p.ext,
+          checksum: `share-${p.sz}-${p.c}`,
+          is_starred: false,
+          deleted_at: null,
+          current_version_id: 'ver-' + p.id,
+          created_at: link.created_at,
+          updated_at: link.created_at,
+          owner: {
+            id: 'usr-share-creator',
+            email: '',
+            display_name: p.o || 'MASTER CLOUD User',
+            avatar_url: null,
+            role: 'user',
+            created_at: link.created_at,
+            updated_at: link.created_at,
+          },
+        };
+
+    return { link, item };
+  } catch (err) {
+    console.warn('Failed to decode share payload:', err);
+    return null;
+  }
+}
+
 class LocalDatabaseService {
   private files: FileRecord[];
   private folders: FolderRecord[];
@@ -1712,18 +1838,19 @@ class LocalDatabaseService {
   async createShareLink(options: {
     resourceType: 'file' | 'folder';
     resourceId: string;
+    item?: FileItem | FolderItem;
     permission?: 'viewer' | 'editor';
     hasPassword?: boolean;
     password?: string;
     allowDownload?: boolean;
     expiresAt?: string | null;
-  }): Promise<ShareLinkRecord> {
+  }): Promise<ShareLinkRecord & { share_url?: string; encoded_data?: string }> {
     const token = generateSecureToken(16);
-    const newLink: ShareLinkRecord = {
+    const newLink: ShareLinkRecord & { share_url?: string; encoded_data?: string } = {
       id: 'link-' + Date.now(),
       resource_type: options.resourceType,
       resource_id: options.resourceId,
-      creator_id: this.currentUser.id,
+      creator_id: this.currentUser?.id || 'usr-master',
       token,
       permission: options.permission || 'viewer',
       password_hash: options.password ? btoa(options.password) : null,
@@ -1736,31 +1863,111 @@ class LocalDatabaseService {
       is_active: true,
       created_at: new Date().toISOString(),
     };
+
+    // Find the item snapshot
+    const item = options.item || (options.resourceType === 'file'
+      ? this.files.find(f => f.id === options.resourceId)
+      : this.folders.find(f => f.id === options.resourceId));
+
+    if (item) {
+      const fullItem = { ...item, owner: item.owner || this.currentUser };
+      const encoded = encodeSharePayload(fullItem, newLink);
+      newLink.encoded_data = encoded;
+      newLink.share_url = typeof window !== 'undefined'
+        ? `${window.location.origin}/share/${token}${encoded ? `?d=${encoded}` : ''}`
+        : `/share/${token}${encoded ? `?d=${encoded}` : ''}`;
+
+      // Save to unpartitioned global public shares registry in localStorage
+      saveGlobalPublicShare(token, newLink, fullItem);
+
+      // Also sync to local backend (if Vite plugin or daemon running)
+      if (typeof fetch !== 'undefined') {
+        const payload = { link: newLink, item: fullItem, token };
+        fetch('/api/shares/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+        fetch('http://127.0.0.1:8766/api/shares/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+      }
+    }
+
     this.shareLinks.push(newLink);
     saveTable('share_links', this.shareLinks);
     return newLink;
   }
 
-  async getShareLinkByToken(token: string): Promise<{ link: ShareLinkRecord; item: FileItem | FolderItem } | null> {
-    const link = this.shareLinks.find(s => s.token === token && s.is_active);
-    if (!link) return null;
+  async getShareLinkByToken(token: string, encodedData?: string | null): Promise<{ link: ShareLinkRecord; item: FileItem | FolderItem } | null> {
+    if (!token) return null;
 
-    if (link.expires_at && new Date(link.expires_at) < new Date()) {
-      return null;
+    // 1. If encoded data URL param is present, decode directly!
+    if (encodedData) {
+      const decoded = decodeSharePayload(encodedData);
+      if (decoded && decoded.link.token === token) {
+        if (decoded.link.expires_at && new Date(decoded.link.expires_at) < new Date()) {
+          return null;
+        }
+        // Cache in global registry
+        saveGlobalPublicShare(token, decoded.link, decoded.item);
+        return decoded;
+      }
     }
 
-    link.view_count += 1;
-    saveTable('share_links', this.shareLinks);
-
-    if (link.resource_type === 'file') {
-      const file = this.files.find(f => f.id === link.resource_id);
-      if (!file) return null;
-      return { link, item: { ...file, owner: this.currentUser } };
-    } else {
-      const folder = this.folders.find(f => f.id === link.resource_id);
-      if (!folder) return null;
-      return { link, item: { ...folder, owner: this.currentUser } };
+    // 2. Check global public shares registry
+    const globalShares = getGlobalPublicShares();
+    if (globalShares[token]) {
+      const entry = globalShares[token];
+      if (entry.link.is_active && (!entry.link.expires_at || new Date(entry.link.expires_at) >= new Date())) {
+        entry.link.view_count = (entry.link.view_count || 0) + 1;
+        saveGlobalPublicShare(token, entry.link, entry.item);
+        return entry;
+      }
     }
+
+    // 3. Check memory share links (e.g. seed demo or current user)
+    const memLink = this.shareLinks.find(s => s.token === token && s.is_active);
+    if (memLink) {
+      if (memLink.expires_at && new Date(memLink.expires_at) < new Date()) {
+        return null;
+      }
+      memLink.view_count += 1;
+      saveTable('share_links', this.shareLinks);
+      const foundItem = memLink.resource_type === 'file'
+        ? this.files.find(f => f.id === memLink.resource_id)
+        : this.folders.find(f => f.id === memLink.resource_id);
+      if (foundItem) {
+        return { link: memLink, item: { ...foundItem, owner: foundItem.owner || this.currentUser } };
+      }
+    }
+
+    // 4. Check backend API (/api/shares/get)
+    if (typeof fetch !== 'undefined') {
+      const endpoints = [
+        `/api/shares/get?token=${encodeURIComponent(token)}`,
+        `http://127.0.0.1:8766/api/shares/get?token=${encodeURIComponent(token)}`,
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.ok && json?.data?.link && json?.data?.item) {
+              const { link, item } = json.data;
+              if (link.is_active && (!link.expires_at || new Date(link.expires_at) >= new Date())) {
+                saveGlobalPublicShare(token, link, item);
+                return { link, item };
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    return null;
   }
 
   async revokeShareLink(linkId: string): Promise<void> {
