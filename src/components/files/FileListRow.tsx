@@ -27,6 +27,7 @@ import { api } from '@/services/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { toast } from 'sonner';
 
 interface FileListRowProps {
   item: (FileItem & { isFolder?: false }) | (FolderItem & { isFolder: true });
@@ -94,7 +95,13 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isFolder && folder) {
-      await api.downloadFolder(folder, files, folders);
+      toast.loading(`Packaging "${folder.name}.zip"...`, { id: `zip-${folder.id}` });
+      try {
+        await api.downloadFolder(folder, files, folders);
+        toast.success(`Downloaded "${folder.name}.zip"`, { id: `zip-${folder.id}` });
+      } catch (err: any) {
+        toast.error(`Download failed: ${err.message || 'Error'}`, { id: `zip-${folder.id}` });
+      }
     } else if (file) {
       await api.downloadFile(file);
     }

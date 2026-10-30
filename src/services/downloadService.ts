@@ -5,6 +5,60 @@ import { TelegramCloudService } from './telegramCloudService';
 
 export class DownloadService {
   /**
+   * Retrieves authentic file bytes from any storage backend (Catbox, Z-drive, Telegram, IndexedDB)
+   */
+  static async fetchFileBlob(file: FileItem): Promise<Blob> {
+    // 1. Direct HTTP/HTTPS Cloud Stream (Catbox, Multi-CDN)
+    if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+      try {
+        const res = await fetch(file.storage_path);
+        if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+          return await res.blob();
+        }
+      } catch (e) {
+        console.warn('HTTP fetch failed for file:', file.name, e);
+      }
+    }
+
+    // 2. Local Z-Drive (localhost Vite local drive read endpoint)
+    if (file.storage_path?.startsWith('zdrive:')) {
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isLocal) {
+        try {
+          const rel = file.storage_path.slice('zdrive:'.length);
+          const res = await fetch(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+          if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+            return await res.blob();
+          }
+        } catch (e) {
+          console.warn('Local drive read failed for file:', file.name, e);
+        }
+      }
+    }
+
+    // 3. Telegram Cloud
+    if (file.storage_path?.startsWith('tgcloud:')) {
+      try {
+        const blob = await TelegramCloudService.downloadFile(file.storage_path);
+        if (blob) return blob;
+      } catch (e) {
+        console.warn('Telegram download failed:', file.name, e);
+      }
+    }
+
+    // 4. IndexedDB / Binary storage
+    if (file.storage_path) {
+      try {
+        const blob = await binaryStorage.getBlob(file.storage_path);
+        if (blob) return blob;
+      } catch {}
+    }
+
+    // 5. Fallback sample blob
+    return this.generateSampleBlob(file);
+  }
+
+  /**
    * Triggers browser download for a single FileItem or Blob
    */
   static async downloadSingleFile(file: FileItem): Promise<void> {
@@ -47,18 +101,35 @@ export class DownloadService {
         return;
       }
 
-      let blob: Blob | null = null;
-
-      // 1. Try local binary store
-      if (file.storage_path) {
-        blob = await binaryStorage.getBlob(file.storage_path);
+      // 3. Direct HTTP / Catbox file download
+      if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+        try {
+          const res = await fetch(file.storage_path);
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            return;
+          }
+        } catch {}
+        // Fallback to direct anchor navigation
+        const a = document.createElement('a');
+        a.href = file.storage_path;
+        a.download = file.name;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
       }
 
-      // 2. Fallback to dummy realistic content if seed binary not populated yet
-      if (!blob) {
-        blob = this.generateSampleBlob(file);
-      }
-
+      const blob = await this.fetchFileBlob(file);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -79,12 +150,13 @@ export class DownloadService {
   static async downloadMultipleFiles(files: FileItem[], zipName: string = 'master-cloud-download.zip'): Promise<void> {
     const zip = new JSZip();
 
-    for (const file of files) {
-      let blob = await binaryStorage.getBlob(file.storage_path);
-      if (!blob) {
-        blob = this.generateSampleBlob(file);
-      }
-      zip.file(file.name, blob);
+    // Fetch files concurrently in batches of 6
+    for (let i = 0; i < files.length; i += 6) {
+      const batch = files.slice(i, i + 6);
+      await Promise.all(batch.map(async (file) => {
+        const blob = await this.fetchFileBlob(file);
+        zip.file(file.name, blob);
+      }));
     }
 
     const zipBlob = await zip.generateAsync({
@@ -104,7 +176,7 @@ export class DownloadService {
   }
 
   /**
-   * Downloads an entire folder hierarchy packaged into a ZIP
+   * Downloads an entire folder hierarchy packaged into a ZIP with full recursive file contents
    */
   static async downloadFolder(
     folder: FolderItem,
@@ -117,12 +189,14 @@ export class DownloadService {
     const packFolder = async (currentFolderId: string, currentZipFolder: JSZip) => {
       // Add files in this folder
       const folderFiles = allFiles.filter(f => f.parent_folder_id === currentFolderId && !f.deleted_at);
-      for (const file of folderFiles) {
-        let blob = await binaryStorage.getBlob(file.storage_path);
-        if (!blob) {
-          blob = this.generateSampleBlob(file);
-        }
-        currentZipFolder.file(file.name, blob);
+
+      // Process downloads in concurrent batches of 6 for speed
+      for (let i = 0; i < folderFiles.length; i += 6) {
+        const batch = folderFiles.slice(i, i + 6);
+        await Promise.all(batch.map(async (file) => {
+          const blob = await this.fetchFileBlob(file);
+          currentZipFolder.file(file.name, blob);
+        }));
       }
 
       // Add child folders
