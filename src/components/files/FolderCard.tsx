@@ -54,12 +54,10 @@ export function FolderCard({ folder }: FolderCardProps) {
 
   const handleDownloadZip = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.loading(`Packaging "${folder.name}.zip"...`, { id: `zip-${folder.id}` });
     try {
       await api.downloadFolder(folder, files, folders);
-      toast.success(`Downloaded "${folder.name}.zip"`, { id: `zip-${folder.id}` });
     } catch (err: any) {
-      toast.error(`Download failed: ${err.message || 'Error'}`, { id: `zip-${folder.id}` });
+      toast.error(`Download failed: ${err.message || 'Error'}`);
     }
   };
 

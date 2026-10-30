@@ -61,12 +61,18 @@ export class DownloadService {
   /**
    * Triggers browser download for a single FileItem or Blob
    */
-  static async downloadSingleFile(file: FileItem): Promise<void> {
+  static async downloadSingleFile(
+    file: FileItem,
+    onProgress?: (progress: number) => void
+  ): Promise<void> {
     try {
+      onProgress?.(25);
+
       // 1. Direct stream download for Telegram Cloud + Multi-CDN files
       if (file.storage_path?.startsWith('tgcloud:')) {
         const directUrl = TelegramCloudService.getDirectStreamUrl(file.storage_path);
         if (directUrl) {
+          onProgress?.(100);
           const a = document.createElement('a');
           a.href = directUrl;
           a.download = file.name;
@@ -77,6 +83,7 @@ export class DownloadService {
         }
 
         const blob = await TelegramCloudService.downloadFile(file.storage_path);
+        onProgress?.(85);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -84,6 +91,7 @@ export class DownloadService {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        onProgress?.(100);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
         return;
       }
@@ -92,6 +100,7 @@ export class DownloadService {
       if (file.storage_path?.startsWith('zdrive:')) {
         const rel = file.storage_path.slice('zdrive:'.length);
         const url = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+        onProgress?.(100);
         const a = document.createElement('a');
         a.href = url;
         a.download = file.name;
@@ -106,7 +115,9 @@ export class DownloadService {
         try {
           const res = await fetch(file.storage_path);
           if (res.ok) {
+            onProgress?.(70);
             const blob = await res.blob();
+            onProgress?.(95);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -114,11 +125,13 @@ export class DownloadService {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            onProgress?.(100);
             setTimeout(() => URL.revokeObjectURL(url), 2000);
             return;
           }
         } catch {}
         // Fallback to direct anchor navigation
+        onProgress?.(100);
         const a = document.createElement('a');
         a.href = file.storage_path;
         a.download = file.name;
@@ -130,6 +143,7 @@ export class DownloadService {
       }
 
       const blob = await this.fetchFileBlob(file);
+      onProgress?.(85);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -137,6 +151,7 @@ export class DownloadService {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      onProgress?.(100);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error('Download single file failed:', err);
@@ -147,8 +162,14 @@ export class DownloadService {
   /**
    * Bundles multiple files into a clean ZIP archive and triggers download
    */
-  static async downloadMultipleFiles(files: FileItem[], zipName: string = 'master-cloud-download.zip'): Promise<void> {
+  static async downloadMultipleFiles(
+    files: FileItem[],
+    zipName: string = 'master-cloud-download.zip',
+    onProgress?: (progress: number, processedCount: number, totalCount: number) => void
+  ): Promise<void> {
     const zip = new JSZip();
+    const totalFiles = files.length;
+    let processedFiles = 0;
 
     // Fetch files concurrently in batches of 6
     for (let i = 0; i < files.length; i += 6) {
@@ -157,13 +178,26 @@ export class DownloadService {
         const blob = await this.fetchFileBlob(file);
         zip.file(file.name, blob);
       }));
+      processedFiles += batch.length;
+      if (onProgress && totalFiles > 0) {
+        const fetchPercent = Math.min(85, Math.round((processedFiles / totalFiles) * 85));
+        onProgress(fetchPercent, processedFiles, totalFiles);
+      }
     }
 
-    const zipBlob = await zip.generateAsync({
-      type: 'blob',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 },
-    });
+    const zipBlob = await zip.generateAsync(
+      {
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      },
+      (metadata) => {
+        if (onProgress) {
+          const zipPercent = 85 + Math.round((metadata.percent / 100) * 15);
+          onProgress(Math.min(100, zipPercent), processedFiles, totalFiles);
+        }
+      }
+    );
 
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
@@ -181,9 +215,12 @@ export class DownloadService {
   static async downloadFolder(
     folder: FolderItem,
     allFiles: FileItem[],
-    allFolders: FolderItem[]
+    allFolders: FolderItem[],
+    onProgress?: (progress: number, processedCount: number, totalCount: number) => void
   ): Promise<void> {
     const zip = new JSZip();
+    const totalFiles = allFiles.filter(f => !f.deleted_at).length;
+    let processedFiles = 0;
 
     // Helper recursive packer
     const packFolder = async (currentFolderId: string, currentZipFolder: JSZip) => {
@@ -197,6 +234,11 @@ export class DownloadService {
           const blob = await this.fetchFileBlob(file);
           currentZipFolder.file(file.name, blob);
         }));
+        processedFiles += batch.length;
+        if (onProgress && totalFiles > 0) {
+          const fetchPercent = Math.min(85, Math.round((processedFiles / totalFiles) * 85));
+          onProgress(fetchPercent, processedFiles, totalFiles);
+        }
       }
 
       // Add child folders
@@ -212,11 +254,19 @@ export class DownloadService {
     const rootFolderInZip = zip.folder(folder.name) || zip;
     await packFolder(folder.id, rootFolderInZip);
 
-    const zipBlob = await zip.generateAsync({
-      type: 'blob',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 },
-    });
+    const zipBlob = await zip.generateAsync(
+      {
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      },
+      (metadata) => {
+        if (onProgress) {
+          const zipPercent = 85 + Math.round((metadata.percent / 100) * 15);
+          onProgress(Math.min(100, zipPercent), processedFiles, totalFiles);
+        }
+      }
+    );
 
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');

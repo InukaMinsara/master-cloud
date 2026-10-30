@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { localDb, binaryStorage } from './localDb';
 import { DownloadService } from './downloadService';
 import { TelegramCloudService } from './telegramCloudService';
+import { useDownloadStore } from '@/stores/downloadStore';
 import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/types/file';
 import { getFileCategory } from '@/lib/utils';
 import {
@@ -914,11 +915,48 @@ class UnifiedApiService {
 
   // --- Downloads ---
   async downloadFile(file: FileItem): Promise<void> {
-    return DownloadService.downloadSingleFile(file);
+    const jobId = `dl-file-${file.id}-${Date.now()}`;
+    useDownloadStore.getState().startDownload({
+      id: jobId,
+      title: `Preparing ${file.name}`,
+      fileName: file.name,
+      itemCount: 1,
+      isArchive: false,
+    });
+
+    try {
+      await DownloadService.downloadSingleFile(file, (progress) => {
+        useDownloadStore.getState().updateProgress(jobId, progress, 1);
+      });
+      useDownloadStore.getState().completeDownload(jobId);
+    } catch (err: any) {
+      useDownloadStore.getState().failDownload(jobId, err.message || 'Download failed');
+      throw err;
+    }
   }
 
   async downloadMultiple(files: FileItem[]): Promise<void> {
-    return DownloadService.downloadMultipleFiles(files);
+    const jobId = `zip-multi-${Date.now()}`;
+    const totalCount = files.length;
+    const title = totalCount === 1 ? 'Zipping 1 file' : `Zipping ${totalCount} files`;
+
+    useDownloadStore.getState().startDownload({
+      id: jobId,
+      title,
+      fileName: 'master-cloud-download.zip',
+      itemCount: totalCount,
+      isArchive: true,
+    });
+
+    try {
+      await DownloadService.downloadMultipleFiles(files, 'master-cloud-download.zip', (progress, processed, total) => {
+        useDownloadStore.getState().updateProgress(jobId, progress, processed);
+      });
+      useDownloadStore.getState().completeDownload(jobId);
+    } catch (err: any) {
+      useDownloadStore.getState().failDownload(jobId, err.message || 'Packaging failed');
+      throw err;
+    }
   }
 
   async downloadFolder(folder: FolderItem, allFiles?: FileItem[], allFolders?: FolderItem[]): Promise<void> {
@@ -930,7 +968,32 @@ class UnifiedApiService {
       ? (descendants.folders as FolderItem[])
       : (allFolders || []);
 
-    return DownloadService.downloadFolder(folder, targetFiles, targetFolders);
+    const totalCount = targetFiles.length;
+    const jobId = `zip-folder-${folder.id}-${Date.now()}`;
+    const title = totalCount === 1 ? 'Zipping 1 file' : `Zipping ${totalCount} files`;
+
+    useDownloadStore.getState().startDownload({
+      id: jobId,
+      title,
+      fileName: `${folder.name}.zip`,
+      itemCount: totalCount || 1,
+      isArchive: true,
+    });
+
+    try {
+      await DownloadService.downloadFolder(
+        folder,
+        targetFiles,
+        targetFolders,
+        (progress, processed, total) => {
+          useDownloadStore.getState().updateProgress(jobId, progress, processed);
+        }
+      );
+      useDownloadStore.getState().completeDownload(jobId);
+    } catch (err: any) {
+      useDownloadStore.getState().failDownload(jobId, err.message || 'Packaging failed');
+      throw err;
+    }
   }
 
   // --- Starred & Recent ---
