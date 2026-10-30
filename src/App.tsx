@@ -43,14 +43,16 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { NativeMobileService } from '@/services/nativeMobile';
 
 export function App() {
   const { theme } = useUIStore();
   const { init } = useAuthStore();
 
-  // Initialize auth session on load
+  // Initialize auth session and native mobile handlers on load
   React.useEffect(() => {
     init();
+    NativeMobileService.init();
   }, [init]);
 
   // Initialize theme on root document

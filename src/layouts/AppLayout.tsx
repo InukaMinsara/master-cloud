@@ -16,6 +16,7 @@ import { NewFolderModal } from '@/components/files/NewFolderModal';
 import { Toaster } from 'sonner';
 import { useFileStore } from '@/stores/fileStore';
 import { ContextMenu } from '@/components/context-menu/ContextMenu';
+import { MobileBottomNav } from '@/components/common/MobileBottomNav';
 
 
 export function AppLayout() {
@@ -23,14 +24,14 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground antialiased">
-      {/* Left Navigation Sidebar */}
+      {/* Left Navigation Sidebar (Desktop) */}
       <Sidebar />
 
       {/* Main Column */}
       <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden">
         <AppHeader />
         
-        <main className="flex flex-1 h-full min-h-0 overflow-hidden relative">
+        <main className="flex flex-1 h-full min-h-0 overflow-hidden relative pb-16 md:pb-0">
           <div className="flex flex-col flex-1 h-full min-h-0 min-w-0 overflow-hidden">
             <Outlet />
           </div>
@@ -39,6 +40,9 @@ export function AppLayout() {
           {activeDetailsItem && <FileDetailsSidebar />}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar (Phone) */}
+      <MobileBottomNav />
 
       {/* Global Interactive Elements & Modals */}
       <ContextMenu />

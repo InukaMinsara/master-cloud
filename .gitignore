@@ -123,4 +123,16 @@ public/releases/MasterCloudSetup.exe
 MASTER-CLOUD-READY.zip
 introducing-master-cloud/
 
+# Android build artifacts
+*.apk
+*.aab
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+
+
 
