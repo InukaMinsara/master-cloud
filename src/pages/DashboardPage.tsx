@@ -20,15 +20,13 @@ import {
   CheckSquare,
   Palette,
   BookOpen,
-  PieChart,
+  Trash2,
   ShieldCheck,
   Zap,
   Layers,
   Download,
   ArrowUpRight,
   Film,
-  WifiOff,
-  ArrowRightLeft,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -81,11 +79,11 @@ export function DashboardPage() {
 
   const quickShortcuts = [
     { label: 'My Drive', path: '/drive', icon: HardDrive, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Shared with me', path: '/shared', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Media Library', path: '/media', icon: Film, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Recent Files', path: '/recent', icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
     { label: 'Starred Files', path: '/starred', icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'Offline Center', path: '/offline', icon: WifiOff, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Sync Center', path: '/sync', icon: ArrowRightLeft, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-    { label: 'Storage Analytics', path: '/storage', icon: PieChart, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Trash Bin', path: '/trash', icon: Trash2, color: 'text-rose-500', bg: 'bg-rose-500/10' },
   ];
 
   return (
