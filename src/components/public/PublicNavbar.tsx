@@ -84,7 +84,7 @@ export function PublicNavbar() {
                 </span>
               </div>
               <span className="text-[10px] text-muted-foreground font-semibold tracking-wider uppercase">
-                Cloud OS &amp; Windows Drive
+                Cloud OS • Windows &amp; Android
               </span>
             </div>
           </Link>

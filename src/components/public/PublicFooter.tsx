@@ -10,6 +10,8 @@ import {
   Zap,
   Layers,
   ArrowRight,
+  Download,
+  Smartphone,
 } from 'lucide-react';
 
 export function PublicFooter() {
@@ -28,14 +30,14 @@ export function PublicFooter() {
                 No credit card. No trials. No hidden fees.
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-xl">
-                Mount your 10 TB virtual drive directly to Windows File Explorer or access your web workspace anywhere.
+                Mount your 10 TB virtual drive directly to Windows File Explorer, install on Android, or access your web workspace anywhere.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
               <Link to="/download">
                 <button className="h-11 px-6 rounded-2xl bg-secondary hover:bg-accent text-foreground text-xs font-bold transition-all border border-border flex items-center gap-2 shadow-sm">
-                  <Laptop className="h-4 w-4 text-blue-500" />
-                  <span>Download Client</span>
+                  <Download className="h-4 w-4 text-blue-500" />
+                  <span>Download Apps</span>
                 </button>
               </Link>
               <Link to="/signup">
@@ -90,7 +92,7 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link to="/download" className="hover:text-primary transition-colors">
-                  Desktop Installer
+                  Windows &amp; Android Apps
                 </Link>
               </li>
               <li>
