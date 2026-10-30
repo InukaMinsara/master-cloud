@@ -668,13 +668,11 @@ class LocalDatabaseService {
     const activeUserId = this.currentUser?.id;
     const activeEmail = (this.currentUser?.email || '').trim().toLowerCase();
 
-    // If no active user, hide
-    if (!activeUserId) return false;
+    // If no active user profile set yet, keep visible
+    if (!activeUserId) return true;
 
-    // Is the active user the master account?
-    const isMasterUser = activeEmail === 'immaster2024@gmail.com';
-
-    // Master account sees all master files, seed items, and drive files
+    // Master account & admins see everything
+    const isMasterUser = activeEmail === 'immaster2024@gmail.com' || activeEmail.startsWith('admin@');
     if (isMasterUser) {
       return true;
     }
@@ -689,17 +687,22 @@ class LocalDatabaseService {
       if (lowerOwner.includes(activeEmail) || (currentPrefix && lowerOwner.includes(currentPrefix))) return true;
     }
 
-    // Cloud files belonging to this user
+    // Cloud files (Catbox, Telegram Cloud, HTTP) are shared cloud assets available across accounts
     if (storagePath && (storagePath.startsWith('http://') || storagePath.startsWith('https://') || storagePath.startsWith('tgcloud:'))) {
-      if (ownerId && (ownerId === activeUserId || (currentPrefix && ownerId.toLowerCase().includes(currentPrefix)))) return true;
+      return true;
     }
 
-    // Local Z: drive files (zdrive:...) are visible if they belong to this user
+    // Seed & common workspace files
+    if (!ownerId || ownerId === 'usr-1' || ownerId === 'usr-local' || ownerId === 'usr-inuka-minsara-master') {
+      return true;
+    }
+
+    // Local Z: drive files
     if (storagePath && storagePath.startsWith('zdrive:')) {
-      return Boolean(ownerId && (ownerId === activeUserId || (currentPrefix && ownerId.toLowerCase().includes(currentPrefix))));
+      return true;
     }
 
-    return false;
+    return true;
   }
 
   // --- Auth / Profile ---
@@ -727,42 +730,8 @@ class LocalDatabaseService {
     const currentPrefix = newEmail.split('@')[0].toLowerCase();
     const userSeed = USER_SEED_DATA[newEmail] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null);
 
-    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : []);
-    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : [
-      {
-        id: `f-${currentPrefix}-work`,
-        owner_id: user.id,
-        parent_folder_id: null,
-        name: 'Work Documents',
-        color: '#3b82f6',
-        is_starred: false,
-        deleted_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: `f-${currentPrefix}-media`,
-        owner_id: user.id,
-        parent_folder_id: null,
-        name: 'Media & Videos',
-        color: '#ec4899',
-        is_starred: false,
-        deleted_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: `f-${currentPrefix}-shared`,
-        owner_id: user.id,
-        parent_folder_id: null,
-        name: 'Shared Projects',
-        color: '#14b8a6',
-        is_starred: false,
-        deleted_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ]);
+    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : SEED_FILES);
+    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : SEED_FOLDERS);
 
     this.files = loadTable('files', initialFiles);
     this.folders = loadTable('folders', initialFolders);
@@ -1700,17 +1669,23 @@ class LocalDatabaseService {
 
   // --- Starred & Recent ---
   async getStarredItems(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
-    const files = this.files.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path)).map(f => ({ ...f, owner: this.currentUser }));
-    const folders = this.folders.filter(f => f.is_starred && !f.deleted_at && this.isItemVisible(f.owner_id)).map(f => ({ ...f, owner: this.currentUser }));
+    await this.syncWithLocalDrive(null);
+    const files = this.files
+      .filter(f => Boolean(f.is_starred) && !f.deleted_at)
+      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
+    const folders = this.folders
+      .filter(f => Boolean(f.is_starred) && !f.deleted_at)
+      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
     return { files, folders };
   }
 
-  async getRecentItems(limit: number = 20): Promise<FileItem[]> {
+  async getRecentItems(limit: number = 24): Promise<FileItem[]> {
+    await this.syncWithLocalDrive(null);
     return this.files
-      .filter(f => !f.deleted_at && this.isItemVisible(f.owner_id, f.storage_path))
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .filter(f => !f.deleted_at)
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
       .slice(0, limit)
-      .map(f => ({ ...f, owner: this.currentUser }));
+      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
   }
 
   // --- Media Library ---

@@ -8,7 +8,7 @@ import { FolderCard } from '@/components/files/FolderCard';
 import { useFileStore } from '@/stores/fileStore';
 
 export function StarredPage() {
-  const { files: storeFiles, folders: storeFolders, searchQuery } = useFileStore();
+  const { files: storeFiles, folders: storeFolders, searchQuery, starVersion } = useFileStore();
   const [starredFiles, setStarredFiles] = React.useState<FileItem[]>([]);
   const [starredFolders, setStarredFolders] = React.useState<FolderItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -21,7 +21,7 @@ export function StarredPage() {
         setStarredFolders(folders);
       })
       .finally(() => setIsLoading(false));
-  }, [storeFiles, storeFolders]);
+  }, [storeFiles, storeFolders, starVersion]);
 
   const displayedFiles = React.useMemo(() => {
     if (!searchQuery.trim()) return starredFiles;
