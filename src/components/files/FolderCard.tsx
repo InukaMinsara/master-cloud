@@ -100,7 +100,7 @@ export function FolderCard({ folder }: FolderCardProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`group relative flex items-center justify-between rounded-2xl border p-3.5 transition-all duration-200 select-none cursor-pointer ${
+      className={`group relative flex items-center justify-between rounded-2xl border p-3.5 transition-all duration-200 select-none cursor-pointer hover:z-20 [&:has([data-dropdown-open])]:z-30 ${
         isDragOver
           ? 'border-primary ring-2 ring-primary bg-primary/10 scale-[1.02]'
           : isSelected
