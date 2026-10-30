@@ -2607,7 +2607,7 @@ async function runSupabaseSyncLoop() {
 }
 
 function startListening() {
-  server.listen(PORT, '127.0.0.1', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log('─'.repeat(65));
     console.log('☁️  MASTER CLOUD 10 TB Online Cloud Server is RUNNING!');
     console.log(`   Server URL:     ${WEBDAV_URL}`);

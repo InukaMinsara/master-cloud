@@ -69,6 +69,8 @@ export function DownloadPage() {
   const [showAndroidQr, setShowAndroidQr] = React.useState(false);
   const [showIosQr, setShowIosQr] = React.useState(false);
   const [showIosGuide, setShowIosGuide] = React.useState(false);
+  const [iosModalTab, setIosModalTab] = React.useState<'files' | 'homescreen'>('files');
+  const [copiedWebdav, setCopiedWebdav] = React.useState(false);
 
   // Compute QR download link based on hostname or standard portal
   const qrAndroidUrl = typeof window !== 'undefined'
@@ -78,6 +80,17 @@ export function DownloadPage() {
   const qrIosUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/drive`
     : 'https://mastercloud09.netlify.app/drive';
+
+  const webdavServerUrl = typeof window !== 'undefined'
+    ? `http://${window.location.hostname}:8766`
+    : 'http://192.168.1.164:8766';
+
+  function copyWebdavUrl() {
+    navigator.clipboard.writeText(webdavServerUrl);
+    setCopiedWebdav(true);
+    toast.success('Apple Files / WebDAV Server URL copied to clipboard!');
+    setTimeout(() => setCopiedWebdav(false), 2000);
+  }
 
   function handleDownloadWindowsExe() {
     window.location.href = WINDOWS_EXE_URL;
@@ -406,14 +419,26 @@ export function DownloadPage() {
 
             {/* Action Buttons & QR Option */}
             <div className="space-y-2.5 pt-2 border-t border-border/60">
-              <Button
-                onClick={() => setShowIosGuide(true)}
-                size="lg"
-                className="w-full h-11 text-xs font-bold gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-600/25"
-              >
-                <AppleIcon className="h-4 w-4" />
-                Install on iPhone (Home Screen)
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  onClick={() => { setIosModalTab('files'); setShowIosGuide(true); }}
+                  size="lg"
+                  className="h-11 text-xs font-bold gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-600/25"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  Mount in Apple Files (10 TB)
+                </Button>
+                <Button
+                  onClick={() => { setIosModalTab('homescreen'); setShowIosGuide(true); }}
+                  variant="outline"
+                  size="lg"
+                  className="h-11 text-xs font-bold gap-1.5 border-purple-500/30 hover:bg-purple-500/10 text-foreground"
+                >
+                  <PlusSquare className="h-4 w-4 text-purple-400" />
+                  Add to Home Screen
+                </Button>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={() => setShowIosQr(!showIosQr)}
@@ -444,14 +469,14 @@ export function DownloadPage() {
                   </div>
                   <div className="text-[11px] font-bold text-foreground">Scan with iPhone Camera</div>
                   <p className="text-[10px] text-muted-foreground">
-                    Opens Master Cloud in Safari to add to your Home Screen in 1-tap.
+                    Opens Master Cloud in Safari to mount storage in 1-tap.
                   </p>
                 </div>
               )}
 
               <div className="p-2 rounded-xl bg-muted/30 border border-border/70 flex items-center justify-between text-[10px] text-muted-foreground">
                 <span>iOS 15.0+ · iPhone 11 to iPhone 16 Pro</span>
-                <span className="font-bold text-purple-400">Free</span>
+                <span className="font-bold text-purple-400">10 TB Free</span>
               </div>
             </div>
           </div>
@@ -459,10 +484,10 @@ export function DownloadPage() {
 
       </div>
 
-      {/* ── Modal: iPhone 1-Tap Home Screen Visual Guide ──────────────────── */}
+      {/* ── Modal: iPhone 10 TB Storage Mount & Files Integration ──────────── */}
       {showIosGuide && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-md rounded-3xl bg-card border border-purple-500/40 p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="relative w-full max-w-lg rounded-3xl bg-card border border-purple-500/40 p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowIosGuide(false)}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
@@ -471,52 +496,141 @@ export function DownloadPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+              <div className="h-12 w-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20 shrink-0">
                 <AppleIcon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-foreground">How to Install on iPhone</h3>
-                <p className="text-xs text-muted-foreground">Runs as a full-screen native app without Safari address bar</p>
+                <h3 className="text-lg font-black text-foreground">iPhone 10 TB Storage Setup</h3>
+                <p className="text-xs text-muted-foreground">Give your iPhone a 10 TB Virtual Drive with zero local storage waste</p>
               </div>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
-                <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">1</div>
-                <div>
-                  <div className="font-bold text-foreground">Open in Safari</div>
-                  <div className="text-muted-foreground mt-0.5">Open <b>Safari</b> on your iPhone and go to Master Cloud (or scan the QR code).</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
-                <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">2</div>
-                <div>
-                  <div className="font-bold text-foreground flex items-center gap-1.5">
-                    Tap the Share Button <Share2 className="h-3.5 w-3.5 text-blue-400" />
-                  </div>
-                  <div className="text-muted-foreground mt-0.5">Tap the <b>Share</b> icon (the square with an arrow pointing up at the bottom of Safari).</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
-                <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">3</div>
-                <div>
-                  <div className="font-bold text-foreground flex items-center gap-1.5">
-                    Tap "Add to Home Screen" <PlusSquare className="h-3.5 w-3.5 text-emerald-400" />
-                  </div>
-                  <div className="text-muted-foreground mt-0.5">Scroll down in the share sheet and tap <b>"Add to Home Screen"</b> (මුල් තිරයට එක් කරන්න).</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
-                <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">4</div>
-                <div>
-                  <div className="font-bold text-foreground">Tap "Add" in Top Right</div>
-                  <div className="text-muted-foreground mt-0.5">Tap <b>Add</b>. Master Cloud icon will appear on your iPhone home screen with your 10 TB storage!</div>
-                </div>
-              </div>
+            {/* Modal Tabs */}
+            <div className="flex rounded-2xl bg-muted/60 p-1 border border-border/60">
+              <button
+                onClick={() => setIosModalTab('files')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  iosModalTab === 'files'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                <span>1. Apple "Files" App (10 TB)</span>
+              </button>
+              <button
+                onClick={() => setIosModalTab('homescreen')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  iosModalTab === 'homescreen'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <PlusSquare className="h-3.5 w-3.5" />
+                <span>2. Home Screen App</span>
+              </button>
             </div>
+
+            {/* TAB 1: APPLE FILES APP MOUNT */}
+            {iosModalTab === 'files' && (
+              <div className="space-y-4 text-xs animate-in fade-in">
+                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 space-y-2">
+                  <div className="text-xs font-bold text-foreground flex items-center justify-between">
+                    <span>Server Connection Address:</span>
+                    <Badge variant="outline" className="text-[10px] text-purple-400 border-purple-500/40">WebDAV</Badge>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-background border border-border/70 flex items-center justify-between font-mono text-[11px]">
+                    <span className="truncate mr-2 text-foreground font-bold">{webdavServerUrl}</span>
+                    <Button
+                      onClick={copyWebdavUrl}
+                      size="sm"
+                      className="h-7 px-3 text-[11px] font-bold bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                    >
+                      {copiedWebdav ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                      {copiedWebdav ? 'Copied!' : 'Copy Address'}
+                    </Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    💡 Connect with <b>Guest</b> mode. No password required!
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                    <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">1</div>
+                    <div>
+                      <div className="font-bold text-foreground">Open Apple "Files" (ගොනු) App</div>
+                      <div className="text-muted-foreground mt-0.5">Open the built-in <b>Files</b> app on your iPhone and go to the <b>Browse</b> tab.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                    <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">2</div>
+                    <div>
+                      <div className="font-bold text-foreground">Tap "..." Menu in Top Right</div>
+                      <div className="text-muted-foreground mt-0.5">Tap the three dots icon in the top right corner and select <b>"Connect to Server" (සර්වර් එකට සම්බන්ධ වන්න)</b>.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                    <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">3</div>
+                    <div>
+                      <div className="font-bold text-foreground">Paste Address &amp; Connect as Guest</div>
+                      <div className="text-muted-foreground mt-0.5">Paste <code className="text-primary font-bold">{webdavServerUrl}</code>, tap <b>Connect</b>, choose <b>Guest</b>, and tap <b>Next</b>.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-purple-500/15 border-2 border-purple-500/40">
+                    <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">✓</div>
+                    <div>
+                      <div className="font-bold text-foreground">10 TB Storage Appears on iPhone!</div>
+                      <div className="text-muted-foreground mt-0.5"><b>MASTER CLOUD</b> appears right beside iCloud Drive with <b>10.0 TB Free Space</b>. Stream 4K videos, save WhatsApp files, and browse with 0-byte iPhone storage used!</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: HOME SCREEN APP */}
+            {iosModalTab === 'homescreen' && (
+              <div className="space-y-3 text-xs animate-in fade-in">
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                  <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">1</div>
+                  <div>
+                    <div className="font-bold text-foreground">Open in Safari</div>
+                    <div className="text-muted-foreground mt-0.5">Open <b>Safari</b> on your iPhone and go to Master Cloud.</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                  <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">2</div>
+                  <div>
+                    <div className="font-bold text-foreground flex items-center gap-1.5">
+                      Tap the Share Button <Share2 className="h-3.5 w-3.5 text-blue-400" />
+                    </div>
+                    <div className="text-muted-foreground mt-0.5">Tap the <b>Share</b> icon (the square with an arrow pointing up at the bottom).</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                  <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">3</div>
+                  <div>
+                    <div className="font-bold text-foreground flex items-center gap-1.5">
+                      Tap "Add to Home Screen" <PlusSquare className="h-3.5 w-3.5 text-emerald-400" />
+                    </div>
+                    <div className="text-muted-foreground mt-0.5">Scroll down in the share sheet and tap <b>"Add to Home Screen"</b> (මුල් තිරයට එක් කරන්න).</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-muted/30 border border-border">
+                  <div className="h-7 w-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">4</div>
+                  <div>
+                    <div className="font-bold text-foreground">Tap "Add" in Top Right</div>
+                    <div className="text-muted-foreground mt-0.5">Tap <b>Add</b>. Master Cloud runs as a standalone app with native camera auto-backup and 10 TB storage!</div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 pt-2">
               <Button
@@ -533,7 +647,7 @@ export function DownloadPage() {
                 variant="ghost"
                 className="w-full h-9 text-xs"
               >
-                Done
+                Close
               </Button>
             </div>
           </div>
