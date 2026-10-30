@@ -1683,10 +1683,10 @@ class LocalDatabaseService {
     await this.syncWithLocalDrive(null);
     const files = this.files
       .filter(f => Boolean(f.is_starred) && !f.deleted_at)
-      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
+      .map(f => ({ ...f, owner: (f as any).owner || this.currentUser }));
     const folders = this.folders
       .filter(f => Boolean(f.is_starred) && !f.deleted_at)
-      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
+      .map(f => ({ ...f, owner: (f as any).owner || this.currentUser }));
     return { files, folders };
   }
 
@@ -1696,7 +1696,7 @@ class LocalDatabaseService {
       .filter(f => !f.deleted_at)
       .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
       .slice(0, limit)
-      .map(f => ({ ...f, owner: f.owner || this.currentUser }));
+      .map(f => ({ ...f, owner: (f as any).owner || this.currentUser }));
   }
 
   // --- Media Library ---
@@ -1883,7 +1883,7 @@ class LocalDatabaseService {
       : this.folders.find(f => f.id === options.resourceId));
 
     if (item) {
-      const fullItem = { ...item, owner: item.owner || this.currentUser };
+      const fullItem = { ...item, owner: (item as any).owner || this.currentUser };
       const encoded = encodeSharePayload(fullItem, newLink);
       newLink.encoded_data = encoded;
       newLink.share_url = typeof window !== 'undefined'
@@ -1953,7 +1953,7 @@ class LocalDatabaseService {
         ? this.files.find(f => f.id === memLink.resource_id)
         : this.folders.find(f => f.id === memLink.resource_id);
       if (foundItem) {
-        return { link: memLink, item: { ...foundItem, owner: foundItem.owner || this.currentUser } };
+        return { link: memLink, item: { ...foundItem, owner: (foundItem as any).owner || this.currentUser } as (FileItem | FolderItem) };
       }
     }
 
@@ -2001,12 +2001,21 @@ class LocalDatabaseService {
     }
 
     const existingIdx = this.sharedWithMe.findIndex(s => s.item_id === item.id && s.user_id === activeUserId);
+    const fallbackOwner: ProfileRecord = this.currentUser || {
+      id: 'usr-collab',
+      email: '',
+      display_name: 'Collaborator',
+      avatar_url: null,
+      role: 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
     const entry = {
       id: `swm-${item.id}-${activeUserId}`,
       item_id: item.id,
       user_id: activeUserId,
       resource_type: link.resource_type,
-      item: { ...item, owner: item.owner || { display_name: 'Collaborator', email: '' } },
+      item: { ...item, owner: (item.owner as ProfileRecord) || fallbackOwner },
       accessed_at: new Date().toISOString(),
     };
 
@@ -2022,6 +2031,15 @@ class LocalDatabaseService {
     await this.syncWithLocalDrive(null);
     const activeUserId = this.currentUser?.id;
     const activeEmail = (this.currentUser?.email || '').trim().toLowerCase();
+    const fallbackOwner: ProfileRecord = this.currentUser || {
+      id: 'usr-collab',
+      email: '',
+      display_name: 'Collaborator',
+      avatar_url: null,
+      role: 'user',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
     const resultFiles: FileItem[] = [];
     const resultFolders: FolderItem[] = [];
@@ -2039,14 +2057,14 @@ class LocalDatabaseService {
                   CLOUD_SEED_FILES.find(item => item.id === sh.resource_id);
         if (f && !seenIds.has(f.id)) {
           seenIds.add(f.id);
-          resultFiles.push({ ...f, owner: f.owner || { display_name: 'Collaborator' } });
+          resultFiles.push({ ...f, owner: (f as any).owner || fallbackOwner });
         }
       } else {
         const fd = this.folders.find(item => item.id === sh.resource_id) ||
                    CLOUD_SEED_FOLDERS.find(item => item.id === sh.resource_id);
         if (fd && !seenIds.has(fd.id)) {
           seenIds.add(fd.id);
-          resultFolders.push({ ...fd, owner: fd.owner || { display_name: 'Collaborator' } });
+          resultFolders.push({ ...fd, owner: (fd as any).owner || fallbackOwner });
         }
       }
     }
@@ -2080,7 +2098,7 @@ class LocalDatabaseService {
       const existing = this.folders.find(f => !f.deleted_at && f.name.toLowerCase() === item.name.toLowerCase() && f.owner_id === activeUserId);
       if (existing) return existing;
 
-      const newFolder = await this.createFolder(item.name, null, (item as FolderItem).color);
+      const newFolder = await this.createFolder(item.name, null, (item as FolderItem).color || undefined);
       return newFolder;
     } else {
       const file = item as FileItem;
@@ -2096,18 +2114,19 @@ class LocalDatabaseService {
         mime_type: file.mime_type,
         size_bytes: file.size_bytes,
         extension: file.extension,
+        checksum: file.checksum || null,
         is_starred: false,
         deleted_at: null,
+        current_version_id: file.current_version_id || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        owner: this.currentUser,
       };
 
       this.files.unshift(newFile);
       saveTable('files', this.files);
       await this.logActivity('file', newFile.id, newFile.name, 'upload', { source: 'shared_import' });
       this.notifyStorageUpdated();
-      return newFile;
+      return { ...newFile, owner: this.currentUser };
     }
   }
 

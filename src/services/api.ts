@@ -501,7 +501,7 @@ class UnifiedApiService {
             avatar_url: meta.avatar_url || meta.picture || null,
             role: user.email?.toLowerCase().startsWith('admin@') || user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' }).catch(() => {});
+          }, { onConflict: 'id' });
 
           const { data, error } = await supabase
             .from('folders')
@@ -586,7 +586,7 @@ class UnifiedApiService {
           await supabase.from('folders').update({ is_starred: nextVal, updated_at: new Date().toISOString() }).eq('id', id);
           return nextVal;
         } else {
-          const f = localDb.getFolderById(id);
+          const f = await localDb.getFolderById(id);
           if (f) {
             const user = (await supabase.auth.getUser()).data.user;
             await supabase.from('folders').upsert({
@@ -597,7 +597,7 @@ class UnifiedApiService {
               parent_folder_id: f.parent_folder_id,
               is_starred: localResult,
               updated_at: new Date().toISOString(),
-            }).catch(() => {});
+            });
           }
         }
       } catch (err) {
@@ -679,13 +679,13 @@ class UnifiedApiService {
             avatar_url: meta.avatar_url || meta.picture || null,
             role: user.email?.toLowerCase().startsWith('admin@') || user.email?.toLowerCase() === 'immaster2024@gmail.com' ? 'admin' : 'user',
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' }).catch(() => {});
+          }, { onConflict: 'id' });
 
           await supabase.from('storage_quotas').upsert({
             user_id: user.id,
             total_quota_bytes: 10995116277760,
             used_storage_bytes: 0,
-          }, { onConflict: 'user_id' }).catch(() => {});
+          }, { onConflict: 'user_id' });
 
           // Server-side Quota Enforcement: Verify (used + incoming) <= 10 TB
           const { data: quota } = await supabase
@@ -913,21 +913,27 @@ class UnifiedApiService {
 
   async softDeleteFile(id: string): Promise<void> {
     if (this.isConfiguredWithSupabase()) {
-      await supabase.from('files').update({ deleted_at: new Date().toISOString() }).eq('id', id).catch(() => {});
+      try {
+        await supabase.from('files').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      } catch {}
     }
     return localDb.softDeleteFile(id);
   }
 
   async restoreFile(id: string): Promise<void> {
     if (this.isConfiguredWithSupabase()) {
-      await supabase.from('files').update({ deleted_at: null }).eq('id', id).catch(() => {});
+      try {
+        await supabase.from('files').update({ deleted_at: null }).eq('id', id);
+      } catch {}
     }
     return localDb.restoreFile(id);
   }
 
   async permanentDeleteFile(id: string): Promise<void> {
     if (this.isConfiguredWithSupabase()) {
-      await supabase.from('files').delete().eq('id', id).catch(() => {});
+      try {
+        await supabase.from('files').delete().eq('id', id);
+      } catch {}
     }
     return localDb.permanentDeleteFile(id);
   }
@@ -946,7 +952,7 @@ class UnifiedApiService {
           await supabase.from('files').update({ is_starred: nextVal, updated_at: new Date().toISOString() }).eq('id', id);
           return nextVal;
         } else {
-          const file = localDb.getFileById(id);
+          const file = await localDb.getFileById(id);
           if (file) {
             const user = (await supabase.auth.getUser()).data.user;
             await supabase.from('files').upsert({
@@ -960,7 +966,7 @@ class UnifiedApiService {
               extension: file.extension,
               is_starred: localResult,
               updated_at: new Date().toISOString(),
-            }).catch(() => {});
+            });
           }
         }
       } catch (err) {
@@ -1282,7 +1288,7 @@ class UnifiedApiService {
             size_bytes: file.size_bytes,
             extension: file.extension,
             updated_at: new Date().toISOString(),
-          }).catch(() => {});
+          });
         }
       } catch (err) {
         console.warn('Supabase saveSharedItemToDrive sync error:', err);
