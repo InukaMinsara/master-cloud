@@ -577,7 +577,34 @@ class UnifiedApiService {
   }
 
   async toggleStarFolder(id: string): Promise<boolean> {
-    return localDb.toggleStarFolder(id);
+    const localResult = await localDb.toggleStarFolder(id);
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const { data } = await supabase.from('folders').select('is_starred').eq('id', id).maybeSingle();
+        if (data) {
+          const nextVal = !data.is_starred;
+          await supabase.from('folders').update({ is_starred: nextVal, updated_at: new Date().toISOString() }).eq('id', id);
+          return nextVal;
+        } else {
+          const f = localDb.getFolderById(id);
+          if (f) {
+            const user = (await supabase.auth.getUser()).data.user;
+            await supabase.from('folders').upsert({
+              id: f.id,
+              owner_id: user?.id || f.owner_id,
+              name: f.name,
+              color: f.color,
+              parent_folder_id: f.parent_folder_id,
+              is_starred: localResult,
+              updated_at: new Date().toISOString(),
+            }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase toggleStarFolder sync error:', err);
+      }
+    }
+    return localResult;
   }
 
   // --- Files ---
@@ -910,7 +937,37 @@ class UnifiedApiService {
   }
 
   async toggleStarFile(id: string): Promise<boolean> {
-    return localDb.toggleStarFile(id);
+    const localResult = await localDb.toggleStarFile(id);
+    if (this.isConfiguredWithSupabase()) {
+      try {
+        const { data } = await supabase.from('files').select('is_starred').eq('id', id).maybeSingle();
+        if (data) {
+          const nextVal = !data.is_starred;
+          await supabase.from('files').update({ is_starred: nextVal, updated_at: new Date().toISOString() }).eq('id', id);
+          return nextVal;
+        } else {
+          const file = localDb.getFileById(id);
+          if (file) {
+            const user = (await supabase.auth.getUser()).data.user;
+            await supabase.from('files').upsert({
+              id: file.id,
+              owner_id: user?.id || file.owner_id,
+              parent_folder_id: file.parent_folder_id,
+              name: file.name,
+              storage_path: file.storage_path,
+              mime_type: file.mime_type,
+              size_bytes: file.size_bytes,
+              extension: file.extension,
+              is_starred: localResult,
+              updated_at: new Date().toISOString(),
+            }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase toggleStarFile sync error:', err);
+      }
+    }
+    return localResult;
   }
 
   // --- Downloads ---
@@ -998,6 +1055,7 @@ class UnifiedApiService {
 
   // --- Starred & Recent ---
   async getStarredItems(): Promise<{ files: FileItem[]; folders: FolderItem[] }> {
+    const localStarred = await localDb.getStarredItems();
     if (this.isConfiguredWithSupabase()) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
@@ -1006,19 +1064,39 @@ class UnifiedApiService {
             supabase.from('files').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
             supabase.from('folders').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
           ]);
+          const remoteFiles = (filesRes.data || []) as FileItem[];
+          const remoteFolders = (foldersRes.data || []) as FolderItem[];
+
+          const fileMap = new Map<string, FileItem>();
+          for (const lf of localStarred.files) {
+            fileMap.set(lf.id, lf);
+          }
+          for (const rf of remoteFiles) {
+            fileMap.set(rf.id, rf);
+          }
+
+          const folderMap = new Map<string, FolderItem>();
+          for (const lf of localStarred.folders) {
+            folderMap.set(lf.id, lf);
+          }
+          for (const rf of remoteFolders) {
+            folderMap.set(rf.id, rf);
+          }
+
           return {
-            files: (filesRes.data || []) as FileItem[],
-            folders: (foldersRes.data || []) as FolderItem[],
+            files: Array.from(fileMap.values()).filter(f => Boolean(f.is_starred) && !f.deleted_at),
+            folders: Array.from(folderMap.values()).filter(f => Boolean(f.is_starred) && !f.deleted_at),
           };
         }
       } catch (err) {
         console.warn('Supabase getStarredItems fallback:', err);
       }
     }
-    return localDb.getStarredItems();
+    return localStarred;
   }
 
-  async getRecentItems(limit: number = 20): Promise<FileItem[]> {
+  async getRecentItems(limit: number = 24): Promise<FileItem[]> {
+    const localRecent = await localDb.getRecentItems(limit);
     if (this.isConfiguredWithSupabase()) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
@@ -1029,15 +1107,26 @@ class UnifiedApiService {
             .is('deleted_at', null)
             .order('updated_at', { ascending: false })
             .limit(limit);
-          if (!error && Array.isArray(data)) {
-            return data as FileItem[];
+          const remoteFiles = (!error && Array.isArray(data)) ? (data as FileItem[]) : [];
+
+          const fileMap = new Map<string, FileItem>();
+          for (const lf of localRecent) {
+            fileMap.set(lf.id, lf);
           }
+          for (const rf of remoteFiles) {
+            fileMap.set(rf.id, rf);
+          }
+
+          return Array.from(fileMap.values())
+            .filter(f => !f.deleted_at)
+            .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
+            .slice(0, limit);
         }
       } catch (err) {
         console.warn('Supabase getRecentItems fallback:', err);
       }
     }
-    return localDb.getRecentItems(limit);
+    return localRecent;
   }
 
   // --- Media ---

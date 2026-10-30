@@ -6,7 +6,7 @@ import { FileCard } from '@/components/files/FileCard';
 import { useFileStore } from '@/stores/fileStore';
 
 export function RecentPage() {
-  const { files: storeFiles, searchQuery } = useFileStore();
+  const { files: storeFiles, searchQuery, starVersion } = useFileStore();
   const [recentFiles, setRecentFiles] = React.useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -15,7 +15,7 @@ export function RecentPage() {
     api.getRecentItems(24)
       .then(setRecentFiles)
       .finally(() => setIsLoading(false));
-  }, [storeFiles]);
+  }, [storeFiles, starVersion]);
 
   const displayedFiles = React.useMemo(() => {
     if (!searchQuery.trim()) return recentFiles;

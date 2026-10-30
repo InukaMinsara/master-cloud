@@ -15,6 +15,7 @@ interface FileState {
   searchQuery: string;
   categoryFilter: string; // 'all' | 'image' | 'video' | 'audio' | 'document' | 'code' | 'archive'
   isLoading: boolean;
+  starVersion: number;
   activeDetailsItem: (FileItem & { isFolder?: boolean }) | (FolderItem & { isFolder: true }) | null;
 
   // Actions
@@ -54,6 +55,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   searchQuery: '',
   categoryFilter: 'all',
   isLoading: false,
+  starVersion: 0,
   activeDetailsItem: null,
 
   setCurrentFolderId: async (folderId) => {
@@ -195,6 +197,7 @@ export const useFileStore = create<FileState>((set, get) => ({
     } else {
       await api.toggleStarFile(id);
     }
+    set(state => ({ starVersion: state.starVersion + 1 }));
     await get().fetchItems();
   },
 
