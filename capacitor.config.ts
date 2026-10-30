@@ -8,6 +8,10 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     cleartext: true,
   },
+  ios: {
+    contentInset: 'automatic',
+    backgroundColor: '#090d16',
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1800,

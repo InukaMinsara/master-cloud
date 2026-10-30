@@ -1,0 +1,23 @@
+{
+  "name": "Master Cloud - 10 TB Storage",
+  "short_name": "Master Cloud",
+  "description": "10 TB Free Cloud Storage with on-demand streaming and instant mobile backup",
+  "start_url": "/drive",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-full.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -30,7 +30,7 @@ export function PublicFooter() {
                 No credit card. No trials. No hidden fees.
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-xl">
-                Mount your 10 TB virtual drive directly to Windows File Explorer, install on Android, or access your web workspace anywhere.
+                Mount your 10 TB virtual drive on Windows, install on Android or iPhone, or access your web workspace anywhere.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
@@ -92,7 +92,7 @@ export function PublicFooter() {
               </li>
               <li>
                 <Link to="/download" className="hover:text-primary transition-colors">
-                  Windows &amp; Android Apps
+                  PC, Android &amp; iPhone Apps
                 </Link>
               </li>
               <li>

@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const apkPath = path.join(rootDir, 'MasterCloud-Android-v1.0.apk');
+const iosZipPath = path.join(rootDir, 'public', 'releases', 'MasterCloud-iOS-Xcode.zip');
 
 // Find local Wi-Fi IPv4 address (prioritizing 192.168.1.x)
 function getLocalIps() {
@@ -20,7 +21,6 @@ function getLocalIps() {
       }
     }
   }
-  // Sort so 192.168.1.x or non-virtualbox comes first
   ips.sort((a, b) => {
     if (a.startsWith('192.168.1.')) return -1;
     if (b.startsWith('192.168.1.')) return 1;
@@ -34,7 +34,10 @@ const primaryIp = localIps[0] || '192.168.1.164';
 const PORT = 8899;
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/download' || req.url === '/MasterCloud.apk' || req.url?.endsWith('.apk')) {
+  const url = req.url || '/';
+
+  // Android APK Direct Download
+  if (url === '/download' || url === '/MasterCloud.apk' || url.endsWith('.apk')) {
     if (!fs.existsSync(apkPath)) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       return res.end('APK not found on server.');
@@ -50,17 +53,37 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // iOS Package Direct Download
+  if (url === '/download-ios' || url.endsWith('Xcode.zip')) {
+    if (!fs.existsSync(iosZipPath)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('iOS Package not found on server.');
+    }
+    const stat = fs.statSync(iosZipPath);
+    res.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Length': stat.size,
+      'Content-Disposition': 'attachment; filename="MasterCloud-iOS-Xcode.zip"',
+    });
+    const readStream = fs.createReadStream(iosZipPath);
+    readStream.pipe(res);
+    return;
+  }
+
   // Mobile-friendly Download Landing Page
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Master Cloud Android App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Master Cloud Mobile (Android &amp; iPhone)</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#090d16">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: #090d16;
       color: #f8fafc;
       display: flex;
@@ -74,17 +97,17 @@ const server = http.createServer((req, res) => {
     .card {
       background: #111827;
       border: 1px solid rgba(59, 130, 246, 0.25);
-      border-radius: 24px;
+      border-radius: 28px;
       padding: 32px 24px;
-      max-width: 420px;
+      max-width: 440px;
       width: 100%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
     }
     .logo {
       width: 80px;
       height: 80px;
       margin-bottom: 20px;
-      border-radius: 20px;
+      border-radius: 22px;
       background: linear-gradient(135deg, #2563eb, #4f46e5);
       display: inline-flex;
       align-items: center;
@@ -100,7 +123,7 @@ const server = http.createServer((req, res) => {
     }
     h1 {
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 800;
       margin-bottom: 8px;
       background: linear-gradient(to right, #60a5fa, #a5b4fc);
       -webkit-background-clip: text;
@@ -108,13 +131,13 @@ const server = http.createServer((req, res) => {
     }
     .badge {
       display: inline-block;
-      padding: 4px 12px;
+      padding: 5px 14px;
       background: rgba(37, 99, 235, 0.2);
       border: 1px solid rgba(59, 130, 246, 0.4);
       color: #93c5fd;
       border-radius: 9999px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 16px;
     }
     p {
@@ -123,38 +146,56 @@ const server = http.createServer((req, res) => {
       line-height: 1.5;
       margin-bottom: 24px;
     }
-    .btn {
+    .btn-android {
       display: block;
       width: 100%;
       padding: 16px 20px;
-      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      background: linear-gradient(135deg, #059669, #10b981);
       color: #fff;
       text-decoration: none;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 600;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .btn-ios {
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 700;
       box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+      margin-bottom: 12px;
       transition: all 0.2s;
     }
     .btn:active {
       transform: scale(0.98);
     }
-    .steps {
-      margin-top: 24px;
+    .box {
+      margin-top: 20px;
       text-align: left;
       background: rgba(255,255,255,0.03);
       padding: 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.07);
     }
-    .steps h3 {
+    .box h3 {
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #cbd5e1;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .steps ol {
+    .box ol {
       padding-left: 20px;
       font-size: 13px;
       color: #94a3b8;
@@ -169,18 +210,29 @@ const server = http.createServer((req, res) => {
         <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
       </svg>
     </div>
-    <h1>Master Cloud</h1>
-    <div class="badge">Android v1.0 • 10 TB Virtual Drive</div>
-    <p>Install the native Master Cloud Android app to access your 10 TB storage, stream media, and backup your phone with zero space usage.</p>
+    <h1>Master Cloud Mobile</h1>
+    <div class="badge">10 TB Storage • Phone Edition</div>
+    <p>Stream 4K videos, auto-backup photos, and access your 10 TB storage with 0-byte phone memory footprint.</p>
     
-    <a href="/download" class="btn">📥 Download APK (179 MB)</a>
+    <a href="/download" class="btn-android">🤖 Download Android APK (179 MB)</a>
+    <a href="http://${primaryIp}:5173/drive" class="btn-ios">🍏 Open on iPhone (1-Tap Home Screen)</a>
+    <a href="/download-ios" style="display:inline-block; font-size:12px; color:#93c5fd; text-decoration:none; margin-top:8px;">📦 Download iOS Xcode Source Package (9.9 MB)</a>
 
-    <div class="steps">
-      <h3>Quick Installation Steps:</h3>
+    <div class="box">
+      <h3>🍏 iPhone (iOS) 1-Tap Home Screen Setup:</h3>
       <ol>
-        <li>Tap <b>Download APK</b> above.</li>
-        <li>Open the downloaded file and select <b>Install</b> (allow Unknown Sources if prompted).</li>
-        <li>Open Master Cloud and sign in to access your 10 TB storage!</li>
+        <li>Tap <b>Open on iPhone</b> above in Safari.</li>
+        <li>Tap the <b>Share button</b> (square with arrow up ⎋) at the bottom.</li>
+        <li>Tap <b>"Add to Home Screen"</b> (මුල් තිරයට එක් කරන්න).</li>
+        <li>Tap <b>Add</b>. Master Cloud icon will appear on your iPhone screen!</li>
+      </ol>
+    </div>
+
+    <div class="box" style="margin-top:12px;">
+      <h3>🤖 Android Installation:</h3>
+      <ol>
+        <li>Tap <b>Download Android APK</b>.</li>
+        <li>Open and tap <b>Install</b>.</li>
       </ol>
     </div>
   </div>
@@ -192,7 +244,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Master Cloud Android Download Portal running!`);
+  console.log(`✅ Master Cloud Mobile Download Portal running!`);
   console.log(`📱 Phone URL: http://${primaryIp}:${PORT}`);
-  console.log(`📥 Direct APK: http://${primaryIp}:${PORT}/download`);
+  console.log(`🤖 Android APK: http://${primaryIp}:${PORT}/download`);
+  console.log(`🍏 iOS Package: http://${primaryIp}:${PORT}/download-ios`);
 });
