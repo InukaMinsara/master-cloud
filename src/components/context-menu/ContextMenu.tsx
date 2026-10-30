@@ -111,10 +111,9 @@ export function ContextMenu() {
 
   const handleFileDownload = async () => {
     if (targetFile) {
-      toast.info(`Preparing download for ${targetFile.name}...`);
+      closeContextMenu();
       await api.downloadFile(targetFile);
     }
-    closeContextMenu();
   };
 
   const handleFileShare = () => {
@@ -194,11 +193,9 @@ export function ContextMenu() {
 
   const handleFolderDownloadZip = async () => {
     if (targetFolder) {
-      toast.info(`Compressing folder "${targetFolder.name}"...`);
+      closeContextMenu();
       await api.downloadFolder(targetFolder, files, folders);
-      toast.success(`Archive of "${targetFolder.name}" downloaded`);
     }
-    closeContextMenu();
   };
 
   const handleFolderStar = async () => {

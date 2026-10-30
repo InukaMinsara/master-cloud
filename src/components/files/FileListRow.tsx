@@ -94,16 +94,14 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isFolder && folder) {
-      toast.loading(`Packaging "${folder.name}.zip"...`, { id: `zip-${folder.id}` });
-      try {
+    try {
+      if (isFolder && folder) {
         await api.downloadFolder(folder, files, folders);
-        toast.success(`Downloaded "${folder.name}.zip"`, { id: `zip-${folder.id}` });
-      } catch (err: any) {
-        toast.error(`Download failed: ${err.message || 'Error'}`, { id: `zip-${folder.id}` });
+      } else if (file) {
+        await api.downloadFile(file);
       }
-    } else if (file) {
-      await api.downloadFile(file);
+    } catch (err: any) {
+      toast.error(`Download failed: ${err.message || 'Error'}`);
     }
   };
 

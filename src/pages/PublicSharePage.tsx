@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { api } from '@/services/api';
+import { DownloadCenter } from '@/components/download/DownloadCenter';
 import { ShareLinkRecord } from '@/types/database';
 import { FileItem, FolderItem } from '@/types/file';
 import { formatBytes, formatDateTime, getFileCategory } from '@/lib/utils';
@@ -63,7 +64,7 @@ export function PublicSharePage() {
     if (linkData.link.resource_type === 'file') {
       await api.downloadFile(linkData.item as FileItem);
     } else {
-      toast.info('Downloading folder bundle...');
+      await api.downloadFolder(linkData.item as FolderItem);
     }
   };
 
@@ -221,6 +222,8 @@ export function PublicSharePage() {
       <footer className="py-4 text-center text-xs text-muted-foreground border-t border-border/60">
         Protected with End-to-End Integrity Verification • MASTER CLOUD
       </footer>
+
+      <DownloadCenter />
     </div>
   );
 }

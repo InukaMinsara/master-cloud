@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { FileDetailsSidebar } from '@/components/common/FileDetailsSidebar';
 import { CommandPalette } from '@/components/common/CommandPalette';
 import { UploadCenter } from '@/components/upload/UploadCenter';
+import { DownloadCenter } from '@/components/download/DownloadCenter';
 import { FileActionBar } from '@/components/files/FileActionBar';
 import { FilePreviewModal } from '@/components/preview/FilePreviewModal';
 import { ShareDialog } from '@/components/sharing/ShareDialog';
@@ -43,6 +44,7 @@ export function AppLayout() {
       <ContextMenu />
       <CommandPalette />
       <UploadCenter />
+      <DownloadCenter />
       <FileActionBar />
       <FilePreviewModal />
       <ShareDialog />
