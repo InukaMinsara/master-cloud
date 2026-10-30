@@ -54,7 +54,14 @@ export function SettingsPage() {
   }, [user]);
 
   React.useEffect(() => {
-    setBreakdown(api.getStorageBreakdown());
+    const updateStats = () => setBreakdown(api.getStorageBreakdown());
+    updateStats();
+    window.addEventListener('mc_storage_updated', updateStats);
+    const interval = setInterval(updateStats, 3000);
+    return () => {
+      window.removeEventListener('mc_storage_updated', updateStats);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleLocalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

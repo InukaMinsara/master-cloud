@@ -52,14 +52,21 @@ export function DashboardPage() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'recent' | 'starred' | 'shared'>('recent');
 
-  const breakdown = api.getStorageBreakdown();
-  const totalQuota = 10 * 1024 * 1024 * 1024 * 1024; // 10 TB
+  const [breakdown, setBreakdown] = useState(() => api.getStorageBreakdown());
+  const totalQuota = breakdown.totalQuota;
   const usedBytes = breakdown.usedStorage;
   const availableBytes = Math.max(0, totalQuota - usedBytes);
   const usagePercentage = Math.min(100, Math.max(0.01, (usedBytes / totalQuota) * 100));
 
   useEffect(() => {
     fetchItems();
+    const updateStats = () => setBreakdown(api.getStorageBreakdown());
+    window.addEventListener('mc_storage_updated', updateStats);
+    const interval = setInterval(updateStats, 3000);
+    return () => {
+      window.removeEventListener('mc_storage_updated', updateStats);
+      clearInterval(interval);
+    };
   }, [fetchItems]);
 
   const recentFiles = files.filter(f => !f.deleted_at).slice(0, 6);

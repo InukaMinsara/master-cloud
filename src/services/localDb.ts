@@ -659,6 +659,15 @@ class LocalDatabaseService {
     return map[ext.toLowerCase()] || 'application/octet-stream';
   }
 
+  notifyStorageUpdated(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        const breakdown = this.getStorageBreakdown();
+        window.dispatchEvent(new CustomEvent('mc_storage_updated', { detail: breakdown }));
+      } catch {}
+    }
+  }
+
   private syncCacheTimestamps = new Map<string, number>();
 
   async syncWithLocalDrive(parentFolderId: string | null = null): Promise<void> {
@@ -709,6 +718,7 @@ class LocalDatabaseService {
         this.folders = this.folders.filter(f => !f.id.startsWith('zfolder-'));
         saveTable('folders', this.folders);
         saveTable('files', this.files);
+        this.notifyStorageUpdated();
         return;
       }
 
@@ -722,57 +732,63 @@ class LocalDatabaseService {
         birthtime: string;
       }> = data.items;
 
-      // Fast O(1) indexed sync for this folder only
-      const currentFolderId = parentFolderId;
-
-      const existingFolderMap = new Map<string, FolderRecord>();
+      // Build folder lookup maps: relPath -> folder.id
+      const folderMapByRel = new Map<string, string>();
       for (const f of this.folders) {
-        if (!f.deleted_at && f.parent_folder_id === currentFolderId) {
-          existingFolderMap.set(f.name.toLowerCase(), f);
+        if (!f.deleted_at) {
+          const rel = this.getFolderRelPath(f.id);
+          folderMapByRel.set(rel, f.id);
         }
       }
 
-      const existingFileMap = new Map<string, FileRecord>();
+      const existingFileByPath = new Map<string, FileRecord>();
       for (const f of this.files) {
-        if (!f.deleted_at && f.parent_folder_id === currentFolderId) {
-          existingFileMap.set(f.name.toLowerCase(), f);
+        if (!f.deleted_at && f.storage_path) {
+          existingFileByPath.set(f.storage_path, f);
         }
       }
 
       let changed = false;
 
-      // 1. Sync folders in this directory
-      for (const item of diskItems.filter(i => i.isDir)) {
-        const existing = existingFolderMap.get(item.name.toLowerCase());
-        if (!existing) {
+      // 1. Sync folders in order of shortest relPath (root folders first)
+      const diskFolders = diskItems.filter(i => i.isDir).sort((a, b) => a.relPath.length - b.relPath.length);
+      for (const item of diskFolders) {
+        let folderId = folderMapByRel.get(item.relPath);
+        if (!folderId) {
+          const parentFolderRel = item.parentRelPath || '';
+          const parentFid = parentFolderRel ? (folderMapByRel.get(parentFolderRel) || null) : null;
+          const newFolderId = 'zfolder-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_');
           const newFolder: FolderRecord = {
-            id: 'zfolder-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_'),
+            id: newFolderId,
             owner_id: this.currentUser.id,
-            parent_folder_id: currentFolderId,
+            parent_folder_id: parentFid,
             name: item.name,
             color: '#3b82f6',
             is_starred: false,
             deleted_at: null,
-            created_at: item.birthtime,
-            updated_at: item.mtime,
+            created_at: item.birthtime || new Date().toISOString(),
+            updated_at: item.mtime || new Date().toISOString(),
           };
           this.folders.push(newFolder);
-          existingFolderMap.set(item.name.toLowerCase(), newFolder);
+          folderMapByRel.set(item.relPath, newFolderId);
           changed = true;
         }
       }
 
-      // 2. Sync files in this directory
-      for (const item of diskItems.filter(i => !i.isDir)) {
-        const ext = getFileExtension(item.name);
+      // 2. Sync all files across the drive
+      const diskFiles = diskItems.filter(i => !i.isDir);
+      for (const item of diskFiles) {
         const zStoragePath = `zdrive:${item.relPath}`;
-        const existing = existingFileMap.get(item.name.toLowerCase());
+        const existing = existingFileByPath.get(zStoragePath);
+        const parentFolderRel = item.parentRelPath || '';
+        const parentFid = parentFolderRel ? (folderMapByRel.get(parentFolderRel) || null) : null;
 
         if (!existing) {
+          const ext = getFileExtension(item.name);
           const newFile: FileRecord = {
             id: 'zfile-' + item.relPath.replace(/[^a-zA-Z0-9_-]/g, '_'),
             owner_id: this.currentUser.id,
-            parent_folder_id: currentFolderId,
+            parent_folder_id: parentFid,
             name: item.name,
             storage_path: zStoragePath,
             mime_type: this.guessMimeType(ext),
@@ -782,22 +798,29 @@ class LocalDatabaseService {
             is_starred: false,
             deleted_at: null,
             current_version_id: 'zver-' + Date.now(),
-            created_at: item.birthtime,
-            updated_at: item.mtime,
+            created_at: item.birthtime || new Date().toISOString(),
+            updated_at: item.mtime || new Date().toISOString(),
           };
           this.files.push(newFile);
-          existingFileMap.set(item.name.toLowerCase(), newFile);
+          existingFileByPath.set(zStoragePath, newFile);
           changed = true;
-        } else if (existing.size_bytes !== item.size) {
-          existing.size_bytes = item.size;
-          existing.updated_at = item.mtime;
-          changed = true;
+        } else {
+          if (existing.size_bytes !== item.size) {
+            existing.size_bytes = item.size;
+            existing.updated_at = item.mtime;
+            changed = true;
+          }
+          if (existing.parent_folder_id !== parentFid) {
+            existing.parent_folder_id = parentFid;
+            changed = true;
+          }
         }
       }
 
       if (changed) {
         saveTable('folders', this.folders);
         saveTable('files', this.files);
+        this.notifyStorageUpdated();
       }
     } catch {
       // Offline or Vite middleware not running — ignore gracefully
@@ -945,18 +968,20 @@ class LocalDatabaseService {
       fetch('/api/local-drive/fs-op', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ op: 'delete', relPath }),
+        body: JSON.stringify({ op: 'trash', relPath }),
       }).catch(() => {});
     }
 
     saveTable('folders', this.folders);
     saveTable('files', this.files);
     await this.logActivity('folder', folder.id, folder.name, 'delete', {});
+    this.notifyStorageUpdated();
   }
 
   async restoreFolder(id: string): Promise<void> {
     const folder = this.folders.find(f => f.id === id);
     if (!folder) return;
+    const relPath = this.getFolderRelPath(folder.id);
     folder.deleted_at = null;
 
     const restoreDescendants = (parentId: string) => {
@@ -970,9 +995,18 @@ class LocalDatabaseService {
     };
     restoreDescendants(id);
 
+    if (typeof fetch !== 'undefined' && relPath) {
+      fetch('/api/local-drive/fs-op', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'restore', relPath }),
+      }).catch(() => {});
+    }
+
     saveTable('folders', this.folders);
     saveTable('files', this.files);
     await this.logActivity('folder', folder.id, folder.name, 'restore', {});
+    this.notifyStorageUpdated();
   }
 
   async permanentDeleteFolder(id: string): Promise<void> {
@@ -1000,6 +1034,7 @@ class LocalDatabaseService {
     this.files = this.files.filter(f => !fileIds.includes(f.id));
     saveTable('folders', this.folders);
     saveTable('files', this.files);
+    this.notifyStorageUpdated();
   }
 
   async toggleStarFolder(id: string): Promise<boolean> {
@@ -1116,6 +1151,7 @@ class LocalDatabaseService {
     this.versions.push(newVersion);
     saveTable('files', this.files);
     saveTable('versions', this.versions);
+    this.notifyStorageUpdated();
 
     await this.logActivity('file', newFile.id, newFile.name, 'upload', {
       size: file.size,
@@ -1175,6 +1211,7 @@ class LocalDatabaseService {
     this.versions.unshift(newVersion);
     saveTable('files', this.files);
     saveTable('versions', this.versions);
+    this.notifyStorageUpdated();
 
     await this.logActivity('file', newFile.id, newFile.name, 'create', {
       canvas: true,
@@ -1302,12 +1339,13 @@ class LocalDatabaseService {
       fetch('/api/local-drive/fs-op', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ op: 'delete', relPath }),
+        body: JSON.stringify({ op: 'trash', relPath }),
       }).catch(() => {});
     }
     file.deleted_at = new Date().toISOString();
     saveTable('files', this.files);
     await this.logActivity('file', file.id, file.name, 'delete', {});
+    this.notifyStorageUpdated();
   }
 
   async restoreFile(id: string): Promise<void> {
@@ -1315,7 +1353,46 @@ class LocalDatabaseService {
     if (!file) return;
     file.deleted_at = null;
     saveTable('files', this.files);
+
+    if (typeof fetch !== 'undefined') {
+      try {
+        let restoredFromDiskTrash = false;
+        if (file.storage_path.startsWith('zdrive:')) {
+          const relPath = file.storage_path.slice('zdrive:'.length);
+          const res = await fetch('/api/local-drive/fs-op', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ op: 'restore', relPath }),
+          });
+          if (res.ok) {
+            restoredFromDiskTrash = true;
+          }
+        }
+
+        // If not restored from disk trash (e.g. uploaded via web or was in binaryStorage),
+        // write it directly to Z: so it is physically present on the local drive!
+        if (!restoredFromDiskTrash || !file.storage_path.startsWith('zdrive:')) {
+          const folderRel = this.getFolderRelPath(file.parent_folder_id);
+          const targetRel = folderRel ? `${folderRel}/${file.name}` : file.name;
+          const blob = await binaryStorage.getBlob(file.storage_path);
+          if (blob) {
+            await fetch('/api/local-drive/upload', {
+              method: 'POST',
+              headers: {
+                'x-file-path': encodeURIComponent(targetRel),
+                'Content-Type': 'application/octet-stream',
+              },
+              body: blob,
+            });
+            file.storage_path = `zdrive:${targetRel}`;
+            saveTable('files', this.files);
+          }
+        }
+      } catch {}
+    }
+
     await this.logActivity('file', file.id, file.name, 'restore', {});
+    this.notifyStorageUpdated();
   }
 
   async permanentDeleteFile(id: string): Promise<void> {
@@ -1335,18 +1412,39 @@ class LocalDatabaseService {
     this.versions = this.versions.filter(v => v.file_id !== id);
     saveTable('files', this.files);
     saveTable('versions', this.versions);
+    this.notifyStorageUpdated();
   }
 
   async emptyTrash(): Promise<void> {
     const deletedFiles = this.files.filter(f => f.deleted_at !== null);
     for (const f of deletedFiles) {
+      if (f.storage_path.startsWith('zdrive:') && typeof fetch !== 'undefined') {
+        const relPath = f.storage_path.slice('zdrive:'.length);
+        fetch('/api/local-drive/fs-op', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'delete', relPath }),
+        }).catch(() => {});
+      }
       await binaryStorage.deleteBlob(f.storage_path);
+    }
+    const deletedFolders = this.folders.filter(f => f.deleted_at !== null);
+    for (const folder of deletedFolders) {
+      const relPath = this.getFolderRelPath(folder.id);
+      if (typeof fetch !== 'undefined' && relPath) {
+        fetch('/api/local-drive/fs-op', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'delete', relPath }),
+        }).catch(() => {});
+      }
     }
     this.files = this.files.filter(f => f.deleted_at === null);
     this.folders = this.folders.filter(f => f.deleted_at === null);
     saveTable('files', this.files);
     saveTable('folders', this.folders);
     await this.logActivity('system', null, 'Trash', 'permanent_delete', { action: 'empty_trash' });
+    this.notifyStorageUpdated();
   }
 
   async toggleStarFile(id: string): Promise<boolean> {
@@ -1762,23 +1860,11 @@ class LocalDatabaseService {
       trashBytes += f.size_bytes;
     }
 
-    if (isMasterAdmin) {
-      usedStorage = Math.max(usedStorage, CLOUD_SEED_STATS.usedStorage);
-      videosBytes = Math.max(videosBytes, CLOUD_SEED_STATS.videosBytes);
-      codeBytes = Math.max(codeBytes, CLOUD_SEED_STATS.codeBytes);
-      documentsBytes = Math.max(documentsBytes, CLOUD_SEED_STATS.documentsBytes);
-      audioBytes = Math.max(audioBytes, CLOUD_SEED_STATS.audioBytes);
-      imagesBytes = Math.max(imagesBytes, CLOUD_SEED_STATS.imagesBytes);
-      otherBytes = Math.max(otherBytes, CLOUD_SEED_STATS.otherBytes);
-    }
-
     const totalQuota = FREE_TEN_TB_BYTES; // 10 TB FREE
     const availableStorage = Math.max(0, totalQuota - usedStorage);
     const percentageUsed = Math.min(100, Number(((usedStorage / totalQuota) * 100).toFixed(2)));
-    const fileCount = isMasterAdmin ? Math.max(activeFiles.length, CLOUD_SEED_STATS.fileCount) : activeFiles.length;
-    const folderCount = isMasterAdmin
-      ? Math.max(this.folders.filter(f => f.deleted_at === null).length, CLOUD_SEED_STATS.folderCount)
-      : this.folders.filter(f => f.deleted_at === null).length;
+    const fileCount = activeFiles.length;
+    const folderCount = this.folders.filter(f => f.deleted_at === null && this.isItemVisible(f.owner_id)).length;
 
     return {
       totalQuota,
