@@ -64,19 +64,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localDb.setCurrentUser(immediateUser);
             api.syncActiveWebSession(immediateUser);
             try {
-              supabase.from('profiles').upsert({
+              Promise.resolve(supabase.from('profiles').upsert({
                 id: session.user.id,
                 email: realEmail,
                 display_name: immediateUser.display_name,
                 avatar_url: immediateUser.avatar_url,
                 role: immediateUser.role,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: 'id' }).then(() => {
-                supabase.from('storage_quotas').upsert({
+              }, { onConflict: 'id' })).then(() => {
+                Promise.resolve(supabase.from('storage_quotas').upsert({
                   user_id: session.user.id,
                   total_quota_bytes: 10995116277760,
                   used_storage_bytes: 0,
-                }, { onConflict: 'user_id' }).catch(() => {});
+                }, { onConflict: 'user_id' })).catch(() => {});
               }).catch(() => {});
             } catch { /* ignore */ }
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
@@ -138,19 +138,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             localDb.setCurrentUser(immediateUser);
             api.syncActiveWebSession(immediateUser);
             try {
-              supabase.from('profiles').upsert({
+              Promise.resolve(supabase.from('profiles').upsert({
                 id: session.user.id,
                 email: realEmail,
                 display_name: immediateUser.display_name,
                 avatar_url: immediateUser.avatar_url,
                 role: immediateUser.role,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: 'id' }).then(() => {
-                supabase.from('storage_quotas').upsert({
+              }, { onConflict: 'id' })).then(() => {
+                Promise.resolve(supabase.from('storage_quotas').upsert({
                   user_id: session.user.id,
                   total_quota_bytes: 10995116277760,
                   used_storage_bytes: 0,
-                }, { onConflict: 'user_id' }).catch(() => {});
+                }, { onConflict: 'user_id' })).catch(() => {});
               }).catch(() => {});
             } catch { /* ignore */ }
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
