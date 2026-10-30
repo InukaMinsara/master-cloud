@@ -215,16 +215,16 @@ const server = http.createServer((req, res) => {
     <p>Stream 4K videos, auto-backup photos, and access your 10 TB storage with 0-byte phone memory footprint.</p>
     
     <a href="/download" class="btn-android">🤖 Download Android APK (179 MB)</a>
-    <a href="http://${primaryIp}:5173/drive" class="btn-ios">🍏 Open on iPhone (1-Tap Home Screen)</a>
+    <a href="http://${primaryIp}:8766" class="btn-ios">🍏 Mount 10 TB in Apple "Files" App</a>
     <a href="/download-ios" style="display:inline-block; font-size:12px; color:#93c5fd; text-decoration:none; margin-top:8px;">📦 Download iOS Xcode Source Package (9.9 MB)</a>
 
     <div class="box">
-      <h3>🍏 iPhone (iOS) 1-Tap Home Screen Setup:</h3>
+      <h3>🍏 Mount 10 TB in iPhone "Files" (ගොනු) App:</h3>
       <ol>
-        <li>Tap <b>Open on iPhone</b> above in Safari.</li>
-        <li>Tap the <b>Share button</b> (square with arrow up ⎋) at the bottom.</li>
-        <li>Tap <b>"Add to Home Screen"</b> (මුල් තිරයට එක් කරන්න).</li>
-        <li>Tap <b>Add</b>. Master Cloud icon will appear on your iPhone screen!</li>
+        <li>Open the <b>Files</b> app on your iPhone.</li>
+        <li>Tap <b>...</b> in top right &gt; <b>Connect to Server</b>.</li>
+        <li>Enter <b>http://${primaryIp}:8766</b> and tap <b>Connect</b>.</li>
+        <li>Select <b>Guest</b> &gt; tap <b>Next</b>. 10 TB storage appears right beside iCloud!</li>
       </ol>
     </div>
 
