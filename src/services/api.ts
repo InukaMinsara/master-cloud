@@ -921,8 +921,16 @@ class UnifiedApiService {
     return DownloadService.downloadMultipleFiles(files);
   }
 
-  async downloadFolder(folder: FolderItem, allFiles: FileItem[], allFolders: FolderItem[]): Promise<void> {
-    return DownloadService.downloadFolder(folder, allFiles, allFolders);
+  async downloadFolder(folder: FolderItem, allFiles?: FileItem[], allFolders?: FolderItem[]): Promise<void> {
+    const descendants = localDb.getFolderDescendants(folder.id);
+    const targetFiles = (descendants.files && descendants.files.length > 0)
+      ? (descendants.files as FileItem[])
+      : (allFiles || []);
+    const targetFolders = (descendants.folders && descendants.folders.length > 0)
+      ? (descendants.folders as FolderItem[])
+      : (allFolders || []);
+
+    return DownloadService.downloadFolder(folder, targetFiles, targetFolders);
   }
 
   // --- Starred & Recent ---

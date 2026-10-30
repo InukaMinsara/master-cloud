@@ -1117,6 +1117,33 @@ class LocalDatabaseService {
     return newFolder;
   }
 
+  getFolderDescendants(folderId: string): { files: FileRecord[]; folders: FolderRecord[] } {
+    const resultFiles: FileRecord[] = [];
+    const resultFolders: FolderRecord[] = [];
+
+    const queue: string[] = [folderId];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+
+      // Add direct child files (not deleted)
+      const childrenFiles = this.files.filter(f => f.parent_folder_id === currentId && !f.deleted_at);
+      resultFiles.push(...childrenFiles);
+
+      // Add direct child folders (not deleted)
+      const childrenFolders = this.folders.filter(f => f.parent_folder_id === currentId && !f.deleted_at);
+      resultFolders.push(...childrenFolders);
+      for (const cf of childrenFolders) {
+        queue.push(cf.id);
+      }
+    }
+
+    return { files: resultFiles, folders: resultFolders };
+  }
+
   async renameFolder(id: string, newName: string): Promise<FolderRecord> {
     const folder = this.folders.find(f => f.id === id);
     if (!folder) throw new Error('Folder not found');
