@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Master Cloud</string>
+    <string name="title_activity_main">Master Cloud</string>
+    <string name="package_name">com.mastercloud.drive</string>
+    <string name="custom_url_scheme">com.mastercloud.drive</string>
+</resources>
