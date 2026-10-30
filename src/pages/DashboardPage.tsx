@@ -21,6 +21,7 @@ import {
   Palette,
   BookOpen,
   Trash2,
+  PieChart,
   ShieldCheck,
   Zap,
   Layers,
@@ -48,7 +49,7 @@ export function DashboardPage() {
   const { setNewFolderModalOpen } = useUIStore();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'starred' | 'shared'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'starred' | 'shared' | 'storage'>('recent');
 
   const [breakdown, setBreakdown] = useState(() => api.getStorageBreakdown());
   const totalQuota = breakdown.totalQuota;
@@ -79,11 +80,11 @@ export function DashboardPage() {
 
   const quickShortcuts = [
     { label: 'My Drive', path: '/drive', icon: HardDrive, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Storage & Quota Analytics', path: '/storage', icon: PieChart, color: 'text-rose-500', bg: 'bg-rose-500/10' },
     { label: 'Shared with me', path: '/shared', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Media Library', path: '/media', icon: Film, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Recent Files', path: '/recent', icon: Clock, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-    { label: 'Starred Files', path: '/starred', icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'Trash Bin', path: '/trash', icon: Trash2, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Trash Bin', path: '/trash', icon: Trash2, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
   return (
@@ -322,6 +323,15 @@ export function DashboardPage() {
               <Users className="h-3.5 w-3.5 inline-block mr-1.5" />
               Shared with Me
             </button>
+            <button
+              onClick={() => setActiveTab('storage')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                activeTab === 'storage' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent'
+              }`}
+            >
+              <PieChart className="h-3.5 w-3.5 inline-block mr-1.5" />
+              Storage & Quota Analytics
+            </button>
           </div>
 
           <Link to="/drive" className="text-xs font-bold text-primary hover:underline">
@@ -373,6 +383,55 @@ export function DashboardPage() {
             <Users className="h-8 w-8 text-muted-foreground mx-auto" />
             <p className="text-xs font-semibold text-muted-foreground">No shared files currently</p>
             <p className="text-[11px] text-muted-foreground">Items shared with you by other collaborators will appear here</p>
+          </div>
+        )}
+
+        {activeTab === 'storage' && (
+          <div className="p-6 rounded-3xl border border-border/80 bg-card/60 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-foreground">Storage & Quota Analytics Overview</h3>
+                <p className="text-xs text-muted-foreground">
+                  Real-time breakdown of your 10 TB free storage usage and category distribution
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => navigate('/storage')}
+                className="rounded-xl text-xs font-semibold gap-1.5 shadow-md shadow-primary/20"
+              >
+                <PieChart className="h-4 w-4" />
+                Open Full Analytics & Optimizer
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Documents</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.documentsBytes)}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Images</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.imagesBytes)}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Videos</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.videosBytes)}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Code & Scripts</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.codeBytes)}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Other Formats</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.otherBytes)}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border/40 space-y-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Trash Bin</span>
+                <p className="text-sm font-black text-foreground">{formatBytes(breakdown.trashBytes)}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
