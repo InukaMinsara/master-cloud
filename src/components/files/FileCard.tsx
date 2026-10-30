@@ -194,7 +194,7 @@ export function FileCard({ file, allFiles }: FileCardProps) {
       onClick={handleCardClick}
       onDoubleClick={handleOpenPreview}
       onContextMenu={handleContextMenu}
-      className={`group relative flex flex-col justify-between rounded-2xl border transition-all duration-200 select-none cursor-pointer overflow-hidden ${
+      className={`group relative flex flex-col justify-between rounded-2xl border transition-all duration-200 select-none cursor-pointer hover:z-20 [&:has([data-dropdown-open])]:z-30 ${
         isSelected
           ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary'
           : 'border-border/80 bg-card hover:border-primary/50 hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5'

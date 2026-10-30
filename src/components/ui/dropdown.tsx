@@ -31,7 +31,11 @@ export function DropdownMenu({ children }: { children: React.ReactNode }) {
 
   return (
     <DropdownContext.Provider value={{ open, setOpen }}>
-      <div ref={containerRef} className="relative inline-block text-left">
+      <div
+        ref={containerRef}
+        className={cn('relative inline-block text-left', open ? 'z-50' : '')}
+        data-dropdown-open={open ? 'true' : undefined}
+      >
         {children}
       </div>
     </DropdownContext.Provider>
@@ -79,7 +83,7 @@ export function DropdownMenuContent({
   return (
     <div
       className={cn(
-        'absolute z-50 mt-2 min-w-[180px] rounded-xl border border-border bg-card p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150 focus:outline-none',
+        'absolute z-50 mt-1.5 min-w-[190px] rounded-xl border border-border/90 bg-card/95 dark:bg-zinc-900/95 backdrop-blur-md p-1.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 focus:outline-none',
         alignClass,
         className
       )}

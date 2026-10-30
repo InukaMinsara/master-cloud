@@ -137,7 +137,7 @@ export function FileListRow({ item, allFiles }: FileListRowProps) {
     <tr
       onClick={handleRowClick}
       onContextMenu={handleContextMenu}
-      className={`group border-b border-border/50 text-xs transition-colors select-none cursor-pointer ${
+      className={`group border-b border-border/50 text-xs transition-colors select-none cursor-pointer hover:relative hover:z-20 [&:has([data-dropdown-open])]:relative [&:has([data-dropdown-open])]:z-30 ${
         isSelected
           ? 'bg-primary/10 hover:bg-primary/15'
           : 'hover:bg-accent/50'
