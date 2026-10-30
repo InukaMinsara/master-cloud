@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   Download,
   Lock,
@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 
 export function PublicSharePage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const dParam = searchParams.get('d');
 
   const [linkData, setLinkData] = React.useState<{ link: ShareLinkRecord; item: FileItem | FolderItem } | null>(null);
   const [password, setPassword] = React.useState('');
@@ -30,7 +32,7 @@ export function PublicSharePage() {
   React.useEffect(() => {
     if (!token) return;
     setIsLoading(true);
-    api.getShareLinkByToken(token)
+    api.getShareLinkByToken(token, dParam)
       .then((data) => {
         if (!data) {
           setError('This share link has expired or been revoked.');
@@ -43,7 +45,7 @@ export function PublicSharePage() {
       })
       .catch(() => setError('Unable to access requested file.'))
       .finally(() => setIsLoading(false));
-  }, [token]);
+  }, [token, dParam]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +180,23 @@ export function PublicSharePage() {
                 </div>
               )}
             </div>
+
+            {/* Optional media preview */}
+            {!isFolder && file && file.storage_path && (
+              getFileCategory(file.mime_type, file.extension) === 'image' ? (
+                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black/40 max-h-72 flex items-center justify-center">
+                  <img src={file.storage_path} alt={file.name} className="max-h-72 object-contain" />
+                </div>
+              ) : getFileCategory(file.mime_type, file.extension) === 'video' ? (
+                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black max-h-72 flex items-center justify-center">
+                  <video src={file.storage_path} controls playsInline className="max-h-72 w-full object-contain" />
+                </div>
+              ) : getFileCategory(file.mime_type, file.extension) === 'audio' ? (
+                <div className="p-4 rounded-2xl border border-border/60 bg-card">
+                  <audio src={file.storage_path} controls className="w-full" />
+                </div>
+              ) : null
+            )}
 
             {/* Actions */}
             <div className="pt-2">
