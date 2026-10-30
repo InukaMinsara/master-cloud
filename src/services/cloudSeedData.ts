@@ -23948,3 +23948,77 @@ export const CLOUD_SEED_FILES: FileRecord[] = [
     "updated_at": "2026-09-27T16:56:24.000Z"
   }
 ];
+
+export const USER_SEED_DATA: Record<string, { folders: FolderRecord[]; files: FileRecord[] }> = {
+  'ruwanguruthuma@gmail.com': {
+    folders: [
+      {
+        id: 'f-ruwan-work',
+        owner_id: 'ruwanguruthuma@gmail.com',
+        parent_folder_id: null,
+        name: 'Work Documents',
+        color: '#3b82f6',
+        is_starred: false,
+        deleted_at: null,
+        created_at: '2026-10-30T09:32:53.000Z',
+        updated_at: '2026-10-30T09:32:53.000Z',
+      },
+      {
+        id: 'f-ruwan-media',
+        owner_id: 'ruwanguruthuma@gmail.com',
+        parent_folder_id: null,
+        name: 'Media & Videos',
+        color: '#ec4899',
+        is_starred: false,
+        deleted_at: null,
+        created_at: '2026-10-30T09:32:53.000Z',
+        updated_at: '2026-10-30T09:32:53.000Z',
+      },
+      {
+        id: 'f-ruwan-shared',
+        owner_id: 'ruwanguruthuma@gmail.com',
+        parent_folder_id: null,
+        name: 'Shared Projects',
+        color: '#14b8a6',
+        is_starred: false,
+        deleted_at: null,
+        created_at: '2026-10-30T09:32:53.000Z',
+        updated_at: '2026-10-30T09:32:53.000Z',
+      },
+    ],
+    files: [
+      {
+        id: 'file-ruwan-1',
+        owner_id: 'ruwanguruthuma@gmail.com',
+        parent_folder_id: null,
+        name: 'Logo_pixel_dispersion_and_assembly_20261026171630.mp4',
+        storage_path: 'https://files.catbox.moe/j9acen.bin',
+        mime_type: 'video/mp4',
+        size_bytes: 3329270,
+        extension: 'mp4',
+        checksum: 'catbox-j9acen',
+        is_starred: false,
+        deleted_at: null,
+        current_version_id: 'ver-ruwan-1',
+        created_at: '2026-10-30T09:33:53.000Z',
+        updated_at: '2026-10-30T09:33:53.000Z',
+      },
+      {
+        id: 'file-ruwan-2',
+        owner_id: 'ruwanguruthuma@gmail.com',
+        parent_folder_id: null,
+        name: 'noventra_labs_dark_banner_2560x1440.png',
+        storage_path: 'https://files.catbox.moe/l8flp2.bin',
+        mime_type: 'image/png',
+        size_bytes: 1978768,
+        extension: 'png',
+        checksum: 'catbox-l8flp2',
+        is_starred: false,
+        deleted_at: null,
+        current_version_id: 'ver-ruwan-2',
+        created_at: '2026-10-30T09:47:04.000Z',
+        updated_at: '2026-10-30T09:47:04.000Z',
+      },
+    ],
+  },
+};

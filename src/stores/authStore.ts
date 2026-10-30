@@ -3,6 +3,7 @@ import { ProfileRecord } from '@/types/database';
 import { api } from '@/services/api';
 import { localDb } from '@/services/localDb';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { useFileStore } from './fileStore';
 
 interface AuthState {
   user: ProfileRecord | null;
@@ -79,13 +80,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               }).catch(() => {});
             } catch { /* ignore */ }
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+            useFileStore.getState().fetchItems().catch(() => {});
 
             const currentUser = await api.getCurrentUser();
             if (currentUser) {
               set({ user: currentUser, isAuthenticated: true, isLoading: false });
+              useFileStore.getState().fetchItems().catch(() => {});
             }
           } else if (event === 'SIGNED_OUT') {
             set({ user: null, isAuthenticated: false, isLoading: false });
+            useFileStore.getState().fetchItems().catch(() => {});
           }
         });
       }
@@ -150,6 +154,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               }).catch(() => {});
             } catch { /* ignore */ }
             set({ user: immediateUser, isAuthenticated: true, isLoading: false });
+            useFileStore.getState().fetchItems().catch(() => {});
             if (typeof window !== 'undefined' && window.location.hash) {
               window.history.replaceState(null, '', window.location.pathname);
             }
@@ -166,6 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: Boolean(user && user.email),
         isLoading: false,
       });
+      useFileStore.getState().fetchItems().catch(() => {});
     } catch (err) {
       console.error('Auth init error:', err);
       set({ user: null, isAuthenticated: false, isLoading: false });
@@ -182,6 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: true, redirected: true };
       }
       set({ user: res.user, isAuthenticated: true });
+      useFileStore.getState().fetchItems().catch(() => {});
       return { success: true, redirected: false, user: res.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Google login failed' };
@@ -195,6 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: res.error };
       }
       set({ user: res.user, isAuthenticated: true });
+      useFileStore.getState().fetchItems().catch(() => {});
       return { success: true, user: res.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Login failed' };
@@ -211,6 +219,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: true, redirected: true };
       }
       set({ user: res.user, isAuthenticated: true });
+      useFileStore.getState().fetchItems().catch(() => {});
       return { success: true, redirected: false };
     } catch (err: any) {
       return { success: false, error: err.message || `${provider} login failed` };
@@ -224,6 +233,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: res.error };
       }
       set({ user: res.user, isAuthenticated: true });
+      useFileStore.getState().fetchItems().catch(() => {});
       return { success: true, user: res.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Signup failed' };
@@ -233,6 +243,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     await api.logout();
     set({ user: null, isAuthenticated: false });
+    useFileStore.getState().fetchItems().catch(() => {});
   },
 
   updateProfile: async (updates) => {

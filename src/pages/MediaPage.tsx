@@ -46,6 +46,22 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
 
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
   const [thumbError, setThumbError] = React.useState(false);
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  const videoStreamUrl = React.useMemo(() => {
+    if (!file || cat !== 'video') return null;
+    if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+      return file.storage_path;
+    }
+    if (file.storage_path?.startsWith('tgcloud:')) {
+      return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+    }
+    if (isLocal && file.storage_path?.startsWith('zdrive:')) {
+      const rel = file.storage_path.slice('zdrive:'.length);
+      return `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+    }
+    return null;
+  }, [file.id, file.storage_path, cat, isLocal]);
 
   React.useEffect(() => {
     let active = true;
@@ -131,7 +147,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
       className="group relative rounded-2xl border border-border/80 bg-card overflow-hidden hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer select-none"
     >
       <div className="aspect-square bg-secondary/40 flex items-center justify-center relative overflow-hidden">
-        {cat === 'image' || cat === 'video' ? (
+        {cat === 'image' ? (
           thumbUrl && !thumbError ? (
             <div className="relative w-full h-full overflow-hidden bg-black/40">
               <img
@@ -142,15 +158,42 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
                 onError={() => setThumbError(true)}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
-              {cat === 'video' && (
-                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center">
-                  <div className="h-11 w-11 rounded-full bg-black/60 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform backdrop-blur-md border border-white/20">
-                    <Play className="h-5 w-5 fill-white ml-0.5" />
-                  </div>
-                </div>
-              )}
             </div>
-          ) : cat === 'video' ? (
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
+              <ImageIcon className="h-8 w-8 text-blue-500/80 group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">{file.extension}</span>
+            </div>
+          )
+        ) : cat === 'video' ? (
+          (videoStreamUrl || (thumbUrl && !thumbError)) ? (
+            <div className="relative w-full h-full overflow-hidden bg-black/60 flex items-center justify-center">
+              {isLocal && thumbUrl && !thumbError ? (
+                <img
+                  src={thumbUrl}
+                  alt={file.name}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setThumbError(true)}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <video
+                  src={videoStreamUrl || thumbUrl || undefined}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
+                  onError={() => setThumbError(true)}
+                />
+              )}
+              <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center pointer-events-none">
+                <div className="h-11 w-11 rounded-full bg-black/60 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform backdrop-blur-md border border-white/20">
+                  <Play className="h-5 w-5 fill-white ml-0.5" />
+                </div>
+              </div>
+            </div>
+          ) : (
             <div className="relative w-full h-full flex items-center justify-center bg-black/40">
               <div className="relative z-10 flex flex-col items-center justify-center gap-2">
                 <div className="h-12 w-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform backdrop-blur-sm shadow-md">
@@ -158,11 +201,6 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
                 </div>
                 <span className="text-[10px] font-mono text-muted-foreground uppercase font-bold">Video</span>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
-              <ImageIcon className="h-8 w-8 text-blue-500/80 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">{file.extension}</span>
             </div>
           )
         ) : (

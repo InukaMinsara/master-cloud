@@ -36,6 +36,22 @@ interface FileCardProps {
   allFiles?: FileItem[];
 }
 
+function getVideoStreamUrl(file: FileItem): string | null {
+  if (!file) return null;
+  if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
+    return file.storage_path;
+  }
+  if (file.storage_path?.startsWith('tgcloud:')) {
+    return TelegramCloudService.getDirectStreamUrl(file.storage_path);
+  }
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (isLocal && file.storage_path?.startsWith('zdrive:')) {
+    const rel = file.storage_path.slice('zdrive:'.length);
+    return `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+  }
+  return null;
+}
+
 /**
  * Resolves a zero-delay direct stream URL synchronously (0.00001s instant preview)
  */
@@ -85,6 +101,8 @@ export function FileCard({ file, allFiles }: FileCardProps) {
   const ext = (file.extension || '').toLowerCase();
 
   // Instant 0ms synchronous resolution for direct streaming
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const videoStreamUrl = React.useMemo(() => (category === 'video' ? getVideoStreamUrl(file) : null), [file.id, file.storage_path, category, isLocal]);
   const initialThumbUrl = React.useMemo(() => getDirectStreamUrl(file), [file.id, file.name, file.storage_path, file.mime_type, file.extension]);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(initialThumbUrl);
   const [thumbError, setThumbError] = React.useState(false);
@@ -287,18 +305,29 @@ export function FileCard({ file, allFiles }: FileCardProps) {
               </div>
             )
           ) : category === 'video' ? (
-            thumbUrl && !thumbError ? (
+            (videoStreamUrl || (thumbUrl && !thumbError)) ? (
               <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-                <img
-                  src={thumbUrl}
-                  alt={file.name}
-                  loading="lazy"
-                  decoding="async"
-                  onError={() => setThumbError(true)}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {isLocal && thumbUrl && !thumbError ? (
+                  <img
+                    src={thumbUrl}
+                    alt={file.name}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setThumbError(true)}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <video
+                    src={videoStreamUrl || thumbUrl || undefined}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
+                    onError={() => setThumbError(true)}
+                  />
+                )}
                 {/* Subtle Google Drive Play badge overlay */}
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors flex items-center justify-center pointer-events-none">
                   <div className="h-9 w-9 rounded-full bg-black/60 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform backdrop-blur-sm border border-white/20">
                     <Play className="h-4 w-4 fill-white ml-0.5" />
                   </div>
