@@ -39,8 +39,12 @@ export function Sidebar() {
 
   React.useEffect(() => {
     const updateStats = () => setStorageBreakdown(api.getStorageBreakdown());
+    window.addEventListener('mc_storage_updated', updateStats);
     const interval = setInterval(updateStats, 3000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('mc_storage_updated', updateStats);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

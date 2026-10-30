@@ -28,8 +28,17 @@ export function StoragePage() {
   const [cleanupSuggestions, setCleanupSuggestions] = React.useState(() => api.getStorageCleanupSuggestions());
 
   React.useEffect(() => {
-    setBreakdown(api.getStorageBreakdown());
-    setCleanupSuggestions(api.getStorageCleanupSuggestions());
+    const refresh = () => {
+      setBreakdown(api.getStorageBreakdown());
+      setCleanupSuggestions(api.getStorageCleanupSuggestions());
+    };
+    refresh();
+    window.addEventListener('mc_storage_updated', refresh);
+    const interval = setInterval(refresh, 3000);
+    return () => {
+      window.removeEventListener('mc_storage_updated', refresh);
+      clearInterval(interval);
+    };
   }, []);
 
   const categories = [

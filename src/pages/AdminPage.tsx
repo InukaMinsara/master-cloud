@@ -41,8 +41,18 @@ interface SystemHealthService {
 
 export function AdminPage() {
   const { user } = useAuthStore();
-  const breakdown = api.getStorageBreakdown();
+  const [breakdown, setBreakdown] = useState(() => api.getStorageBreakdown());
   const isSupabase = api.isConfiguredWithSupabase();
+
+  useEffect(() => {
+    const updateStats = () => setBreakdown(api.getStorageBreakdown());
+    window.addEventListener('mc_storage_updated', updateStats);
+    const interval = setInterval(updateStats, 3000);
+    return () => {
+      window.removeEventListener('mc_storage_updated', updateStats);
+      clearInterval(interval);
+    };
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'system' | 'flags'>('overview');
   const [userSearch, setUserSearch] = useState('');

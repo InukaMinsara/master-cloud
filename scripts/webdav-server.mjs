@@ -1669,10 +1669,58 @@ function generateThumbAsync(inputSource, outputPath) {
       try {
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
         const { op, relPath: opRel, newRelPath, name } = body;
-        if (op === 'delete' && opRel) {
-          deleteManifestFile(opRel);
-          deleteManifestFolder(opRel);
-          const localPath = path.join(STORAGE_DIR, opRel);
+        const trashDir = path.join(USER_DATA_DIR, 'trash');
+        try { fs.mkdirSync(trashDir, { recursive: true }); } catch {}
+        const cleanOpRel = String(opRel || '').replace(/^[/\\]+/, '').replace(/\\/g, '/');
+        const trashTarget = path.join(trashDir, encodeURIComponent(cleanOpRel));
+        const localPath = path.join(STORAGE_DIR, cleanOpRel);
+
+        if (op === 'trash' && cleanOpRel) {
+          // Soft delete: move to trash
+          deleteManifestFile(cleanOpRel);
+          deleteManifestFolder(cleanOpRel);
+          if (fs.existsSync(localPath)) {
+            try {
+              if (fs.existsSync(trashTarget)) fs.rmSync(trashTarget, { recursive: true, force: true });
+              fs.renameSync(localPath, trashTarget);
+            } catch {}
+          }
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        if (op === 'restore' && cleanOpRel) {
+          // Restore from trash
+          if (fs.existsSync(trashTarget)) {
+            try {
+              fs.mkdirSync(path.dirname(localPath), { recursive: true });
+              fs.renameSync(trashTarget, localPath);
+              const st = fs.statSync(localPath);
+              ensureManifestParentFolders(cleanOpRel);
+              setManifestFile(cleanOpRel, {
+                relPath: cleanOpRel,
+                name: path.basename(cleanOpRel),
+                size: st.size,
+                mtime: st.mtime.toISOString(),
+                birthtime: (st.birthtime || st.mtime).toISOString(),
+                cloudUrls: [],
+              });
+            } catch {}
+          }
+          saveManifestDebounced();
+          notifyRcloneRefresh();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        if ((op === 'delete' || op === 'permanent_delete') && cleanOpRel) {
+          deleteManifestFile(cleanOpRel);
+          deleteManifestFolder(cleanOpRel);
+          try { fs.rmSync(trashTarget, { recursive: true, force: true }); } catch {}
           try { fs.rmSync(localPath, { recursive: true, force: true }); } catch {}
           saveManifestDebounced();
           notifyRcloneRefresh();

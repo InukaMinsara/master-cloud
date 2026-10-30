@@ -104,6 +104,9 @@ export const useUploadStore = create<UploadState>((set, get) => ({
       try {
         useFileStore.getState().fetchItems().catch(() => {});
       } catch {}
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mc_storage_updated'));
+      }
     } catch (err: any) {
       console.error('Upload failed for item:', itemId, err);
       set(state => ({

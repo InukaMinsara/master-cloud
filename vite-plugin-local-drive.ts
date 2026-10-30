@@ -690,17 +690,75 @@ function resolveLocalPath(cleanRelPath: string): string | null {
               return;
             }
 
-            const target = path.join(driveRoot, String(relPath));
+            const cleanRel = String(relPath).replace(/^[/\\]+/, '').replace(/\\/g, '/');
+            const target = path.join(driveRoot, cleanRel);
+            const trashDir = path.join(process.env.USERPROFILE || process.env.HOME || '', '.mastercloud', 'trash');
+            if (!fs.existsSync(trashDir)) {
+              try { fs.mkdirSync(trashDir, { recursive: true }); } catch {}
+            }
+            const trashTarget = path.join(trashDir, encodeURIComponent(cleanRel));
+
             if (op === 'mkdir') {
               if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
-            } else if (op === 'delete') {
+            } else if (op === 'trash') {
+              // Soft delete: move file or directory to .mastercloud/trash
               if (fs.existsSync(target)) {
-                fs.rmSync(target, { recursive: true, force: true });
+                if (fs.existsSync(trashTarget)) {
+                  try { fs.rmSync(trashTarget, { recursive: true, force: true }); } catch {}
+                }
+                try {
+                  fs.renameSync(target, trashTarget);
+                } catch {
+                  // Fallback for cross-device or permission locks: copy and delete
+                  try {
+                    const st = fs.statSync(target);
+                    if (st.isDirectory()) {
+                      fs.cpSync(target, trashTarget, { recursive: true });
+                    } else {
+                      fs.copyFileSync(target, trashTarget);
+                    }
+                    fs.rmSync(target, { recursive: true, force: true });
+                  } catch {}
+                }
+              }
+            } else if (op === 'restore') {
+              // Restore file or directory from .mastercloud/trash back to driveRoot
+              if (fs.existsSync(trashTarget)) {
+                const parentDir = path.dirname(target);
+                if (!fs.existsSync(parentDir)) {
+                  try { fs.mkdirSync(parentDir, { recursive: true }); } catch {}
+                }
+                try {
+                  fs.renameSync(trashTarget, target);
+                } catch {
+                  try {
+                    const st = fs.statSync(trashTarget);
+                    if (st.isDirectory()) {
+                      fs.cpSync(trashTarget, target, { recursive: true });
+                    } else {
+                      fs.copyFileSync(trashTarget, target);
+                    }
+                    fs.rmSync(trashTarget, { recursive: true, force: true });
+                  } catch {}
+                }
+              }
+            } else if (op === 'delete' || op === 'permanent_delete') {
+              // Permanent delete: remove from trash and driveRoot
+              if (fs.existsSync(trashTarget)) {
+                try { fs.rmSync(trashTarget, { recursive: true, force: true }); } catch {}
+              }
+              if (fs.existsSync(target)) {
+                try { fs.rmSync(target, { recursive: true, force: true }); } catch {}
               }
             } else if (op === 'rename') {
               if (newRelPath && !String(newRelPath).includes('..')) {
-                const newTarget = path.join(driveRoot, String(newRelPath));
-                if (fs.existsSync(target)) fs.renameSync(target, newTarget);
+                const cleanNewRel = String(newRelPath).replace(/^[/\\]+/, '').replace(/\\/g, '/');
+                const newTarget = path.join(driveRoot, cleanNewRel);
+                if (fs.existsSync(target)) {
+                  const newDir = path.dirname(newTarget);
+                  if (!fs.existsSync(newDir)) fs.mkdirSync(newDir, { recursive: true });
+                  fs.renameSync(target, newTarget);
+                }
               }
             }
 
