@@ -23,7 +23,7 @@ public class MasterCloudDrivePlugin extends Plugin {
     public void getDriveStatus(PluginCall call) {
         JSObject ret = new JSObject();
         ret.put("isMounted", true);
-        ret.put("driveTitle", "MASTER CLOUD (10 TB)");
+        ret.put("driveTitle", "MASTER CLOUD (Z:)");
         ret.put("authority", MasterCloudDocumentsProvider.AUTHORITY);
         ret.put("totalQuotaBytes", MasterCloudDocumentsProvider.TEN_TB_BYTES);
         ret.put("availableBytes", MasterCloudDocumentsProvider.TEN_TB_BYTES - (1024L * 1024L * 50L));
