@@ -30,7 +30,7 @@ const WINDOWS_SIZE      = '153.2 MB';
 // ── Android Release Configuration ─────────────────────────────────────────────
 const ANDROID_APK_URL   = '/releases/MasterCloud-Android-v1.0.apk';
 const ANDROID_VERSION   = '1.0.0';
-const ANDROID_SIZE      = '171.3 MB';
+const ANDROID_SIZE      = '9.6 MB';
 const ANDROID_MIN_OS    = 'Android 8.0+ (Oreo to Android 15)';
 
 // ── iOS Release Configuration ─────────────────────────────────────────────────
