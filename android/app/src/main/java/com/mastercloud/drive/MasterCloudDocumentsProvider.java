@@ -117,7 +117,7 @@ public class MasterCloudDocumentsProvider extends DocumentsProvider {
         final MatrixCursor.RowBuilder row = result.newRow();
         row.add(Root.COLUMN_ROOT_ID, ROOT_ID);
         row.add(Root.COLUMN_DOCUMENT_ID, getDocIdForFile(baseDir));
-        row.add(Root.COLUMN_TITLE, "MASTER CLOUD (10 TB)");
+        row.add(Root.COLUMN_TITLE, "MASTER CLOUD (Z:) - 10 TB");
         row.add(Root.COLUMN_SUMMARY, "10.0 TB Virtual Local Drive · Stream Mode");
         row.add(Root.COLUMN_FLAGS,
                 Root.FLAG_SUPPORTS_CREATE |
@@ -226,7 +226,7 @@ public class MasterCloudDocumentsProvider extends DocumentsProvider {
 
         String displayName = file.getName();
         if ("root".equals(docId) || (baseDir != null && file.equals(baseDir))) {
-            displayName = "MASTER CLOUD (10 TB)";
+            displayName = "MASTER CLOUD (Z:)";
         }
 
         final MatrixCursor.RowBuilder row = result.newRow();

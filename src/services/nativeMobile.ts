@@ -95,7 +95,7 @@ export class NativeMobileService {
     // Default virtual volume metrics (10 TB)
     return {
       isMounted: true,
-      driveTitle: 'MASTER CLOUD (10 TB)',
+      driveTitle: 'MASTER CLOUD (Z:)',
       authority: 'com.mastercloud.drive.documents',
       totalQuotaBytes: 10995116277760, // 10 TB
       availableBytes: 10995063865344,  // 10 TB - 50 MB

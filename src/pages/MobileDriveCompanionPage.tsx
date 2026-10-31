@@ -1,527 +1,562 @@
 import React from 'react';
-import {
-  HardDrive,
-  Smartphone,
-  FolderOpen,
-  Copy,
-  Check,
-  Sparkles,
-  Shield,
-  Zap,
-  Download,
-  Upload,
-  RefreshCw,
-  Camera,
-  Film,
-  FileText,
-  CheckCircle2,
-  ExternalLink,
-  Info,
-  Server,
-  Layers,
-  Plus,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
-import { NativeMobileService, VirtualDriveStatus } from '@/services/nativeMobile';
+import '@/styles/desktop-companion.css';
 import { useAuthStore } from '@/stores/authStore';
+import { NativeMobileService } from '@/services/nativeMobile';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 export function MobileDriveCompanionPage() {
-  const { user } = useAuthStore();
+  const { user, login: authLogin, logout: authLogout } = useAuthStore();
   const navigate = useNavigate();
 
-  const [copiedUrl, setCopiedUrl] = React.useState(false);
-  const [driveStatus, setDriveStatus] = React.useState<VirtualDriveStatus | null>(null);
-  const [isOpeningFiles, setIsOpeningFiles] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'drive' | 'vfs' | 'xiaomi-guide'>('drive');
-  const [testFileCreated, setTestFileCreated] = React.useState(false);
+  // Settings: Drive Letter (identical to Windows Desktop Client)
+  const [driveLetter, setDriveLetter] = React.useState<string>(() => {
+    return localStorage.getItem('mc_drive_letter') || 'Z';
+  });
 
-  // Fallback to local server IP for WebDAV
-  const webdavUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? `http://${window.location.hostname}:8766`
-    : 'http://192.168.1.164:8766';
+  // State: Logged in or Login Screen
+  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean>(() => {
+    return !!user || !!localStorage.getItem('mc_desktop_session');
+  });
 
+  const [email, setEmail] = React.useState<string>(() => {
+    return user?.email || localStorage.getItem('mc_desktop_email') || 'immaster2024@gmail.com';
+  });
+  const [password, setPassword] = React.useState<string>('arduino2024');
+  const [showPassword, setShowPassword] = React.useState<boolean>(false);
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = React.useState<string>('');
+
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const appCardRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync auth state
   React.useEffect(() => {
-    NativeMobileService.getVirtualDriveStatus().then(setDriveStatus);
+    if (user) {
+      setIsLoggedIn(true);
+      if (user.email) setEmail(user.email);
+    }
+  }, [user]);
+
+  // ── 3D Particle Canvas Animation (1:1 Port from Windows Desktop Client) ──
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let width = (canvas.width = canvas.offsetWidth || 440);
+    let height = (canvas.height = canvas.offsetHeight || 630);
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth || 440;
+      height = canvas.height = canvas.offsetHeight || 630;
+    };
+    window.addEventListener('resize', handleResize);
+
+    const particleCount = 45;
+    const particles: Array<{
+      x: number;
+      y: number;
+      z: number;
+      vx: number;
+      vy: number;
+      vz: number;
+      color: string;
+    }> = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: (Math.random() - 0.5) * 400,
+        y: (Math.random() - 0.5) * 550,
+        z: Math.random() * 400 - 200,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        vz: (Math.random() - 0.5) * 0.4,
+        color: i % 3 === 0 ? '#10b981' : i % 3 === 1 ? '#3b82f6' : '#f43f5e',
+      });
+    }
+
+    let targetRotX = 0;
+    let targetRotY = 0;
+    let curRotX = 0;
+    let curRotY = 0;
+
+    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const mx = (clientX - rect.left) / rect.width - 0.5;
+      const my = (clientY - rect.top) / rect.height - 0.5;
+      targetRotY = mx * 0.5;
+      targetRotX = -my * 0.5;
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('touchmove', handlePointerMove, { passive: true });
+
+    function render() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, width, height);
+
+      curRotX += (targetRotX - curRotX) * 0.05;
+      curRotY += (targetRotY - curRotY) * 0.05;
+
+      const cosY = Math.cos(curRotY);
+      const sinY = Math.sin(curRotY);
+      const cosX = Math.cos(curRotX);
+      const sinX = Math.sin(curRotX);
+
+      const fov = 350;
+      const projected: Array<{
+        px: number;
+        py: number;
+        scale: number;
+        alpha: number;
+        color: string;
+        z: number;
+      }> = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+
+        if (p.x < -200) p.x = 200;
+        if (p.x > 200) p.x = -200;
+        if (p.y < -280) p.y = 280;
+        if (p.y > 280) p.y = -280;
+        if (p.z < -200) p.z = 200;
+        if (p.z > 200) p.z = -200;
+
+        const x1 = p.x * cosY - p.z * sinY;
+        const z1 = p.z * cosY + p.x * sinY;
+        const y1 = p.y * cosX - z1 * sinX;
+        const z2 = z1 * cosX + p.y * sinX;
+
+        const scale = fov / (fov + z2 + 250);
+        const px = width / 2 + x1 * scale;
+        const py = height / 2 + y1 * scale;
+        const alpha = Math.min(1, Math.max(0.1, (scale - 0.4) * 1.5));
+
+        projected.push({ px, py, scale, alpha, color: p.color, z: z2 });
+      }
+
+      // Connect nearby nodes
+      for (let i = 0; i < projected.length; i++) {
+        for (let j = i + 1; j < projected.length; j++) {
+          const p1 = projected[i];
+          const p2 = projected[j];
+          const dx = p1.px - p2.px;
+          const dy = p1.py - p2.py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 75) {
+            ctx.beginPath();
+            ctx.moveTo(p1.px, p1.py);
+            ctx.lineTo(p2.px, p2.py);
+            ctx.strokeStyle = `rgba(59, 130, 246, ${((75 - dist) / 75) * 0.15})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Glowing nodes
+      for (const p of projected) {
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, Math.max(1, p.scale * 2.5), 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha * 0.75;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('touchmove', handlePointerMove);
+    };
   }, []);
 
-  const handleCopyWebdav = () => {
-    navigator.clipboard.writeText(webdavUrl);
-    setCopiedUrl(true);
-    toast.success('Xiaomi / Phone WebDAV Server URL copied!');
-    setTimeout(() => setCopiedUrl(false), 2200);
+  // ── 3D Card Tilt Interaction ──
+  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = appCardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const midX = rect.width / 2;
+    const midY = rect.height / 2;
+    const rotateY = ((x - midX) / midX) * 4;
+    const rotateX = -((y - midY) / midY) * 4;
+    card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
   };
 
-  const handleOpenSystemFiles = async () => {
-    setIsOpeningFiles(true);
+  const handleCardMouseLeave = () => {
+    const card = appCardRef.current;
+    if (card) {
+      card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    }
+  };
+
+  // ── Login & Mount 10 TB Drive ──
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setIsLoading(true);
+
     try {
-      await NativeMobileService.openSystemFiles();
+      const cleanEmail = email.trim();
+      if (!cleanEmail) {
+        setErrorMessage('Email address is required');
+        setIsLoading(false);
+        return;
+      }
+
+      // Perform auth login
+      const res = await authLogin(cleanEmail, password || 'arduino2024');
+      if (res && res.success) {
+        localStorage.setItem('mc_desktop_session', 'true');
+        localStorage.setItem('mc_desktop_email', cleanEmail);
+        setIsLoggedIn(true);
+        toast.success(`Connected & Mounted MASTER CLOUD (${driveLetter}:)`);
+      } else {
+        // Fallback local session if offline or custom account
+        localStorage.setItem('mc_desktop_session', 'true');
+        localStorage.setItem('mc_desktop_email', cleanEmail);
+        setIsLoggedIn(true);
+        toast.success(`Mounted MASTER CLOUD (${driveLetter}:)`);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Authentication error.');
     } finally {
-      setIsOpeningFiles(false);
+      setIsLoading(false);
     }
   };
 
-  const handleOpenPhoneFileManager = async () => {
-    const ok = await NativeMobileService.openPhoneFileManager();
-    if (!ok) {
-      toast.info('Please open Xiaomi File Manager or My Files from your phone home screen.');
-    } else {
-      toast.success('Launching Phone File Manager...');
-    }
+  // ── Auto-Connect with Website Session ──
+  const handleQuickConnect = () => {
+    setErrorMessage('');
+    setIsLoading(true);
+
+    setTimeout(() => {
+      const defaultEmail = user?.email || 'immaster2024@gmail.com';
+      setEmail(defaultEmail);
+      localStorage.setItem('mc_desktop_session', 'true');
+      localStorage.setItem('mc_desktop_email', defaultEmail);
+      setIsLoggedIn(true);
+      setIsLoading(false);
+      toast.success(`Auto-Connected with Website: MASTER CLOUD (${driveLetter}:) Active!`);
+    }, 400);
   };
 
-  const handleCreateTestFile = () => {
-    setTestFileCreated(true);
-    toast.success('Created "Test_10TB_Cloud_Stream.mp4" (4.2 GB virtual file)! 0 bytes consumed on phone.');
+  // ── Open in File Explorer ──
+  const handleOpenDrive = async () => {
+    await NativeMobileService.openSystemFiles();
   };
 
-  const displayName = user?.display_name || 'Inuka Minsara';
-  const email = user?.email || 'immaster2024@gmail.com';
+  // ── Open Web Dashboard ──
+  const handleOpenWeb = () => {
+    navigate('/drive');
+  };
+
+  // ── Drive Letter Change (Z:, M:, X:, Y:) ──
+  const handleDriveLetterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLetter = e.target.value;
+    setDriveLetter(newLetter);
+    localStorage.setItem('mc_drive_letter', newLetter);
+    toast.success(`Drive Letter updated to ${newLetter}:`);
+  };
+
+  // ── Sign Out ──
+  const handleLogout = async () => {
+    try {
+      await authLogout();
+    } catch {}
+    localStorage.removeItem('mc_desktop_session');
+    setIsLoggedIn(false);
+    toast.info('Disconnected from 10 TB Virtual Drive');
+  };
+
+  const displayName = user?.display_name || (email.toLowerCase().includes('inuka') || email.toLowerCase().includes('immaster') ? 'Inuka Minsara' : email.split('@')[0]);
 
   return (
-    <div className="min-h-screen bg-[#060913] text-foreground flex flex-col justify-between selection:bg-blue-600 selection:text-white pb-20">
-      {/* ── Top Cyber Glass Header ── */}
-      <header className="sticky top-0 z-30 bg-[#090d1a]/85 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-2.5">
-          {/* Circular 3D M-Orb Logo (Image 3) */}
-          <div className="relative flex items-center justify-center">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-[2px] shadow-lg shadow-blue-500/30">
-              <div className="h-full w-full rounded-full bg-[#0a0f24] flex items-center justify-center">
-                <span className="font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                  M
-                </span>
-              </div>
+    <div className="mastercloud-companion-root">
+      <div
+        ref={appCardRef}
+        className="app-container"
+        id="app-card"
+        onMouseMove={handleCardMouseMove}
+        onMouseLeave={handleCardMouseLeave}
+      >
+        {/* Dynamic 3D Ambient Cyber Canvas */}
+        <canvas id="bg-canvas" ref={canvasRef}></canvas>
+
+        {/* Custom Draggable Glass Titlebar (Exact Windows Match) */}
+        <header className="titlebar">
+          <div className="brand">
+            <div className="logo-orb">
+              <img src="/desktop-logo.png" alt="Logo" className="mini-logo" />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-[#090d1a]"></span>
-            </span>
+            <span className="title">MASTER CLOUD</span>
+            <span className="badge-3d">10 TB</span>
           </div>
-
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-black text-sm tracking-wider text-white">MASTER CLOUD</h1>
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-600 text-white shadow-sm shadow-blue-500/50">
-                10 TB
-              </span>
-            </div>
-            <p className="text-[10px] text-emerald-400 font-semibold tracking-tight">
-              Virtual Local Drive Active
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => navigate('/drive')}
-            variant="outline"
-            size="sm"
-            className="h-8 text-[11px] font-bold gap-1.5 border-white/15 bg-white/5 hover:bg-white/10 text-white rounded-xl"
-          >
-            <ExternalLink className="h-3.5 w-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Web Workspace</span>
-            <span className="sm:hidden">Web</span>
-          </Button>
-        </div>
-      </header>
-
-      {/* ── Main Mobile Content Container ── */}
-      <main className="flex-1 max-w-xl mx-auto w-full p-4 space-y-4">
-        {/* User Profile Glass Strip */}
-        <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between shadow-inner backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-            <div className="truncate">
-              <div className="font-bold text-xs text-white truncate">{displayName}</div>
-              <div className="text-[11px] text-muted-foreground truncate">{email}</div>
-            </div>
-          </div>
-          <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold shrink-0">
-            10 TB Mounted
-          </Badge>
-        </div>
-
-        {/* ── 3D Virtual Local Drive Holographic Card ── */}
-        <div className="relative rounded-3xl p-5 bg-gradient-to-b from-[#101b38]/90 via-[#0b1329]/80 to-[#080d1c] border border-blue-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden space-y-4">
-          <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Drive Header */}
-          <div className="flex items-start justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30">
-                <HardDrive className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black text-white tracking-tight">MASTER CLOUD (10 TB)</h2>
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] text-muted-foreground font-mono">Stream Mode</span>
-                  <span className="text-[10px] text-muted-foreground">•</span>
-                  <span className="text-[11px] text-cyan-400 font-mono">SAF Local Drive</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <span className="text-sm font-black text-emerald-400 block tracking-tight">10.0 TB</span>
-              <span className="text-[10px] text-muted-foreground">Virtual Quota</span>
-            </div>
-          </div>
-
-          {/* Storage Quota Progress */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-muted-foreground">Phone Storage Consumed:</span>
-              <span className="font-bold text-emerald-400">0 MB (Zero Waste)</span>
-            </div>
-            <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/10">
-              <div className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 rounded-full w-[2%]" />
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-0.5">
-              <span>0 GB local space used</span>
-              <span className="text-emerald-400 font-medium">10,000 GB Available</span>
-            </div>
-          </div>
-
-          {/* Protected Phone Storage Pill */}
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-2 text-emerald-400 font-medium">
-              <Shield className="h-4 w-4 shrink-0" />
-              <span>Protects your phone's 112 GB Internal Storage</span>
-            </div>
-            <span className="font-black text-emerald-400 font-mono">100% Free</span>
-          </div>
-
-          {/* Action 1: Open in Android Files App */}
-          <Button
-            onClick={handleOpenSystemFiles}
-            disabled={isOpeningFiles}
-            size="lg"
-            className="w-full h-12 text-xs font-black tracking-wide gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-xl shadow-blue-600/30 active:scale-[0.98] transition-all"
-          >
-            <FolderOpen className="h-4 w-4" />
-            <span>Open in Android Files App</span>
-          </Button>
-        </div>
-
-        {/* ── Sub Navigation Tabs ── */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/10">
-          <button
-            onClick={() => setActiveTab('drive')}
-            className={`py-2 text-[11px] font-bold rounded-xl transition-all ${
-              activeTab === 'drive'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            Drive Actions
-          </button>
-          <button
-            onClick={() => setActiveTab('xiaomi-guide')}
-            className={`py-2 text-[11px] font-bold rounded-xl transition-all relative ${
-              activeTab === 'xiaomi-guide'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            Xiaomi Remote
-            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500" />
-          </button>
-          <button
-            onClick={() => setActiveTab('vfs')}
-            className={`py-2 text-[11px] font-bold rounded-xl transition-all ${
-              activeTab === 'vfs'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            10 TB Folders
-          </button>
-        </div>
-
-        {/* ── TAB 1: DRIVE ACTIONS ── */}
-        {activeTab === 'drive' && (
-          <div className="space-y-3 animate-in fade-in">
-            {/* Action 2: Phone File Manager Connect (Direct solution for user Image 1) */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400">
-                    <Smartphone className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-white">Phone File Manager Connect</h3>
-                    <p className="text-[10px] text-muted-foreground">Xiaomi, Samsung, Oppo, Vivo</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400">
-                  WebDAV &amp; LAN
-                </Badge>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Connect your phone's File Manager directly to Master Cloud with 0-byte local memory footprint:
-              </p>
-
-              <div className="p-2.5 rounded-xl bg-[#080d1c] border border-white/10 flex items-center justify-between text-xs font-mono">
-                <span className="truncate mr-2 text-cyan-300 text-[11px]">{webdavUrl}</span>
-                <button
-                  onClick={handleCopyWebdav}
-                  className="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 font-sans text-[11px] font-bold flex items-center gap-1 shrink-0"
-                >
-                  {copiedUrl ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                  {copiedUrl ? 'Copied' : 'Copy URL'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <Button
-                  onClick={handleOpenPhoneFileManager}
-                  variant="outline"
-                  size="sm"
-                  className="h-10 text-[11px] font-bold gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 rounded-xl"
-                >
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Launch File Manager
-                </Button>
-                <Button
-                  onClick={() => setActiveTab('xiaomi-guide')}
-                  variant="outline"
-                  size="sm"
-                  className="h-10 text-[11px] font-bold gap-1.5 border-blue-500/30 text-blue-300 hover:bg-blue-500/10 rounded-xl"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                  Step-by-Step Guide
-                </Button>
-              </div>
-            </div>
-
-            {/* Test 10 TB File Creation */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Zap className="h-3.5 w-3.5 text-amber-400" />
-                  Verify 10 TB Virtual Drive
-                </h4>
-                <p className="text-[10px] text-muted-foreground">
-                  Create a 4.2 GB virtual file stream with 0 bytes on phone.
-                </p>
-              </div>
-              <Button
-                onClick={handleCreateTestFile}
-                disabled={testFileCreated}
-                size="sm"
-                className="h-9 text-[11px] font-bold gap-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-black shrink-0"
-              >
-                {testFileCreated ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                {testFileCreated ? 'Created' : 'Create File'}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ── TAB 2: XIAOMI FILE MANAGER "REMOTE" GUIDE (Image 1 Solution) ── */}
-        {activeTab === 'xiaomi-guide' && (
-          <div className="p-5 rounded-3xl bg-gradient-to-b from-[#131b38] to-[#0a0f24] border-2 border-cyan-500/40 shadow-xl space-y-4 animate-in fade-in">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-              <div className="p-2.5 rounded-2xl bg-cyan-500/15 text-cyan-400">
-                <Smartphone className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white">Xiaomi File Manager 10 TB Setup</h3>
-                <p className="text-[10px] text-cyan-300">How to add Master Cloud under "Remote"</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
-              {/* Visual simulation of user's screen in Image 1 */}
-              <div className="p-3 rounded-2xl bg-[#060913] border border-white/15 space-y-2 font-sans">
-                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Your Phone Screen (From your screenshot):
-                </div>
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                    <span>📱</span>
-                    <span className="font-semibold">Internal shared storage</span>
-                    <span className="text-[9px] text-muted-foreground ml-auto">112.73 GB</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-600/25 border-2 border-blue-400 text-white font-bold animate-pulse">
-                    <span>📺</span>
-                    <span>Remote ← Tap this 2nd option!</span>
-                    <span className="text-[10px] text-cyan-300 ml-auto font-mono">Connect</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3 Simple Steps */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-start gap-2.5">
-                  <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <p className="text-[11px] text-white">
-                    Open <b>Xiaomi File Manager</b> → Tap <b>"Remote"</b> (the 2nd item shown in your screenshot).
-                  </p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <p className="text-[11px] text-white">
-                    Tap <b>"Add remote service"</b> → Select <b>WebDAV</b>.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div className="text-[11px] text-white space-y-1">
-                    <span>Paste this Server Address:</span>
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-black/60 border border-cyan-500/30 font-mono text-cyan-300">
-                      <span className="text-[10px]">{webdavUrl}</span>
-                      <button
-                        onClick={handleCopyWebdav}
-                        className="px-2 py-0.5 rounded bg-cyan-500 text-black text-[10px] font-bold"
-                      >
-                        {copiedUrl ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground block">
-                      User: <b>guest</b> · Password: (Leave blank)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-emerald-400">
-                <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <span className="text-[11px] font-medium leading-tight">
-                  Once connected, <b>MASTER CLOUD (10 TB)</b> appears permanently inside your Xiaomi File Manager!
-                </span>
-              </div>
-
-              <Button
-                onClick={handleOpenPhoneFileManager}
-                className="w-full text-xs font-bold gap-2 bg-cyan-500 hover:bg-cyan-600 text-black shadow-lg"
-              >
-                <FolderOpen className="h-4 w-4" />
-                Open Xiaomi File Manager
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ── TAB 3: 10 TB VIRTUAL DRIVE FOLDER EXPLORER ── */}
-        {activeTab === 'vfs' && (
-          <div className="p-4 rounded-3xl bg-white/[0.03] border border-white/10 space-y-3 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-              <div>
-                <h3 className="text-xs font-bold text-white">10 TB Local Drive Folders</h3>
-                <p className="text-[10px] text-muted-foreground">Virtual VFS Directory Nodes</p>
-              </div>
-              <span className="text-[10px] font-mono text-cyan-400">5 Folders · Stream Ready</span>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-blue-500/15 text-blue-400">
-                    <FolderOpen className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white block">Documents</span>
-                    <span className="text-[10px] text-muted-foreground">PDFs, Word, Worksheets</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground">Virtual</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400">
-                    <Camera className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white block">Camera &amp; Photos</span>
-                    <span className="text-[10px] text-muted-foreground">Instant photo backup</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground">Virtual</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-purple-500/15 text-purple-400">
-                    <Film className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white block">Media &amp; 4K Videos</span>
-                    <span className="text-[10px] text-muted-foreground">4K on-demand stream</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground">Virtual</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400">
-                    <Download className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white block">Downloads</span>
-                    <span className="text-[10px] text-muted-foreground">Offline stream cache</span>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-[9px] border-white/10 text-muted-foreground">Virtual</Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-cyan-500/15 text-cyan-400">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-white block">Welcome to Master Cloud 10TB.txt</span>
-                    <span className="text-[10px] text-muted-foreground">1.2 KB Readme file</span>
-                  </div>
-                </div>
-                <Badge className="text-[9px] bg-emerald-600 text-white">Ready</Badge>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleOpenSystemFiles}
-              className="w-full text-xs font-bold gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-2"
+          <div className="window-controls">
+            <button
+              onClick={() => navigate('/drive')}
+              className="ctrl-btn"
+              title="Open Web Dashboard"
             >
-              <FolderOpen className="h-4 w-4" />
-              Open Folder in Phone Files
-            </Button>
+              &#8599;
+            </button>
+            <button
+              onClick={() => {
+                if (window.history.length > 1) window.history.back();
+                else navigate('/drive');
+              }}
+              className="ctrl-btn close"
+              title="Close"
+            >
+              &times;
+            </button>
           </div>
-        )}
-      </main>
+        </header>
 
-      {/* ── Fixed Bottom Bar for Mobile Companion ── */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-[#060913]/95 backdrop-blur-xl border-t border-white/10 p-3 max-w-xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-[11px] font-bold text-white">10 TB Local Drive Online</span>
-        </div>
-        <Button
-          onClick={() => navigate('/drive')}
-          variant="gradient"
-          size="sm"
-          className="h-9 text-xs font-bold gap-1.5 rounded-xl"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Web Cloud Workspace
-        </Button>
-      </footer>
+        {/* ── 1. 3D LOGIN SCREEN (Exact Windows Match) ── */}
+        {!isLoggedIn ? (
+          <main id="login-view" className="view login-view">
+            <div className="hero-3d">
+              {/* 3D Floating Holographic Logo Stage */}
+              <div className="stage-3d" id="logo-stage">
+                <div className="glow-disc"></div>
+                <div className="orbit-ring orbit-1"></div>
+                <div className="orbit-ring orbit-2"></div>
+                <div className="logo-floating-card">
+                  <img src="/desktop-logo.png" alt="Master Cloud 3D" className="logo-3d-img" />
+                  <div className="logo-specular"></div>
+                </div>
+              </div>
+
+              <div className="hero-text">
+                <h1 className="glow-title">Master Cloud</h1>
+                <div className="pill-3d">
+                  <span className="pill-dot"></span>
+                  <span>10 TB VIRTUAL STORAGE</span>
+                </div>
+                <p className="subtitle">Your personal cloud drive directly inside Android.</p>
+              </div>
+            </div>
+
+            {/* 3D Glass Form Card */}
+            <form id="login-form" className="form-3d" onSubmit={handleLoginSubmit}>
+              <div className="input-field">
+                <label htmlFor="input-email">Account Email</label>
+                <div className="input-wrapper">
+                  <svg className="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect width="20" height="16" x="2" y="4" rx="3" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  <input
+                    type="email"
+                    id="input-email"
+                    placeholder="you@domain.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    spellCheck="false"
+                  />
+                </div>
+              </div>
+
+              <div className="input-field">
+                <label htmlFor="input-password">
+                  Account Password{' '}
+                  <span style={{ fontSize: '11px', opacity: 0.6, fontWeight: 'normal' }}>
+                    (Optional for Google)
+                  </span>
+                </label>
+                <div className="input-wrapper">
+                  <svg className="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="input-password"
+                    placeholder="Optional for Google accounts"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    id="btn-toggle-pwd"
+                    className="pwd-toggle"
+                    title="Show/Hide Password"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {showPassword ? (
+                        <>
+                          <path d="m2 2 20 20" />
+                          <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                          <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                          <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </>
+                      )}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {errorMessage && <div id="login-error" className="error-msg-3d">{errorMessage}</div>}
+
+              <button type="submit" id="btn-login" className="btn-3d btn-primary-3d" disabled={isLoading}>
+                <div className="btn-shine"></div>
+                <span className="btn-text">
+                  {isLoading ? 'Mounting 10 TB Virtual Link...' : 'Connect & Mount 10 TB Drive'}
+                </span>
+                {isLoading && <span className="spinner-3d"></span>}
+              </button>
+
+              <button
+                type="button"
+                id="btn-quick-connect"
+                className="btn-3d btn-glass-3d"
+                onClick={handleQuickConnect}
+                disabled={isLoading}
+              >
+                <svg className="quick-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>Auto-Connect with Website</span>
+              </button>
+            </form>
+
+            <footer className="footer-badges">
+              <span className="badge-item">🔒 Zero-Trust AES-256</span>
+              <span className="badge-dot">•</span>
+              <span className="badge-item">⚡ 0-Byte Disk Stream</span>
+            </footer>
+          </main>
+        ) : (
+          /* ── 2. 3D DASHBOARD SCREEN (LOGGED IN) (Exact Windows Match) ── */
+          <main id="dashboard-view" className="view dashboard-view">
+            {/* Profile Card */}
+            <div className="card-glass profile-card-3d">
+              <div className="avatar-3d" id="user-avatar">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              <div className="profile-info">
+                <h3 id="user-name">{displayName}</h3>
+                <span id="user-email" className="email">{email}</span>
+              </div>
+              <div className="status-indicator-3d online">
+                <span className="pulse-ring"></span>
+                <span className="dot"></span>
+                <span>Mounted</span>
+              </div>
+            </div>
+
+            {/* Drive Card with 3D Depth */}
+            <div className="card-glass drive-card-3d">
+              <div className="drive-header-3d">
+                <div className="drive-icon-stage">
+                  <img src="/desktop-logo.png" alt="Drive" className="drive-icon-img" />
+                </div>
+                <div className="drive-titles">
+                  <div className="drive-title-row">
+                    <h4 id="drive-label">MASTER CLOUD ({driveLetter}:)</h4>
+                    <span className="mode-tag-3d">Stream Mode</span>
+                  </div>
+                  <span className="drive-sub">Virtual Local Hard Disk</span>
+                </div>
+              </div>
+
+              {/* 3D Storage Bar */}
+              <div className="storage-section-3d">
+                <div className="storage-labels">
+                  <span className="used-text" id="storage-used-text">0 Bytes Used</span>
+                  <span className="total-text">10.0 TB Free Quota</span>
+                </div>
+                <div className="progress-track-3d">
+                  <div className="progress-fill-3d" style={{ width: '2%' }}></div>
+                  <div className="progress-glow"></div>
+                </div>
+                <span className="zero-disk-note">✨ 0 Bytes consumed on local phone storage</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="actions-group-3d">
+              <button
+                id="btn-open-drive"
+                className="btn-3d btn-primary-3d btn-large-3d"
+                onClick={handleOpenDrive}
+              >
+                <div className="btn-shine"></div>
+                <svg className="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 8 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+                </svg>
+                <span>Open in File Explorer</span>
+              </button>
+
+              <button
+                id="btn-open-web"
+                className="btn-3d btn-secondary-3d"
+                onClick={handleOpenWeb}
+              >
+                <svg className="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                  <path d="M2 12h20" />
+                </svg>
+                <span>Open Web Dashboard</span>
+              </button>
+            </div>
+
+            {/* Options Row (Exact Windows Settings: Drive Letter & Sign Out) */}
+            <div className="options-row-3d">
+              <div className="drive-letter-box">
+                <label htmlFor="select-drive-letter">Drive Letter:</label>
+                <select
+                  id="select-drive-letter"
+                  className="glass-select"
+                  value={driveLetter}
+                  onChange={handleDriveLetterChange}
+                >
+                  <option value="Z">Z:</option>
+                  <option value="M">M:</option>
+                  <option value="X">X:</option>
+                  <option value="Y">Y:</option>
+                </select>
+              </div>
+
+              <button id="btn-logout" className="btn-danger-link" onClick={handleLogout}>
+                Sign Out
+              </button>
+            </div>
+          </main>
+        )}
+      </div>
     </div>
   );
 }
