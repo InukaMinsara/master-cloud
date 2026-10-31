@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { NativeMobileService } from '@/services/nativeMobile';
 
 function AppleIcon({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -244,6 +245,95 @@ export function LocalDriveExperiencePage() {
               <div className="text-right">
                 <span className="text-xs font-black text-emerald-500 block">10.0 TB Free</span>
                 <span className="text-[10px] text-muted-foreground">0-Byte Local</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Android Smartphone 10 TB Virtual Local Drive Showcase ── */}
+      <div className="rounded-3xl border-2 border-emerald-500/40 bg-card p-8 sm:p-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center shadow-xl">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold tracking-wide border border-emerald-500/20">
+            <Smartphone className="h-3.5 w-3.5" />
+            <span>Android OS Native SAF DocumentsProvider</span>
+          </div>
+          <h3 className="text-2xl sm:text-4xl font-black text-foreground tracking-tight">
+            Mount 10 TB directly into Android Phone Storage
+          </h3>
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            Just like the Windows Z: drive, Master Cloud on Android is not just a webview — it is a full native Storage Provider. It mounts <b>"MASTER CLOUD (10 TB)"</b> directly inside <b>Files by Google</b>, <b>Samsung My Files</b>, and the Android system storage picker. Browse, upload, and stream 4K videos from any app (WhatsApp, Camera, CapCut, VLC) with 0-byte local phone storage consumption!
+          </p>
+          <div className="space-y-2.5 pt-2">
+            <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 text-xs font-mono flex items-center justify-between">
+              <span>Android Storage Authority</span>
+              <span className="text-emerald-500 font-bold truncate max-w-[220px]">com.mastercloud.drive.documents</span>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 text-xs font-mono flex items-center justify-between">
+              <span>Drive Label</span>
+              <span className="text-primary font-bold">MASTER CLOUD (10 TB)</span>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 text-xs font-mono flex items-center justify-between">
+              <span>Storage Footprint on Phone</span>
+              <span className="text-emerald-500 font-bold">0 MB (Virtual Stream Mode)</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-3">
+            <Button
+              onClick={() => NativeMobileService.openSystemFiles()}
+              className="text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+            >
+              <FolderOpen className="h-4 w-4" />
+              Open in Android Files App
+            </Button>
+            <Link to="/download">
+              <Button variant="outline" className="w-full sm:w-auto text-xs font-bold gap-2 border-emerald-500/30 text-emerald-500">
+                <Download className="h-4 w-4" />
+                Download Android APK
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Visual Mockup Box: Android Files App Simulation */}
+        <div className="p-6 rounded-2xl bg-secondary/30 border border-emerald-500/30 space-y-4 text-xs shadow-lg">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4 text-emerald-500" />
+              <span className="font-bold text-foreground">Files by Google / Samsung My Files — Storage</span>
+            </div>
+            <Badge className="bg-emerald-600 text-white text-[10px]">MOUNTED</Badge>
+          </div>
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-background/60 border border-border/50">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">📱</span>
+                <div>
+                  <span className="font-medium text-foreground block">Internal Storage</span>
+                  <span className="text-[10px] text-rose-400 font-semibold">120 GB of 128 GB Used</span>
+                </div>
+              </div>
+              <span className="text-[11px] text-muted-foreground font-mono">8 GB Free</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-background/60 border border-border/50">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">💾</span>
+                <span className="font-medium text-foreground">SD Card</span>
+              </div>
+              <span className="text-[11px] text-muted-foreground">Not inserted</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/15 border-2 border-emerald-500/50 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg">🚀</span>
+                <div>
+                  <div className="font-black text-foreground">MASTER CLOUD (10 TB)</div>
+                  <div className="text-[10px] text-emerald-500 font-bold">Android SAF Local Virtual Drive</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-black text-emerald-500 block">10,000 GB Free</span>
+                <span className="text-[10px] text-muted-foreground">0-Byte Phone Waste</span>
               </div>
             </div>
           </div>
