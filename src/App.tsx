@@ -13,6 +13,7 @@ import { DownloadPage } from '@/pages/public/DownloadPage';
 import { PublicSecurityPage } from '@/pages/public/PublicSecurityPage';
 import { FeaturesCatalogPage } from '@/pages/public/FeaturesCatalogPage';
 import { ContactPage } from '@/pages/public/ContactPage';
+import { MobileDriveCompanionPage } from '@/pages/MobileDriveCompanionPage';
 
 // Authenticated Cloud App Pages
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -69,7 +70,12 @@ export function App() {
     <Routes>
       {/* ─── 1. PUBLIC MARKETING WEBSITE ROUTES ─── */}
       <Route element={<PublicWebsiteLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/"
+          element={NativeMobileService.isNative() ? <MobileDriveCompanionPage /> : <HomePage />}
+        />
+        <Route path="/mobile-drive" element={<MobileDriveCompanionPage />} />
+        <Route path="/phone-drive" element={<MobileDriveCompanionPage />} />
         <Route path="/cloud" element={<CloudExperiencePage />} />
         <Route path="/local-drive" element={<LocalDriveExperiencePage />} />
         <Route path="/download" element={<DownloadPage />} />

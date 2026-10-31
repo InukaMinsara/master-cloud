@@ -224,9 +224,14 @@ public class MasterCloudDocumentsProvider extends DocumentsProvider {
             flags |= Document.FLAG_SUPPORTS_THUMBNAIL;
         }
 
+        String displayName = file.getName();
+        if ("root".equals(docId) || (baseDir != null && file.equals(baseDir))) {
+            displayName = "MASTER CLOUD (10 TB)";
+        }
+
         final MatrixCursor.RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, docId);
-        row.add(Document.COLUMN_DISPLAY_NAME, file.getName());
+        row.add(Document.COLUMN_DISPLAY_NAME, displayName);
         row.add(Document.COLUMN_SIZE, file.isDirectory() ? 0L : file.length());
         row.add(Document.COLUMN_MIME_TYPE, mimeType);
         row.add(Document.COLUMN_LAST_MODIFIED, file.lastModified());

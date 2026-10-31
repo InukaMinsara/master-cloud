@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   HardDrive,
   Clock,
@@ -16,6 +16,7 @@ import { useFileStore } from '@/stores/fileStore';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown';
 
 export function MobileBottomNav() {
+  const navigate = useNavigate();
   const { setNewFolderModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
@@ -97,6 +98,10 @@ export function MobileBottomNav() {
               <DropdownMenuItem onClick={() => cameraInputRef.current?.click()} className="gap-2.5 py-2.5">
                 <Camera className="h-4 w-4 text-violet-500" />
                 <span className="font-medium">Take photo / video</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/mobile-drive')} className="gap-2.5 py-2.5 border-t border-border/60">
+                <HardDrive className="h-4 w-4 text-cyan-500" />
+                <span className="font-medium text-cyan-500">10 TB Phone Drive Companion</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
