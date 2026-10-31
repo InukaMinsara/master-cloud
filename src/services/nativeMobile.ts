@@ -20,6 +20,7 @@ export interface VirtualDriveStatus {
 export interface MasterCloudDrivePluginInterface {
   getDriveStatus(): Promise<VirtualDriveStatus>;
   openSystemFiles(): Promise<{ success: boolean; opened?: boolean; error?: string }>;
+  openPhoneFileManager(): Promise<{ success: boolean; error?: string }>;
 }
 
 export const MasterCloudDrive = registerPlugin<MasterCloudDrivePluginInterface>('MasterCloudDrive');
@@ -120,6 +121,23 @@ export class NativeMobileService {
     }
 
     toast.info('Open "Files by Google" or "Samsung My Files" on your phone to explore "MASTER CLOUD (10 TB)".');
+    return false;
+  }
+
+  /**
+   * Open the phone's built-in File Manager (e.g., Xiaomi File Manager / Samsung My Files)
+   */
+  static async openPhoneFileManager(): Promise<boolean> {
+    if (this.isAndroid()) {
+      try {
+        const res = await MasterCloudDrive.openPhoneFileManager();
+        if (res && res.success) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('Native openPhoneFileManager error:', err);
+      }
+    }
     return false;
   }
 
