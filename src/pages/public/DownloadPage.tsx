@@ -303,26 +303,26 @@ export function DownloadPage() {
               </div>
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Connects your smartphone directly to your <b>10 TB Virtual Cloud Storage</b>. Stream 4K videos, play music, and auto-backup photos with zero phone memory used!
+                Mounts a full <b>10 TB Virtual Local Drive</b> directly inside your phone's native file system (Files by Google &amp; Samsung My Files) via Android Storage Access Framework (SAF). Zero phone memory footprint!
               </p>
 
               {/* Android feature chips */}
               <div className="grid grid-cols-2 gap-2 text-[10px] font-medium">
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-muted/40 border border-border/60">
-                  <Camera className="h-3 w-3 text-emerald-500 shrink-0" />
-                  <span>Camera auto-backup</span>
+                  <HardDrive className="h-3 w-3 text-emerald-500 shrink-0" />
+                  <span>10 TB Native SAF Drive</span>
                 </div>
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-muted/40 border border-border/60">
                   <Film className="h-3 w-3 text-blue-500 shrink-0" />
                   <span>On-demand 4K stream</span>
                 </div>
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-muted/40 border border-border/60">
-                  <HardDrive className="h-3 w-3 text-indigo-500 shrink-0" />
-                  <span>10 TB Virtual Drive</span>
+                  <Camera className="h-3 w-3 text-purple-500 shrink-0" />
+                  <span>Camera auto-backup</span>
                 </div>
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-muted/40 border border-border/60">
-                  <Shield className="h-3 w-3 text-purple-500 shrink-0" />
-                  <span>Native Mobile Bottom Bar</span>
+                  <Shield className="h-3 w-3 text-indigo-500 shrink-0" />
+                  <span>0-byte phone memory</span>
                 </div>
               </div>
             </div>

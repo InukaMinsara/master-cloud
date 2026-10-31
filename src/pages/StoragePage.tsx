@@ -20,6 +20,7 @@ import {
   Copy,
   ExternalLink,
   QrCode,
+  Download,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { formatBytes } from '@/lib/utils';
@@ -27,6 +28,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores/uiStore';
+import { NativeMobileService } from '@/services/nativeMobile';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
@@ -255,33 +257,44 @@ export function StoragePage() {
             </Link>
           </div>
 
-          {/* CARD 3: Android Smartphone */}
-          <div className="p-5 rounded-3xl border-2 border-emerald-500/30 bg-card hover:border-emerald-500/60 transition-all space-y-4 shadow-sm">
+          {/* CARD 3: Android Smartphone 10 TB Virtual Local Drive (SAF) */}
+          <div className="p-5 rounded-3xl border-2 border-emerald-500/40 bg-card hover:border-emerald-500/70 transition-all space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500">
+                <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-500">
                   <Smartphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <h5 className="font-bold text-sm text-foreground">Android Smartphone</h5>
-                  <Badge className="text-[10px] bg-emerald-600 text-white mt-0.5">APK &amp; Cloud Drive</Badge>
+                  <h5 className="font-bold text-sm text-foreground">Android Virtual Drive</h5>
+                  <Badge className="text-[10px] bg-emerald-600 text-white mt-0.5">SAF Storage Provider</Badge>
                 </div>
               </div>
               <span className="text-xs font-bold text-emerald-500">10.0 TB</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Connect your Android phone for on-demand 4K video streaming, instant camera auto-backup, and native bottom navigation.
+              Mounts as a real local storage drive directly inside <b>Files by Google</b> and <b>Samsung My Files</b> via Android SAF. Access 10 TB from WhatsApp, Gallery, and Camera with 0-byte phone memory footprint!
             </p>
             <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/70 text-[11px] font-mono text-muted-foreground flex justify-between">
-              <span>Storage: <b className="text-foreground">10 TB Cloud Space</b></span>
-              <span className="text-emerald-500 font-bold">Zero Phone Lag</span>
+              <span>Drive: <b className="text-foreground">MASTER CLOUD (10 TB)</b></span>
+              <span className="text-emerald-500 font-bold">Stream Mode</span>
             </div>
-            <Link to="/download">
-              <Button variant="outline" size="sm" className="w-full text-xs font-bold gap-1.5 mt-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                <Smartphone className="h-3.5 w-3.5 text-emerald-500" />
-                Get Android APK
+            
+            <div className="space-y-2 pt-1">
+              <Button
+                onClick={() => NativeMobileService.openSystemFiles()}
+                className="w-full text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                Open in Android Files App
               </Button>
-            </Link>
+
+              <Link to="/download" className="block">
+                <Button variant="outline" size="sm" className="w-full text-xs font-bold gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                  <Download className="h-3.5 w-3.5 text-emerald-500" />
+                  Get Android APK (10 TB Drive)
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
