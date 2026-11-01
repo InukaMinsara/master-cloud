@@ -41,6 +41,7 @@ import { FileRequestPage } from '@/pages/FileRequestPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { MobileCompanionPage } from '@/pages/MobileCompanionPage';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { NativeMobileService } from '@/services/nativeMobile';
@@ -67,9 +68,17 @@ export function App() {
 
   return (
     <Routes>
+      {/* ─── NATIVE MOBILE COMPANION APP ROOT ─── */}
+      {NativeMobileService.isNative() && (
+        <Route path="/" element={<MobileCompanionPage />} />
+      )}
+
       {/* ─── 1. PUBLIC MARKETING WEBSITE ROUTES ─── */}
       <Route element={<PublicWebsiteLayout />}>
-        <Route path="/" element={<HomePage />} />
+        {!NativeMobileService.isNative() && (
+          <Route path="/" element={<HomePage />} />
+        )}
+        <Route path="/home" element={<HomePage />} />
         <Route path="/cloud" element={<CloudExperiencePage />} />
         <Route path="/local-drive" element={<LocalDriveExperiencePage />} />
         <Route path="/download" element={<DownloadPage />} />
@@ -78,7 +87,9 @@ export function App() {
         <Route path="/contact" element={<ContactPage />} />
       </Route>
 
-      {/* ─── 2. STANDALONE PUBLIC & AUTH ROUTES ─── */}
+      {/* ─── 2. STANDALONE COMPANION & AUTH ROUTES ─── */}
+      <Route path="/companion" element={<MobileCompanionPage />} />
+      <Route path="/drive-app" element={<MobileCompanionPage />} />
       <Route path="/share/:token" element={<PublicSharePage />} />
       <Route path="/request/:token" element={<FileRequestPage />} />
       <Route path="/login" element={<LoginPage />} />
