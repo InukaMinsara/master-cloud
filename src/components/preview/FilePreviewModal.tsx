@@ -22,6 +22,12 @@ import {
   Layers,
   Zap,
   SlidersHorizontal,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { VgpuService } from '@/services/vgpuService';
 import { usePreviewStore, PreviewQuality, QUALITY_OPTIONS } from '@/stores/previewStore';
@@ -38,6 +44,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown';
+
+function formatTime(seconds: number) {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  const hrs = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hrs > 0) {
+    return `${hrs}:${remMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
 
 export function FilePreviewModal() {
   const navigate = useNavigate();
@@ -68,7 +86,15 @@ export function FilePreviewModal() {
   const [isCopied, setIsCopied] = React.useState(false);
   const [mediaError, setMediaError] = React.useState(false);
   const [playbackRate, setPlaybackRate] = React.useState<number>(1);
+  const [isPlaying, setIsPlaying] = React.useState(true);
+  const [currentTime, setCurrentTime] = React.useState(0);
+  const [duration, setDuration] = React.useState(0);
+  const [isMuted, setIsMuted] = React.useState(false);
+  const [volume, setVolume] = React.useState(1);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const videoContainerRef = React.useRef<HTMLDivElement>(null);
 
   const handleMediaError = async () => {
     if (activeFile && !mediaError) {
@@ -253,25 +279,18 @@ export function FilePreviewModal() {
     let active = true;
     let generatedObjectUrl: string | null = null;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (blobUrl.startsWith('http://') || blobUrl.startsWith('https://')) {
+      img.crossOrigin = 'anonymous';
+    }
 
     img.onload = () => {
       if (!active) return;
       const opt = QUALITY_OPTIONS.find((q) => q.id === previewQuality) || QUALITY_OPTIONS[0];
       const origW = img.naturalWidth;
       const origH = img.naturalHeight;
-      let targetW = origW;
-      let targetH = origH;
-
-      if (targetW > opt.maxDim || targetH > opt.maxDim) {
-        if (targetW >= targetH) {
-          targetH = Math.max(1, Math.round((targetH * opt.maxDim) / targetW));
-          targetW = opt.maxDim;
-        } else {
-          targetW = Math.max(1, Math.round((targetW * opt.maxDim) / targetH));
-          targetH = opt.maxDim;
-        }
-      }
+      // Direct true scale multiplier on dimensions
+      const targetW = Math.max(32, Math.round(origW * opt.scale));
+      const targetH = Math.max(32, Math.round(origH * opt.scale));
 
       try {
         const canvas = document.createElement('canvas');
@@ -280,7 +299,7 @@ export function FilePreviewModal() {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.imageSmoothingEnabled = previewQuality !== '360p';
-          ctx.imageSmoothingQuality = previewQuality === '360p' ? 'low' : 'high';
+          ctx.imageSmoothingQuality = previewQuality === '360p' ? 'low' : 'medium';
           ctx.drawImage(img, 0, 0, targetW, targetH);
           canvas.toBlob(
             (blob) => {
@@ -317,6 +336,108 @@ export function FilePreviewModal() {
       }
     };
   }, [blobUrl, previewQuality, category]);
+
+  // Real-time Canvas Video Quality Resampler
+  React.useEffect(() => {
+    if (category !== 'video' || previewQuality === 'original' || !blobUrl) return;
+
+    let animId: number;
+    const renderVideo = () => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video && canvas && video.readyState >= 2 && video.videoWidth > 0) {
+        const opt = QUALITY_OPTIONS.find((q) => q.id === previewQuality) || QUALITY_OPTIONS[0];
+        const targetW = Math.max(160, Math.round(video.videoWidth * opt.scale));
+        const targetH = Math.max(90, Math.round(video.videoHeight * opt.scale));
+
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = previewQuality !== '360p';
+          ctx.imageSmoothingQuality = previewQuality === '360p' ? 'low' : 'medium';
+          ctx.drawImage(video, 0, 0, targetW, targetH);
+        }
+      }
+      animId = requestAnimationFrame(renderVideo);
+    };
+
+    animId = requestAnimationFrame(renderVideo);
+    return () => cancelAnimationFrame(animId);
+  }, [category, previewQuality, blobUrl]);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+      setIsPlaying(!videoRef.current.paused);
+      if (playbackRate !== 1) {
+        videoRef.current.playbackRate = playbackRate;
+      }
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = val;
+      setCurrentTime(val);
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      const nextMuted = !isMuted;
+      videoRef.current.muted = nextMuted;
+      setIsMuted(nextMuted);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    if (videoRef.current) {
+      videoRef.current.volume = val;
+      if (val === 0) {
+        videoRef.current.muted = true;
+        setIsMuted(true);
+      } else if (isMuted) {
+        videoRef.current.muted = false;
+        setIsMuted(false);
+      }
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!videoContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      videoContainerRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
   const handleSpeedChange = (speed: number) => {
     setPlaybackRate(speed);
@@ -523,10 +644,18 @@ export function FilePreviewModal() {
                   loading="eager"
                   decoding="async"
                   onError={handleMediaError}
-                  className="max-h-[72vh] max-w-[85vw] object-contain rounded-xl shadow-2xl transition-all duration-200"
+                  className="object-contain rounded-xl shadow-2xl transition-transform duration-200"
                   style={{
                     transform: `scale(${zoom}) rotate(${rotation}deg)`,
                     imageRendering: previewQuality === '360p' ? 'pixelated' : 'auto',
+                    aspectRatio:
+                      scaledDims?.origWidth && scaledDims?.origHeight
+                        ? `${scaledDims.origWidth} / ${scaledDims.origHeight}`
+                        : undefined,
+                    maxHeight: '72vh',
+                    maxWidth: '85vw',
+                    width: scaledDims?.origWidth ? `${Math.min(scaledDims.origWidth, 1000)}px` : 'auto',
+                    height: 'auto',
                   }}
                 />
               ) : (
@@ -578,33 +707,141 @@ export function FilePreviewModal() {
             />
           </div>
         ) : category === 'video' ? (
-          /* ── 3. VIDEO VIEWER WITH QUALITY & SPEED SELECTOR ── */
+          /* ── 3. VIDEO VIEWER WITH REAL-TIME RESOLUTION DOWNMIXER ── */
           <div className="relative flex flex-col items-center justify-center max-w-full">
             <div
-              className={`aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10 transition-all duration-300 ${
-                previewQuality === '360p'
-                  ? 'w-full max-w-xl max-h-[360px]'
-                  : previewQuality === '480p'
-                  ? 'w-full max-w-2xl max-h-[480px]'
-                  : previewQuality === '720p'
-                  ? 'w-full max-w-4xl max-h-[620px]'
-                  : 'w-full max-w-5xl max-h-[72vh]'
-              }`}
+              ref={videoContainerRef}
+              className="w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-white/10 group select-none"
             >
               {blobUrl ? (
-                <video
-                  ref={videoRef}
-                  src={blobUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="auto"
-                  onError={handleMediaError}
-                  className="h-full w-full object-contain"
-                  style={{
-                    imageRendering: previewQuality === '360p' ? 'pixelated' : 'auto',
-                  }}
-                />
+                <>
+                  {/* Native Video (shown in full hardware acceleration on 'original') */}
+                  <video
+                    ref={videoRef}
+                    src={blobUrl}
+                    autoPlay
+                    playsInline
+                    preload="auto"
+                    onError={handleMediaError}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={() => setIsPlaying(false)}
+                    className={`h-full w-full object-contain ${
+                      previewQuality === 'original' ? 'block' : 'opacity-0 absolute inset-0 pointer-events-none'
+                    }`}
+                  />
+
+                  {/* Real-time Dynamic Canvas Resampler (renders genuine downscaled resolution & compression) */}
+                  {previewQuality !== 'original' && (
+                    <canvas
+                      ref={canvasRef}
+                      onClick={togglePlay}
+                      className="h-full w-full object-contain cursor-pointer"
+                      style={{
+                        imageRendering: previewQuality === '360p' ? 'pixelated' : 'auto',
+                      }}
+                    />
+                  )}
+
+                  {/* Big Play Overlay Button */}
+                  {!isPlaying && (
+                    <button
+                      onClick={togglePlay}
+                      className="absolute inset-0 flex items-center justify-center bg-black/35 z-10 hover:bg-black/45 transition-colors"
+                      title="Play"
+                    >
+                      <div className="h-16 w-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-xl shadow-cyan-500/40 hover:scale-110 transition-transform">
+                        <Play className="h-8 w-8 ml-1 fill-black" />
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Sleek Custom Media Controls Overlay */}
+                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/95 via-black/75 to-transparent flex flex-col gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {/* Scrubbable Timeline Progress */}
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="range"
+                        min={0}
+                        max={duration || 100}
+                        step={0.1}
+                        value={currentTime}
+                        onChange={handleSeek}
+                        className="w-full h-1.5 bg-white/25 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:h-2 transition-all"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-white">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={togglePlay}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                          title={isPlaying ? 'Pause' : 'Play'}
+                        >
+                          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white" />}
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={toggleMute}
+                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                            title={isMuted ? 'Unmute' : 'Mute'}
+                          >
+                            {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                          </button>
+                          <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={isMuted ? 0 : volume}
+                            onChange={handleVolumeChange}
+                            className="w-16 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                          />
+                        </div>
+
+                        <span className="text-[11px] font-mono text-white/70">
+                          {formatTime(currentTime)} / {formatTime(duration)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Current Real Resolution Badge */}
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                          {currentQualityOption.badge}
+                        </span>
+
+                        {/* Speed Dropdown */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="cursor-pointer">
+                            <span className="text-[11px] font-bold px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                              {playbackRate}x
+                            </span>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="right" className="bg-zinc-900/95 border-white/15 min-w-[100px] text-white">
+                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                onClick={() => handleSpeedChange(s)}
+                                className={playbackRate === s ? 'text-cyan-400 font-bold' : 'text-white/80'}
+                              >
+                                {s}x Speed
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <button
+                          onClick={toggleFullscreen}
+                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Fullscreen"
+                        >
+                          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-col items-center gap-4 text-center p-8 bg-white/5 rounded-3xl max-w-md border border-white/10">
                   <div className="h-16 w-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
@@ -648,29 +885,13 @@ export function FilePreviewModal() {
 
                 <div className="h-4 w-px bg-white/20 hidden md:block" />
 
-                {/* Speed Selector */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] font-bold text-white/60 px-1.5">Speed:</span>
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleSpeedChange(s)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                        playbackRate === s
-                          ? 'bg-purple-500 text-white shadow-sm'
-                          : 'text-white/60 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {s}x
-                    </button>
-                  ))}
-                </div>
-
-                <div className="h-4 w-px bg-white/20 hidden lg:block" />
-
                 <div className="text-[10px] font-bold text-cyan-300 px-2 py-0.5 rounded-lg bg-cyan-950/40 border border-cyan-800/30 hidden lg:flex items-center gap-1">
                   <Zap className="h-3 w-3 text-cyan-400" />
-                  <span>vGPU H.264 Acceleration</span>
+                  <span>
+                    {previewQuality === 'original'
+                      ? '100% Native Uncompressed Stream'
+                      : `Hardware Resampled: ${Math.round(currentQualityOption.scale * 100)}% (${currentQualityOption.desc})`}
+                  </span>
                 </div>
               </div>
             )}
