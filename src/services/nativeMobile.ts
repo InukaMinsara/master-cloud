@@ -15,11 +15,12 @@ export interface VirtualDriveStatus {
   storageMode: string;
   protocol: string;
   localPath?: string;
+  displayPath?: string;
 }
 
 export interface MasterCloudDrivePluginInterface {
   getDriveStatus(): Promise<VirtualDriveStatus>;
-  openSystemFiles(): Promise<{ success: boolean; opened?: boolean; error?: string }>;
+  openSystemFiles(): Promise<{ success: boolean; opened?: boolean; localPath?: string; displayPath?: string; error?: string }>;
   openPhoneFileManager(): Promise<{ success: boolean; error?: string }>;
 }
 
@@ -107,21 +108,22 @@ export class NativeMobileService {
   /**
    * Launch native Android system Files app directly at the Master Cloud 10 TB storage root
    */
-  static async openSystemFiles(): Promise<boolean> {
+  static async openSystemFiles(): Promise<{ success: boolean; displayPath?: string }> {
     if (this.isAndroid()) {
       try {
         const res = await MasterCloudDrive.openSystemFiles();
         if (res && res.success) {
-          toast.success('Opened Master Cloud 10 TB in Android Files!');
-          return true;
+          const loc = res.displayPath || 'Download > Master Cloud (10 TB)';
+          toast.success(`Opened Master Cloud 10 TB!\nLocation: ${loc}`, { duration: 5000 });
+          return { success: true, displayPath: loc };
         }
       } catch (err) {
         console.warn('Native openSystemFiles error:', err);
       }
     }
 
-    toast.info('Open "Files by Google" or "Samsung My Files" on your phone to explore "MASTER CLOUD (10 TB)".');
-    return false;
+    toast.info('Open your phone\'s File Manager (My Files / Files) and check "Download > Master Cloud (10 TB)".', { duration: 6000 });
+    return { success: false, displayPath: 'Download > Master Cloud (10 TB)' };
   }
 
   /**

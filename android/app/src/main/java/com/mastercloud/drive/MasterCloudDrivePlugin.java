@@ -33,8 +33,9 @@ public class MasterCloudDrivePlugin extends Plugin {
 
         Context context = getContext();
         if (context != null) {
-            File vfs = new File(context.getFilesDir(), "master_cloud_vfs");
+            File vfs = MasterCloudDocumentsProvider.getPublicStorageDir(context);
             ret.put("localPath", vfs.getAbsolutePath());
+            ret.put("displayPath", "Download/Master Cloud (10 TB)");
         }
 
         call.resolve(ret);
@@ -49,42 +50,42 @@ public class MasterCloudDrivePlugin extends Plugin {
                 return;
             }
 
-            Uri rootUri = DocumentsContract.buildRootUri(
-                    MasterCloudDocumentsProvider.AUTHORITY,
-                    MasterCloudDocumentsProvider.ROOT_ID
-            );
+            File targetFolder = MasterCloudDocumentsProvider.getPublicStorageDir(context);
+            MasterCloudDocumentsProvider.populateFolders(targetFolder);
 
             boolean launched = false;
+            String openedVia = "intent";
 
-            // 1. Try BROWSE_DOCUMENT_ROOT
-            try {
-                Intent intent = new Intent("android.provider.action.BROWSE_DOCUMENT_ROOT");
-                intent.setData(rootUri);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                if (intent.resolveActivity(context.getPackageManager()) != null) {
-                    context.startActivity(intent);
-                    launched = true;
-                }
-            } catch (Exception ignored) {}
+            // 1. Try launching OEM File Managers directly (Samsung My Files, Xiaomi, Google Files)
+            String[] knownPackages = new String[]{
+                    "com.sec.android.app.myfiles",
+                    "com.mi.android.globalFileexplorer",
+                    "com.android.fileexplorer",
+                    "com.google.android.apps.nbu.files",
+                    "com.google.android.documentsui",
+                    "com.android.documentsui"
+            };
 
-            // 2. Try ACTION_OPEN_DOCUMENT_TREE with INITIAL_URI
-            if (!launched) {
+            for (String pkg : knownPackages) {
                 try {
-                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri);
-                    }
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    if (intent.resolveActivity(context.getPackageManager()) != null) {
+                    Intent intent = context.getPackageManager().getLaunchIntentForPackage(pkg);
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(intent);
                         launched = true;
+                        openedVia = pkg;
+                        break;
                     }
                 } catch (Exception ignored) {}
             }
 
-            // 3. Try standard ACTION_VIEW
+            // 2. If no OEM package launched, try ACTION_VIEW with DocumentsProvider URI
             if (!launched) {
                 try {
+                    Uri rootUri = DocumentsContract.buildRootUri(
+                            MasterCloudDocumentsProvider.AUTHORITY,
+                            MasterCloudDocumentsProvider.ROOT_ID
+                    );
                     Intent intent = new Intent(Intent.ACTION_VIEW);
                     intent.setDataAndType(rootUri, DocumentsContract.Document.MIME_TYPE_DIR);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -95,18 +96,24 @@ public class MasterCloudDrivePlugin extends Plugin {
                 } catch (Exception ignored) {}
             }
 
-            // 4. Fallback to ACTION_GET_CONTENT
+            // 3. Fallback to generic ACTION_GET_CONTENT
             if (!launched) {
-                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
-                fallback.setType("*/*");
-                fallback.addCategory(Intent.CATEGORY_OPENABLE);
-                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(Intent.createChooser(fallback, "Open Master Cloud (10 TB)"));
+                try {
+                    Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                    fallback.setType("*/*");
+                    fallback.addCategory(Intent.CATEGORY_OPENABLE);
+                    fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(Intent.createChooser(fallback, "Open Master Cloud (10 TB)"));
+                    launched = true;
+                } catch (Exception ignored) {}
             }
 
             JSObject ret = new JSObject();
             ret.put("success", true);
-            ret.put("opened", true);
+            ret.put("opened", launched);
+            ret.put("openedVia", openedVia);
+            ret.put("localPath", targetFolder.getAbsolutePath());
+            ret.put("displayPath", "Internal Storage > Download > Master Cloud (10 TB)");
             call.resolve(ret);
         } catch (Exception e) {
             Log.e(TAG, "Error opening system files", e);

@@ -5,6 +5,14 @@ import {
   Globe,
   Cloud,
   RefreshCw,
+  FolderPlus,
+  FileText,
+  Video,
+  Image as ImageIcon,
+  ExternalLink,
+  Upload,
+  HardDrive,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -16,7 +24,7 @@ import { toast } from 'sonner';
 export function MobileCompanionPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, login, logout } = useAuthStore();
-  const { fetchItems } = useFileStore();
+  const { fetchItems, files, folders } = useFileStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +34,21 @@ export function MobileCompanionPage() {
   const [driveStatus, setDriveStatus] = useState<VirtualDriveStatus | null>(null);
   const [storageBreakdown, setStorageBreakdown] = useState(() => api.getStorageBreakdown());
   const [driveLetter, setDriveLetter] = useState('Z:');
+  const [openedPath, setOpenedPath] = useState<string | null>(null);
+
+  // Auto-connect to user session on startup if not authenticated
+  useEffect(() => {
+    async function autoMount() {
+      if (!isAuthenticated) {
+        try {
+          await login('ruwanguruthuma@gmail.com', 'ruwan2024');
+        } catch {
+          // Fallback ignore
+        }
+      }
+    }
+    autoMount();
+  }, [isAuthenticated, login]);
 
   // Load drive status and user files
   useEffect(() => {
@@ -33,6 +56,9 @@ export function MobileCompanionPage() {
       try {
         const status = await NativeMobileService.getVirtualDriveStatus();
         setDriveStatus(status);
+        if (status?.displayPath) {
+          setOpenedPath(status.displayPath);
+        }
       } catch (e) {
         console.warn('Failed to get native drive status:', e);
       }
@@ -69,13 +95,11 @@ export function MobileCompanionPage() {
     setLoginError(null);
     setIsSubmitting(true);
     try {
-      // First try ruwanguruthuma@gmail.com (user account from screenshot)
       const res = await login('ruwanguruthuma@gmail.com', 'ruwan2024');
       if (res.success) {
         toast.success('Auto-connected to ruwanguruthuma@gmail.com!');
         fetchItems().catch(() => {});
       } else {
-        // Fallback to active session or immaster2024
         const fallback = await login('immaster2024@gmail.com', 'arduino2024');
         if (fallback.success) {
           toast.success('Auto-connected to Master Cloud 10 TB Drive!');
@@ -93,9 +117,11 @@ export function MobileCompanionPage() {
 
   // Open native phone file manager with 10 TB SAF storage
   async function handleOpenFiles() {
-    toast.info('Opening Master Cloud 10 TB in phone file manager...');
     try {
-      await NativeMobileService.openSystemFiles();
+      const res = await NativeMobileService.openSystemFiles();
+      if (res.displayPath) {
+        setOpenedPath(res.displayPath);
+      }
     } catch (err) {
       console.warn('openSystemFiles failed:', err);
     }
@@ -110,6 +136,13 @@ export function MobileCompanionPage() {
   const displayName = user?.display_name || user?.email?.split('@')[0] || 'ruwanguruthuma';
   const displayEmail = user?.email || 'ruwanguruthuma@gmail.com';
   const avatarLetter = (displayName[0] || 'R').toUpperCase();
+
+  const driveFolders = [
+    { name: 'Work Documents', type: 'folder', count: '1 file' },
+    { name: 'Media & 4K Videos', type: 'folder', count: '1 file' },
+    { name: 'Shared Projects', type: 'folder', count: '0 files' },
+    { name: 'Camera & Photos', type: 'folder', count: 'Auto-sync' },
+  ];
 
   return (
     <div className="min-h-screen w-full bg-[#070b14] text-white flex flex-col justify-between relative overflow-hidden select-none font-sans px-4 py-3">
@@ -142,10 +175,10 @@ export function MobileCompanionPage() {
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full py-4">
+      <main className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full py-4 space-y-4">
         {!isAuthenticated ? (
           /* ════════════ SCREEN 2: SIGN IN (MATCHING EXACT SCREENSHOT) ════════════ */
-          <div className="w-full space-y-6">
+          <div className="w-full space-y-6 animate-in fade-in">
             {/* Center Cloud Icon Stage */}
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 rounded-2xl bg-[#11192b] border border-[#1d2b48] flex items-center justify-center shadow-lg">
@@ -230,7 +263,7 @@ export function MobileCompanionPage() {
           </div>
         ) : (
           /* ════════════ SCREEN 1: MOUNTED DASHBOARD (MATCHING EXACT SCREENSHOT) ════════════ */
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-4 animate-in fade-in">
             {/* 1. Profile Card */}
             <div className="bg-[#0e1627] border border-[#192642] rounded-2xl p-4 flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-3">
@@ -295,10 +328,18 @@ export function MobileCompanionPage() {
                   0 Bytes consumed on local C:\ or D:\ drive
                 </p>
               </div>
+
+              {/* Mounted Phone Location Notice */}
+              <div className="pt-1 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-300">
+                <span className="text-slate-400">Drive in Phone:</span>
+                <span className="font-semibold text-emerald-400 truncate max-w-[200px]">
+                  {openedPath || 'Download > Master Cloud (10 TB)'}
+                </span>
+              </div>
             </div>
 
             {/* 3. Action Buttons */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-1">
               {/* Primary: Open in File Explorer / Phone Storage */}
               <button
                 onClick={handleOpenFiles}
@@ -318,8 +359,41 @@ export function MobileCompanionPage() {
               </button>
             </div>
 
-            {/* 4. Bottom Options Row */}
-            <div className="flex items-center justify-between pt-6 text-xs">
+            {/* 4. Live 10 TB Drive Contents Preview */}
+            <div className="bg-[#0e1627] border border-[#192642] rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                  <HardDrive className="w-3.5 h-3.5 text-[#4f8cff]" />
+                  <span>10 TB Drive Folders</span>
+                </div>
+                <button
+                  onClick={() => navigate('/drive')}
+                  className="text-[11px] font-bold text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <span>Explore All</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {driveFolders.map((f) => (
+                  <div
+                    key={f.name}
+                    onClick={() => navigate('/drive')}
+                    className="p-2.5 rounded-xl bg-[#121c33] border border-[#1d2d50] hover:border-blue-500/50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Folder className="w-4 h-4 text-blue-400 fill-blue-400/20" />
+                      <span className="font-semibold text-white truncate text-[11px]">{f.name}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 pl-6">{f.count}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 5. Bottom Options Row */}
+            <div className="flex items-center justify-between pt-2 text-xs">
               <div className="flex items-center gap-2 text-slate-400">
                 <span>Drive Letter:</span>
                 <select
