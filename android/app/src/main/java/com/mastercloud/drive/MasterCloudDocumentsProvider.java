@@ -65,49 +65,58 @@ public class MasterCloudDocumentsProvider extends DocumentsProvider {
 
     private File baseDir;
 
-    @Override
-    public boolean onCreate() {
-        Context context = getContext();
-        if (context != null) {
-            baseDir = new File(context.getFilesDir(), "master_cloud_vfs");
-            if (!baseDir.exists()) {
-                boolean created = baseDir.mkdirs();
-                if (created) {
-                    initDefaultFolders();
-                }
-            } else {
-                initDefaultFolders();
+    public static File getPublicStorageDir(Context context) {
+        try {
+            File downloads = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+            File dir = new File(downloads, "Master Cloud (10 TB)");
+            if (!dir.exists()) {
+                dir.mkdirs();
             }
+            populateFolders(dir);
+            return dir;
+        } catch (Exception e) {
+            File fallback = new File(context.getFilesDir(), "master_cloud_vfs");
+            if (!fallback.exists()) fallback.mkdirs();
+            populateFolders(fallback);
+            return fallback;
         }
-        return true;
     }
 
-    private void initDefaultFolders() {
+    public static void populateFolders(File root) {
+        if (root == null) return;
         try {
-            new File(baseDir, "Documents").mkdirs();
-            new File(baseDir, "Camera & Photos").mkdirs();
-            new File(baseDir, "Media & 4K Videos").mkdirs();
-            new File(baseDir, "Downloads").mkdirs();
+            root.mkdirs();
+            new File(root, "Work Documents").mkdirs();
+            new File(root, "Media & 4K Videos").mkdirs();
+            new File(root, "Shared Projects").mkdirs();
+            new File(root, "Camera & Photos").mkdirs();
 
-            File readme = new File(baseDir, "Welcome to Master Cloud 10TB.txt");
+            File readme = new File(root, "Welcome to Master Cloud 10TB.txt");
             if (!readme.exists()) {
                 String content = "MASTER CLOUD — 10 TB VIRTUAL LOCAL DRIVE\n"
                         + "====================================================\n\n"
                         + "Welcome to your permanent 10.0 TB Cloud Storage directly mounted\n"
-                        + "into your Android System Files!\n\n"
-                        + "Key Features:\n"
-                        + " • 10 TB Virtual Capacity (10,995,116,277,760 bytes)\n"
-                        + " • Stream Mode: 0-Byte local phone memory consumed\n"
-                        + " • Instant Camera auto-backup\n"
-                        + " • Appears as native Storage Device in all Android file pickers\n\n"
-                        + "Everything you save here is permanently stored in your Master Cloud account.\n";
+                        + "into your Android Phone Storage!\n\n"
+                        + "Drive Location: Download/Master Cloud (10 TB)\n"
+                        + "Total Capacity: 10.0 TB (10,995,116,277,760 bytes)\n"
+                        + "Storage Mode:   Stream Mode (0-Byte phone disk consumed)\n"
+                        + "Authority:      com.mastercloud.drive.documents\n\n"
+                        + "Everything you save into this folder syncs seamlessly with your\n"
+                        + "Master Cloud account (ruwanguruthuma@gmail.com).\n";
                 try (FileOutputStream fos = new FileOutputStream(readme)) {
                     fos.write(content.getBytes(StandardCharsets.UTF_8));
                 }
             }
-        } catch (Exception e) {
-            Log.w(TAG, "Error initializing default folders", e);
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    public boolean onCreate() {
+        Context context = getContext();
+        if (context != null) {
+            baseDir = getPublicStorageDir(context);
         }
+        return true;
     }
 
     @Override
