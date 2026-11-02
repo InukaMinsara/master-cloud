@@ -248,19 +248,33 @@ function loadManifest() {
     let bestData = null;
     let maxFileCount = -1;
 
-    for (const candidate of seedCandidates) {
-      if (!candidate || !fs.existsSync(candidate)) continue;
+    // Fast-path: Check primary MANIFEST_FILE first to avoid multi-candidate disk blocking
+    if (fs.existsSync(MANIFEST_FILE)) {
       try {
-        const raw = fs.readFileSync(candidate, 'utf8').replace(/^\uFEFF/, '');
+        const raw = fs.readFileSync(MANIFEST_FILE, 'utf8').replace(/^\uFEFF/, '');
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          const fileCount = Object.keys(parsed.files || {}).length;
-          if (fileCount > maxFileCount) {
-            maxFileCount = fileCount;
-            bestData = parsed;
-          }
+        if (parsed && typeof parsed === 'object' && parsed.files) {
+          bestData = parsed;
+          maxFileCount = Object.keys(parsed.files).length;
         }
-      } catch { /* ignore */ }
+      } catch { /* fallback to other seed candidates */ }
+    }
+
+    if (!bestData) {
+      for (const candidate of seedCandidates) {
+        if (!candidate || candidate === MANIFEST_FILE || !fs.existsSync(candidate)) continue;
+        try {
+          const raw = fs.readFileSync(candidate, 'utf8').replace(/^\uFEFF/, '');
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            const fileCount = Object.keys(parsed.files || {}).length;
+            if (fileCount > maxFileCount) {
+              maxFileCount = fileCount;
+              bestData = parsed;
+            }
+          }
+        } catch { /* ignore */ }
+      }
     }
 
     if (bestData) {

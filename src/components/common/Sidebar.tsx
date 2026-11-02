@@ -14,6 +14,7 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
+  Zap,
 
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
@@ -58,6 +59,7 @@ export function Sidebar() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
+    { label: 'Quantum 50x vGPU', path: '/quantum-vgpu', icon: Zap, badge: '4TB' },
 
     { label: 'Shared with me', path: '/shared', icon: Users },
     { label: 'Recent', path: '/recent', icon: Clock },
