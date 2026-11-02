@@ -34,6 +34,7 @@ import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { OfflineCenterPage } from '@/pages/OfflineCenterPage';
 import { SecurityCenterPage } from '@/pages/SecurityCenterPage';
 import { DiagnosticsPage } from '@/pages/DiagnosticsPage';
+import { MatrixStudioPage } from '@/pages/MatrixStudioPage';
 
 // Standalone Shared & Auth Pages
 import { PublicSharePage } from '@/pages/PublicSharePage';
@@ -118,6 +119,8 @@ export function App() {
         {/* Master Canvas temporarily hidden until upcoming full upgrade */}
         <Route path="/canvas" element={<Navigate to="/drive" replace />} />
         <Route path="/canvas/*" element={<Navigate to="/drive" replace />} />
+        <Route path="/matrix" element={<MatrixStudioPage />} />
+        <Route path="/matrix-studio" element={<MatrixStudioPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
