@@ -7,8 +7,7 @@ export interface QualityOption {
   id: PreviewQuality;
   label: string;
   badge: string;
-  resLabel: string;
-  maxDim: number;
+  scale: number;
   jpegQuality: number;
   desc: string;
 }
@@ -16,57 +15,51 @@ export interface QualityOption {
 export const QUALITY_OPTIONS: QualityOption[] = [
   {
     id: 'original',
-    label: 'Original Source (100%)',
-    badge: 'RAW',
-    resLabel: 'Native Source',
-    maxDim: 99999,
+    label: 'Original (100% Master)',
+    badge: '100% RAW',
+    scale: 1.0,
     jpegQuality: 1.0,
-    desc: 'Uncompressed pixel-perfect native quality',
+    desc: 'Uncompressed raw native source',
   },
   {
     id: '4k',
-    label: 'Ultra HD 4K (2160p)',
-    badge: '4K',
-    resLabel: '3840 × 2160',
-    maxDim: 3840,
-    jpegQuality: 0.95,
-    desc: 'Ultra high density, cinema clarity',
+    label: 'Ultra High (85% Ultra)',
+    badge: '85% Ultra',
+    scale: 0.85,
+    jpegQuality: 0.92,
+    desc: 'Cinema sharpness & high density',
   },
   {
     id: '1080p',
-    label: 'Full HD (1080p)',
-    badge: '1080p',
-    resLabel: '1920 × 1080',
-    maxDim: 1920,
-    jpegQuality: 0.85,
-    desc: 'Crisp, crystal clear & balanced',
+    label: 'High (70% 1080p)',
+    badge: '70% High',
+    scale: 0.70,
+    jpegQuality: 0.80,
+    desc: 'Crisp Full HD streaming',
   },
   {
     id: '720p',
-    label: 'Standard HD (720p)',
-    badge: '720p',
-    resLabel: '1280 × 720',
-    maxDim: 1280,
-    jpegQuality: 0.75,
-    desc: 'Fast loading & smooth streaming',
+    label: 'Medium (50% 720p)',
+    badge: '50% Med',
+    scale: 0.50,
+    jpegQuality: 0.60,
+    desc: 'Balanced streaming & data saver',
   },
   {
     id: '480p',
-    label: 'Standard (480p)',
-    badge: '480p',
-    resLabel: '854 × 480',
-    maxDim: 854,
-    jpegQuality: 0.60,
-    desc: 'Data saver & quick preview',
+    label: 'Low (35% 480p)',
+    badge: '35% Low',
+    scale: 0.35,
+    jpegQuality: 0.40,
+    desc: 'Low bandwidth, noticeable compression',
   },
   {
     id: '360p',
-    label: 'Eco Potato (360p)',
-    badge: '360p',
-    resLabel: '640 × 360',
-    maxDim: 640,
-    jpegQuality: 0.40,
-    desc: 'Ultra potato low-memory boost (<15MB RAM)',
+    label: 'Ultra Potato (18% Eco)',
+    badge: '18% Potato',
+    scale: 0.18,
+    jpegQuality: 0.18,
+    desc: 'Ultra low RAM (<10MB), pixelated turbo',
   },
 ];
 
