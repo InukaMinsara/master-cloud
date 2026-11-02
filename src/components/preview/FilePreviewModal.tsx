@@ -21,9 +21,10 @@ import {
   Sparkles,
   Layers,
   Zap,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { VgpuService } from '@/services/vgpuService';
-import { usePreviewStore } from '@/stores/previewStore';
+import { usePreviewStore, PreviewQuality, QUALITY_OPTIONS } from '@/stores/previewStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,19 +32,43 @@ import { formatBytes, formatDateRelative, getFileCategory } from '@/lib/utils';
 import { api } from '@/services/api';
 import { TelegramCloudService } from '@/services/telegramCloudService';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown';
 
 export function FilePreviewModal() {
   const navigate = useNavigate();
-  const { activeFile, isOpen, closePreview, nextFile, prevFile, fileList } = usePreviewStore();
+  const {
+    activeFile,
+    isOpen,
+    closePreview,
+    nextFile,
+    prevFile,
+    fileList,
+    previewQuality,
+    setPreviewQuality,
+  } = usePreviewStore();
   const { setShareModalItem } = useUIStore();
 
   const [blobUrl, setBlobUrl] = React.useState<string | null>(null);
+  const [displayImageUrl, setDisplayImageUrl] = React.useState<string | null>(null);
+  const [scaledDims, setScaledDims] = React.useState<{
+    width: number;
+    height: number;
+    origWidth: number;
+    origHeight: number;
+  } | null>(null);
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [zoom, setZoom] = React.useState(1);
   const [rotation, setRotation] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isCopied, setIsCopied] = React.useState(false);
   const [mediaError, setMediaError] = React.useState(false);
+  const [playbackRate, setPlaybackRate] = React.useState<number>(1);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   const handleMediaError = async () => {
     if (activeFile && !mediaError) {
@@ -202,6 +227,115 @@ export function FilePreviewModal() {
   const category = activeFile ? getFileCategory(activeFile.mime_type, activeFile.extension) : 'other';
   const currentIndex = activeFile ? fileList.findIndex((f) => f.id === activeFile.id) : -1;
 
+  // Handle Dynamic Image Resolution Scaling & Canvas Quality Adaptation
+  React.useEffect(() => {
+    if (!blobUrl || category !== 'image') {
+      setDisplayImageUrl(blobUrl);
+      setScaledDims(null);
+      return;
+    }
+
+    if (previewQuality === 'original') {
+      setDisplayImageUrl(blobUrl);
+      const img = new Image();
+      img.src = blobUrl;
+      img.onload = () => {
+        setScaledDims({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          origWidth: img.naturalWidth,
+          origHeight: img.naturalHeight,
+        });
+      };
+      return;
+    }
+
+    let active = true;
+    let generatedObjectUrl: string | null = null;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      if (!active) return;
+      const opt = QUALITY_OPTIONS.find((q) => q.id === previewQuality) || QUALITY_OPTIONS[0];
+      const origW = img.naturalWidth;
+      const origH = img.naturalHeight;
+      let targetW = origW;
+      let targetH = origH;
+
+      if (targetW > opt.maxDim || targetH > opt.maxDim) {
+        if (targetW >= targetH) {
+          targetH = Math.max(1, Math.round((targetH * opt.maxDim) / targetW));
+          targetW = opt.maxDim;
+        } else {
+          targetW = Math.max(1, Math.round((targetW * opt.maxDim) / targetH));
+          targetH = opt.maxDim;
+        }
+      }
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = previewQuality !== '360p';
+          ctx.imageSmoothingQuality = previewQuality === '360p' ? 'low' : 'high';
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+          canvas.toBlob(
+            (blob) => {
+              if (!active || !blob) return;
+              generatedObjectUrl = URL.createObjectURL(blob);
+              setDisplayImageUrl(generatedObjectUrl);
+              setScaledDims({
+                width: targetW,
+                height: targetH,
+                origWidth: origW,
+                origHeight: origH,
+              });
+            },
+            'image/jpeg',
+            opt.jpegQuality
+          );
+        }
+      } catch (err) {
+        console.warn('Canvas scaling fallback to original:', err);
+        if (active) setDisplayImageUrl(blobUrl);
+      }
+    };
+
+    img.onerror = () => {
+      if (active) setDisplayImageUrl(blobUrl);
+    };
+
+    img.src = blobUrl;
+
+    return () => {
+      active = false;
+      if (generatedObjectUrl) {
+        URL.revokeObjectURL(generatedObjectUrl);
+      }
+    };
+  }, [blobUrl, previewQuality, category]);
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackRate(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+    toast.success(`Video speed set to ${speed}x`);
+  };
+
+  const handleQualityChange = (q: PreviewQuality) => {
+    setPreviewQuality(q);
+    const opt = QUALITY_OPTIONS.find((o) => o.id === q);
+    if (opt) {
+      toast.success(`Preview quality: ${opt.label}`);
+    }
+  };
+
+  const currentQualityOption = QUALITY_OPTIONS.find((q) => q.id === previewQuality) || QUALITY_OPTIONS[0];
+
   const handleDownload = async () => {
     if (activeFile) await api.downloadFile(activeFile);
   };
@@ -284,6 +418,43 @@ export function FilePreviewModal() {
             </>
           )}
 
+          {(category === 'image' || category === 'video') && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="cursor-pointer">
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all shadow-sm"
+                  title="Change preview resolution and quality"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline text-white/70">Quality:</span>
+                  <span className="text-cyan-300 font-bold">{currentQualityOption.badge}</span>
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="right" className="min-w-[240px] bg-zinc-900/95 border-white/15 text-white">
+                <div className="px-2.5 py-1.5 text-[10px] font-bold text-white/50 uppercase tracking-wider">
+                  Select {category === 'image' ? 'Image' : 'Video'} Quality
+                </div>
+                {QUALITY_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.id}
+                    onClick={() => handleQualityChange(opt.id)}
+                    className={`flex items-center justify-between py-2 text-xs cursor-pointer ${
+                      previewQuality === opt.id
+                        ? 'bg-cyan-500/20 text-cyan-300 font-bold'
+                        : 'text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex flex-col text-left">
+                      <span className="font-semibold">{opt.label}</span>
+                      <span className="text-[10px] text-white/50">{opt.desc}</span>
+                    </div>
+                    {previewQuality === opt.id && <Check className="h-4 w-4 text-cyan-400 ml-2 shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
 
           <Button
             variant="outline"
@@ -342,23 +513,58 @@ export function FilePreviewModal() {
             <span className="text-xs text-white/70 font-medium">Fetching real asset preview...</span>
           </div>
         ) : category === 'image' ? (
-          /* ── 1. IMAGE VIEWER ── */
-          <div className="overflow-auto max-h-full max-w-full flex items-center justify-center">
-            {blobUrl ? (
-              <img
-                src={blobUrl}
-                alt={activeFile.name}
-                loading="eager"
-                decoding="async"
-                onError={handleMediaError}
-                className="max-h-[80vh] max-w-[85vw] object-contain rounded-xl shadow-2xl transition-transform duration-200"
-                style={{
-                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                }}
-              />
-            ) : (
-              <div className="p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
-                <span className="text-white/60 text-sm">Image preview unavailable</span>
+          /* ── 1. IMAGE VIEWER WITH LIVE QUALITY SELECTOR ── */
+          <div className="relative flex flex-col items-center justify-center max-h-full max-w-full">
+            <div className="overflow-auto max-h-[72vh] max-w-[85vw] flex items-center justify-center">
+              {displayImageUrl ? (
+                <img
+                  src={displayImageUrl}
+                  alt={activeFile.name}
+                  loading="eager"
+                  decoding="async"
+                  onError={handleMediaError}
+                  className="max-h-[72vh] max-w-[85vw] object-contain rounded-xl shadow-2xl transition-all duration-200"
+                  style={{
+                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                    imageRendering: previewQuality === '360p' ? 'pixelated' : 'auto',
+                  }}
+                />
+              ) : (
+                <div className="p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
+                  <span className="text-white/60 text-sm">Image preview unavailable</span>
+                </div>
+              )}
+            </div>
+
+            {/* Floating Live Quality Bar for Instant 1-Click Selection */}
+            {displayImageUrl && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-black/85 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl z-20">
+                <div className="flex items-center gap-1.5 px-2 text-[11px] font-bold text-white/60">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline">Quality:</span>
+                </div>
+                {QUALITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleQualityChange(opt.id)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                      previewQuality === opt.id
+                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 scale-105'
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                    title={`${opt.label} - ${opt.desc}`}
+                  >
+                    {opt.badge}
+                  </button>
+                ))}
+                {scaledDims && (
+                  <div className="text-[10px] text-cyan-300/90 font-mono px-2 py-0.5 rounded-lg bg-cyan-950/40 border border-cyan-800/30 hidden sm:inline-flex items-center gap-1">
+                    <span>{scaledDims.width} × {scaledDims.height}</span>
+                    {scaledDims.origWidth !== scaledDims.width && (
+                      <span className="text-white/40">({Math.round((scaledDims.width / scaledDims.origWidth) * 100)}%)</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -372,30 +578,100 @@ export function FilePreviewModal() {
             />
           </div>
         ) : category === 'video' ? (
-          /* ── 3. VIDEO VIEWER ── */
-          <div className="w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10">
-            {blobUrl ? (
-              <video
-                src={blobUrl}
-                controls
-                autoPlay
-                playsInline
-                preload="auto"
-                onError={handleMediaError}
-                className="h-full w-full object-contain"
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-4 text-center p-8 bg-white/5 rounded-3xl max-w-md border border-white/10">
-                <div className="h-16 w-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                  <VideoIcon className="h-8 w-8" />
+          /* ── 3. VIDEO VIEWER WITH QUALITY & SPEED SELECTOR ── */
+          <div className="relative flex flex-col items-center justify-center max-w-full">
+            <div
+              className={`aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10 transition-all duration-300 ${
+                previewQuality === '360p'
+                  ? 'w-full max-w-xl max-h-[360px]'
+                  : previewQuality === '480p'
+                  ? 'w-full max-w-2xl max-h-[480px]'
+                  : previewQuality === '720p'
+                  ? 'w-full max-w-4xl max-h-[620px]'
+                  : 'w-full max-w-5xl max-h-[72vh]'
+              }`}
+            >
+              {blobUrl ? (
+                <video
+                  ref={videoRef}
+                  src={blobUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="auto"
+                  onError={handleMediaError}
+                  className="h-full w-full object-contain"
+                  style={{
+                    imageRendering: previewQuality === '360p' ? 'pixelated' : 'auto',
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-4 text-center p-8 bg-white/5 rounded-3xl max-w-md border border-white/10">
+                  <div className="h-16 w-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <VideoIcon className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-white">{activeFile.name}</h4>
+                    <p className="text-xs text-white/60 mt-1">High-definition video ready for playback & download.</p>
+                  </div>
+                  <Button variant="default" onClick={handleDownload} className="rounded-xl text-xs gap-1.5">
+                    <Download className="h-3.5 w-3.5" /> Download Video ({formatBytes(activeFile.size_bytes)})
+                  </Button>
                 </div>
-                <div>
-                  <h4 className="text-base font-bold text-white">{activeFile.name}</h4>
-                  <p className="text-xs text-white/60 mt-1">High-definition video ready for playback & download.</p>
+              )}
+            </div>
+
+            {/* Video Quality & Playback Speed Floating Control Bar */}
+            {blobUrl && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 p-1.5 bg-black/85 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl z-20">
+                {/* Quality Switcher */}
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 px-2 text-[11px] font-bold text-white/60">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>Quality:</span>
+                  </div>
+                  {QUALITY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleQualityChange(opt.id)}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                        previewQuality === opt.id
+                          ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 scale-105'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                      title={`${opt.label} - ${opt.desc}`}
+                    >
+                      {opt.badge}
+                    </button>
+                  ))}
                 </div>
-                <Button variant="default" onClick={handleDownload} className="rounded-xl text-xs gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> Download Video ({formatBytes(activeFile.size_bytes)})
-                </Button>
+
+                <div className="h-4 w-px bg-white/20 hidden md:block" />
+
+                {/* Speed Selector */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-bold text-white/60 px-1.5">Speed:</span>
+                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSpeedChange(s)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                        playbackRate === s
+                          ? 'bg-purple-500 text-white shadow-sm'
+                          : 'text-white/60 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+
+                <div className="h-4 w-px bg-white/20 hidden lg:block" />
+
+                <div className="text-[10px] font-bold text-cyan-300 px-2 py-0.5 rounded-lg bg-cyan-950/40 border border-cyan-800/30 hidden lg:flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-cyan-400" />
+                  <span>vGPU H.264 Acceleration</span>
+                </div>
               </div>
             )}
           </div>

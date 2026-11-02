@@ -26,9 +26,11 @@ import { formatBytes } from '@/lib/utils';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { QuantumVgpuHub } from '@/components/QuantumVgpuHub';
+import { usePreviewStore, QUALITY_OPTIONS, PreviewQuality } from '@/stores/previewStore';
 
 export function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
+  const { previewQuality, setPreviewQuality } = usePreviewStore();
   const {
     theme,
     setTheme,
@@ -334,6 +336,39 @@ export function SettingsPage() {
                   >
                     System
                   </button>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-border/60">
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Default Media Preview Quality (Image & Video)</label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Select your preferred resolution and quality for media previews. You can also change this on-the-fly directly inside the preview modal.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {QUALITY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setPreviewQuality(opt.id);
+                        toast.success(`Default preview quality set to: ${opt.label}`);
+                      }}
+                      className={`p-3 rounded-2xl border text-left text-xs transition-all ${
+                        previewQuality === opt.id
+                          ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm shadow-primary/10'
+                          : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-foreground text-xs">{opt.badge}</span>
+                        {previewQuality === opt.id && <span className="h-2 w-2 rounded-full bg-primary" />}
+                      </div>
+                      <div className="font-semibold text-foreground text-[11px] mt-1 truncate">{opt.label}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{opt.desc}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
