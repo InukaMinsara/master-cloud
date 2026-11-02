@@ -20,7 +20,9 @@ import {
   Code,
   Sparkles,
   Layers,
+  Zap,
 } from 'lucide-react';
+import { VgpuService } from '@/services/vgpuService';
 import { usePreviewStore } from '@/stores/previewStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/ui/button';
@@ -83,6 +85,7 @@ export function FilePreviewModal() {
 
     const loadData = async () => {
       try {
+        VgpuService.acceleratePreview(activeFile);
         const category = getFileCategory(activeFile.mime_type, activeFile.extension);
         const ext = activeFile.extension.toLowerCase();
 
@@ -242,6 +245,9 @@ export function FilePreviewModal() {
           </Badge>
           <span className="text-xs text-white/50 hidden sm:inline">
             ({formatBytes(activeFile.size_bytes)})
+          </span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hidden sm:inline-flex items-center gap-1">
+            <Zap className="w-2.5 h-2.5" /> 50x vGPU
           </span>
           {fileList.length > 1 && (
             <span className="text-xs text-white/40 hidden md:inline">

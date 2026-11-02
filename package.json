@@ -16,7 +16,9 @@
     "package:zip": "node scripts/build-deployment-package.mjs",
     "preview": "vite preview",
     "desktop:start": "electron desktop/main.cjs",
-    "desktop:build": "node scripts/build-desktop.mjs"
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "vgpu:start": "node scripts/master-50x-vgpu.mjs",
+    "vgpu:install": "node scripts/master-50x-vgpu.mjs --install"
   },
   "main": "desktop/main.cjs",
   "dependencies": {

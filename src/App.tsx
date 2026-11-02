@@ -34,6 +34,7 @@ import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { OfflineCenterPage } from '@/pages/OfflineCenterPage';
 import { SecurityCenterPage } from '@/pages/SecurityCenterPage';
 import { DiagnosticsPage } from '@/pages/DiagnosticsPage';
+import { QuantumVgpuPage } from '@/pages/QuantumVgpuPage';
 
 
 // Standalone Shared & Auth Pages
@@ -121,6 +122,7 @@ export function App() {
         <Route path="/canvas/*" element={<Navigate to="/drive" replace />} />
 
 
+        <Route path="/quantum-vgpu" element={<QuantumVgpuPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
