@@ -40,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { FileCard } from '@/components/files/FileCard';
 import { FolderCard } from '@/components/files/FolderCard';
+import { QuantumVgpuHub } from '@/components/QuantumVgpuHub';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export function DashboardPage() {
   const { setNewFolderModalOpen } = useUIStore();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'starred' | 'shared' | 'storage'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'starred' | 'shared' | 'storage' | 'vgpu'>('recent');
 
   const [breakdown, setBreakdown] = useState(() => api.getStorageBreakdown());
   const totalQuota = breakdown.totalQuota;
@@ -332,6 +333,15 @@ export function DashboardPage() {
               <PieChart className="h-3.5 w-3.5 inline-block mr-1.5" />
               Storage Analytics
             </button>
+            <button
+              onClick={() => setActiveTab('vgpu')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                activeTab === 'vgpu' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5 inline-block mr-1.5 text-cyan-400" />
+              Quantum 50x vGPU
+            </button>
           </div>
 
           <Link to="/drive" className="text-xs font-bold text-primary hover:underline">
@@ -432,6 +442,12 @@ export function DashboardPage() {
                 <p className="text-sm font-black text-foreground">{formatBytes(breakdown.trashBytes)}</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'vgpu' && (
+          <div className="pt-2 animate-in fade-in">
+            <QuantumVgpuHub />
           </div>
         )}
       </div>

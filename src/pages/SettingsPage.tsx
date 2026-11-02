@@ -25,6 +25,7 @@ import { api } from '@/services/api';
 import { formatBytes } from '@/lib/utils';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { QuantumVgpuHub } from '@/components/QuantumVgpuHub';
 
 export function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -108,10 +109,11 @@ export function SettingsPage() {
     { id: 'security', label: 'Security & Auth', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'plan', label: '10 TB Cloud Plan', icon: HardDrive },
+    { id: 'vgpu', label: 'Quantum 50x vGPU', icon: Zap },
   ];
 
   // Safeguard against outdated active tab keys
-  const currentTab = ['account', 'security', 'appearance', 'plan'].includes(activeSettingsTab)
+  const currentTab = ['account', 'security', 'appearance', 'plan', 'vgpu'].includes(activeSettingsTab)
     ? activeSettingsTab
     : 'account';
 
@@ -441,6 +443,12 @@ export function SettingsPage() {
                   Smart Cleanup Optimizer
                 </Button>
               </div>
+            </div>
+          )}
+
+          {currentTab === 'vgpu' && (
+            <div className="space-y-4 animate-in fade-in">
+              <QuantumVgpuHub />
             </div>
           )}
         </div>
