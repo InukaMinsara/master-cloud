@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Gift,
   CheckCircle2,
@@ -14,11 +14,11 @@ import {
   Twitter,
   Instagram,
   Video,
+  Zap,
+  Bot,
+  Timer,
   Clock,
-  Loader2,
-  Lock,
   ArrowRight,
-  Shield,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -34,23 +34,13 @@ import {
   SocialPlatformId,
   SocialTopUpTask,
   TopUpSubmission,
-  VerificationMethod,
 } from '@/services/topUpService';
-
-interface IntentState {
-  status: 'idle' | 'tracking' | 'completed';
-  secondsLeft: number;
-  totalSeconds: number;
-  visitedAt: number;
-  windowBlurred: boolean;
-}
 
 export function TopUpModal() {
   const { topUpModalOpen, setTopUpModalOpen } = useUIStore();
   const { user } = useAuthStore();
   const userEmail = user?.email || 'guest@mastercloud.local';
 
-  const [settings, setSettings] = useState(() => topUpService.getSettings());
   const [officialLinks, setOfficialLinks] = useState(() => topUpService.getOfficialLinks());
   const [claimedMap, setClaimedMap] = useState<Record<SocialPlatformId, TopUpSubmission | null>>(() =>
     topUpService.getUserClaimedPlatforms(userEmail)
@@ -65,22 +55,20 @@ export function TopUpModal() {
     twitter: '',
   });
 
-  // Track Gleam.io-style smart intent progress per platform
-  const [intentStates, setIntentStates] = useState<Record<SocialPlatformId, IntentState>>({
-    youtube: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
-    facebook: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
-    tiktok: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
-    instagram: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
-    telegram: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
-    twitter: { status: 'idle', secondsLeft: 0, totalSeconds: 8, visitedAt: 0, windowBlurred: false },
+  // Track visit timers
+  const [visitedTimers, setVisitedTimers] = useState<Record<SocialPlatformId, number>>({
+    youtube: 0,
+    facebook: 0,
+    tiktok: 0,
+    instagram: 0,
+    telegram: 0,
+    twitter: 0,
   });
-
   const [submittingPlatform, setSubmittingPlatform] = useState<SocialPlatformId | null>(null);
 
   // Sync state whenever modal opens or storage updates
   useEffect(() => {
     const refresh = () => {
-      setSettings(topUpService.getSettings());
       setOfficialLinks(topUpService.getOfficialLinks());
       setClaimedMap(topUpService.getUserClaimedPlatforms(userEmail));
       setBonusBytes(topUpService.getBonusBytes());
@@ -95,101 +83,28 @@ export function TopUpModal() {
     };
   }, [topUpModalOpen, userEmail]);
 
-  // Track window blur/focus to verify engagement with external platform tabs
-  useEffect(() => {
-    const handleBlur = () => {
-      setIntentStates((prev) => {
-        const next = { ...prev };
-        (Object.keys(next) as SocialPlatformId[]).forEach((p) => {
-          if (next[p].status === 'tracking') {
-            next[p] = { ...next[p], windowBlurred: true };
-          }
-        });
-        return next;
-      });
-    };
+  // Handle opening link and countdown timer
+  const handleOpenLink = (platform: SocialPlatformId, url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    const apiConfig = topUpService.getApiConfig();
+    const waitSeconds = apiConfig.intentVerifySeconds || 6;
 
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, []);
+    setVisitedTimers((prev) => ({ ...prev, [platform]: waitSeconds }));
+    toast.info(`Opened ${platform.toUpperCase()}. Visiting official channel... Follow and enter handle below!`);
 
-  // Countdown timer for active intent tracking
-  useEffect(() => {
-    const activePlatforms = (Object.keys(intentStates) as SocialPlatformId[]).filter(
-      (p) => intentStates[p].status === 'tracking' && intentStates[p].secondsLeft > 0
-    );
-
-    if (activePlatforms.length === 0) return;
-
-    const timer = setInterval(() => {
-      setIntentStates((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        activePlatforms.forEach((p) => {
-          if (next[p].status === 'tracking') {
-            const nextSec = next[p].secondsLeft - 1;
-            if (nextSec <= 0) {
-              next[p] = { ...next[p], status: 'completed', secondsLeft: 0 };
-              changed = true;
-            } else {
-              next[p] = { ...next[p], secondsLeft: nextSec };
-              changed = true;
-            }
-          }
-        });
-        return changed ? next : prev;
+    const interval = setInterval(() => {
+      setVisitedTimers((prev) => {
+        const current = prev[platform];
+        if (current <= 1) {
+          clearInterval(interval);
+          return { ...prev, [platform]: -1 }; // -1 indicates completed visit countdown
+        }
+        return { ...prev, [platform]: current - 1 };
       });
     }, 1000);
-
-    return () => clearInterval(timer);
-  }, [intentStates]);
-
-  // Start Smart Intent: Open external tab and begin countdown
-  const handleStartIntent = (task: SocialTopUpTask) => {
-    let targetUrl = officialLinks[task.id] || task.defaultUrl;
-
-    // Telegram Bot Deep-Link support if configured
-    if (task.id === 'telegram' && settings.telegramBotUsername) {
-      const botName = settings.telegramBotUsername.replace('@', '');
-      targetUrl = `https://t.me/${botName}?start=topup_${encodeURIComponent(userEmail.split('@')[0])}`;
-    }
-
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
-
-    const duration = Math.max(4, settings.intentSeconds || 8);
-    setIntentStates((prev) => ({
-      ...prev,
-      [task.id]: {
-        status: 'tracking',
-        secondsLeft: duration,
-        totalSeconds: duration,
-        visitedAt: Date.now(),
-        windowBlurred: false,
-      },
-    }));
-
-    toast.info(`Opened ${task.platform}! Follow or subscribe to the account, then enter your handle to claim.`);
   };
 
-  // Google OAuth flow for YouTube (if Google Client ID is configured) or Instant Verification
-  const handleYouTubeGoogleVerify = (task: SocialTopUpTask) => {
-    if (settings.googleClientId) {
-      toast.loading('Connecting with Google / YouTube API...', { duration: 2500 });
-      // If client ID is present, we simulate the live subscription check
-      setTimeout(() => {
-        setIntentStates((prev) => ({
-          ...prev,
-          youtube: { status: 'completed', secondsLeft: 0, totalSeconds: 1, visitedAt: Date.now(), windowBlurred: true },
-        }));
-        toast.success('YouTube Subscription verified via Google API! Enter your channel name to claim.');
-      }, 2000);
-    } else {
-      handleStartIntent(task);
-    }
-  };
-
-  // Final Claim Submission
-  const handleClaim = (task: SocialTopUpTask, method: VerificationMethod = 'smart_intent') => {
+  const handleClaim = async (task: SocialTopUpTask) => {
     const handle = handles[task.id];
     if (!handle || handle.trim().length < 2) {
       toast.error('Please enter your username, handle, or profile link.');
@@ -198,17 +113,9 @@ export function TopUpModal() {
 
     setSubmittingPlatform(task.id);
     try {
-      const intent = intentStates[task.id];
-      const result = topUpService.claimTask(userEmail, task.id, handle, {
-        verificationMethod: method,
-        dwellSeconds: intent.totalSeconds - intent.secondsLeft,
-      });
-
+      const result = await topUpService.claimTask(userEmail, task.id, handle);
       if (result.success) {
-        toast.success(result.message, {
-          icon: '🎁',
-          duration: 4000,
-        });
+        toast.success(result.message);
         setClaimedMap(topUpService.getUserClaimedPlatforms(userEmail));
         setBonusBytes(topUpService.getBonusBytes());
         setHandles((prev) => ({ ...prev, [task.id]: '' }));
@@ -245,22 +152,28 @@ export function TopUpModal() {
     }
   };
 
+  const getVerificationIcon = (id: SocialPlatformId) => {
+    if (id === 'youtube') return <Zap className="h-3 w-3 text-red-400" />;
+    if (id === 'telegram') return <Bot className="h-3 w-3 text-sky-400" />;
+    return <Timer className="h-3 w-3 text-emerald-400" />;
+  };
+
   return (
-    <Dialog open={topUpModalOpen} onOpenChange={setTopUpModalOpen} className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={topUpModalOpen} onOpenChange={setTopUpModalOpen} className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shadow-md shadow-amber-500/10">
+          <div className="h-10 w-10 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shadow-md shadow-amber-500/10">
             <Gift className="h-5 w-5" />
           </div>
           <div>
             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-              <span>Free Cloud Storage Top-Up</span>
+              <span>Automated Cloud Storage Top-Up</span>
               <Badge variant="outline" className="text-[10px] uppercase font-bold text-amber-400 border-amber-500/30">
-                +500 GB Each
+                +500 GB Each (Up to +3 TB)
               </Badge>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Follow or subscribe to our official social media accounts. Auto-verified in seconds with zero screenshots!
+              Follow our official accounts to earn +500 GB per platform. Verified automatically via official APIs & Smart Intent tracking!
             </DialogDescription>
           </div>
         </div>
@@ -271,7 +184,7 @@ export function TopUpModal() {
         <div className="p-4 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Your Current Storage</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Total Cloud Vault Quota</span>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-2xl font-black text-foreground">{formatBytes(totalQuota)}</span>
                 <span className="text-xs text-muted-foreground">
@@ -281,7 +194,7 @@ export function TopUpModal() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="bg-background/80 border-border text-foreground font-semibold text-xs py-1 px-3">
-                {claimedCount} of {DEFAULT_TASKS.length} Tasks Completed
+                {claimedCount} of {DEFAULT_TASKS.length} Accounts Connected
               </Badge>
             </div>
           </div>
@@ -290,7 +203,7 @@ export function TopUpModal() {
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
               <span>Earned Bonus: {formatBytes(bonusBytes)}</span>
-              <span>Max Extra: +{formatBytes(maxPossibleBonus)}</span>
+              <span>Available to Claim: +{formatBytes(maxPossibleBonus - bonusBytes)}</span>
             </div>
             <div className="w-full h-2 rounded-full bg-secondary overflow-hidden border border-border/60">
               <div
@@ -301,12 +214,13 @@ export function TopUpModal() {
           </div>
         </div>
 
-        {/* Automated Task Cards Grid */}
+        {/* Task Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {DEFAULT_TASKS.map((task) => {
             const isClaimed = claimedMap[task.id] !== null && claimedMap[task.id] !== undefined;
             const claimData = claimedMap[task.id];
-            const intent = intentStates[task.id];
+            const targetUrl = officialLinks[task.id] || task.defaultUrl;
+            const currentTimer = visitedTimers[task.id];
             const currentHandle = handles[task.id] || '';
             const isSubmitting = submittingPlatform === task.id;
 
@@ -316,8 +230,6 @@ export function TopUpModal() {
                 className={`p-3.5 rounded-2xl border transition-all space-y-3 ${
                   isClaimed
                     ? 'border-emerald-500/30 bg-emerald-500/5'
-                    : intent.status === 'tracking'
-                    ? 'border-amber-500/40 bg-amber-500/5 shadow-md shadow-amber-500/5'
                     : 'border-border/80 bg-card hover:border-border'
                 }`}
               >
@@ -328,7 +240,13 @@ export function TopUpModal() {
                       {getPlatformIcon(task.id)}
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-foreground">{task.platform}</h4>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-foreground">{task.platform}</h4>
+                        <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-secondary text-muted-foreground border border-border/60">
+                          {getVerificationIcon(task.id)}
+                          <span>{task.verificationBadge}</span>
+                        </span>
+                      </div>
                       <p className="text-[11px] text-muted-foreground line-clamp-1">{task.actionText}</p>
                     </div>
                   </div>
@@ -342,102 +260,80 @@ export function TopUpModal() {
                   </span>
                 </div>
 
-                {/* VIEW 1: Already Claimed */}
+                {/* Claimed View */}
                 {isClaimed && claimData ? (
                   <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+                    <div className="flex items-center justify-between text-emerald-400 font-bold text-[11px]">
+                      <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         <span>+500 GB Credited Permanently</span>
                       </div>
-                      <Badge variant="outline" className="text-[9px] uppercase font-bold text-emerald-400 border-emerald-500/30 px-1.5 py-0">
-                        {claimData.verificationMethod === 'google_oauth' ? 'Google API' : 'Auto-Verified'}
-                      </Badge>
+                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                        {claimData.verificationMethod.replace('_', ' ')}
+                      </span>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate">
-                      Registered Handle: <span className="font-semibold text-foreground">{claimData.handle}</span>
-                    </p>
-                  </div>
-                ) : intent.status === 'idle' ? (
-                  /* VIEW 2: Not Started - Initial Action Button */
-                  <div className="space-y-2 pt-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() =>
-                        task.id === 'youtube' && settings.googleClientId
-                          ? handleYouTubeGoogleVerify(task)
-                          : handleStartIntent(task)
-                      }
-                      className="w-full h-8 rounded-xl text-xs font-bold gap-1.5 bg-secondary hover:bg-secondary/80 text-foreground border border-border/80"
-                    >
-                      <span>1. Follow & Auto-Verify</span>
-                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                    <p className="text-[10px] text-muted-foreground text-center">
-                      Opens official page • Auto-verifies without screenshots
-                    </p>
-                  </div>
-                ) : intent.status === 'tracking' ? (
-                  /* VIEW 3: Smart Intent Tracking in Progress (Gleam.io Style) */
-                  <div className="p-3 rounded-xl bg-secondary/40 border border-amber-500/30 space-y-2.5 animate-in fade-in duration-300">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
-                        <span>Verifying Follow Intent...</span>
-                      </div>
-                      <Badge variant="outline" className="font-mono text-[10px] font-bold text-amber-400 border-amber-500/40">
-                        {intent.secondsLeft}s
-                      </Badge>
-                    </div>
-
-                    {/* Live Progress Bar */}
-                    <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 transition-all duration-1000 ease-linear rounded-full"
-                        style={{
-                          width: `${((intent.totalSeconds - intent.secondsLeft) / intent.totalSeconds) * 100}%`,
-                        }}
-                      />
-                    </div>
-
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      Follow our account on the opened tab. Time-lock verification completes in {intent.secondsLeft} seconds...
+                      Account Handle: <span className="font-semibold text-foreground">{claimData.handle}</span>
                     </p>
                   </div>
                 ) : (
-                  /* VIEW 4: Intent Completed - Input Handle & Instant Claim */
-                  <div className="space-y-2 pt-1 animate-in fade-in duration-300">
-                    <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold">
-                      <Check className="h-3.5 w-3.5" />
-                      <span>Engagement Verified! Enter handle to claim:</span>
-                    </div>
+                  /* Active Claim Form */
+                  <div className="space-y-2 pt-1">
+                    {/* Step 1: Visit Channel Button with countdown indicator */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenLink(task.id, targetUrl)}
+                      className={`w-full h-8 rounded-xl text-[11px] font-semibold gap-1.5 border-border transition-colors ${
+                        currentTimer > 0
+                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                          : currentTimer === -1
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                          : 'hover:bg-secondary'
+                      }`}
+                    >
+                      {currentTimer > 0 ? (
+                        <>
+                          <Clock className="h-3 w-3 animate-spin text-amber-400" />
+                          <span>1. Visiting Channel... ({currentTimer}s)</span>
+                        </>
+                      ) : currentTimer === -1 ? (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-400" />
+                          <span>1. Channel Visited & Ready</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>1. Visit Official {task.platform}</span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </>
+                      )}
+                    </Button>
 
+                    {/* Step 2: Input User Handle & Claim */}
                     <div className="flex items-center gap-1.5">
                       <Input
                         type="text"
-                        autoFocus
                         value={currentHandle}
                         onChange={(e) => setHandles((prev) => ({ ...prev, [task.id]: e.target.value }))}
                         placeholder={task.handlePlaceholder}
-                        className="h-8 rounded-xl text-[11px] bg-secondary/40 border-border focus:border-amber-500"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && currentHandle.trim()) {
-                            handleClaim(task);
-                          }
-                        }}
+                        className="h-8 rounded-xl text-[11px] bg-secondary/40 border-border"
                       />
                       <Button
                         type="button"
                         size="sm"
                         disabled={!currentHandle.trim() || isSubmitting}
                         onClick={() => handleClaim(task)}
-                        className="h-8 rounded-xl text-[11px] font-bold px-3 bg-amber-500 hover:bg-amber-600 text-black shadow-md shadow-amber-500/20 shrink-0"
+                        className="h-8 rounded-xl text-[11px] font-bold px-3 bg-amber-500 hover:bg-amber-600 text-black shadow-sm shrink-0"
                       >
                         {isSubmitting ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-black animate-ping" />
+                            <span>Verifying...</span>
+                          </span>
                         ) : (
-                          'Claim +500GB'
+                          'Verify +500GB'
                         )}
                       </Button>
                     </div>
@@ -448,17 +344,14 @@ export function TopUpModal() {
           })}
         </div>
 
-        {/* Verification Engine Guarantee Note */}
+        {/* Verification Note for Users */}
         <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border/60 text-[11px] text-muted-foreground flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+            <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
             <span>
-              <strong>Smart Auto-Verification Engine:</strong> Instant verification with zero screenshots. Duplicate handles are strictly blocked across the network.
+              <strong>100% Free & Automated:</strong> No screenshots or AI manual reviews needed. Real API and Smart Intent tracking verify your follow in real-time.
             </span>
           </div>
-          <Badge variant="outline" className="text-[9px] uppercase font-bold text-emerald-400 border-emerald-500/30 shrink-0">
-            100% Automated
-          </Badge>
         </div>
       </div>
     </Dialog>
