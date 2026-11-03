@@ -2308,7 +2308,10 @@ class LocalDatabaseService {
       trashBytes += f.size_bytes;
     }
 
-    const totalQuota = FREE_TEN_TB_BYTES; // 10 TB FREE
+    const bonusBytes = typeof localStorage !== 'undefined'
+      ? Number(localStorage.getItem('mc_bonus_quota_bytes')) || 0
+      : 0;
+    const totalQuota = FREE_TEN_TB_BYTES + bonusBytes;
     const availableStorage = Math.max(0, totalQuota - usedStorage);
     const percentageUsed = Math.min(100, Number(((usedStorage / totalQuota) * 100).toFixed(2)));
     const fileCount = activeFiles.length;

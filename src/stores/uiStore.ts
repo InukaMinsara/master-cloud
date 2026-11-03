@@ -13,6 +13,7 @@ interface UIState {
   versionHistoryModalFile: FileItem | null;
   smartCleanupModalOpen: boolean;
   activeSettingsTab: string;
+  topUpModalOpen: boolean;
 
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
@@ -23,6 +24,7 @@ interface UIState {
   setVersionHistoryModalFile: (file: FileItem | null) => void;
   setSmartCleanupModalOpen: (open: boolean) => void;
   setActiveSettingsTab: (tab: string) => void;
+  setTopUpModalOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -35,6 +37,7 @@ export const useUIStore = create<UIState>((set) => ({
   versionHistoryModalFile: null,
   smartCleanupModalOpen: false,
   activeSettingsTab: 'account',
+  topUpModalOpen: false,
 
   setTheme: (theme) => {
     localStorage.setItem('mc_theme', theme);
@@ -55,4 +58,5 @@ export const useUIStore = create<UIState>((set) => ({
   setVersionHistoryModalFile: (file) => set({ versionHistoryModalFile: file }),
   setSmartCleanupModalOpen: (open) => set({ smartCleanupModalOpen: open }),
   setActiveSettingsTab: (tab) => set({ activeSettingsTab: tab }),
+  setTopUpModalOpen: (open) => set({ topUpModalOpen: open }),
 }));

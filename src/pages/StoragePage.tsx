@@ -21,6 +21,7 @@ import {
   ExternalLink,
   QrCode,
   Download,
+  Gift,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { formatBytes } from '@/lib/utils';
@@ -41,7 +42,7 @@ function AppleIcon({ className = 'h-5 w-5' }: { className?: string }) {
 }
 
 export function StoragePage() {
-  const { setSmartCleanupModalOpen } = useUIStore();
+  const { setSmartCleanupModalOpen, setTopUpModalOpen } = useUIStore();
   const [breakdown, setBreakdown] = React.useState(() => api.getStorageBreakdown());
   const [cleanupSuggestions, setCleanupSuggestions] = React.useState(() => api.getStorageCleanupSuggestions());
   const [copiedUrl, setCopiedUrl] = React.useState(false);
@@ -91,6 +92,14 @@ export function StoragePage() {
           </p>
         </div>
 
+        <Button
+          onClick={() => setTopUpModalOpen(true)}
+          size="sm"
+          className="rounded-xl text-xs font-bold gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black shadow-md shadow-amber-500/10 cursor-pointer"
+        >
+          <Gift className="h-4 w-4" />
+          Free Top Up (+500GB)
+        </Button>
         <Button
           onClick={() => setSmartCleanupModalOpen(true)}
           variant="gradient"

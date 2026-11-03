@@ -13,6 +13,7 @@ import { FileRequestDialog } from '@/components/sharing/FileRequestDialog';
 import { VersionHistoryDialog } from '@/components/versions/VersionHistoryDialog';
 import { SmartCleanupDialog } from '@/components/cleanup/SmartCleanupDialog';
 import { NewFolderModal } from '@/components/files/NewFolderModal';
+import { TopUpModal } from '@/components/topup/TopUpModal';
 import { Toaster } from 'sonner';
 import { useFileStore } from '@/stores/fileStore';
 import { ContextMenu } from '@/components/context-menu/ContextMenu';
@@ -56,6 +57,7 @@ export function AppLayout() {
       <VersionHistoryDialog />
       <SmartCleanupDialog />
       <NewFolderModal />
+      <TopUpModal />
 
       {/* Toast notifications */}
       <Toaster position="bottom-left" richColors closeButton />
