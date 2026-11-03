@@ -647,12 +647,22 @@ export function AdminPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Official Channel ID / Handle</label>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Official Channel 1 ID / Handle</label>
                       <input
                         type="text"
                         value={apiInputs.youtubeChannelId}
                         onChange={(e) => setApiInputs((prev) => ({ ...prev, youtubeChannelId: e.target.value }))}
                         placeholder="UC... or @MasterCloudOfficial"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Official Channel 2 ID / Handle (Optional)</label>
+                      <input
+                        type="text"
+                        value={apiInputs.youtubeChannelId2 || ''}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, youtubeChannelId2: e.target.value }))}
+                        placeholder="UC... or @MasterCloudSecond"
                         className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
