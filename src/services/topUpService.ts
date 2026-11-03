@@ -156,7 +156,7 @@ class TopUpService {
   // Get API automation configurations
   getApiConfig(): TopUpApiConfig {
     const defaults: TopUpApiConfig = {
-      youtubeApiKey: '',
+      youtubeApiKey: 'AIzaSyD1n-ja667zrn1hSDKhuV_g_7kdQ45VP5k',
       youtubeChannelId: '',
       youtubeChannelId2: '',
       telegramBotToken: '',
@@ -168,7 +168,13 @@ class TopUpService {
     if (typeof localStorage === 'undefined') return defaults;
     try {
       const saved = localStorage.getItem(this.STORAGE_KEY_API_CONFIG);
-      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+      if (!saved) return defaults;
+      const parsed = JSON.parse(saved);
+      return {
+        ...defaults,
+        ...parsed,
+        youtubeApiKey: parsed.youtubeApiKey || defaults.youtubeApiKey,
+      };
     } catch {
       return defaults;
     }
