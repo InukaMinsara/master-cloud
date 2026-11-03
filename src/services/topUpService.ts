@@ -4,6 +4,8 @@ export const FIVE_HUNDRED_GB_BYTES = 536870912000; // 500 GiB (536,870,912,000 b
 
 export type SocialPlatformId = 'youtube' | 'facebook' | 'tiktok' | 'instagram' | 'telegram' | 'twitter';
 
+export type VerificationMethod = 'smart_intent' | 'google_oauth' | 'telegram_bot' | 'manual';
+
 export interface SocialTopUpTask {
   id: SocialPlatformId;
   platform: string;
@@ -15,6 +17,8 @@ export interface SocialTopUpTask {
   brandColor: string;
   bgLight: string;
   badgeColor: string;
+  supportsGoogleOAuth?: boolean;
+  supportsTelegramBot?: boolean;
 }
 
 export interface TopUpSubmission {
@@ -27,6 +31,16 @@ export interface TopUpSubmission {
   rewardLabel: string;
   claimedAt: string;
   status: 'verified' | 'pending' | 'revoked';
+  verificationMethod: VerificationMethod;
+  dwellSeconds?: number;
+}
+
+export interface TopUpSettings {
+  intentSeconds: number; // default: 8 seconds (Gleam.io style)
+  youtubeChannelId: string;
+  googleClientId: string;
+  telegramBotUsername: string;
+  telegramChannelUsername: string;
 }
 
 export const DEFAULT_TASKS: SocialTopUpTask[] = [
@@ -41,6 +55,7 @@ export const DEFAULT_TASKS: SocialTopUpTask[] = [
     brandColor: '#FF0000',
     bgLight: 'bg-red-500/10 border-red-500/20 text-red-500',
     badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
+    supportsGoogleOAuth: true,
   },
   {
     id: 'facebook',
@@ -89,6 +104,7 @@ export const DEFAULT_TASKS: SocialTopUpTask[] = [
     brandColor: '#229ED9',
     bgLight: 'bg-sky-500/10 border-sky-500/20 text-sky-400',
     badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    supportsTelegramBot: true,
   },
   {
     id: 'twitter',
@@ -108,6 +124,7 @@ class TopUpService {
   private STORAGE_KEY_BONUS = 'mc_bonus_quota_bytes';
   private STORAGE_KEY_SUBMISSIONS = 'mc_topup_submissions';
   private STORAGE_KEY_LINKS = 'mc_topup_official_links';
+  private STORAGE_KEY_SETTINGS = 'mc_topup_settings';
 
   // Get user bonus bytes
   getBonusBytes(): number {
@@ -146,6 +163,34 @@ class TopUpService {
     const current = this.getOfficialLinks();
     current[platform] = url;
     localStorage.setItem(this.STORAGE_KEY_LINKS, JSON.stringify(current));
+    this.notifyUpdate();
+  }
+
+  // Get Top-Up Settings
+  getSettings(): TopUpSettings {
+    const defaults: TopUpSettings = {
+      intentSeconds: 8,
+      youtubeChannelId: '',
+      googleClientId: '',
+      telegramBotUsername: '',
+      telegramChannelUsername: '',
+    };
+    if (typeof localStorage === 'undefined') return defaults;
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY_SETTINGS);
+      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  // Update Top-Up Settings
+  updateSettings(newSettings: Partial<TopUpSettings>): void {
+    if (typeof localStorage === 'undefined') return;
+    const current = this.getSettings();
+    const updated = { ...current, ...newSettings };
+    localStorage.setItem(this.STORAGE_KEY_SETTINGS, JSON.stringify(updated));
+    this.notifyUpdate();
   }
 
   // Get all recorded claims (for Admin review)
@@ -183,7 +228,11 @@ class TopUpService {
   claimTask(
     userEmail: string,
     platform: SocialPlatformId,
-    handle: string
+    handle: string,
+    options?: {
+      verificationMethod?: VerificationMethod;
+      dwellSeconds?: number;
+    }
   ): { success: boolean; message: string; newBonusTotal: number } {
     if (!handle || handle.trim().length < 2) {
       return { success: false, message: 'Please provide a valid handle, username, or profile link.', newBonusTotal: this.getBonusBytes() };
@@ -207,7 +256,7 @@ class TopUpService {
     if (handleReused) {
       return {
         success: false,
-        message: `This social handle (${cleanHandle}) is already registered by another user. Each follower can only claim once.`,
+        message: `This social handle (${cleanHandle}) is already registered by another user. Each account can only claim once.`,
         newBonusTotal: this.getBonusBytes(),
       };
     }
@@ -223,6 +272,8 @@ class TopUpService {
       rewardLabel: '+500 GB',
       claimedAt: new Date().toISOString(),
       status: 'verified',
+      verificationMethod: options?.verificationMethod || 'smart_intent',
+      dwellSeconds: options?.dwellSeconds || this.getSettings().intentSeconds,
     };
 
     submissions.unshift(newSubmission);
@@ -233,11 +284,7 @@ class TopUpService {
     const newBonus = currentBonus + FIVE_HUNDRED_GB_BYTES;
     localStorage.setItem(this.STORAGE_KEY_BONUS, String(newBonus));
 
-    // Dispatch global event so all components react immediately
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('mc_storage_updated'));
-      window.dispatchEvent(new CustomEvent('mc_topup_updated'));
-    }
+    this.notifyUpdate();
 
     return {
       success: true,
@@ -265,12 +312,15 @@ class TopUpService {
     const newBonus = Math.max(0, currentBonus - sub.rewardBytes);
     localStorage.setItem(this.STORAGE_KEY_BONUS, String(newBonus));
 
+    this.notifyUpdate();
+    return true;
+  }
+
+  private notifyUpdate() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('mc_storage_updated'));
       window.dispatchEvent(new CustomEvent('mc_topup_updated'));
     }
-
-    return true;
   }
 }
 
