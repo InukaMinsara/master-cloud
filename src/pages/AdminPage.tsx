@@ -22,6 +22,8 @@ import {
   CheckCheck,
   Trash2,
   Plus,
+  Gift,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { formatBytes } from '@/lib/utils';
@@ -29,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { topUpService, DEFAULT_TASKS, SocialPlatformId } from '@/services/topUpService';
 
 interface SystemHealthService {
   name: string;
@@ -54,8 +57,37 @@ export function AdminPage() {
     };
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'system' | 'flags'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'topup' | 'system' | 'flags'>('overview');
   const [userSearch, setUserSearch] = useState('');
+  const [topUpSubmissions, setTopUpSubmissions] = useState(() => topUpService.getAllSubmissions());
+  const [officialLinks, setOfficialLinks] = useState(() => topUpService.getOfficialLinks());
+  const [linkInputs, setLinkInputs] = useState(() => topUpService.getOfficialLinks());
+
+  useEffect(() => {
+    const refreshTopUp = () => {
+      setTopUpSubmissions(topUpService.getAllSubmissions());
+      setOfficialLinks(topUpService.getOfficialLinks());
+    };
+    window.addEventListener('mc_topup_updated', refreshTopUp);
+    return () => window.removeEventListener('mc_topup_updated', refreshTopUp);
+  }, []);
+
+  const handleSaveOfficialLinks = (e: React.FormEvent) => {
+    e.preventDefault();
+    Object.entries(linkInputs).forEach(([platform, url]) => {
+      topUpService.updateOfficialLink(platform as SocialPlatformId, url);
+    });
+    setOfficialLinks(topUpService.getOfficialLinks());
+    toast.success('Official social media channel links updated successfully!');
+  };
+
+  const handleRevokeClaim = (submissionId: string) => {
+    if (confirm('Revoke this claim and deduct 500 GB bonus from user?')) {
+      topUpService.revokeClaim(submissionId);
+      setTopUpSubmissions(topUpService.getAllSubmissions());
+      toast.info('Claim revoked and bonus quota deducted.');
+    }
+  };
 
   // Feature Flags State
   const [flags, setFlags] = useState({
@@ -244,6 +276,14 @@ export function AdminPage() {
           User Accounts ({usersList.length})
         </button>
         <button
+          onClick={() => setActiveTab('topup')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+            activeTab === 'topup' ? 'bg-amber-500 text-black shadow-sm font-extrabold' : 'text-muted-foreground hover:bg-accent'
+          }`}
+        >
+          🎁 Top-Up Claims ({topUpSubmissions.filter((s) => s.status !== 'revoked').length})
+        </button>
+        <button
           onClick={() => setActiveTab('system')}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
             activeTab === 'system' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent'
@@ -415,6 +455,169 @@ export function AdminPage() {
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Every provisioned account receives 10 TB of high-performance cloud storage backed by PostgreSQL Row-Level Security and AES-256 chunk encryption. No paid tiers or storage limits apply.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: TOP-UP CLAIMS & REWARDS VERIFICATION */}
+      {activeTab === 'topup' && (
+        <div className="space-y-6">
+          {/* Top Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 rounded-2xl bg-card border border-border/80 space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Total Submissions</span>
+              <p className="text-xl font-black text-foreground">
+                {topUpSubmissions.length} Claims
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {topUpSubmissions.filter((s) => s.status === 'verified').length} Active Verified
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-card border border-border/80 space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Bonus Storage Granted</span>
+              <p className="text-xl font-black text-amber-400">
+                +{formatBytes(topUpSubmissions.filter((s) => s.status === 'verified').length * 536870912000)}
+              </p>
+              <p className="text-[11px] text-muted-foreground">500 GB awarded per task</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-card border border-border/80 space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Anti-Fraud Engine</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-bold text-emerald-400">Active</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Duplicate social handles blocked</p>
+            </div>
+          </div>
+
+          {/* Official Social Links Configuration (Admin Editable) */}
+          <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-amber-400" />
+                  <span>Configure Official Social Media Channels</span>
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Update the official destination links users visit to follow/subscribe for their +500 GB storage bonus.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveOfficialLinks} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {DEFAULT_TASKS.map((task) => (
+                <div key={task.id} className="space-y-1">
+                  <label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                    <span>{task.platform} Official URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={linkInputs[task.id] || ''}
+                    onChange={(e) => setLinkInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                    placeholder={task.defaultUrl}
+                    className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              ))}
+
+              <div className="md:col-span-2 pt-2 flex justify-end">
+                <Button type="submit" size="sm" className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-black">
+                  Save Official Channel Links
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Claims Proof Table */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">Submitted User Claims & Verification Proofs</h4>
+                <p className="text-xs text-muted-foreground">
+                  Inspect submitted usernames and profiles. Revoke fake submissions if needed.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-border/80 overflow-hidden bg-card shadow-sm">
+              {topUpSubmissions.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground space-y-2">
+                  <Gift className="h-8 w-8 mx-auto text-muted-foreground/60" />
+                  <p className="font-semibold">No Top-Up claims submitted yet.</p>
+                  <p className="text-[11px]">When users follow accounts and submit their handles, proofs will appear here.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-border/60 bg-muted/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <th className="px-4 py-3">User Email</th>
+                        <th className="px-4 py-3">Platform</th>
+                        <th className="px-4 py-3">Submitted Handle / Proof</th>
+                        <th className="px-4 py-3">Bonus Quota</th>
+                        <th className="px-4 py-3">Claim Date</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40">
+                      {topUpSubmissions.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-foreground">{sub.userEmail}</td>
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-foreground capitalize">{sub.platformName}</span>
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-amber-400">{sub.handle}</span>
+                              {sub.handle.startsWith('http') && (
+                                <a
+                                  href={sub.handle}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-muted-foreground hover:text-primary"
+                                  title="Open profile link"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-emerald-400">
+                            {sub.rewardLabel}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {new Date(sub.claimedAt).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              variant={sub.status === 'verified' ? 'success' : 'destructive'}
+                              className="text-[10px] uppercase font-bold"
+                            >
+                              {sub.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {sub.status !== 'revoked' ? (
+                              <button
+                                onClick={() => handleRevokeClaim(sub.id)}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                              >
+                                Revoke (-500GB)
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">Revoked</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

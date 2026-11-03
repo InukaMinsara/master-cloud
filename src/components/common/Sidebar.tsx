@@ -14,7 +14,7 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-
+  Gift,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
@@ -30,7 +30,7 @@ import { UserAvatar } from '@/components/common/UserAvatar';
 
 export function Sidebar() {
   const navigate = useNavigate();
-  const { sidebarCollapsed, toggleSidebar, setNewFolderModalOpen } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar, setNewFolderModalOpen, setTopUpModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
   const { user } = useAuthStore();
@@ -212,6 +212,19 @@ export function Sidebar() {
               <span>Open Z:</span>
             </a>
           </div>
+
+          {/* Quick Top-Up CTA Button */}
+          <button
+            onClick={() => setTopUpModalOpen(true)}
+            className="w-full mt-2.5 flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/25 text-amber-400 text-xs font-bold transition-all shadow-sm cursor-pointer"
+            title="Follow social accounts to earn +500 GB storage per account"
+          >
+            <div className="flex items-center gap-1.5">
+              <Gift className="h-3.5 w-3.5 text-amber-400" />
+              <span>Free Top Up</span>
+            </div>
+            <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded-md font-extrabold">+500GB</span>
+          </button>
         </div>
       )}
 

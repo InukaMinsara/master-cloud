@@ -23,6 +23,7 @@ import {
   FileText,
   ChevronRight,
   ArrowRight,
+  Gift,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -43,7 +44,7 @@ import { toast } from 'sonner';
 
 export function AppHeader() {
   const navigate = useNavigate();
-  const { theme, setTheme, setCommandPaletteOpen, setSmartCleanupModalOpen } = useUIStore();
+  const { theme, setTheme, setCommandPaletteOpen, setSmartCleanupModalOpen, setTopUpModalOpen } = useUIStore();
   const { searchQuery, setSearchQuery, categoryFilter, setCategoryFilter, setCurrentFolderId } = useFileStore();
   const { openPreview } = usePreviewStore();
   const { user, logout } = useAuthStore();
@@ -403,6 +404,17 @@ export function AppHeader() {
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Cleanup</span>
         </Button>
+
+        {/* Top Up +500GB Button */}
+        <button
+          onClick={() => setTopUpModalOpen(true)}
+          title="Earn +500 GB permanent cloud storage per social follow!"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/35 bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-400 text-xs font-bold transition-all shadow-sm shadow-amber-500/10 cursor-pointer"
+        >
+          <Gift className="h-3.5 w-3.5 text-amber-400" />
+          <span>Top Up</span>
+          <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-[10px] text-amber-300 font-extrabold">+500GB</span>
+        </button>
 
         {/* Connect Z: Virtual Drive Button */}
         {user?.email && (

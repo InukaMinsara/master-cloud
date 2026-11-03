@@ -14,6 +14,7 @@ import {
   Zap,
   Lock,
   Cloud,
+  Gift,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -37,6 +38,7 @@ export function SettingsPage() {
     activeSettingsTab,
     setActiveSettingsTab,
     setSmartCleanupModalOpen,
+    setTopUpModalOpen,
   } = useUIStore();
   const navigate = useNavigate();
 
@@ -428,6 +430,18 @@ export function SettingsPage() {
                     <span className="text-muted-foreground block text-[11px]">Credit Card Required</span>
                     <span className="font-bold text-emerald-500">None (100% Free)</span>
                   </div>
+                </div>
+
+                {/* Top Up Free Storage CTA */}
+                <div className="pt-2 border-t border-border/40">
+                  <Button
+                    type="button"
+                    onClick={() => setTopUpModalOpen(true)}
+                    className="w-full rounded-2xl text-xs font-bold gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black shadow-md shadow-amber-500/10 cursor-pointer"
+                  >
+                    <Gift className="h-4 w-4" />
+                    <span>Top Up More Free Cloud Storage (+500 GB Each)</span>
+                  </Button>
                 </div>
               </div>
 
