@@ -24,6 +24,12 @@ import {
   Plus,
   Gift,
   ExternalLink,
+  KeyRound,
+  Zap,
+  Bot,
+  Timer,
+  HelpCircle,
+  Check,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { formatBytes } from '@/lib/utils';
@@ -31,7 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
-import { topUpService, DEFAULT_TASKS, SocialPlatformId } from '@/services/topUpService';
+import { topUpService, DEFAULT_TASKS, SocialPlatformId, TopUpApiConfig } from '@/services/topUpService';
 
 interface SystemHealthService {
   name: string;
@@ -62,28 +68,72 @@ export function AdminPage() {
   const [topUpSubmissions, setTopUpSubmissions] = useState(() => topUpService.getAllSubmissions());
   const [officialLinks, setOfficialLinks] = useState(() => topUpService.getOfficialLinks());
   const [linkInputs, setLinkInputs] = useState(() => topUpService.getOfficialLinks());
-  const [topUpSettings, setTopUpSettings] = useState(() => topUpService.getSettings());
-  const [settingsInputs, setSettingsInputs] = useState(() => topUpService.getSettings());
+  const [apiInputs, setApiInputs] = useState<TopUpApiConfig>(() => topUpService.getApiConfig());
+  const [testingYouTube, setTestingYouTube] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [youtubeTestResult, setYoutubeTestResult] = useState<{ success: boolean; message: string; channelTitle?: string } | null>(null);
+  const [telegramTestResult, setTelegramTestResult] = useState<{ success: boolean; message: string; botUsername?: string; chatTitle?: string } | null>(null);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   useEffect(() => {
     const refreshTopUp = () => {
       setTopUpSubmissions(topUpService.getAllSubmissions());
       setOfficialLinks(topUpService.getOfficialLinks());
-      setTopUpSettings(topUpService.getSettings());
+      setApiInputs(topUpService.getApiConfig());
     };
     window.addEventListener('mc_topup_updated', refreshTopUp);
     return () => window.removeEventListener('mc_topup_updated', refreshTopUp);
   }, []);
 
-  const handleSaveTopUpConfig = (e: React.FormEvent) => {
+  const handleSaveApiConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    topUpService.updateApiConfig(apiInputs);
+    toast.success('Live API Keys & Automation Settings saved successfully!');
+  };
+
+  const handleTestYouTube = async () => {
+    setTestingYouTube(true);
+    setYoutubeTestResult(null);
+    try {
+      topUpService.updateApiConfig(apiInputs);
+      const res = await topUpService.testYouTubeApi();
+      setYoutubeTestResult(res);
+      if (res.success) toast.success(res.message);
+      else toast.error(res.message);
+    } catch (err: any) {
+      const errRes = { success: false, message: err.message || 'YouTube test failed' };
+      setYoutubeTestResult(errRes);
+      toast.error(errRes.message);
+    } finally {
+      setTestingYouTube(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true);
+    setTelegramTestResult(null);
+    try {
+      topUpService.updateApiConfig(apiInputs);
+      const res = await topUpService.testTelegramBot();
+      setTelegramTestResult(res);
+      if (res.success) toast.success(res.message);
+      else toast.error(res.message);
+    } catch (err: any) {
+      const errRes = { success: false, message: err.message || 'Telegram Bot test failed' };
+      setTelegramTestResult(errRes);
+      toast.error(errRes.message);
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
+  const handleSaveOfficialLinks = (e: React.FormEvent) => {
     e.preventDefault();
     Object.entries(linkInputs).forEach(([platform, url]) => {
       topUpService.updateOfficialLink(platform as SocialPlatformId, url);
     });
-    topUpService.updateSettings(settingsInputs);
     setOfficialLinks(topUpService.getOfficialLinks());
-    setTopUpSettings(topUpService.getSettings());
-    toast.success('Official channel links & Smart Auto-Verification settings saved!');
+    toast.success('Official social media channel links updated successfully!');
   };
 
   const handleRevokeClaim = (submissionId: string) => {
@@ -494,101 +544,256 @@ export function AdminPage() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-sm font-bold text-emerald-400">Active</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">Duplicate social handles blocked</p>
+              <p className="text-[11px] text-muted-foreground">Live APIs & Intent Time-Lock active</p>
             </div>
           </div>
 
-          {/* Official Social Links & Verification Engine Configuration (Admin Editable) */}
-          <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-5">
+          {/* LIVE API CREDENTIALS & AUTOMATION SETTINGS */}
+          <div className="p-5 rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-amber-400" />
+                  <span>Live API Automation Engine (Google & Telegram)</span>
+                  <Badge variant="outline" className="text-[9px] uppercase font-bold text-amber-400 border-amber-500/40">
+                    100% Automated & Free
+                  </Badge>
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Connect official Google YouTube & Telegram Bot APIs to automatically check follows without manual review or screenshots.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSetupGuide(!showSetupGuide)}
+                className="h-8 rounded-xl text-xs font-semibold gap-1.5 border-border shrink-0"
+              >
+                <HelpCircle className="h-3.5 w-3.5 text-amber-400" />
+                <span>{showSetupGuide ? 'Hide Setup Guide' : 'API Setup Guide (Free)'}</span>
+              </Button>
+            </div>
+
+            {/* Quick Setup Guide Accordion */}
+            {showSetupGuide && (
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border/70 text-xs space-y-3">
+                <div className="font-bold text-foreground text-sm flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-amber-400" />
+                  <span>How to get Free API Keys in 2 Minutes:</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] text-muted-foreground">
+                  <div className="space-y-1.5 p-3 rounded-xl bg-background/60 border border-border/50">
+                    <p className="font-bold text-foreground flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span>1. Google YouTube Data API v3 (100% Free):</span>
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 leading-relaxed">
+                      <li>Go to <strong>console.cloud.google.com</strong> and create a free project.</li>
+                      <li>In <em>APIs & Services</em>, search & enable <strong>YouTube Data API v3</strong>.</li>
+                      <li>Go to <em>Credentials</em> &rarr; <em>Create Credentials</em> &rarr; <strong>API Key</strong>.</li>
+                      <li>Paste the key into the YouTube API Key field below and enter your Channel ID (e.g. <code>UC...</code> or <code>@yourchannel</code>).</li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-1.5 p-3 rounded-xl bg-background/60 border border-border/50">
+                    <p className="font-bold text-foreground flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-sky-500" />
+                      <span>2. Telegram Bot API (100% Free):</span>
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 leading-relaxed">
+                      <li>Open Telegram and search for the official <strong>@BotFather</strong>.</li>
+                      <li>Send <code>/newbot</code>, give your bot a name and username (e.g. <code>MasterCloudVerifyBot</code>).</li>
+                      <li>BotFather gives you an HTTP API token (e.g. <code>123456:ABC-DEF...</code>).</li>
+                      <li>Add your bot as an <strong>Administrator</strong> in your Telegram Channel so it can check member status.</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* API Config Form */}
+            <form onSubmit={handleSaveApiConfig} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Google YouTube API Section */}
+                <div className="p-4 rounded-2xl bg-card border border-border/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5 text-red-500" />
+                      <span>Google YouTube Data API v3</span>
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={testingYouTube || !apiInputs.youtubeApiKey}
+                      onClick={handleTestYouTube}
+                      className="h-7 text-[10px] font-bold rounded-lg border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    >
+                      {testingYouTube ? 'Testing...' : 'Test YouTube API'}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Google API Key</label>
+                      <input
+                        type="password"
+                        value={apiInputs.youtubeApiKey}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, youtubeApiKey: e.target.value }))}
+                        placeholder="AIzaSy..."
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Official Channel ID / Handle</label>
+                      <input
+                        type="text"
+                        value={apiInputs.youtubeChannelId}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, youtubeChannelId: e.target.value }))}
+                        placeholder="UC... or @MasterCloudOfficial"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {youtubeTestResult && (
+                    <div
+                      className={`p-2 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 border ${
+                        youtubeTestResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      }`}
+                    >
+                      {youtubeTestResult.success ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
+                      <span className="truncate">{youtubeTestResult.message} {youtubeTestResult.channelTitle && `(${youtubeTestResult.channelTitle})`}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Telegram Bot API Section */}
+                <div className="p-4 rounded-2xl bg-card border border-border/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <Bot className="h-3.5 w-3.5 text-sky-400" />
+                      <span>Telegram Bot API</span>
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={testingTelegram || !apiInputs.telegramBotToken}
+                      onClick={handleTestTelegram}
+                      className="h-7 text-[10px] font-bold rounded-lg border-sky-500/30 text-sky-400 hover:bg-sky-500/10"
+                    >
+                      {testingTelegram ? 'Testing...' : 'Test Bot API'}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Botfather Token</label>
+                      <input
+                        type="password"
+                        value={apiInputs.telegramBotToken}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, telegramBotToken: e.target.value }))}
+                        placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Official Channel Username or ID</label>
+                      <input
+                        type="text"
+                        value={apiInputs.telegramChannelId}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, telegramChannelId: e.target.value }))}
+                        placeholder="@mastercloud_vip or -1001234567890"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {telegramTestResult && (
+                    <div
+                      className={`p-2 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 border ${
+                        telegramTestResult.success
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      }`}
+                    >
+                      {telegramTestResult.success ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
+                      <span className="truncate">{telegramTestResult.message} {telegramTestResult.chatTitle && `[${telegramTestResult.chatTitle}]`}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Smart Intent Verification Duration */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-secondary/30 border border-border/60">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Timer className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>TikTok / Facebook / Instagram / X Smart Intent Timer</span>
+                  </span>
+                  <p className="text-[11px] text-muted-foreground">
+                    Number of seconds users must visit official account before handle registration unlocks (Gleam.io standard).
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="3"
+                    max="30"
+                    value={apiInputs.intentVerifySeconds || 6}
+                    onChange={(e) => setApiInputs((prev) => ({ ...prev, intentVerifySeconds: Math.max(3, Number(e.target.value)) }))}
+                    className="w-16 h-8 text-center bg-card border border-border/70 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+                  />
+                  <span className="text-xs text-muted-foreground font-semibold">seconds</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button type="submit" size="sm" className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-black shadow-sm">
+                  Save API Automation Settings
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Official Social Links Configuration (Admin Editable) */}
+          <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                   <Gift className="h-4 w-4 text-amber-400" />
-                  <span>Configure Official Channels & Smart Auto-Verification Engine</span>
+                  <span>Configure Official Social Media Channels</span>
                 </h4>
                 <p className="text-xs text-muted-foreground">
-                  Gleam.io & Galxe style 100% automated follow verification with zero screenshots or manual approvals.
+                  Update the official destination links users visit to follow/subscribe for their +500 GB storage bonus.
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleSaveTopUpConfig} className="space-y-4">
-              {/* Engine Parameters */}
-              <div className="p-4 rounded-2xl bg-secondary/30 border border-border/60 space-y-3">
-                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Verification Engine Rules</span>
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground">Intent Time-Lock Duration</label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="3"
-                        max="60"
-                        value={settingsInputs.intentSeconds}
-                        onChange={(e) =>
-                          setSettingsInputs((prev) => ({ ...prev, intentSeconds: Math.max(3, Number(e.target.value) || 8) }))
-                        }
-                        className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-                      />
-                      <span className="text-xs text-muted-foreground font-semibold">seconds</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground">Telegram Bot Username (Optional)</label>
-                    <input
-                      type="text"
-                      value={settingsInputs.telegramBotUsername}
-                      onChange={(e) =>
-                        setSettingsInputs((prev) => ({ ...prev, telegramBotUsername: e.target.value }))
-                      }
-                      placeholder="@MasterCloudStorageBot"
-                      className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground">YouTube Channel ID / Handle (Optional)</label>
-                    <input
-                      type="text"
-                      value={settingsInputs.youtubeChannelId}
-                      onChange={(e) =>
-                        setSettingsInputs((prev) => ({ ...prev, youtubeChannelId: e.target.value }))
-                      }
-                      placeholder="@MasterCloudOfficial"
-                      className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-                    />
-                  </div>
+            <form onSubmit={handleSaveOfficialLinks} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {DEFAULT_TASKS.map((task) => (
+                <div key={task.id} className="space-y-1">
+                  <label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                    <span>{task.platform} Official URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={linkInputs[task.id] || ''}
+                    onChange={(e) => setLinkInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                    placeholder={task.defaultUrl}
+                    className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                  />
                 </div>
-              </div>
+              ))}
 
-              {/* Destination URLs */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-foreground">Official Channel & Profile Destination URLs</span>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {DEFAULT_TASKS.map((task) => (
-                    <div key={task.id} className="space-y-1">
-                      <label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                        <span>{task.platform} URL</span>
-                      </label>
-                      <input
-                        type="url"
-                        value={linkInputs[task.id] || ''}
-                        onChange={(e) => setLinkInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                        placeholder={task.defaultUrl}
-                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end">
+              <div className="md:col-span-2 pt-2 flex justify-end">
                 <Button type="submit" size="sm" className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-black">
-                  Save Top-Up & Verification Settings
+                  Save Official Channel Links
                 </Button>
               </div>
             </form>
@@ -600,7 +805,7 @@ export function AdminPage() {
               <div>
                 <h4 className="text-sm font-bold text-foreground">Submitted User Claims & Verification Proofs</h4>
                 <p className="text-xs text-muted-foreground">
-                  Inspect submitted usernames, verification methods, and timestamps.
+                  Inspect submitted usernames and profiles. Revoke fake submissions if needed.
                 </p>
               </div>
             </div>
@@ -619,8 +824,8 @@ export function AdminPage() {
                       <tr className="border-b border-border/60 bg-muted/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         <th className="px-4 py-3">User Email</th>
                         <th className="px-4 py-3">Platform</th>
-                        <th className="px-4 py-3">Submitted Handle</th>
-                        <th className="px-4 py-3">Method</th>
+                        <th className="px-4 py-3">Submitted Handle / Proof</th>
+                        <th className="px-4 py-3">Verification Engine</th>
                         <th className="px-4 py-3">Bonus Quota</th>
                         <th className="px-4 py-3">Claim Date</th>
                         <th className="px-4 py-3">Status</th>
@@ -651,13 +856,22 @@ export function AdminPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/80 border border-border">
-                              {sub.verificationMethod === 'google_oauth'
-                                ? '🔍 Google API'
-                                : sub.verificationMethod === 'telegram_bot'
-                                ? '🤖 Telegram Bot'
-                                : '⚡ Smart Intent'}
-                            </span>
+                            {sub.verificationMethod === 'youtube_api' ? (
+                              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 gap-1 text-[10px]">
+                                <Zap className="h-2.5 w-2.5" />
+                                <span>YouTube API</span>
+                              </Badge>
+                            ) : sub.verificationMethod === 'telegram_api' ? (
+                              <Badge variant="outline" className="bg-sky-500/10 text-sky-400 border-sky-500/30 gap-1 text-[10px]">
+                                <Bot className="h-2.5 w-2.5" />
+                                <span>Telegram Bot</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1 text-[10px]">
+                                <Timer className="h-2.5 w-2.5" />
+                                <span>Smart Intent</span>
+                              </Badge>
+                            )}
                           </td>
                           <td className="px-4 py-3 font-mono font-bold text-emerald-400">
                             {sub.rewardLabel}
