@@ -48,6 +48,7 @@ export function TopUpModal() {
   const [bonusBytes, setBonusBytes] = useState(() => topUpService.getBonusBytes());
   const [handles, setHandles] = useState<Record<SocialPlatformId, string>>({
     youtube: '',
+    youtube_2: '',
     facebook: '',
     tiktok: '',
     instagram: '',
@@ -58,6 +59,7 @@ export function TopUpModal() {
   // Track visit timers
   const [visitedTimers, setVisitedTimers] = useState<Record<SocialPlatformId, number>>({
     youtube: 0,
+    youtube_2: 0,
     facebook: 0,
     tiktok: 0,
     instagram: 0,
@@ -136,6 +138,7 @@ export function TopUpModal() {
   const getPlatformIcon = (id: SocialPlatformId) => {
     switch (id) {
       case 'youtube':
+      case 'youtube_2':
         return <Youtube className="h-5 w-5 text-red-500" />;
       case 'facebook':
         return <Facebook className="h-5 w-5 text-blue-500" />;
@@ -153,7 +156,7 @@ export function TopUpModal() {
   };
 
   const getVerificationIcon = (id: SocialPlatformId) => {
-    if (id === 'youtube') return <Zap className="h-3 w-3 text-red-400" />;
+    if (id === 'youtube' || id === 'youtube_2') return <Zap className="h-3 w-3 text-red-400" />;
     if (id === 'telegram') return <Bot className="h-3 w-3 text-sky-400" />;
     return <Timer className="h-3 w-3 text-emerald-400" />;
   };

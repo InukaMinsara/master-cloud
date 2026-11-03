@@ -2,7 +2,7 @@ import { FREE_TEN_TB_BYTES } from '@/lib/constants';
 
 export const FIVE_HUNDRED_GB_BYTES = 536870912000; // 500 GiB (536,870,912,000 bytes)
 
-export type SocialPlatformId = 'youtube' | 'facebook' | 'tiktok' | 'instagram' | 'telegram' | 'twitter';
+export type SocialPlatformId = 'youtube' | 'youtube_2' | 'facebook' | 'tiktok' | 'instagram' | 'telegram' | 'twitter';
 
 export interface SocialTopUpTask {
   id: SocialPlatformId;
@@ -35,6 +35,7 @@ export interface TopUpSubmission {
 export interface TopUpApiConfig {
   youtubeApiKey: string;
   youtubeChannelId: string;
+  youtubeChannelId2?: string;
   telegramBotToken: string;
   telegramChannelId: string;
   intentVerifySeconds: number;
@@ -44,8 +45,21 @@ export interface TopUpApiConfig {
 export const DEFAULT_TASKS: SocialTopUpTask[] = [
   {
     id: 'youtube',
-    platform: 'YouTube',
-    actionText: 'Subscribe to our official YouTube channel',
+    platform: 'YouTube (Channel 1)',
+    actionText: 'Subscribe to our primary official YouTube channel',
+    rewardLabel: '+500 GB',
+    rewardBytes: FIVE_HUNDRED_GB_BYTES,
+    defaultUrl: 'https://youtube.com',
+    handlePlaceholder: '@your_youtube_handle or Channel Link',
+    brandColor: '#FF0000',
+    bgLight: 'bg-red-500/10 border-red-500/20 text-red-500',
+    badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
+    verificationBadge: 'Google YouTube API',
+  },
+  {
+    id: 'youtube_2',
+    platform: 'YouTube (Channel 2)',
+    actionText: 'Subscribe to our secondary / backup YouTube channel',
     rewardLabel: '+500 GB',
     rewardBytes: FIVE_HUNDRED_GB_BYTES,
     defaultUrl: 'https://youtube.com',
@@ -144,6 +158,7 @@ class TopUpService {
     const defaults: TopUpApiConfig = {
       youtubeApiKey: '',
       youtubeChannelId: '',
+      youtubeChannelId2: '',
       telegramBotToken: '',
       telegramChannelId: '',
       intentVerifySeconds: 6,
@@ -174,6 +189,7 @@ class TopUpService {
   getOfficialLinks(): Record<SocialPlatformId, string> {
     const defaults: Record<SocialPlatformId, string> = {
       youtube: 'https://youtube.com',
+      youtube_2: 'https://youtube.com',
       facebook: 'https://facebook.com',
       tiktok: 'https://tiktok.com',
       instagram: 'https://instagram.com',
@@ -217,6 +233,7 @@ class TopUpService {
     const submissions = this.getAllSubmissions();
     const result: Record<SocialPlatformId, TopUpSubmission | null> = {
       youtube: null,
+      youtube_2: null,
       facebook: null,
       tiktok: null,
       instagram: null,
@@ -240,17 +257,17 @@ class TopUpService {
     }
 
     try {
+      let targetChannel = config.youtubeChannelId || config.youtubeChannelId2;
       let url = '';
-      if (config.youtubeChannelId.startsWith('UC')) {
+      if (targetChannel && targetChannel.startsWith('UC')) {
         url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${encodeURIComponent(
-          config.youtubeChannelId
+          targetChannel
         )}&key=${encodeURIComponent(config.youtubeApiKey)}`;
-      } else if (config.youtubeChannelId.startsWith('@')) {
+      } else if (targetChannel && targetChannel.startsWith('@')) {
         url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${encodeURIComponent(
-          config.youtubeChannelId
+          targetChannel
         )}&key=${encodeURIComponent(config.youtubeApiKey)}`;
       } else {
-        // Fallback test query using channels:list with a standard channel or popular query
         url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=%40YouTube&key=${encodeURIComponent(
           config.youtubeApiKey
         )}`;
@@ -267,10 +284,10 @@ class TopUpService {
       }
 
       const item = data.items?.[0];
-      const title = item?.snippet?.title || 'YouTube Channel Verified';
+      const title = item?.snippet?.title || 'YouTube API Validated';
       return {
         success: true,
-        message: `Connected successfully to YouTube Data API!`,
+        message: `Connected successfully to Google YouTube Data API!`,
         channelTitle: title,
       };
     } catch (err: any) {
@@ -294,7 +311,6 @@ class TopUpService {
     }
 
     try {
-      // Step 1: verify bot identity (getMe)
       const meRes = await fetch(`https://api.telegram.org/bot${encodeURIComponent(config.telegramBotToken)}/getMe`);
       const meData = await meRes.json();
 
@@ -304,7 +320,6 @@ class TopUpService {
 
       const botUsername = meData.result?.username;
 
-      // Step 2: if channel ID provided, check chat access
       let chatTitle: string | undefined;
       if (config.telegramChannelId) {
         try {
@@ -343,7 +358,6 @@ class TopUpService {
     const config = this.getApiConfig();
 
     if (!config.youtubeApiKey) {
-      // Smart intent verified fallback when admin hasn't added API key yet
       return {
         verified: true,
         message: 'YouTube handle verified via Smart Intent & Deduplication engine.',
@@ -352,7 +366,6 @@ class TopUpService {
     }
 
     try {
-      // Try resolving user channel if handle provided
       const cleanHandle = userHandle.trim();
       let queryHandle = cleanHandle;
       if (queryHandle.includes('youtube.com/')) {
@@ -376,7 +389,6 @@ class TopUpService {
         };
       }
 
-      // If handle lookup didn't match public handle or privacy is enabled
       return {
         verified: true,
         message: `YouTube subscription confirmed (Handle registered with Smart Intent).`,
@@ -406,9 +418,7 @@ class TopUpService {
     }
 
     try {
-      // Clean handle
       let cleanHandle = userHandle.trim().replace('@', '');
-      // If numeric ID, direct getChatMember query
       if (/^\d+$/.test(cleanHandle)) {
         const res = await fetch(
           `https://api.telegram.org/bot${encodeURIComponent(
@@ -425,7 +435,6 @@ class TopUpService {
         }
       }
 
-      // Default to validated Telegram handle with bot routing
       return {
         verified: true,
         message: `Telegram Bot verified user @${cleanHandle} for channel access.`,
@@ -440,7 +449,7 @@ class TopUpService {
     }
   }
 
-  // Claim +500 GB for a task (Async with automated API verification)
+  // Claim +500 GB for a task
   async claimTask(
     userEmail: string,
     platform: SocialPlatformId,
@@ -464,7 +473,7 @@ class TopUpService {
     if (alreadyClaimedByUser) {
       return {
         success: false,
-        message: `You have already claimed +500 GB for ${platform.toUpperCase()}!`,
+        message: `You have already claimed +500 GB for this task!`,
         newBonusTotal: this.getBonusBytes(),
       };
     }
@@ -485,7 +494,7 @@ class TopUpService {
     let verificationMethod: 'youtube_api' | 'telegram_api' | 'smart_intent' = 'smart_intent';
     let apiNote = 'Verified via Anti-Fraud Intent Engine';
 
-    if (platform === 'youtube') {
+    if (platform === 'youtube' || platform === 'youtube_2') {
       const ytResult = await this.verifyYouTubeSubscription(cleanHandle);
       verificationMethod = ytResult.method;
       apiNote = ytResult.message;
