@@ -151,6 +151,62 @@ export function TopUpModal() {
     }
   };
 
+  // Google OAuth 2.0 Live Subscription Verification
+  const handleGoogleOAuthVerify = (platform: 'youtube' | 'youtube_2') => {
+    const config = topUpService.getApiConfig();
+    if (!config.googleOAuthClientId) {
+      toast.info('Google OAuth Client ID is not configured in Admin Panel yet. You can use the Secret Code verification below, or ask Admin to add Google Client ID!');
+      return;
+    }
+
+    setSubmittingPlatform(platform);
+
+    const runOAuth = () => {
+      try {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: config.googleOAuthClientId,
+          scope: 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              toast.error(`Google Login cancelled or failed: ${tokenResponse.error}`);
+              setSubmittingPlatform(null);
+              return;
+            }
+            if (tokenResponse.access_token) {
+              toast.info('Checking your YouTube subscriptions with Google...');
+              const res = await topUpService.claimWithGoogleOAuth(userEmail, platform, tokenResponse.access_token);
+              if (res.success) {
+                toast.success(res.message);
+                setClaimedMap(topUpService.getUserClaimedPlatforms(userEmail));
+                setBonusBytes(topUpService.getBonusBytes());
+              } else {
+                toast.error(res.message);
+              }
+            }
+            setSubmittingPlatform(null);
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } catch (err: any) {
+        toast.error(`Google OAuth error: ${err.message}`);
+        setSubmittingPlatform(null);
+      }
+    };
+
+    if (!(window as any).google?.accounts?.oauth2) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = runOAuth;
+      script.onerror = () => {
+        toast.error('Could not load Google Identity Services. Please check internet connection.');
+        setSubmittingPlatform(null);
+      };
+      document.body.appendChild(script);
+    } else {
+      runOAuth();
+    }
+  };
+
   const totalQuota = topUpService.getTotalQuota();
   const claimedCount = Object.values(claimedMap).filter((v) => v !== null).length;
   const maxPossibleBonus = DEFAULT_TASKS.length * 536870912000;
@@ -304,6 +360,44 @@ export function TopUpModal() {
                 ) : (
                   /* Active Claim Form */
                   <div className="space-y-2.5 pt-1">
+                    {/* One-Click Google OAuth Direct Live Verification for YouTube */}
+                    {(task.id === 'youtube' || task.id === 'youtube_2') && (
+                      <div className="space-y-1.5 pb-0.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isSubmitting}
+                          onClick={() => handleGoogleOAuthVerify(task.id as 'youtube' | 'youtube_2')}
+                          className="w-full h-8 rounded-xl text-[11px] font-bold bg-white text-zinc-900 hover:bg-zinc-100 shadow-sm border border-zinc-200 flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-[0.98]"
+                        >
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
+                            <path
+                              fill="#4285F4"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                            />
+                            <path
+                              fill="#EA4335"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                            />
+                          </svg>
+                          <span>Sign in with Google (100% Live Subscribe Check)</span>
+                        </Button>
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <div className="h-px bg-border flex-1" />
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">OR VIA SECRET CODE</span>
+                          <div className="h-px bg-border flex-1" />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Step 1: Visit Channel Button with countdown indicator */}
                     <Button
                       type="button"

@@ -666,6 +666,22 @@ export function AdminPage() {
                         className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
+                    <div className="space-y-1 pt-1 border-t border-border/50">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Google OAuth Client ID (Method 1)</label>
+                        <span className="text-[9px] text-amber-400 font-bold">100% Live Check</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={apiInputs.googleOAuthClientId || ''}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, googleOAuthClientId: e.target.value.trim() }))}
+                        placeholder="xxxx.apps.googleusercontent.com"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-primary"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Enables "Sign in with Google" to directly check if the user is truly subscribed.
+                      </p>
+                    </div>
                   </div>
 
                   {youtubeTestResult && (

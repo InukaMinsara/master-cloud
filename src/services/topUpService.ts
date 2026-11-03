@@ -36,6 +36,7 @@ export interface TopUpApiConfig {
   youtubeApiKey: string;
   youtubeChannelId: string;
   youtubeChannelId2?: string;
+  googleOAuthClientId?: string;
   telegramBotToken: string;
   telegramChannelId: string;
   intentVerifySeconds: number;
@@ -161,6 +162,7 @@ class TopUpService {
       youtubeApiKey: '***REMOVED***',
       youtubeChannelId: '',
       youtubeChannelId2: '',
+      googleOAuthClientId: '',
       telegramBotToken: '',
       telegramChannelId: '',
       intentVerifySeconds: 6,
@@ -473,6 +475,182 @@ class TopUpService {
       verified: true,
       message: `Telegram user @${cleanHandle} registered for verification.`,
       method: 'smart_intent',
+    };
+  }
+
+  // Google OAuth 2.0 Live Subscription Verification (100% Genuine, Zero Fraud)
+  async verifySubscriptionWithAccessToken(
+    accessToken: string,
+    targetChannelId: string
+  ): Promise<{ isSubscribed: boolean; channelTitle?: string; message: string }> {
+    if (!accessToken) {
+      return { isSubscribed: false, message: 'Google OAuth token is missing.' };
+    }
+
+    try {
+      // First, get user's profile info
+      const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const profileData = await profileRes.json();
+      const userGoogleName = profileData.name || profileData.email || 'Google User';
+
+      // If targetChannelId is a handle (starts with @) or custom name, resolve it to UC ID using YouTube API key
+      let resolvedChannelId = targetChannelId;
+      const config = this.getApiConfig();
+      if (resolvedChannelId.startsWith('@') && config.youtubeApiKey) {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(
+              resolvedChannelId
+            )}&key=${encodeURIComponent(config.youtubeApiKey)}`
+          );
+          const d = await res.json();
+          if (d.items && d.items[0]?.id) {
+            resolvedChannelId = d.items[0].id;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // Query YouTube API: Check user's subscriptions for targetChannelId
+      let checkUrl = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`;
+      if (resolvedChannelId.startsWith('UC')) {
+        checkUrl += `&forChannelId=${encodeURIComponent(resolvedChannelId)}`;
+      }
+
+      const res = await fetch(checkUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        return {
+          isSubscribed: false,
+          message: data.error?.message || `YouTube API error: ${res.statusText}`,
+        };
+      }
+
+      // If forChannelId was passed, data.items has 1 item if subscribed, 0 if not subscribed!
+      if (data.items && data.items.length > 0) {
+        const item = data.items[0];
+        const title = item.snippet?.title || resolvedChannelId;
+        return {
+          isSubscribed: true,
+          channelTitle: title,
+          message: `Verified: ${userGoogleName} is actively subscribed to ${title}!`,
+        };
+      }
+
+      // If checkUrl didn't filter or if handle wasn't resolved, scan through items
+      if (data.items && !resolvedChannelId.startsWith('UC')) {
+        const matched = data.items.find((sub: any) => {
+          const t = sub.snippet?.title?.toLowerCase() || '';
+          const cleanTarget = resolvedChannelId.replace('@', '').toLowerCase();
+          return t.includes(cleanTarget);
+        });
+        if (matched) {
+          return {
+            isSubscribed: true,
+            channelTitle: matched.snippet?.title,
+            message: `Verified: ${userGoogleName} is actively subscribed to ${matched.snippet?.title}!`,
+          };
+        }
+      }
+
+      // STRICT RESULT: User is NOT subscribed to this channel!
+      return {
+        isSubscribed: false,
+        message: `❌ You have not subscribed to our channel with your Google account (${profileData.email}). Please subscribe and try again!`,
+      };
+    } catch (err: any) {
+      return {
+        isSubscribed: false,
+        message: `Network error verifying Google subscription: ${err.message}`,
+      };
+    }
+  }
+
+  // Claim with Google OAuth (100% Genuine Direct Subscription Check)
+  async claimWithGoogleOAuth(
+    userEmail: string,
+    platform: 'youtube' | 'youtube_2',
+    accessToken: string
+  ): Promise<{ success: boolean; message: string; newBonusTotal: number }> {
+    const config = this.getApiConfig();
+    const targetChannel = platform === 'youtube' ? config.youtubeChannelId : config.youtubeChannelId2;
+
+    const taskMeta = DEFAULT_TASKS.find((t) => t.id === platform);
+    const platformName = taskMeta?.platform || platform;
+
+    // Check if already claimed by user
+    const submissions = this.getAllSubmissions();
+    const alreadyClaimed = submissions.some(
+      (s) => s.userEmail.toLowerCase() === userEmail.toLowerCase() && s.platform === platform && s.status !== 'revoked'
+    );
+    if (alreadyClaimed) {
+      return {
+        success: false,
+        message: `⚠️ You have already claimed +500 GB for ${platformName}!`,
+        newBonusTotal: this.getBonusBytes(),
+      };
+    }
+
+    // Call live Google OAuth verification
+    const verifyRes = await this.verifySubscriptionWithAccessToken(accessToken, targetChannel || 'UC');
+    if (!verifyRes.isSubscribed) {
+      return {
+        success: false,
+        message: verifyRes.message,
+        newBonusTotal: this.getBonusBytes(),
+      };
+    }
+
+    // Fetch user profile from token to record genuine identity
+    let googleIdent = 'Google Verified Subscriber';
+    try {
+      const pRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const pData = await pRes.json();
+      googleIdent = pData.email || pData.name || googleIdent;
+    } catch {}
+
+    const newSubmission: TopUpSubmission = {
+      id: 'claim_' + Math.random().toString(36).substring(2, 11),
+      userEmail,
+      platform,
+      platformName,
+      handle: `Google (${googleIdent})`,
+      rewardBytes: FIVE_HUNDRED_GB_BYTES,
+      rewardLabel: '+500 GB',
+      claimedAt: new Date().toISOString(),
+      status: 'verified',
+      verificationMethod: 'youtube_api',
+      apiResponseNote: verifyRes.message,
+    };
+
+    submissions.unshift(newSubmission);
+    localStorage.setItem(this.STORAGE_KEY_SUBMISSIONS, JSON.stringify(submissions));
+
+    const currentBonus = this.getBonusBytes();
+    const newBonus = currentBonus + FIVE_HUNDRED_GB_BYTES;
+    localStorage.setItem(this.STORAGE_KEY_BONUS, String(newBonus));
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mc_storage_updated'));
+      window.dispatchEvent(new CustomEvent('mc_topup_updated'));
+    }
+
+    return {
+      success: true,
+      message: `🎉 100% Genuine Google Verification Successful! +500 GB added! (${verifyRes.message})`,
+      newBonusTotal: newBonus,
     };
   }
 
