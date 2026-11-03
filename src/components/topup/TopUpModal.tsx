@@ -18,7 +18,8 @@ import {
   Bot,
   Timer,
   Clock,
-  ArrowRight,
+  KeyRound,
+  Lock,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -47,6 +48,16 @@ export function TopUpModal() {
   );
   const [bonusBytes, setBonusBytes] = useState(() => topUpService.getBonusBytes());
   const [handles, setHandles] = useState<Record<SocialPlatformId, string>>({
+    youtube: '',
+    youtube_2: '',
+    facebook: '',
+    tiktok: '',
+    instagram: '',
+    telegram: '',
+    twitter: '',
+  });
+
+  const [secretCodes, setSecretCodes] = useState<Record<SocialPlatformId, string>>({
     youtube: '',
     youtube_2: '',
     facebook: '',
@@ -92,7 +103,7 @@ export function TopUpModal() {
     const waitSeconds = apiConfig.intentVerifySeconds || 6;
 
     setVisitedTimers((prev) => ({ ...prev, [platform]: waitSeconds }));
-    toast.info(`Opened ${platform.toUpperCase()}. Visiting official channel... Follow and enter handle below!`);
+    toast.info(`Opened ${platform.toUpperCase()}. Visiting official channel... Find the secret code and enter your handle below!`);
 
     const interval = setInterval(() => {
       setVisitedTimers((prev) => {
@@ -108,24 +119,33 @@ export function TopUpModal() {
 
   const handleClaim = async (task: SocialTopUpTask) => {
     const handle = handles[task.id];
-    if (!handle || handle.trim().length < 2) {
-      toast.error('Please enter your username, handle, or profile link.');
+    const code = secretCodes[task.id];
+    const hasVisited = visitedTimers[task.id] === -1;
+
+    if (!hasVisited) {
+      toast.error('Please click "1. Visit Channel" first and wait for the countdown before claiming!');
+      return;
+    }
+
+    if (!handle || handle.trim().length < 3) {
+      toast.error('Please enter a valid handle (minimum 3 characters, e.g. @yourname).');
       return;
     }
 
     setSubmittingPlatform(task.id);
     try {
-      const result = await topUpService.claimTask(userEmail, task.id, handle);
+      const result = await topUpService.claimTask(userEmail, task.id, handle, code, hasVisited);
       if (result.success) {
         toast.success(result.message);
         setClaimedMap(topUpService.getUserClaimedPlatforms(userEmail));
         setBonusBytes(topUpService.getBonusBytes());
         setHandles((prev) => ({ ...prev, [task.id]: '' }));
+        setSecretCodes((prev) => ({ ...prev, [task.id]: '' }));
       } else {
         toast.error(result.message);
       }
     } catch (e: any) {
-      toast.error(e.message || 'Failed to claim storage');
+      toast.error(e.message || 'Verification failed. Please check your details.');
     } finally {
       setSubmittingPlatform(null);
     }
@@ -172,11 +192,11 @@ export function TopUpModal() {
             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <span>Automated Cloud Storage Top-Up</span>
               <Badge variant="outline" className="text-[10px] uppercase font-bold text-amber-400 border-amber-500/30">
-                +500 GB Each (Up to +3 TB)
+                +500 GB Each (Up to +3.5 TB)
               </Badge>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Follow our official accounts to earn +500 GB per platform. Verified automatically via official APIs & Smart Intent tracking!
+              Follow our official accounts to earn +500 GB per platform. Strictly verified via Google YouTube API & Channel Secret Codes.
             </DialogDescription>
           </div>
         </div>
@@ -225,7 +245,9 @@ export function TopUpModal() {
             const targetUrl = officialLinks[task.id] || task.defaultUrl;
             const currentTimer = visitedTimers[task.id];
             const currentHandle = handles[task.id] || '';
+            const currentCode = secretCodes[task.id] || '';
             const isSubmitting = submittingPlatform === task.id;
+            const hasVisited = currentTimer === -1;
 
             return (
               <div
@@ -281,7 +303,7 @@ export function TopUpModal() {
                   </div>
                 ) : (
                   /* Active Claim Form */
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-2.5 pt-1">
                     {/* Step 1: Visit Channel Button with countdown indicator */}
                     <Button
                       type="button"
@@ -291,7 +313,7 @@ export function TopUpModal() {
                       className={`w-full h-8 rounded-xl text-[11px] font-semibold gap-1.5 border-border transition-colors ${
                         currentTimer > 0
                           ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
-                          : currentTimer === -1
+                          : hasVisited
                           ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
                           : 'hover:bg-secondary'
                       }`}
@@ -301,10 +323,10 @@ export function TopUpModal() {
                           <Clock className="h-3 w-3 animate-spin text-amber-400" />
                           <span>1. Visiting Channel... ({currentTimer}s)</span>
                         </>
-                      ) : currentTimer === -1 ? (
+                      ) : hasVisited ? (
                         <>
                           <Check className="h-3 w-3 text-emerald-400" />
-                          <span>1. Channel Visited & Ready</span>
+                          <span>1. Visited Official Account (Unlocked)</span>
                         </>
                       ) : (
                         <>
@@ -314,31 +336,66 @@ export function TopUpModal() {
                       )}
                     </Button>
 
-                    {/* Step 2: Input User Handle & Claim */}
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="text"
-                        value={currentHandle}
-                        onChange={(e) => setHandles((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                        placeholder={task.handlePlaceholder}
-                        className="h-8 rounded-xl text-[11px] bg-secondary/40 border-border"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={!currentHandle.trim() || isSubmitting}
-                        onClick={() => handleClaim(task)}
-                        className="h-8 rounded-xl text-[11px] font-bold px-3 bg-amber-500 hover:bg-amber-600 text-black shadow-sm shrink-0"
-                      >
-                        {isSubmitting ? (
-                          <span className="flex items-center gap-1">
-                            <span className="h-2 w-2 rounded-full bg-black animate-ping" />
-                            <span>Verifying...</span>
-                          </span>
-                        ) : (
-                          'Verify +500GB'
+                    {/* Step 2: Input User Handle + Secret Code & Claim */}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          disabled={!hasVisited || isSubmitting}
+                          value={currentHandle}
+                          onChange={(e) => setHandles((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                          placeholder={hasVisited ? task.handlePlaceholder : 'Visit channel above to unlock handle input'}
+                          className={`h-8 rounded-xl text-[11px] bg-secondary/40 border-border ${
+                            !hasVisited ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        />
+                        {!hasVisited && (
+                          <Lock className="absolute right-2.5 top-2.5 h-3 w-3 text-muted-foreground/60" />
                         )}
-                      </Button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <div className="relative flex-1">
+                          <Input
+                            type="text"
+                            disabled={!hasVisited || isSubmitting}
+                            value={currentCode}
+                            onChange={(e) => setSecretCodes((prev) => ({ ...prev, [task.id]: e.target.value.toUpperCase() }))}
+                            placeholder={hasVisited ? 'Channel Secret Code (e.g. MC-...)' : 'Locked'}
+                            className={`h-8 rounded-xl text-[11px] bg-secondary/40 border-border font-mono uppercase pr-7 ${
+                              !hasVisited ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                          />
+                          <KeyRound className="absolute right-2.5 top-2.5 h-3 w-3 text-muted-foreground pointer-events-none" />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={!hasVisited || !currentHandle.trim() || !currentCode.trim() || isSubmitting}
+                          onClick={() => handleClaim(task)}
+                          className="h-8 rounded-xl text-[11px] font-bold px-3 bg-amber-500 hover:bg-amber-600 text-black shadow-sm shrink-0 disabled:opacity-40"
+                        >
+                          {isSubmitting ? (
+                            <span className="flex items-center gap-1">
+                              <span className="h-2 w-2 rounded-full bg-black animate-ping" />
+                              <span>Verifying...</span>
+                            </span>
+                          ) : (
+                            'Verify +500GB'
+                          )}
+                        </Button>
+                      </div>
+
+                      {!hasVisited ? (
+                        <p className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          <span>Click "1. Visit" above first to find the secret code and unlock Step 2.</span>
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground">
+                          Enter your real handle and the secret code found in our channel's Pinned Comment or Bio.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -352,7 +409,7 @@ export function TopUpModal() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
             <span>
-              <strong>100% Free & Automated:</strong> No screenshots or AI manual reviews needed. Real API and Smart Intent tracking verify your follow in real-time.
+              <strong>Strict Anti-Fraud Protection:</strong> Fake handles and wrong secret codes are instantly rejected by the Google YouTube API & Fraud Engine. No cheat submissions allowed.
             </span>
           </div>
         </div>

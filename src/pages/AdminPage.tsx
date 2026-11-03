@@ -739,6 +739,57 @@ export function AdminPage() {
                 </div>
               </div>
 
+              {/* Channel Secret Verification Codes (Anti-Cheat Engine) */}
+              <div className="p-4 rounded-2xl bg-card border border-amber-500/30 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-2">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Channel Secret Verification Codes (100% Anti-Cheat)</span>
+                    </span>
+                    <p className="text-[11px] text-muted-foreground">
+                      Put these secret codes in your YouTube video pinned comments or bio. Users MUST enter the code to claim +500 GB, strictly stopping all fake submissions!
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-semibold text-muted-foreground cursor-pointer flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={apiInputs.requireSecretCode}
+                        onChange={(e) => setApiInputs((prev) => ({ ...prev, requireSecretCode: e.target.checked }))}
+                        className="rounded border-border text-amber-500 focus:ring-amber-500"
+                      />
+                      <span>Strict Secret Code Required</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  {DEFAULT_TASKS.map((task) => (
+                    <div key={task.id} className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center justify-between">
+                        <span>{task.platform} Code</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={apiInputs.secretCodes?.[task.id] || ''}
+                        onChange={(e) =>
+                          setApiInputs((prev) => ({
+                            ...prev,
+                            secretCodes: {
+                              ...prev.secretCodes,
+                              [task.id]: e.target.value.toUpperCase(),
+                            },
+                          }))
+                        }
+                        placeholder="MC-CODE"
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-2.5 py-1.5 text-xs text-amber-400 font-mono font-bold focus:outline-none focus:border-amber-400 uppercase"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Smart Intent Verification Duration */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-secondary/30 border border-border/60">
                 <div className="space-y-0.5">
