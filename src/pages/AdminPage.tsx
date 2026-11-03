@@ -62,23 +62,28 @@ export function AdminPage() {
   const [topUpSubmissions, setTopUpSubmissions] = useState(() => topUpService.getAllSubmissions());
   const [officialLinks, setOfficialLinks] = useState(() => topUpService.getOfficialLinks());
   const [linkInputs, setLinkInputs] = useState(() => topUpService.getOfficialLinks());
+  const [topUpSettings, setTopUpSettings] = useState(() => topUpService.getSettings());
+  const [settingsInputs, setSettingsInputs] = useState(() => topUpService.getSettings());
 
   useEffect(() => {
     const refreshTopUp = () => {
       setTopUpSubmissions(topUpService.getAllSubmissions());
       setOfficialLinks(topUpService.getOfficialLinks());
+      setTopUpSettings(topUpService.getSettings());
     };
     window.addEventListener('mc_topup_updated', refreshTopUp);
     return () => window.removeEventListener('mc_topup_updated', refreshTopUp);
   }, []);
 
-  const handleSaveOfficialLinks = (e: React.FormEvent) => {
+  const handleSaveTopUpConfig = (e: React.FormEvent) => {
     e.preventDefault();
     Object.entries(linkInputs).forEach(([platform, url]) => {
       topUpService.updateOfficialLink(platform as SocialPlatformId, url);
     });
+    topUpService.updateSettings(settingsInputs);
     setOfficialLinks(topUpService.getOfficialLinks());
-    toast.success('Official social media channel links updated successfully!');
+    setTopUpSettings(topUpService.getSettings());
+    toast.success('Official channel links & Smart Auto-Verification settings saved!');
   };
 
   const handleRevokeClaim = (submissionId: string) => {
@@ -493,39 +498,97 @@ export function AdminPage() {
             </div>
           </div>
 
-          {/* Official Social Links Configuration (Admin Editable) */}
-          <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-4">
+          {/* Official Social Links & Verification Engine Configuration (Admin Editable) */}
+          <div className="p-5 rounded-3xl border border-border/80 bg-card space-y-5">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                   <Gift className="h-4 w-4 text-amber-400" />
-                  <span>Configure Official Social Media Channels</span>
+                  <span>Configure Official Channels & Smart Auto-Verification Engine</span>
                 </h4>
                 <p className="text-xs text-muted-foreground">
-                  Update the official destination links users visit to follow/subscribe for their +500 GB storage bonus.
+                  Gleam.io & Galxe style 100% automated follow verification with zero screenshots or manual approvals.
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleSaveOfficialLinks} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {DEFAULT_TASKS.map((task) => (
-                <div key={task.id} className="space-y-1">
-                  <label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                    <span>{task.platform} Official URL</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={linkInputs[task.id] || ''}
-                    onChange={(e) => setLinkInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                    placeholder={task.defaultUrl}
-                    className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
-                  />
-                </div>
-              ))}
+            <form onSubmit={handleSaveTopUpConfig} className="space-y-4">
+              {/* Engine Parameters */}
+              <div className="p-4 rounded-2xl bg-secondary/30 border border-border/60 space-y-3">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Verification Engine Rules</span>
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">Intent Time-Lock Duration</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="3"
+                        max="60"
+                        value={settingsInputs.intentSeconds}
+                        onChange={(e) =>
+                          setSettingsInputs((prev) => ({ ...prev, intentSeconds: Math.max(3, Number(e.target.value) || 8) }))
+                        }
+                        className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
+                      />
+                      <span className="text-xs text-muted-foreground font-semibold">seconds</span>
+                    </div>
+                  </div>
 
-              <div className="md:col-span-2 pt-2 flex justify-end">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">Telegram Bot Username (Optional)</label>
+                    <input
+                      type="text"
+                      value={settingsInputs.telegramBotUsername}
+                      onChange={(e) =>
+                        setSettingsInputs((prev) => ({ ...prev, telegramBotUsername: e.target.value }))
+                      }
+                      placeholder="@MasterCloudStorageBot"
+                      className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">YouTube Channel ID / Handle (Optional)</label>
+                    <input
+                      type="text"
+                      value={settingsInputs.youtubeChannelId}
+                      onChange={(e) =>
+                        setSettingsInputs((prev) => ({ ...prev, youtubeChannelId: e.target.value }))
+                      }
+                      placeholder="@MasterCloudOfficial"
+                      className="w-full bg-secondary/60 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Destination URLs */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-foreground">Official Channel & Profile Destination URLs</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {DEFAULT_TASKS.map((task) => (
+                    <div key={task.id} className="space-y-1">
+                      <label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                        <span>{task.platform} URL</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={linkInputs[task.id] || ''}
+                        onChange={(e) => setLinkInputs((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                        placeholder={task.defaultUrl}
+                        className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
                 <Button type="submit" size="sm" className="rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-black">
-                  Save Official Channel Links
+                  Save Top-Up & Verification Settings
                 </Button>
               </div>
             </form>
@@ -537,7 +600,7 @@ export function AdminPage() {
               <div>
                 <h4 className="text-sm font-bold text-foreground">Submitted User Claims & Verification Proofs</h4>
                 <p className="text-xs text-muted-foreground">
-                  Inspect submitted usernames and profiles. Revoke fake submissions if needed.
+                  Inspect submitted usernames, verification methods, and timestamps.
                 </p>
               </div>
             </div>
@@ -556,7 +619,8 @@ export function AdminPage() {
                       <tr className="border-b border-border/60 bg-muted/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         <th className="px-4 py-3">User Email</th>
                         <th className="px-4 py-3">Platform</th>
-                        <th className="px-4 py-3">Submitted Handle / Proof</th>
+                        <th className="px-4 py-3">Submitted Handle</th>
+                        <th className="px-4 py-3">Method</th>
                         <th className="px-4 py-3">Bonus Quota</th>
                         <th className="px-4 py-3">Claim Date</th>
                         <th className="px-4 py-3">Status</th>
@@ -585,6 +649,15 @@ export function AdminPage() {
                                 </a>
                               )}
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/80 border border-border">
+                              {sub.verificationMethod === 'google_oauth'
+                                ? '🔍 Google API'
+                                : sub.verificationMethod === 'telegram_bot'
+                                ? '🤖 Telegram Bot'
+                                : '⚡ Smart Intent'}
+                            </span>
                           </td>
                           <td className="px-4 py-3 font-mono font-bold text-emerald-400">
                             {sub.rewardLabel}
