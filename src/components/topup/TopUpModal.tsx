@@ -166,6 +166,14 @@ export function TopUpModal() {
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: config.googleOAuthClientId,
           scope: 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+          error_callback: (err: any) => {
+            console.error('Google OAuth error:', err);
+            const msg = err.type === 'popup_closed' 
+              ? 'Google sign-in popup was closed.' 
+              : `Google OAuth Error: ${err.message || err.type || 'Please check Authorized Origins in Google Console'}`;
+            toast.error(msg);
+            setSubmittingPlatform(null);
+          },
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
               toast.error(`Google Login cancelled or failed: ${tokenResponse.error}`);

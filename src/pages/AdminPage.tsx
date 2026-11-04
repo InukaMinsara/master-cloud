@@ -678,9 +678,20 @@ export function AdminPage() {
                         placeholder="xxxx.apps.googleusercontent.com"
                         className="w-full bg-secondary/40 border border-border/70 rounded-xl px-3 py-1.5 text-xs text-foreground font-mono focus:outline-none focus:border-primary"
                       />
-                      <p className="text-[10px] text-muted-foreground">
-                        Enables "Sign in with Google" to directly check if the user is truly subscribed.
-                      </p>
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] space-y-1.5 text-amber-300">
+                        <p className="font-bold flex items-center gap-1.5">
+                          <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />
+                          <span>Fix for "Error 401: invalid_client / no registered origin":</span>
+                        </p>
+                        <p className="text-muted-foreground text-[10px] leading-relaxed">
+                          In Google Cloud Console &rarr; <em>Credentials</em> &rarr; Edit your <em>OAuth 2.0 Client ID</em> &rarr; under <strong>Authorized JavaScript origins</strong>, you must add your web origins (no trailing slash):
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          <code className="px-2 py-0.5 rounded-md bg-background/80 border border-border text-foreground font-mono select-all">http://localhost:5173</code>
+                          <code className="px-2 py-0.5 rounded-md bg-background/80 border border-border text-foreground font-mono select-all">http://127.0.0.1:5173</code>
+                          <code className="px-2 py-0.5 rounded-md bg-background/80 border border-border text-foreground font-mono select-all">https://mastercloud09.netlify.app</code>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
