@@ -87,7 +87,7 @@ export function FileRequestPage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <img src="/cloud-logo.svg" alt="Master Cloud" className="h-12 w-12 animate-pulse" />
+          <img src="/logo-icon.svg" alt="Master Cloud" className="h-12 w-12 animate-pulse rounded-2xl object-contain" />
           <span className="text-xs text-muted-foreground">Loading file request portal...</span>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function FileRequestPage() {
       {/* Brand Header */}
       <header className="flex h-16 items-center justify-between px-6 border-b border-border/60 bg-card/60 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <img src="/cloud-logo.svg" alt="Master Cloud" className="h-8 w-8" />
+          <img src="/logo-icon.svg" alt="Master Cloud" className="h-8 w-8 rounded-xl object-contain" />
           <span className="font-bold text-base tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             MASTER CLOUD
           </span>
