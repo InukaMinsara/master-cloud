@@ -76,7 +76,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border/60">
         <NavLink to="/" className="flex items-center gap-3 overflow-hidden">
-          <img src="/logo-icon.svg" alt="Master Cloud" className="h-9 w-9 shrink-0 drop-shadow" />
+          <img src="/logo-icon.svg" alt="Master Cloud" className="h-9 w-9 shrink-0 drop-shadow rounded-xl object-contain" />
           {!sidebarCollapsed && (
             <div className="flex flex-col">
               <span className="font-bold text-base tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-300">

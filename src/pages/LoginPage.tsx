@@ -89,7 +89,7 @@ export function LoginPage() {
               <img
                 src="/logo-icon.svg"
                 alt="Master Cloud"
-                className="relative h-16 w-16 drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
+                className="relative h-16 w-16 drop-shadow-xl transition-transform duration-300 group-hover:scale-105 rounded-2xl object-contain"
               />
             </div>
           </Link>
