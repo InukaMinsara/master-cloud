@@ -168,39 +168,31 @@ export function PublicSharePage() {
     }
   };
 
+  const resolvedDownloadUrl = mediaUrl || (linkData ? (TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name)) : null);
+
   const handleDownload = async () => {
     if (!linkData) return;
     try {
-      const targetUrl = mediaUrl || TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name);
+      const targetUrl = resolvedDownloadUrl;
       if (targetUrl) {
-        toast.info(`Downloading ${linkData.item.name}...`);
-        try {
-          const res = await fetch(targetUrl);
-          if (res.ok) {
-            const blob = await res.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = objectUrl;
-            a.download = linkData.item.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-            toast.success(`Download ready: ${linkData.item.name}`);
-            return;
+        toast.success(`Starting download: ${linkData.item.name}`);
+        // Native direct anchor trigger
+        const a = document.createElement('a');
+        a.href = targetUrl;
+        a.download = linkData.item.name;
+        a.setAttribute('download', linkData.item.name);
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Fallback native location redirect
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.assign(targetUrl);
           }
-        } catch {
-          // Fallback to direct anchor download
-          const a = document.createElement('a');
-          a.href = targetUrl;
-          a.download = linkData.item.name;
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          toast.success(`Download started: ${linkData.item.name}`);
-          return;
-        }
+        }, 150);
+        return;
       }
 
       if (linkData.link.resource_type === 'file') {
@@ -421,13 +413,30 @@ export function PublicSharePage() {
             {/* Actions */}
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               {link.allow_download && (
-                <Button
-                  variant="gradient"
-                  onClick={handleDownload}
-                  className="flex-1 h-12 rounded-2xl text-sm font-semibold shadow-md"
-                >
-                  <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
-                </Button>
+                resolvedDownloadUrl ? (
+                  <a
+                    href={resolvedDownloadUrl}
+                    download={item.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex"
+                  >
+                    <Button
+                      variant="gradient"
+                      className="w-full h-12 rounded-2xl text-sm font-semibold shadow-md cursor-pointer"
+                    >
+                      <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button
+                    variant="gradient"
+                    onClick={handleDownload}
+                    className="flex-1 h-12 rounded-2xl text-sm font-semibold shadow-md cursor-pointer"
+                  >
+                    <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
+                  </Button>
+                )
               )}
 
               <Button

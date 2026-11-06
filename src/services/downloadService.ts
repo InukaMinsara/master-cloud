@@ -71,35 +71,21 @@ export class DownloadService {
       // 0. Check known cloud media registry or direct cloud resolution first
       const directCloud = TelegramCloudService.resolveDirectCloudUrl(file.storage_path) || TelegramCloudService.resolveDirectCloudUrl(file.name);
       if (directCloud) {
-        onProgress?.(50);
-        try {
-          const res = await fetch(directCloud);
-          if (res.ok) {
-            const blob = await res.blob();
-            onProgress?.(90);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            onProgress?.(100);
-            setTimeout(() => URL.revokeObjectURL(url), 5000);
-            return;
-          }
-        } catch {
-          // If cross-origin fetch blocked, direct anchor download
-          onProgress?.(100);
-          const a = document.createElement('a');
-          a.href = directCloud;
-          a.download = file.name;
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          return;
+        onProgress?.(100);
+        const a = document.createElement('a');
+        a.href = directCloud;
+        a.download = file.name;
+        a.setAttribute('download', file.name);
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          setTimeout(() => {
+            window.location.assign(directCloud);
+          }, 150);
         }
+        return;
       }
 
       // 1. Direct stream download for Telegram Cloud + Multi-CDN files
