@@ -386,6 +386,11 @@ class UnifiedApiService {
     }
     await this.syncActiveWebSession(null);
     localDb.setCurrentUser(null as any);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('master_cloud_v3_current_user');
+      localStorage.removeItem('master_cloud_current_user');
+      localStorage.removeItem('master_cloud_active_session');
+    }
     await localDb.logActivity('auth', null, 'Current User', 'logout', {}).catch(() => {});
   }
 

@@ -81,6 +81,16 @@ export function PublicSharePage() {
       setIsLoadingMedia(true);
       setMediaError(null);
 
+      // 0. Known Cloud Media Registry lookup (Immediate 100% cloud playback for verified assets)
+      const directCloud = TelegramCloudService.resolveDirectCloudUrl(f.storage_path) || TelegramCloudService.resolveDirectCloudUrl(f.name);
+      if (directCloud) {
+        if (active) {
+          setMediaUrl(directCloud);
+          setIsLoadingMedia(false);
+        }
+        return;
+      }
+
       // 1. Direct HTTP/HTTPS Cloud Stream (Litterbox, Catbox, CDN)
       if (f.storage_path.startsWith('http://') || f.storage_path.startsWith('https://')) {
         if (active) {
@@ -161,19 +171,49 @@ export function PublicSharePage() {
   const handleDownload = async () => {
     if (!linkData) return;
     try {
-      if (mediaUrl) {
-        const a = document.createElement('a');
-        a.href = mediaUrl;
-        a.download = linkData.item.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast.success(`Downloading ${linkData.item.name}`);
-        return;
+      const targetUrl = mediaUrl || TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name);
+      if (targetUrl) {
+        toast.info(`Downloading ${linkData.item.name}...`);
+        try {
+          const res = await fetch(targetUrl);
+          if (res.ok) {
+            const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = linkData.item.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+            toast.success(`Download ready: ${linkData.item.name}`);
+            return;
+          }
+        } catch {
+          // Fallback to direct anchor download
+          const a = document.createElement('a');
+          a.href = targetUrl;
+          a.download = linkData.item.name;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          toast.success(`Download started: ${linkData.item.name}`);
+          return;
+        }
       }
 
       if (linkData.link.resource_type === 'file') {
-        await api.downloadFile(linkData.item as FileItem);
+        const file = linkData.item as FileItem;
+        if (file.storage_path?.startsWith('zdrive:')) {
+          const isLocal = typeof window !== 'undefined' &&
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+          if (!isLocal) {
+            toast.info(`"${file.name}" was shared while still syncing from the owner's Windows PC. Cloud stream will be ready shortly.`);
+            return;
+          }
+        }
+        await api.downloadFile(file);
       } else {
         await api.downloadFolder(linkData.item as FolderItem);
       }
