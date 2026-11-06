@@ -37,21 +37,54 @@ export class TelegramCloudService {
 
   // Known verified cloud media map (immediate instant playback & download for seed & user assets)
   private static KNOWN_CLOUD_MEDIA: Record<string, string> = {
-    "2000's Chart Hits Medley - News අයිමාත්‍රා": "https://litter.catbox.moe/7ctigb.mp4",
-    "2000's Chart Hits Medley": "https://litter.catbox.moe/7ctigb.mp4",
-    "7ctigb.mp4": "https://litter.catbox.moe/7ctigb.mp4",
-    "AVATAR First Medley - Heen Kaluware Medley": "https://litter.catbox.moe/w8lbkc.mp4",
-    "AVATAR First Medley": "https://litter.catbox.moe/w8lbkc.mp4",
+    "2000": "https://litter.catbox.moe/7ctigb.mp4",
+    "chart hits": "https://litter.catbox.moe/7ctigb.mp4",
+    "news": "https://litter.catbox.moe/7ctigb.mp4",
+    "අයිමාත්‍රා": "https://litter.catbox.moe/7ctigb.mp4",
+    "utpiujtg": "https://litter.catbox.moe/7ctigb.mp4",
+    "7ctigb": "https://litter.catbox.moe/7ctigb.mp4",
+    "uqlvmnjfgwqa2oph": "https://litter.catbox.moe/7ctigb.mp4",
     "avatar": "https://litter.catbox.moe/w8lbkc.mp4",
-    "w8lbkc.mp4": "https://litter.catbox.moe/w8lbkc.mp4",
+    "heen kaluware": "https://litter.catbox.moe/w8lbkc.mp4",
+    "w8lbkc": "https://litter.catbox.moe/w8lbkc.mp4",
+    "jdzn_dnxb1vt_z9e": "https://litter.catbox.moe/w8lbkc.mp4",
   };
+
+  /**
+   * Cleans strings to handle cross-platform unicode, punctuation, curly quotes, and ZWJ
+   */
+  private static normalizeKey(str: string): string {
+    return str
+      .toLowerCase()
+      .replace(/[\u2018\u2019'`´"]/g, '') // remove straight & curly apostrophes
+      .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces/joiners
+      .replace(/[\[\]()._-]/g, ' ') // replace symbols with spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Rewrites remote cloud URLs to Netlify-proxied stream paths to eliminate CORS & CORP blocking
+   */
+  static toProxiedStreamUrl(url: string): string {
+    if (!url) return url;
+    if (typeof window !== 'undefined' && url.includes('litter.catbox.moe/')) {
+      const parts = url.split('litter.catbox.moe/');
+      if (parts[1]) return `/api/litter-stream/${parts[1]}`;
+    }
+    if (typeof window !== 'undefined' && url.includes('files.catbox.moe/')) {
+      const parts = url.split('files.catbox.moe/');
+      if (parts[1]) return `/api/catbox-stream/${parts[1]}`;
+    }
+    return url;
+  }
 
   /**
    * Dynamically registers a verified cloud media URL (persisted across reloads)
    */
   static registerCloudMedia(key: string, url: string): void {
     if (!key || !url) return;
-    const cleanKey = key.toLowerCase().trim();
+    const cleanKey = this.normalizeKey(key);
     this.KNOWN_CLOUD_MEDIA[cleanKey] = url;
     if (typeof localStorage !== 'undefined') {
       try {
@@ -71,16 +104,17 @@ export class TelegramCloudService {
     if (!storagePathOrName) return null;
     const input = storagePathOrName.trim();
 
-    // 1. Direct HTTP/HTTPS link
+    // 1. Direct HTTP/HTTPS link -> proxy through Netlify to bypass CORP/CORS
     if (input.startsWith('http://') || input.startsWith('https://')) {
-      return input;
+      return this.toProxiedStreamUrl(input);
     }
 
-    // 2. Exact or substring match in static map
-    const lower = input.toLowerCase();
+    // 2. Exact or fuzzy normalized match in static map
+    const normInput = this.normalizeKey(input);
     for (const [k, u] of Object.entries(this.KNOWN_CLOUD_MEDIA)) {
-      if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) {
-        return u;
+      const normKey = this.normalizeKey(k);
+      if (normInput.includes(normKey) || normKey.includes(normInput)) {
+        return this.toProxiedStreamUrl(u);
       }
     }
 
@@ -91,8 +125,11 @@ export class TelegramCloudService {
         if (raw) {
           const parsed = JSON.parse(raw);
           for (const [k, u] of Object.entries(parsed)) {
-            if (typeof u === 'string' && (lower.includes(k) || k.includes(lower))) {
-              return u;
+            if (typeof u === 'string') {
+              const normKey = this.normalizeKey(k);
+              if (normInput.includes(normKey) || normKey.includes(normInput)) {
+                return this.toProxiedStreamUrl(u);
+              }
             }
           }
         }
@@ -101,7 +138,8 @@ export class TelegramCloudService {
 
     // 4. Single-chunk tgcloud descriptor
     if (input.startsWith('tgcloud:')) {
-      return this.getDirectStreamUrl(input);
+      const streamUrl = this.getDirectStreamUrl(input);
+      if (streamUrl) return this.toProxiedStreamUrl(streamUrl);
     }
 
     return null;
@@ -267,7 +305,11 @@ export class TelegramCloudService {
       fd.append('time', '72h');
       fd.append('fileToUpload', file, fileName);
 
-      const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      const uploadEndpoint = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+        ? '/api/litterbox-proxy/resources/internals/api.php'
+        : 'https://litterbox.catbox.moe/resources/internals/api.php';
+
+      const r = await fetch(uploadEndpoint, {
         method: 'POST',
         body: fd,
       });

@@ -17,8 +17,8 @@ export function LoginPage() {
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
 
   // Email form state
-  const [email, setEmail] = useState('immaster2024@gmail.com');
-  const [password, setPassword] = useState('arduino2024');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleInstantGoogleLogin = async (targetEmail: string, displayName?: string) => {
