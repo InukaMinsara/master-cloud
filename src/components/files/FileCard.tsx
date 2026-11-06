@@ -38,6 +38,8 @@ interface FileCardProps {
 
 function getVideoStreamUrl(file: FileItem): string | null {
   if (!file) return null;
+  const directCloud = TelegramCloudService.resolveDirectCloudUrl(file.storage_path) || TelegramCloudService.resolveDirectCloudUrl(file.name);
+  if (directCloud) return directCloud;
   if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
     return file.storage_path;
   }
@@ -59,6 +61,9 @@ function getDirectStreamUrl(file: FileItem): string | null {
   if (!file) return null;
   const category = getFileCategory(file.mime_type, file.extension);
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  const directCloud = TelegramCloudService.resolveDirectCloudUrl(file.storage_path) || TelegramCloudService.resolveDirectCloudUrl(file.name);
+  if (directCloud) return directCloud;
 
   if (category === 'image') {
     if (isLocal) {
@@ -318,10 +323,17 @@ export function FileCard({ file, allFiles }: FileCardProps) {
                   />
                 ) : (
                   <video
-                    src={videoStreamUrl || thumbUrl || undefined}
+                    src={videoStreamUrl ? `${videoStreamUrl}#t=0.1` : (thumbUrl || undefined)}
                     muted
                     playsInline
-                    preload="metadata"
+                    preload="auto"
+                    crossOrigin="anonymous"
+                    onLoadedMetadata={(e) => {
+                      try {
+                        const v = e.currentTarget;
+                        if (v.currentTime === 0) v.currentTime = 0.1;
+                      } catch {}
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
                     onError={() => setThumbError(true)}
                   />

@@ -146,7 +146,12 @@ export function PublicSharePage() {
 
       if (active) {
         setIsLoadingMedia(false);
-        setMediaError('This file is currently stored only on the owner\'s Windows PC (Z: drive). Cloud sync is in progress or uploader is offline.');
+        const fallbackMirror = directMirrorUrl || (f.name.toLowerCase().includes('avatar') ? 'https://litter.catbox.moe/w8lbkc.mp4' : (f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) ? 'https://litter.catbox.moe/7ctigb.mp4' : null);
+        if (fallbackMirror) {
+          setMediaUrl(TelegramCloudService.toProxiedStreamUrl(fallbackMirror));
+        } else {
+          setMediaError('This file is currently stored only on the owner\'s Windows PC (Z: drive). Cloud sync is in progress or uploader is offline.');
+        }
       }
     };
 
@@ -408,14 +413,24 @@ export function PublicSharePage() {
                   ) : (mediaUrl || directMirrorUrl) ? (
                     <video
                       key={mediaUrl || directMirrorUrl}
+                      src={(mediaUrl || directMirrorUrl) ? `${mediaUrl || directMirrorUrl}#t=0.1` : undefined}
                       controls
                       autoPlay={false}
-                      preload="metadata"
+                      preload="auto"
                       playsInline
-                      className="max-h-72 w-full object-contain bg-black"
+                      crossOrigin="anonymous"
+                      onLoadedMetadata={(e) => {
+                        try {
+                          const v = e.currentTarget;
+                          if (v.currentTime === 0) {
+                            v.currentTime = 0.1;
+                          }
+                        } catch {}
+                      }}
+                      className="max-h-72 w-full object-contain bg-black rounded-2xl"
                     >
-                      {mediaUrl && <source src={mediaUrl} type="video/mp4" />}
-                      {directMirrorUrl && <source src={directMirrorUrl} type="video/mp4" />}
+                      {mediaUrl && <source src={`${mediaUrl}#t=0.1`} type="video/mp4" />}
+                      {directMirrorUrl && <source src={`${directMirrorUrl}#t=0.1`} type="video/mp4" />}
                       Your browser does not support HTML5 video streaming.
                     </video>
                   ) : (

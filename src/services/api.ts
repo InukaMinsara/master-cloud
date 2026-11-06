@@ -445,7 +445,13 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
+
           let query = supabase.from('folders').select('*, owner:profiles(*)');
+          if (!isMasterAccount) {
+            query = query.eq('owner_id', user.id);
+          }
           if (includeDeleted) {
             query = query.not('deleted_at', 'is', null);
           } else {
@@ -458,10 +464,9 @@ class UnifiedApiService {
           }
           const { data, error } = await query.order('name');
           if (!error && Array.isArray(data)) {
-            const remoteMap = new Map((data as FolderItem[]).map((f) => [f.name.toLowerCase(), f]));
-            const merged = [...(data as FolderItem[])];
-            const currentEmail = (user.email || '').trim().toLowerCase();
-            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
+            const remoteFolders = isMasterAccount ? (data as FolderItem[]) : (data as FolderItem[]).filter(f => f.owner_id === user.id);
+            const remoteMap = new Map(remoteFolders.map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...remoteFolders];
             for (const lf of localFolders) {
               const isUserOwned = isMasterAccount ? true : (lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0])));
               if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
@@ -619,7 +624,13 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
+
           let query = supabase.from('files').select('*, owner:profiles(*)');
+          if (!isMasterAccount) {
+            query = query.eq('owner_id', user.id);
+          }
           if (includeDeleted) {
             query = query.not('deleted_at', 'is', null);
           } else {
@@ -632,10 +643,9 @@ class UnifiedApiService {
           }
           const { data, error } = await query.order('created_at', { ascending: false });
           if (!error && Array.isArray(data)) {
-            const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
-            const merged = [...(data as FileItem[])];
-            const currentEmail = (user.email || '').trim().toLowerCase();
-            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
+            const remoteFiles = isMasterAccount ? (data as FileItem[]) : (data as FileItem[]).filter(f => f.owner_id === user.id);
+            const remoteMap = new Map(remoteFiles.map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...remoteFiles];
             for (const lf of localFiles) {
               const isUserOwned = isMasterAccount ? true : (lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0])));
               if (!remoteMap.has(lf.name.toLowerCase()) && isUserOwned) {
@@ -1071,12 +1081,20 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
-          const [filesRes, foldersRes] = await Promise.all([
-            supabase.from('files').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
-            supabase.from('folders').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name'),
-          ]);
-          const remoteFiles = (filesRes.data || []) as FileItem[];
-          const remoteFolders = (foldersRes.data || []) as FolderItem[];
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
+
+          let filesQuery = supabase.from('files').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name');
+          let foldersQuery = supabase.from('folders').select('*, owner:profiles(*)').eq('is_starred', true).is('deleted_at', null).order('name');
+
+          if (!isMasterAccount) {
+            filesQuery = filesQuery.eq('owner_id', user.id);
+            foldersQuery = foldersQuery.eq('owner_id', user.id);
+          }
+
+          const [filesRes, foldersRes] = await Promise.all([filesQuery, foldersQuery]);
+          const remoteFiles = ((filesRes.data || []) as FileItem[]).filter(f => isMasterAccount || f.owner_id === user.id);
+          const remoteFolders = ((foldersRes.data || []) as FolderItem[]).filter(f => isMasterAccount || f.owner_id === user.id);
 
           const fileMap = new Map<string, FileItem>();
           for (const lf of localStarred.files) {
@@ -1112,13 +1130,22 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
-          const { data, error } = await supabase
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
+
+          let query = supabase
             .from('files')
             .select('*, owner:profiles(*)')
-            .is('deleted_at', null)
+            .is('deleted_at', null);
+
+          if (!isMasterAccount) {
+            query = query.eq('owner_id', user.id);
+          }
+
+          const { data, error } = await query
             .order('updated_at', { ascending: false })
             .limit(limit);
-          const remoteFiles = (!error && Array.isArray(data)) ? (data as FileItem[]) : [];
+          const remoteFiles = (!error && Array.isArray(data)) ? (data as FileItem[]).filter(f => isMasterAccount || f.owner_id === user.id) : [];
 
           const fileMap = new Map<string, FileItem>();
           for (const lf of localRecent) {
@@ -1147,22 +1174,29 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
-          const { data, error } = await supabase
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
+
+          let mediaQuery = supabase
             .from('files')
             .select('*, owner:profiles(*)')
-            .is('deleted_at', null)
-            .order('created_at', { ascending: false });
+            .is('deleted_at', null);
+
+          if (!isMasterAccount) {
+            mediaQuery = mediaQuery.eq('owner_id', user.id);
+          }
+
+          const { data, error } = await mediaQuery.order('created_at', { ascending: false });
 
           if (!error && Array.isArray(data)) {
-            const remoteMap = new Map((data as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
-            const mediaFiles = (data as FileItem[]).filter(f => {
+            const userFiles = (data as FileItem[]).filter(f => isMasterAccount || f.owner_id === user.id);
+            const remoteMap = new Map(userFiles.map((f) => [f.name.toLowerCase(), f]));
+            const mediaFiles = userFiles.filter(f => {
               const cat = getFileCategory(f.mime_type, f.extension);
               if (type === 'all') return ['image', 'video', 'audio'].includes(cat);
               return cat === type;
             });
             const merged = [...mediaFiles];
-            const currentEmail = (user.email || '').trim().toLowerCase();
-            const isMasterAccount = currentEmail === 'immaster2024@gmail.com';
             for (const lm of localMedia) {
               const isUserOwned = isMasterAccount ? true : (lm.owner_id === user.id || Boolean(lm.owner_id && lm.owner_id.includes(currentEmail.split('@')[0])));
               if (!remoteMap.has(lm.name.toLowerCase()) && isUserOwned) {
@@ -1186,6 +1220,8 @@ class UnifiedApiService {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
+          const currentEmail = (user.email || '').trim().toLowerCase();
+          const isMasterAccount = currentEmail === 'immaster2024@gmail.com' || currentEmail.startsWith('admin@');
           const q = query.trim();
           let fileQuery = supabase
             .from('files')
@@ -1193,12 +1229,18 @@ class UnifiedApiService {
             .is('deleted_at', null)
             .ilike('name', `%${q}%`);
 
+          if (!isMasterAccount) {
+            fileQuery = fileQuery.eq('owner_id', user.id);
+          }
+
           const { data: remoteFiles } = await fileQuery.limit(100);
           if (remoteFiles && Array.isArray(remoteFiles)) {
-            const map = new Map((remoteFiles as FileItem[]).map((f) => [f.name.toLowerCase(), f]));
-            const merged = [...(remoteFiles as FileItem[])];
+            const userFiles = (remoteFiles as FileItem[]).filter(f => isMasterAccount || f.owner_id === user.id);
+            const map = new Map(userFiles.map((f) => [f.name.toLowerCase(), f]));
+            const merged = [...userFiles];
             for (const lf of localResults.files) {
-              if (!map.has(lf.name.toLowerCase())) {
+              const isUserOwned = isMasterAccount ? true : (lf.owner_id === user.id || Boolean(lf.owner_id && lf.owner_id.includes(currentEmail.split('@')[0])));
+              if (!map.has(lf.name.toLowerCase()) && isUserOwned) {
                 merged.push(lf);
               }
             }

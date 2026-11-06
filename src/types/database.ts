@@ -111,6 +111,8 @@ export interface ShareLinkRecord {
   view_count: number;
   is_active: boolean;
   created_at: string;
+  encoded_data?: string;
+  share_url?: string;
 }
 
 export interface FileRequestRecord {
