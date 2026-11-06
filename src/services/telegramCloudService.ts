@@ -31,9 +31,9 @@ export interface CloudFileDescriptor {
 
 export class TelegramCloudService {
   // Telegram Bot limits: standard getFile supports up to 20 MB files.
-  // By chunking into 19.5 MB slices, ANY file of ANY size (up to 10 TB!)
-  // can be uploaded and streamed directly via standard Telegram Bot API.
-  private static CHUNK_SIZE_BYTES = 19.5 * 1024 * 1024; // 19.5 MB chunks
+  // Netlify proxy limits request bodies to 6 MB.
+  // By chunking into 5 MB slices, ANY file of ANY size can pass cleanly through Netlify proxy!
+  private static CHUNK_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB chunks
 
   /**
    * Retrieves platform Telegram credentials strictly from environment variables.
@@ -174,8 +174,6 @@ export class TelegramCloudService {
     onProgress?: (percent: number, bytesUploaded: number) => void
   ): Promise<string> {
     const totalSize = file.size;
-    const { botToken, chatId } = this.getCredentials();
-    const useTelegram = Boolean(botToken && chatId);
 
     // If file is 0 bytes
     if (totalSize === 0) {
@@ -189,6 +187,32 @@ export class TelegramCloudService {
       };
       return `tgcloud:${JSON.stringify(desc)}`;
     }
+
+    // 1. FAST DIRECT MULTI-CDN UPLOAD (Full direct streaming up to 1GB with global CORS *)
+    try {
+      const fd = new FormData();
+      fd.append('reqtype', 'fileupload');
+      fd.append('time', '72h');
+      fd.append('fileToUpload', file, fileName);
+
+      const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+        method: 'POST',
+        body: fd,
+      });
+
+      if (r.ok) {
+        const url = (await r.text()).trim();
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          onProgress?.(100, totalSize);
+          return url; // Directly streamable HTTPS media URL
+        }
+      }
+    } catch (cdnErr) {
+      console.warn('[Cloud Upload] Direct Multi-CDN skipped, falling back to Telegram Cloud chunks:', cdnErr);
+    }
+
+    const { botToken, chatId } = this.getCredentials();
+    const useTelegram = Boolean(botToken && chatId);
 
     const chunksCount = Math.ceil(totalSize / this.CHUNK_SIZE_BYTES);
     const uploadedChunks: CloudChunkMeta[] = [];

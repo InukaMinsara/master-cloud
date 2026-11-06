@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { TelegramCloudService } from '@/services/telegramCloudService';
+import { binaryStorage } from '@/services/localDb';
 
 export function PublicSharePage() {
   const navigate = useNavigate();
@@ -36,6 +38,9 @@ export function PublicSharePage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaved, setIsSaved] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [mediaUrl, setMediaUrl] = React.useState<string | null>(null);
+  const [isLoadingMedia, setIsLoadingMedia] = React.useState(false);
+  const [mediaError, setMediaError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!token) return;
@@ -64,6 +69,84 @@ export function PublicSharePage() {
     }
   }, [linkData, user]);
 
+  // Resolve playable media stream URL (HTTP / tgcloud / IndexedDB blob)
+  React.useEffect(() => {
+    if (!linkData || linkData.link.resource_type !== 'file' || !isUnlocked) return;
+    const f = linkData.item as FileItem;
+    if (!f.storage_path) return;
+
+    let active = true;
+
+    const resolveMedia = async () => {
+      setIsLoadingMedia(true);
+      setMediaError(null);
+
+      // 1. Direct HTTP/HTTPS Cloud Stream (Litterbox, Catbox, CDN)
+      if (f.storage_path.startsWith('http://') || f.storage_path.startsWith('https://')) {
+        if (active) {
+          setMediaUrl(f.storage_path);
+          setIsLoadingMedia(false);
+        }
+        return;
+      }
+
+      // 2. Telegram Cloud
+      if (f.storage_path.startsWith('tgcloud:')) {
+        try {
+          const directUrl = TelegramCloudService.getDirectStreamUrl(f.storage_path);
+          if (directUrl && active) {
+            setMediaUrl(directUrl);
+            setIsLoadingMedia(false);
+            return;
+          }
+          const blob = await TelegramCloudService.downloadFile(f.storage_path);
+          if (blob && active) {
+            const objectUrl = URL.createObjectURL(blob);
+            setMediaUrl(objectUrl);
+            setIsLoadingMedia(false);
+            return;
+          }
+        } catch (err: any) {
+          console.warn('Failed to load tgcloud stream:', err);
+        }
+      }
+
+      // 3. Local IndexedDB Cache
+      try {
+        const blob = await binaryStorage.getBlob(f.storage_path);
+        if (blob && active) {
+          const objectUrl = URL.createObjectURL(blob);
+          setMediaUrl(objectUrl);
+          setIsLoadingMedia(false);
+          return;
+        }
+      } catch {}
+
+      // 4. Localhost Z-drive Bridge
+      if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        if (f.storage_path.startsWith('zdrive:')) {
+          const rel = f.storage_path.slice('zdrive:'.length);
+          if (active) {
+            setMediaUrl(`/api/local-drive/read?path=${encodeURIComponent(rel)}`);
+            setIsLoadingMedia(false);
+          }
+          return;
+        }
+      }
+
+      if (active) {
+        setIsLoadingMedia(false);
+        setMediaError('This file is currently stored only on the owner\'s Windows PC (Z: drive). Cloud sync is in progress or uploader is offline.');
+      }
+    };
+
+    resolveMedia();
+
+    return () => {
+      active = false;
+    };
+  }, [linkData, isUnlocked]);
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkData) return;
@@ -78,6 +161,17 @@ export function PublicSharePage() {
   const handleDownload = async () => {
     if (!linkData) return;
     try {
+      if (mediaUrl) {
+        const a = document.createElement('a');
+        a.href = mediaUrl;
+        a.download = linkData.item.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success(`Downloading ${linkData.item.name}`);
+        return;
+      }
+
       if (linkData.link.resource_type === 'file') {
         await api.downloadFile(linkData.item as FileItem);
       } else {
@@ -241,18 +335,45 @@ export function PublicSharePage() {
             </div>
 
             {/* Optional media preview */}
-            {!isFolder && file && file.storage_path && (
+            {!isFolder && file && (
               getFileCategory(file.mime_type, file.extension) === 'image' ? (
-                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black/40 max-h-72 flex items-center justify-center">
-                  <img src={file.storage_path} alt={file.name} className="max-h-72 object-contain" />
+                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black/40 max-h-72 flex items-center justify-center p-2">
+                  {isLoadingMedia ? (
+                    <div className="py-12 flex flex-col items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                      <Cloud className="h-6 w-6 text-primary animate-bounce" />
+                      <span>Loading image preview...</span>
+                    </div>
+                  ) : mediaUrl ? (
+                    <img src={mediaUrl} alt={file.name} className="max-h-72 object-contain rounded-xl" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground py-8">{mediaError || 'Image preview unavailable'}</p>
+                  )}
                 </div>
               ) : getFileCategory(file.mime_type, file.extension) === 'video' ? (
                 <div className="rounded-2xl overflow-hidden border border-border/60 bg-black max-h-72 flex items-center justify-center">
-                  <video src={file.storage_path} controls playsInline className="max-h-72 w-full object-contain" />
+                  {isLoadingMedia ? (
+                    <div className="py-16 flex flex-col items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                      <Cloud className="h-8 w-8 text-primary animate-bounce" />
+                      <span>Streaming video from Master Cloud...</span>
+                    </div>
+                  ) : mediaUrl ? (
+                    <video src={mediaUrl} controls playsInline className="max-h-72 w-full object-contain" />
+                  ) : (
+                    <div className="py-10 px-4 text-center space-y-2">
+                      <AlertCircle className="h-8 w-8 text-amber-500 mx-auto" />
+                      <p className="text-xs text-muted-foreground max-w-sm">{mediaError || 'Video streaming unavailable remotely'}</p>
+                    </div>
+                  )}
                 </div>
               ) : getFileCategory(file.mime_type, file.extension) === 'audio' ? (
                 <div className="p-4 rounded-2xl border border-border/60 bg-card">
-                  <audio src={file.storage_path} controls className="w-full" />
+                  {isLoadingMedia ? (
+                    <p className="text-xs text-muted-foreground animate-pulse text-center py-2">Loading audio...</p>
+                  ) : mediaUrl ? (
+                    <audio src={mediaUrl} controls className="w-full" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{mediaError || 'Audio stream unavailable'}</p>
+                  )}
                 </div>
               ) : null
             )}
