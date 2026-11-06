@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { TelegramCloudService } from '@/services/telegramCloudService';
+import { VideoPosterService } from '@/services/videoPosterService';
 import { binaryStorage } from '@/services/localDb';
 
 export function PublicSharePage() {
@@ -187,6 +188,12 @@ export function PublicSharePage() {
       return path;
     }
     return null;
+  }, [linkData]);
+
+  const videoPoster = React.useMemo(() => {
+    if (!linkData || linkData.link.resource_type !== 'file') return '';
+    const f = linkData.item as FileItem;
+    return VideoPosterService.getVideoPoster(f.name, f.size_bytes);
   }, [linkData]);
 
   const resolvedDownloadUrl = mediaUrl || (linkData ? (TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name)) : null);
@@ -413,24 +420,16 @@ export function PublicSharePage() {
                   ) : (mediaUrl || directMirrorUrl) ? (
                     <video
                       key={mediaUrl || directMirrorUrl}
-                      src={(mediaUrl || directMirrorUrl) ? `${mediaUrl || directMirrorUrl}#t=0.1` : undefined}
+                      src={mediaUrl || directMirrorUrl || undefined}
+                      poster={videoPoster || undefined}
                       controls
                       autoPlay={false}
-                      preload="auto"
+                      preload="metadata"
                       playsInline
-                      crossOrigin="anonymous"
-                      onLoadedMetadata={(e) => {
-                        try {
-                          const v = e.currentTarget;
-                          if (v.currentTime === 0) {
-                            v.currentTime = 0.1;
-                          }
-                        } catch {}
-                      }}
-                      className="max-h-72 w-full object-contain bg-black rounded-2xl"
+                      className="max-h-72 w-full object-contain bg-black rounded-2xl shadow-xl"
                     >
-                      {mediaUrl && <source src={`${mediaUrl}#t=0.1`} type="video/mp4" />}
-                      {directMirrorUrl && <source src={`${directMirrorUrl}#t=0.1`} type="video/mp4" />}
+                      {mediaUrl && <source src={mediaUrl} type="video/mp4" />}
+                      {directMirrorUrl && <source src={directMirrorUrl} type="video/mp4" />}
                       Your browser does not support HTML5 video streaming.
                     </video>
                   ) : (

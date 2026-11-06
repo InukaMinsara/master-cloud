@@ -2,6 +2,7 @@ import React from 'react';
 import { Film, Image as ImageIcon, Video, Music, Play, Upload } from 'lucide-react';
 import { api } from '@/services/api';
 import { TelegramCloudService } from '@/services/telegramCloudService';
+import { VideoPosterService } from '@/services/videoPosterService';
 import { FileItem } from '@/types/file';
 import { usePreviewStore } from '@/stores/previewStore';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
@@ -183,20 +184,12 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
-                <video
-                  src={videoStreamUrl ? `${videoStreamUrl}#t=0.1` : (thumbUrl || undefined)}
-                  muted
-                  playsInline
-                  preload="auto"
-                  crossOrigin="anonymous"
-                  onLoadedMetadata={(e) => {
-                    try {
-                      const v = e.currentTarget;
-                      if (v.currentTime === 0) v.currentTime = 0.1;
-                    } catch {}
-                  }}
+                <img
+                  src={VideoPosterService.getVideoPoster(file.name, file.size_bytes)}
+                  alt={file.name}
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
-                  onError={() => setThumbError(true)}
                 />
               )}
               <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors flex items-center justify-center pointer-events-none">

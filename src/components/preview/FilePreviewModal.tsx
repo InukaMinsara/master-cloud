@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatBytes, formatDateRelative, getFileCategory } from '@/lib/utils';
 import { api } from '@/services/api';
 import { TelegramCloudService } from '@/services/telegramCloudService';
+import { VideoPosterService } from '@/services/videoPosterService';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -732,23 +733,21 @@ export function FilePreviewModal() {
             >
               {blobUrl ? (
                 <>
-                  {/* Native Video (shown in full hardware acceleration on 'original') */}
+                  {/* Native Video (shown in full hardware acceleration with zero-latency poster) */}
                   <video
                     ref={videoRef}
                     key={blobUrl}
                     src={blobUrl}
+                    poster={activeFile ? VideoPosterService.getVideoPoster(activeFile.name, activeFile.size_bytes) : undefined}
                     controls
                     autoPlay
                     playsInline
-                    preload="auto"
-                    crossOrigin="anonymous"
+                    preload="metadata"
                     onError={handleMediaError}
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onEnded={() => setIsPlaying(false)}
-                    className={`h-full w-full object-contain ${
-                      previewQuality === 'original' ? 'block' : 'opacity-0 absolute inset-0 pointer-events-none'
-                    }`}
+                    className="h-full w-full object-contain"
                   />
 
                   {/* Real-time Dynamic Canvas Resampler (renders genuine downscaled resolution & compression) */}

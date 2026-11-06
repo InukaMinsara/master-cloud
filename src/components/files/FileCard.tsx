@@ -27,6 +27,7 @@ import { useFileStore } from '@/stores/fileStore';
 import { useUIStore } from '@/stores/uiStore';
 import { usePreviewStore } from '@/stores/previewStore';
 import { api } from '@/services/api';
+import { VideoPosterService } from '@/services/videoPosterService';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
 import { TelegramCloudService } from '@/services/telegramCloudService';
@@ -322,20 +323,12 @@ export function FileCard({ file, allFiles }: FileCardProps) {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <video
-                    src={videoStreamUrl ? `${videoStreamUrl}#t=0.1` : (thumbUrl || undefined)}
-                    muted
-                    playsInline
-                    preload="auto"
-                    crossOrigin="anonymous"
-                    onLoadedMetadata={(e) => {
-                      try {
-                        const v = e.currentTarget;
-                        if (v.currentTime === 0) v.currentTime = 0.1;
-                      } catch {}
-                    }}
+                  <img
+                    src={VideoPosterService.getVideoPoster(file.name, file.size_bytes)}
+                    alt={file.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
-                    onError={() => setThumbError(true)}
                   />
                 )}
                 {/* Subtle Google Drive Play badge overlay */}
