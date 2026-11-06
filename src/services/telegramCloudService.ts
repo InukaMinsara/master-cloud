@@ -40,6 +40,10 @@ export class TelegramCloudService {
     "2000's Chart Hits Medley - News අයිමාත්‍රා": "https://litter.catbox.moe/7ctigb.mp4",
     "2000's Chart Hits Medley": "https://litter.catbox.moe/7ctigb.mp4",
     "7ctigb.mp4": "https://litter.catbox.moe/7ctigb.mp4",
+    "AVATAR First Medley - Heen Kaluware Medley": "https://litter.catbox.moe/w8lbkc.mp4",
+    "AVATAR First Medley": "https://litter.catbox.moe/w8lbkc.mp4",
+    "avatar": "https://litter.catbox.moe/w8lbkc.mp4",
+    "w8lbkc.mp4": "https://litter.catbox.moe/w8lbkc.mp4",
   };
 
   /**
