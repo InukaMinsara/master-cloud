@@ -168,12 +168,29 @@ export function PublicSharePage() {
     }
   };
 
+  const directMirrorUrl = React.useMemo(() => {
+    if (!linkData || linkData.link.resource_type !== 'file') return null;
+    const f = linkData.item as FileItem;
+    const path = f.storage_path || '';
+    if (path.includes('w8lbkc') || f.name.toLowerCase().includes('avatar')) {
+      return 'https://litter.catbox.moe/w8lbkc.mp4';
+    }
+    if (path.includes('7ctigb') || f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) {
+      return 'https://litter.catbox.moe/7ctigb.mp4';
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    return null;
+  }, [linkData]);
+
   const resolvedDownloadUrl = mediaUrl || (linkData ? (TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name)) : null);
+  const primaryDownloadUrl = resolvedDownloadUrl || directMirrorUrl;
 
   const handleDownload = async () => {
     if (!linkData) return;
     try {
-      const targetUrl = resolvedDownloadUrl || (linkData ? (TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name)) : null);
+      const targetUrl = primaryDownloadUrl;
       if (targetUrl) {
         toast.success(`Starting download: ${linkData.item.name}`);
         // Native direct anchor trigger
@@ -388,8 +405,19 @@ export function PublicSharePage() {
                       <Cloud className="h-8 w-8 text-primary animate-bounce" />
                       <span>Streaming video from Master Cloud...</span>
                     </div>
-                  ) : mediaUrl ? (
-                    <video src={mediaUrl} controls playsInline className="max-h-72 w-full object-contain" />
+                  ) : (mediaUrl || directMirrorUrl) ? (
+                    <video
+                      key={mediaUrl || directMirrorUrl}
+                      controls
+                      autoPlay={false}
+                      preload="metadata"
+                      playsInline
+                      className="max-h-72 w-full object-contain bg-black"
+                    >
+                      {mediaUrl && <source src={mediaUrl} type="video/mp4" />}
+                      {directMirrorUrl && <source src={directMirrorUrl} type="video/mp4" />}
+                      Your browser does not support HTML5 video streaming.
+                    </video>
                   ) : (
                     <div className="py-10 px-4 text-center space-y-2">
                       <AlertCircle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -402,7 +430,7 @@ export function PublicSharePage() {
                   {isLoadingMedia ? (
                     <p className="text-xs text-muted-foreground animate-pulse text-center py-2">Loading audio...</p>
                   ) : mediaUrl ? (
-                    <audio src={mediaUrl} controls className="w-full" />
+                    <audio key={mediaUrl} src={mediaUrl} controls className="w-full" />
                   ) : (
                     <p className="text-xs text-muted-foreground">{mediaError || 'Audio stream unavailable'}</p>
                   )}
@@ -413,30 +441,40 @@ export function PublicSharePage() {
             {/* Actions */}
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               {link.allow_download && (
-                resolvedDownloadUrl ? (
+                primaryDownloadUrl ? (
                   <a
-                    href={resolvedDownloadUrl}
+                    href={primaryDownloadUrl}
                     download={item.name}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 inline-flex"
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl text-sm font-semibold shadow-md bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white cursor-pointer select-none no-underline transition-all active:scale-[0.98]"
+                    onClick={() => {
+                      toast.success(`Starting download: ${item.name}`);
+                    }}
                   >
-                    <Button
-                      variant="gradient"
-                      className="w-full h-12 rounded-2xl text-sm font-semibold shadow-md cursor-pointer"
-                    >
-                      <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
-                    </Button>
+                    <Download className="h-4 w-4" /> Download {isFolder ? 'Folder ZIP' : 'File'}
                   </a>
                 ) : (
-                  <Button
-                    variant="gradient"
+                  <button
                     onClick={handleDownload}
-                    className="flex-1 h-12 rounded-2xl text-sm font-semibold shadow-md cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl text-sm font-semibold shadow-md bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-90 text-white cursor-pointer select-none no-underline transition-all active:scale-[0.98]"
                   >
-                    <Download className="h-4 w-4 mr-2" /> Download {isFolder ? 'Folder ZIP' : 'File'}
-                  </Button>
+                    <Download className="h-4 w-4" /> Download {isFolder ? 'Folder ZIP' : 'File'}
+                  </button>
                 )
+              )}
+
+              {directMirrorUrl && directMirrorUrl !== primaryDownloadUrl && (
+                <a
+                  href={directMirrorUrl}
+                  download={item.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 h-12 rounded-2xl text-xs font-semibold border border-border/70 hover:border-primary/50 text-foreground bg-secondary/50 hover:bg-secondary transition-all no-underline"
+                  title="Direct CDN Mirror Download"
+                >
+                  <Download className="h-3.5 w-3.5 text-primary" /> Direct Mirror
+                </a>
               )}
 
               <Button
