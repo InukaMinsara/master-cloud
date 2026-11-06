@@ -81,9 +81,9 @@ export class DownloadService {
         a.click();
         document.body.removeChild(a);
         if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          setTimeout(() => {
-            window.location.assign(directCloud);
-          }, 150);
+          if (directCloud.startsWith('http://') || directCloud.startsWith('https://')) {
+            window.open(directCloud, '_blank');
+          }
         }
         return;
       }

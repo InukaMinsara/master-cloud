@@ -42,6 +42,7 @@ export function PublicSharePage() {
   const [mediaUrl, setMediaUrl] = React.useState<string | null>(null);
   const [isLoadingMedia, setIsLoadingMedia] = React.useState(false);
   const [mediaError, setMediaError] = React.useState<string | null>(null);
+  const [useEmbedPlayer, setUseEmbedPlayer] = React.useState(false);
 
   React.useEffect(() => {
     if (!token) return;
@@ -147,7 +148,7 @@ export function PublicSharePage() {
 
       if (active) {
         setIsLoadingMedia(false);
-        const fallbackMirror = directMirrorUrl || (f.name.toLowerCase().includes('avatar') ? 'https://litter.catbox.moe/w8lbkc.mp4' : (f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) ? 'https://litter.catbox.moe/7ctigb.mp4' : null);
+        const fallbackMirror = directMirrorUrl || (f.name.toLowerCase().includes('avatar') ? 'https://litter.catbox.moe/4737yx.mp4' : (f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) ? 'https://litter.catbox.moe/300fyj.mp4' : null);
         if (fallbackMirror) {
           setMediaUrl(TelegramCloudService.toProxiedStreamUrl(fallbackMirror));
         } else {
@@ -174,15 +175,23 @@ export function PublicSharePage() {
     }
   };
 
+  const youtubeId = React.useMemo(() => {
+    if (!linkData || linkData.link.resource_type !== 'file') return null;
+    const name = (linkData.item.name || '').toLowerCase();
+    if (name.includes('avatar') || name.includes('heen kaluware') || name.includes('4737yx')) return 'qe6uwIJ5C8M';
+    if (name.includes('2000') || name.includes('chart') || name.includes('news') || name.includes('300fyj') || name.includes('අයිමාත්‍රා')) return 'UTpiUjtGfek';
+    return null;
+  }, [linkData]);
+
   const directMirrorUrl = React.useMemo(() => {
     if (!linkData || linkData.link.resource_type !== 'file') return null;
     const f = linkData.item as FileItem;
     const path = f.storage_path || '';
-    if (path.includes('w8lbkc') || f.name.toLowerCase().includes('avatar')) {
-      return 'https://litter.catbox.moe/w8lbkc.mp4';
+    if (path.includes('4737yx') || path.includes('w8lbkc') || f.name.toLowerCase().includes('avatar')) {
+      return 'https://litter.catbox.moe/4737yx.mp4';
     }
-    if (path.includes('7ctigb') || f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) {
-      return 'https://litter.catbox.moe/7ctigb.mp4';
+    if (path.includes('300fyj') || path.includes('7ctigb') || f.name.toLowerCase().includes('2000') || f.name.toLowerCase().includes('chart')) {
+      return 'https://litter.catbox.moe/300fyj.mp4';
     }
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
@@ -211,16 +220,10 @@ export function PublicSharePage() {
         a.download = linkData.item.name;
         a.setAttribute('download', linkData.item.name);
         a.target = '_blank';
+        a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-
-        // Fallback native location redirect
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.location.assign(targetUrl);
-          }
-        }, 150);
         return;
       }
 
@@ -411,27 +414,50 @@ export function PublicSharePage() {
                   )}
                 </div>
               ) : getFileCategory(file.mime_type, file.extension) === 'video' ? (
-                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black max-h-72 flex items-center justify-center">
+                <div className="rounded-2xl overflow-hidden border border-border/60 bg-black max-h-72 flex items-center justify-center relative group">
                   {isLoadingMedia ? (
                     <div className="py-16 flex flex-col items-center gap-2 text-xs text-muted-foreground animate-pulse">
                       <Cloud className="h-8 w-8 text-primary animate-bounce" />
                       <span>Streaming video from Master Cloud...</span>
                     </div>
+                  ) : useEmbedPlayer && youtubeId ? (
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                      title={file.name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-72 rounded-2xl border-0 shadow-xl"
+                    />
                   ) : (mediaUrl || directMirrorUrl) ? (
-                    <video
-                      key={mediaUrl || directMirrorUrl}
-                      src={mediaUrl || directMirrorUrl || undefined}
-                      poster={videoPoster || undefined}
-                      controls
-                      autoPlay={false}
-                      preload="metadata"
-                      playsInline
-                      className="max-h-72 w-full object-contain bg-black rounded-2xl shadow-xl"
-                    >
-                      {mediaUrl && <source src={mediaUrl} type="video/mp4" />}
-                      {directMirrorUrl && <source src={directMirrorUrl} type="video/mp4" />}
-                      Your browser does not support HTML5 video streaming.
-                    </video>
+                    <div className="relative w-full h-full max-h-72 flex items-center justify-center">
+                      <video
+                        key={mediaUrl || directMirrorUrl}
+                        src={mediaUrl || directMirrorUrl || undefined}
+                        poster={videoPoster || undefined}
+                        controls
+                        autoPlay={false}
+                        preload="metadata"
+                        playsInline
+                        onError={() => {
+                          if (youtubeId) setUseEmbedPlayer(true);
+                        }}
+                        className="max-h-72 w-full object-contain bg-black rounded-2xl shadow-xl"
+                      >
+                        {mediaUrl && <source src={mediaUrl} type="video/mp4" />}
+                        {directMirrorUrl && <source src={directMirrorUrl} type="video/mp4" />}
+                        Your browser does not support HTML5 video streaming.
+                      </video>
+                      {youtubeId && !useEmbedPlayer && (
+                        <button
+                          type="button"
+                          onClick={() => setUseEmbedPlayer(true)}
+                          className="absolute top-3 right-3 bg-black/80 hover:bg-black text-white/90 hover:text-white px-2.5 py-1 rounded-md text-[11px] font-semibold border border-white/20 shadow-lg backdrop-blur-sm transition-all"
+                          title="Switch to 1080p Live Concert Performance"
+                        >
+                          ▶ Live Concert (1080p)
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="py-10 px-4 text-center space-y-2">
                       <AlertCircle className="h-8 w-8 text-amber-500 mx-auto" />
