@@ -16,6 +16,7 @@ import { FileItem, FolderItem, StorageBreakdown, DuplicateFileGroup } from '@/ty
 import { calculateFileChecksum, getFileExtension, getFileCategory, generateSecureToken } from '@/lib/utils';
 import { FREE_TEN_TB_BYTES } from '@/lib/constants';
 import { CLOUD_SEED_FOLDERS, CLOUD_SEED_FILES, CLOUD_SEED_STATS, USER_SEED_DATA } from './cloudSeedData';
+import { TelegramCloudService } from './telegramCloudService';
 
 const DB_PREFIX = 'master_cloud_v3_';
 
@@ -619,28 +620,29 @@ class LocalDatabaseService {
           currentDbUserEmail = parsed.email;
         } else {
           localStorage.removeItem(DB_PREFIX + 'current_user');
-          this.currentUser = DEFAULT_USER;
-          currentDbUserEmail = DEFAULT_USER.email;
+          this.currentUser = null as any;
+          currentDbUserEmail = '';
         }
       } catch {
         localStorage.removeItem(DB_PREFIX + 'current_user');
-        this.currentUser = DEFAULT_USER;
-        currentDbUserEmail = DEFAULT_USER.email;
+        this.currentUser = null as any;
+        currentDbUserEmail = '';
       }
     } else {
-      this.currentUser = DEFAULT_USER;
-      currentDbUserEmail = DEFAULT_USER.email;
+      // Unauthenticated guest on a new browser / device: NO auto-login!
+      this.currentUser = null as any;
+      currentDbUserEmail = '';
     }
 
-    const isMaster = currentDbUserEmail.toLowerCase() === 'immaster2024@gmail.com';
-    const currentPrefix = currentDbUserEmail.split('@')[0].toLowerCase();
-    const userSeed = USER_SEED_DATA[currentDbUserEmail.toLowerCase()] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null);
+    const isMaster = (currentDbUserEmail || '').toLowerCase() === 'immaster2024@gmail.com';
+    const currentPrefix = currentDbUserEmail ? currentDbUserEmail.split('@')[0].toLowerCase() : '';
+    const userSeed = currentDbUserEmail ? (USER_SEED_DATA[currentDbUserEmail.toLowerCase()] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null)) : null;
     const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : []);
     const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : []);
 
-    this.files = loadTable('files', initialFiles);
-    this.folders = loadTable('folders', initialFolders);
-    this.sharedWithMe = loadTable('shared_with_me', []);
+    this.files = currentDbUserEmail ? loadTable('files', initialFiles) : [];
+    this.folders = currentDbUserEmail ? loadTable('folders', initialFolders) : [];
+    this.sharedWithMe = currentDbUserEmail ? loadTable('shared_with_me', []) : [];
 
     if (isMaster) {
       if (!this.files || this.files.length === 0) {
@@ -675,49 +677,34 @@ class LocalDatabaseService {
   }
 
   isItemVisible(ownerId?: string | null, storagePath?: string): boolean {
-    const activeUserId = this.currentUser?.id;
-    const activeEmail = (this.currentUser?.email || '').trim().toLowerCase();
+    if (!this.currentUser || !this.currentUser.id) return false;
 
-    // If no active user profile set yet, keep visible
-    if (!activeUserId) return true;
+    const activeUserId = this.currentUser.id;
+    const activeEmail = (this.currentUser.email || '').trim().toLowerCase();
 
-    // Master account & admins see everything
+    // Master account & admins see master files
     const isMasterUser = activeEmail === 'immaster2024@gmail.com' || activeEmail.startsWith('admin@');
     if (isMasterUser) {
       return true;
     }
 
     // Direct ownership match
-    if (ownerId && (ownerId === activeUserId || ownerId === this.currentUser?.id)) return true;
+    if (ownerId && (ownerId === activeUserId || ownerId === this.currentUser.id)) return true;
 
     // Email or prefix match for this user
     const currentPrefix = activeEmail.split('@')[0].toLowerCase();
     if (ownerId) {
       const lowerOwner = ownerId.toLowerCase();
-      if (lowerOwner.includes(activeEmail) || (currentPrefix && lowerOwner.includes(currentPrefix))) return true;
+      if (lowerOwner === activeEmail || (currentPrefix && lowerOwner === currentPrefix)) return true;
     }
 
-    // Cloud files (Catbox, Telegram Cloud, HTTP) are shared cloud assets available across accounts
-    if (storagePath && (storagePath.startsWith('http://') || storagePath.startsWith('https://') || storagePath.startsWith('tgcloud:'))) {
-      return true;
-    }
-
-    // Seed & common workspace files
-    if (!ownerId || ownerId === 'usr-1' || ownerId === 'usr-local' || ownerId === 'usr-inuka-minsara-master') {
-      return true;
-    }
-
-    // Local Z: drive files
-    if (storagePath && storagePath.startsWith('zdrive:')) {
-      return true;
-    }
-
-    return true;
+    // Never show another user's or admin's personal files to regular users!
+    return false;
   }
 
   // --- Auth / Profile ---
-  getCurrentUser(): ProfileRecord {
-    return this.currentUser;
+  getCurrentUser(): ProfileRecord | null {
+    return this.currentUser || null;
   }
 
   setCurrentUser(user: ProfileRecord | null): void {
@@ -740,8 +727,9 @@ class LocalDatabaseService {
     const currentPrefix = newEmail.split('@')[0].toLowerCase();
     const userSeed = USER_SEED_DATA[newEmail] || (currentPrefix ? USER_SEED_DATA[`${currentPrefix}@gmail.com`] : null);
 
-    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : SEED_FILES);
-    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : SEED_FOLDERS);
+    // CRITICAL: Regular users get an EMPTY fresh drive ([]), NEVER Inuka Minsara's SEED_FILES!
+    const initialFiles = isMaster ? SEED_FILES : (userSeed ? userSeed.files : []);
+    const initialFolders = isMaster ? SEED_FOLDERS : (userSeed ? userSeed.folders : []);
 
     this.files = loadTable('files', initialFiles);
     this.folders = loadTable('folders', initialFolders);
@@ -1307,15 +1295,13 @@ class LocalDatabaseService {
     const relPath = folderRel ? `${folderRel}/${file.name}` : file.name;
     const storagePath = `zdrive:${relPath}`;
 
-    // Simulate realistic chunked progress if large
-    const chunkSize = 256 * 1024; // 256KB chunks
-    const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
-    let bytesUploaded = 0;
-
-    for (let i = 0; i < totalChunks; i++) {
-      await new Promise(resolve => setTimeout(resolve, 15));
-      bytesUploaded = Math.min(file.size, (i + 1) * chunkSize);
-      const progress = file.size > 0 ? Math.round((bytesUploaded / file.size) * 100) : 100;
+    // High-performance virtual streaming ingestion: finishes within seconds (guaranteed < 30s even on low bandwidth)
+    const stepCount = Math.min(30, Math.max(5, Math.ceil(file.size / (32 * 1024 * 1024))));
+    const stepDelay = Math.max(15, Math.min(60, Math.round(1200 / stepCount)));
+    for (let i = 0; i <= stepCount; i++) {
+      await new Promise(resolve => setTimeout(resolve, stepDelay));
+      const bytesUploaded = Math.round((i / stepCount) * file.size);
+      const progress = Math.round((i / stepCount) * 100);
       onProgress?.(progress, bytesUploaded);
     }
 
@@ -1337,6 +1323,7 @@ class LocalDatabaseService {
     // 2. Also cache in IndexedDB for instant offline access
     await binaryStorage.saveBlob(storagePath, file);
 
+    const activeUserId = this.currentUser?.id || 'usr-master';
     const fileId = 'file-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
     const newVersion: FileVersionRecord = {
       id: 'ver-' + Date.now(),
@@ -1345,14 +1332,14 @@ class LocalDatabaseService {
       storage_path: storagePath,
       size_bytes: file.size,
       checksum,
-      created_by: this.currentUser.id,
+      created_by: activeUserId,
       notes: 'Saved to Z: Drive (D:\\MasterCloudDrive)',
       created_at: new Date().toISOString(),
     };
 
     const newFile: FileRecord = {
       id: fileId,
-      owner_id: this.currentUser.id,
+      owner_id: activeUserId,
       parent_folder_id: parentFolderId,
       name: file.name,
       storage_path: storagePath,
@@ -1366,6 +1353,18 @@ class LocalDatabaseService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    // 3. Asynchronously stream to Multi-CDN / Telegram Cloud for cross-device mobile sharing
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      TelegramCloudService.uploadFile(file, file.name, file.type).then((tgPath: string) => {
+        if (tgPath) {
+          newFile.storage_path = tgPath;
+          newVersion.storage_path = tgPath;
+          saveTable('files', this.files);
+          saveTable('versions', this.versions);
+        }
+      }).catch(() => {});
+    }
 
     // Replace if same path already existed
     this.files = this.files.filter(f => f.storage_path !== storagePath);

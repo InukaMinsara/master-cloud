@@ -18,10 +18,18 @@ import { Toaster } from 'sonner';
 import { useFileStore } from '@/stores/fileStore';
 import { ContextMenu } from '@/components/context-menu/ContextMenu';
 import { MobileBottomNav } from '@/components/common/MobileBottomNav';
-
+import { useAuthStore } from '@/stores/authStore';
+import { Navigate, useLocation } from 'react-router-dom';
 
 export function AppLayout() {
   const { activeDetailsItem } = useFileStore();
+  const { user, isLoading, isAuthenticated } = useAuthStore();
+  const location = useLocation();
+
+  // Protect internal drive & dashboard routes from unauthenticated guests
+  if (!isLoading && (!user || !isAuthenticated)) {
+    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground antialiased">

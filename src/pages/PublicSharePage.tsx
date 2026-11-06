@@ -77,10 +77,14 @@ export function PublicSharePage() {
 
   const handleDownload = async () => {
     if (!linkData) return;
-    if (linkData.link.resource_type === 'file') {
-      await api.downloadFile(linkData.item as FileItem);
-    } else {
-      await api.downloadFolder(linkData.item as FolderItem);
+    try {
+      if (linkData.link.resource_type === 'file') {
+        await api.downloadFile(linkData.item as FileItem);
+      } else {
+        await api.downloadFolder(linkData.item as FolderItem);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Download failed');
     }
   };
 

@@ -98,16 +98,42 @@ export class DownloadService {
 
       // 2. Direct stream download for Z: drive and local cloud files for real bytes and max speed
       if (file.storage_path?.startsWith('zdrive:')) {
-        const rel = file.storage_path.slice('zdrive:'.length);
-        const url = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
-        onProgress?.(100);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
+        const isLocalHost = typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+        if (isLocalHost) {
+          const rel = file.storage_path.slice('zdrive:'.length);
+          const url = `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
+          onProgress?.(100);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+
+        // On mobile or remote device: check IndexedDB storage
+        const cachedBlob = await binaryStorage.getBlob(file.storage_path);
+        if (cachedBlob) {
+          onProgress?.(85);
+          const url = URL.createObjectURL(cachedBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          onProgress?.(100);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          return;
+        }
+
+        // Never download Netlify's index.html SPA fallback as a corrupted media file!
+        throw new Error(
+          `"${file.name}" is stored locally on the Windows PC (Z: Drive) where it was uploaded. To share across devices, please sync it via Cloud Storage.`
+        );
       }
 
       // 3. Direct HTTP / Catbox file download
