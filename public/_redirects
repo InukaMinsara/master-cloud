@@ -1,0 +1,6 @@
+/api/litter-stream/:file  https://litter.catbox.moe/:file  200!
+/api/catbox-stream/:file  https://files.catbox.moe/:file  200!
+/api/telegram-proxy/*  https://api.telegram.org/:splat  200!
+/api/catbox-proxy/*  https://catbox.moe/:splat  200!
+/api/litterbox-proxy/*  https://litterbox.catbox.moe/:splat  200!
+/*  /index.html  200

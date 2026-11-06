@@ -173,7 +173,7 @@ export function PublicSharePage() {
   const handleDownload = async () => {
     if (!linkData) return;
     try {
-      const targetUrl = resolvedDownloadUrl;
+      const targetUrl = resolvedDownloadUrl || (linkData ? (TelegramCloudService.resolveDirectCloudUrl((linkData.item as any).storage_path) || TelegramCloudService.resolveDirectCloudUrl(linkData.item.name)) : null);
       if (targetUrl) {
         toast.success(`Starting download: ${linkData.item.name}`);
         // Native direct anchor trigger
@@ -201,7 +201,7 @@ export function PublicSharePage() {
           const isLocal = typeof window !== 'undefined' &&
             (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
           if (!isLocal) {
-            toast.info(`"${file.name}" was shared while still syncing from the owner's Windows PC. Cloud stream will be ready shortly.`);
+            toast.warning(`"${file.name}" was shared while still syncing from the owner's Windows PC. Cloud stream will be ready shortly.`);
             return;
           }
         }

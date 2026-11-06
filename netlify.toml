@@ -5,6 +5,19 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Direct Cloud Media Streaming & Download Proxies (Bypasses CORP same-site and browser CORS)
+[[redirects]]
+  from = "/api/litter-stream/:file"
+  to = "https://litter.catbox.moe/:file"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/catbox-stream/:file"
+  to = "https://files.catbox.moe/:file"
+  status = 200
+  force = true
+
 # API proxies to bypass browser CORS for cloud uploads
 [[redirects]]
   from = "/api/telegram-proxy/*"
@@ -24,6 +37,7 @@
   status = 200
   force = true
 
+# SPA client-side routing fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
