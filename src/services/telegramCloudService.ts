@@ -50,6 +50,20 @@ export class TelegramCloudService {
     return Boolean(botToken && chatId);
   }
 
+  private static getApiBase(botToken: string): string {
+    if (typeof window !== 'undefined') {
+      return `/api/telegram-proxy/bot${botToken}`;
+    }
+    return `https://api.telegram.org/bot${botToken}`;
+  }
+
+  private static getFileBase(botToken: string): string {
+    if (typeof window !== 'undefined') {
+      return `/api/telegram-proxy/file/bot${botToken}`;
+    }
+    return `https://api.telegram.org/file/bot${botToken}`;
+  }
+
   /**
    * Upload a single binary chunk to Telegram Cloud.
    */
@@ -65,7 +79,8 @@ export class TelegramCloudService {
     fd.append('document', chunkBlob, `${fileName}.part${chunkIndex}`);
     fd.append('caption', `MASTER_CLOUD#${chunkIndex}#${chunkBlob.size}`);
 
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+    const apiBase = this.getApiBase(botToken);
+    const res = await fetch(`${apiBase}/sendDocument`, {
       method: 'POST',
       body: fd,
     });
@@ -85,7 +100,7 @@ export class TelegramCloudService {
     // Resolve file_path from Telegram
     let filePath = '';
     try {
-      const pathRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+      const pathRes = await fetch(`${apiBase}/getFile?file_id=${fileId}`);
       if (pathRes.ok) {
         const pathData = await pathRes.json();
         if (pathData.ok && pathData.result?.file_path) {
@@ -106,7 +121,7 @@ export class TelegramCloudService {
   }
 
   /**
-   * Upload a single binary chunk to Multi-CDN fallback (Catbox).
+   * Upload a single binary chunk to Multi-CDN fallback (Catbox / Litterbox).
    */
   private static async uploadChunkToMultiCDN(
     chunkBlob: Blob,
@@ -117,30 +132,35 @@ export class TelegramCloudService {
     fd.append('reqtype', 'fileupload');
     fd.append('fileToUpload', chunkBlob, `${fileName}.part${chunkIndex}.bin`);
 
-    const res = await fetch('https://catbox.moe/user/api.php', {
-      method: 'POST',
-      body: fd,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) MasterCloud/2.4',
-      },
-    });
+    const endpoints = typeof window !== 'undefined'
+      ? ['/api/catbox-proxy/user/api.php', 'https://catbox.moe/user/api.php']
+      : ['https://catbox.moe/user/api.php'];
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Multi-CDN upload failed (${res.status}): ${err}`);
+    let lastErr: any = null;
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep, {
+          method: 'POST',
+          body: fd,
+        });
+
+        if (res.ok) {
+          const url = (await res.text()).trim();
+          if (url.startsWith('http')) {
+            return {
+              index: chunkIndex,
+              provider: 'catbox',
+              url,
+              size: chunkBlob.size,
+            };
+          }
+        }
+      } catch (e) {
+        lastErr = e;
+      }
     }
 
-    const url = (await res.text()).trim();
-    if (!url.startsWith('http')) {
-      throw new Error(`Invalid Multi-CDN URL response: ${url}`);
-    }
-
-    return {
-      index: chunkIndex,
-      provider: 'catbox',
-      url,
-      size: chunkBlob.size,
-    };
+    throw new Error(`Multi-CDN upload failed: ${lastErr?.message || 'Network error'}`);
   }
 
   /**
@@ -228,11 +248,13 @@ export class TelegramCloudService {
   private static async fetchChunkBlob(chunk: CloudChunkMeta): Promise<Blob> {
     if (chunk.provider === 'telegram') {
       const { botToken } = this.getCredentials();
+      const apiBase = this.getApiBase(botToken);
+      const fileBase = this.getFileBase(botToken);
       let filePath = chunk.filePath;
 
       // If filePath not cached, query Telegram API
       if (!filePath && chunk.fileId && botToken) {
-        const pathRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${chunk.fileId}`);
+        const pathRes = await fetch(`${apiBase}/getFile?file_id=${chunk.fileId}`);
         if (pathRes.ok) {
           const pathData = await pathRes.json();
           filePath = pathData.result?.file_path;
@@ -240,16 +262,10 @@ export class TelegramCloudService {
       }
 
       if (filePath && botToken) {
-        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        const urlsToTry: string[] = [];
-
-        // Direct Telegram API works with CORS in all modern browsers
-        urlsToTry.push(`https://api.telegram.org/file/bot${botToken}/${filePath}`);
-
-        // On local dev server, local proxy is also available
-        if (isLocal) {
-          urlsToTry.push(`/api/telegram-proxy/file/bot${botToken}/${filePath}`);
-        }
+        const urlsToTry: string[] = [
+          `${fileBase}/${filePath}`,
+          `https://api.telegram.org/file/bot${botToken}/${filePath}`,
+        ];
 
         for (const url of urlsToTry) {
           try {
@@ -267,15 +283,21 @@ export class TelegramCloudService {
       // If initial fetch failed or filePath expired, refresh directly via getFile
       if (chunk.fileId && botToken) {
         try {
-          const pathRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${chunk.fileId}`);
+          const pathRes = await fetch(`${apiBase}/getFile?file_id=${chunk.fileId}`);
           if (pathRes.ok) {
             const pathData = await pathRes.json();
             const freshPath = pathData.result?.file_path;
             if (freshPath) {
               chunk.filePath = freshPath;
-              const res = await fetch(`https://api.telegram.org/file/bot${botToken}/${freshPath}`);
-              if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
-                return await res.blob();
+              const urlsToTry = [
+                `${fileBase}/${freshPath}`,
+                `https://api.telegram.org/file/bot${botToken}/${freshPath}`,
+              ];
+              for (const u of urlsToTry) {
+                const res = await fetch(u);
+                if (res.ok && !res.headers.get('content-type')?.includes('text/html')) {
+                  return await res.blob();
+                }
               }
             }
           }

@@ -25,6 +25,16 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/telegram-proxy/, ''),
       },
+      '/api/catbox-proxy': {
+        target: 'https://catbox.moe',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/catbox-proxy/, ''),
+      },
+      '/api/litterbox-proxy': {
+        target: 'https://litterbox.catbox.moe',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/litterbox-proxy/, ''),
+      },
     },
   },
   build: {

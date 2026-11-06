@@ -5,10 +5,22 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA fallback — all routes served by index.html
+# API proxies to bypass browser CORS for cloud uploads
 [[redirects]]
   from = "/api/telegram-proxy/*"
   to = "https://api.telegram.org/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/catbox-proxy/*"
+  to = "https://catbox.moe/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/litterbox-proxy/*"
+  to = "https://litterbox.catbox.moe/:splat"
   status = 200
   force = true
 
