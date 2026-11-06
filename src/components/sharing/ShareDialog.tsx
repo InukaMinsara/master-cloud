@@ -18,6 +18,9 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/services/api';
+import { binaryStorage, localDb } from '@/services/localDb';
+import { TelegramCloudService } from '@/services/telegramCloudService';
+import { FileItem } from '@/types/file';
 import { ShareLinkRecord, ShareRecord } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -65,16 +68,42 @@ export function ShareDialog() {
 
   if (!isOpen || !item) return null;
 
+  const [isSyncingCloud, setIsSyncingCloud] = React.useState(false);
+
   const handleCreateShareLink = async () => {
     let expiresAt: string | null = null;
     if (expiresInDays) {
       expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
     }
 
+    let targetItem = item;
+
+    // If file is stored on local Z: drive, sync to cloud so remote users/phones can play & download!
+    if (!isFolder && (item as FileItem).storage_path?.startsWith('zdrive:')) {
+      const fileItem = item as FileItem;
+      setIsSyncingCloud(true);
+      try {
+        const cachedBlob = await binaryStorage.getBlob(fileItem.storage_path);
+        if (cachedBlob && typeof navigator !== 'undefined' && navigator.onLine) {
+          toast.info('Syncing to Cloud Storage for public streaming...');
+          const cloudPath = await TelegramCloudService.uploadFile(cachedBlob, fileItem.name, fileItem.mime_type);
+          if (cloudPath) {
+            fileItem.storage_path = cloudPath;
+            targetItem = { ...fileItem };
+            await localDb.updateFile(fileItem.id, { storage_path: cloudPath });
+          }
+        }
+      } catch (err) {
+        console.warn('Cloud sync error on share creation:', err);
+      } finally {
+        setIsSyncingCloud(false);
+      }
+    }
+
     const newLink = await api.createShareLink({
       resourceType: isFolder ? 'folder' : 'file',
       resourceId: item.id,
-      item,
+      item: targetItem,
       permission: 'viewer',
       hasPassword,
       password: hasPassword ? password : '',
@@ -275,8 +304,8 @@ export function ShareDialog() {
                 </div>
               </div>
 
-              <Button onClick={handleCreateShareLink} className="w-full text-xs rounded-xl">
-                Create Public Link
+              <Button onClick={handleCreateShareLink} disabled={isSyncingCloud} className="w-full text-xs rounded-xl">
+                {isSyncingCloud ? 'Syncing to Cloud...' : 'Create Public Link'}
               </Button>
             </div>
           )}

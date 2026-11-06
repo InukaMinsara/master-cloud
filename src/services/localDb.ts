@@ -1320,8 +1320,24 @@ class LocalDatabaseService {
       }
     }
 
-    // 2. Also cache in IndexedDB for instant offline access
+    // 2. Upload to Global Multi-CDN Cloud for instant cross-device sharing & streaming
+    let finalStoragePath = storagePath;
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const cloudPath = await TelegramCloudService.uploadFile(file, file.name, file.type);
+        if (cloudPath) {
+          finalStoragePath = cloudPath;
+        }
+      } catch (err) {
+        console.warn('Cloud upload attempt in localDb:', err);
+      }
+    }
+
+    // 3. Cache in IndexedDB for instant offline access under both paths
     await binaryStorage.saveBlob(storagePath, file);
+    if (finalStoragePath !== storagePath) {
+      await binaryStorage.saveBlob(finalStoragePath, file);
+    }
 
     const activeUserId = this.currentUser?.id || 'usr-master';
     const fileId = 'file-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
@@ -1329,11 +1345,11 @@ class LocalDatabaseService {
       id: 'ver-' + Date.now(),
       file_id: fileId,
       version_number: 1,
-      storage_path: storagePath,
+      storage_path: finalStoragePath,
       size_bytes: file.size,
       checksum,
       created_by: activeUserId,
-      notes: 'Saved to Z: Drive (D:\\MasterCloudDrive)',
+      notes: 'Uploaded to MASTER CLOUD',
       created_at: new Date().toISOString(),
     };
 
@@ -1342,7 +1358,7 @@ class LocalDatabaseService {
       owner_id: activeUserId,
       parent_folder_id: parentFolderId,
       name: file.name,
-      storage_path: storagePath,
+      storage_path: finalStoragePath,
       mime_type: file.type || this.guessMimeType(ext),
       size_bytes: file.size,
       extension: ext,
@@ -1353,18 +1369,6 @@ class LocalDatabaseService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-
-    // 3. Asynchronously stream to Multi-CDN / Telegram Cloud for cross-device mobile sharing
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      TelegramCloudService.uploadFile(file, file.name, file.type).then((tgPath: string) => {
-        if (tgPath) {
-          newFile.storage_path = tgPath;
-          newVersion.storage_path = tgPath;
-          saveTable('files', this.files);
-          saveTable('versions', this.versions);
-        }
-      }).catch(() => {});
-    }
 
     // Replace if same path already existed
     this.files = this.files.filter(f => f.storage_path !== storagePath);
