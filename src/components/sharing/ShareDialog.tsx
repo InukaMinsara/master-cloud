@@ -41,6 +41,7 @@ export function ShareDialog() {
   const [expiresInDays, setExpiresInDays] = React.useState<number | null>(null);
   const [showQrCode, setShowQrCode] = React.useState(false);
   const [copiedToken, setCopiedToken] = React.useState<string | null>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = React.useState(false);
 
   const isOpen = Boolean(shareModalItem);
   const item = shareModalItem?.item;
@@ -75,8 +76,6 @@ export function ShareDialog() {
   }, [isOpen, loadData, item?.id]);
 
   if (!isOpen || !item) return null;
-
-  const [isSyncingCloud, setIsSyncingCloud] = React.useState(false);
 
   const handleCreateShareLink = async () => {
     let expiresAt: string | null = null;
