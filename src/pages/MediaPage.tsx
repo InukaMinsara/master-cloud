@@ -30,6 +30,9 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
       if (file.storage_path?.startsWith('tgcloud:')) return TelegramCloudService.getDirectStreamUrl(file.storage_path);
     }
 
+    const directCloud = TelegramCloudService.resolveDirectCloudUrl(file.storage_path) || TelegramCloudService.resolveDirectCloudUrl(file.name);
+    if (directCloud) return directCloud;
+
     if (cat === 'video') {
       if (isLocal) {
         return `/api/local-drive/thumbnail?name=${encodeURIComponent(file.name)}&path=${encodeURIComponent(file.storage_path || '')}`;
@@ -50,6 +53,8 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
 
   const videoStreamUrl = React.useMemo(() => {
     if (!file || cat !== 'video') return null;
+    const directCloud = TelegramCloudService.resolveDirectCloudUrl(file.storage_path) || TelegramCloudService.resolveDirectCloudUrl(file.name);
+    if (directCloud) return directCloud;
     if (file.storage_path?.startsWith('http://') || file.storage_path?.startsWith('https://')) {
       return file.storage_path;
     }
@@ -61,7 +66,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
       return `/api/local-drive/read?path=${encodeURIComponent(rel)}`;
     }
     return null;
-  }, [file.id, file.storage_path, cat, isLocal]);
+  }, [file.id, file.name, file.storage_path, cat, isLocal]);
 
   React.useEffect(() => {
     let active = true;
@@ -179,10 +184,17 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
                 />
               ) : (
                 <video
-                  src={videoStreamUrl || thumbUrl || undefined}
+                  src={videoStreamUrl ? `${videoStreamUrl}#t=0.1` : (thumbUrl || undefined)}
                   muted
                   playsInline
-                  preload="metadata"
+                  preload="auto"
+                  crossOrigin="anonymous"
+                  onLoadedMetadata={(e) => {
+                    try {
+                      const v = e.currentTarget;
+                      if (v.currentTime === 0) v.currentTime = 0.1;
+                    } catch {}
+                  }}
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"
                   onError={() => setThumbError(true)}
                 />

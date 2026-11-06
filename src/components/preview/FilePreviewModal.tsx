@@ -140,7 +140,24 @@ export function FilePreviewModal() {
         const category = getFileCategory(activeFile.mime_type, activeFile.extension);
         const ext = activeFile.extension.toLowerCase();
 
-        // 0. Ultra-Fast Zero-Delay Instant Direct Stream for HTTP / HTTPS (Catbox, Cloud URLs)
+        // 0. Known Cloud Media Direct Stream & Proxy (Instant 0ms verified stream)
+        const directCloud = TelegramCloudService.resolveDirectCloudUrl(activeFile.storage_path) ||
+          TelegramCloudService.resolveDirectCloudUrl(activeFile.name);
+        if (directCloud) {
+          if (
+            category === 'video' ||
+            category === 'audio' ||
+            category === 'image' ||
+            ext === 'pdf' ||
+            activeFile.mime_type.includes('pdf')
+          ) {
+            setBlobUrl(directCloud);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // 0.1 Ultra-Fast Zero-Delay Instant Direct Stream for HTTP / HTTPS (Catbox, Cloud URLs)
         if (activeFile.storage_path?.startsWith('http://') || activeFile.storage_path?.startsWith('https://')) {
           if (
             category === 'video' ||
@@ -718,10 +735,13 @@ export function FilePreviewModal() {
                   {/* Native Video (shown in full hardware acceleration on 'original') */}
                   <video
                     ref={videoRef}
+                    key={blobUrl}
                     src={blobUrl}
+                    controls
                     autoPlay
                     playsInline
                     preload="auto"
+                    crossOrigin="anonymous"
                     onError={handleMediaError}
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}

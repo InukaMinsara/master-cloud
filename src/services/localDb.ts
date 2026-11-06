@@ -1520,6 +1520,15 @@ class LocalDatabaseService {
     return null;
   }
 
+  async updateFile(id: string, updates: Partial<FileRecord>): Promise<FileRecord> {
+    const file = this.files.find(f => f.id === id);
+    if (!file) throw new Error('File not found');
+    Object.assign(file, updates);
+    file.updated_at = new Date().toISOString();
+    saveTable('files', this.files);
+    return file;
+  }
+
   async renameFile(id: string, newName: string): Promise<FileRecord> {
     const file = this.files.find(f => f.id === id);
     if (!file) throw new Error('File not found');

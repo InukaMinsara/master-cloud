@@ -1,0 +1,10 @@
+/api/litter-stream/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  Content-Security-Policy: default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; media-src * data: blob:;
+/api/catbox-stream/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  Content-Security-Policy: default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; media-src * data: blob:;
+/*
+  Access-Control-Allow-Origin: *

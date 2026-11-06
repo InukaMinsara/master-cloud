@@ -20,6 +20,16 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
+      '/api/litter-stream': {
+        target: 'https://litter.catbox.moe',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/litter-stream/, ''),
+      },
+      '/api/catbox-stream': {
+        target: 'https://files.catbox.moe',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/catbox-stream/, ''),
+      },
       '/api/telegram-proxy': {
         target: 'https://api.telegram.org',
         changeOrigin: true,
