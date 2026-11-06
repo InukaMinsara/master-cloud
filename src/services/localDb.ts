@@ -597,14 +597,9 @@ class LocalDatabaseService {
     ]);
 
     let savedUser = localStorage.getItem(DB_PREFIX + 'current_user');
+    // Ensure obsolete legacy sessions are never automatically migrated
     if (!savedUser) {
-      // Migrate existing session from previous version
-      savedUser = localStorage.getItem('master_cloud_current_user');
-      if (savedUser) {
-        try {
-          localStorage.setItem(DB_PREFIX + 'current_user', savedUser);
-        } catch { /* ignore */ }
-      }
+      localStorage.removeItem('master_cloud_current_user');
     }
     if (savedUser) {
       try {
@@ -1324,7 +1319,9 @@ class LocalDatabaseService {
     let finalStoragePath = storagePath;
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       try {
-        const cloudPath = await TelegramCloudService.uploadFile(file, file.name, file.type);
+        const cloudPath = await TelegramCloudService.uploadFile(file, file.name, file.type, (pct, bytes) => {
+          onProgress?.(pct, bytes);
+        });
         if (cloudPath) {
           finalStoragePath = cloudPath;
         }
@@ -1377,6 +1374,38 @@ class LocalDatabaseService {
     saveTable('files', this.files);
     saveTable('versions', this.versions);
     this.notifyStorageUpdated();
+
+    // Background cloud sync guarantee: if file was saved locally first, update file and any generated share links
+    if (finalStoragePath === storagePath && typeof navigator !== 'undefined' && navigator.onLine) {
+      TelegramCloudService.uploadFile(file, file.name, file.type).then((bgPath) => {
+        if (bgPath) {
+          newFile.storage_path = bgPath;
+          newVersion.storage_path = bgPath;
+          saveTable('files', this.files);
+          saveTable('versions', this.versions);
+
+          // Update any share links generated before sync finished
+          this.shareLinks.forEach((link) => {
+            if (link.resource_id === newFile.id) {
+              const fullItem = { ...newFile, owner: this.currentUser };
+              const encoded = encodeSharePayload(fullItem, link);
+              link.encoded_data = encoded;
+              link.share_url = typeof window !== 'undefined'
+                ? `${window.location.origin}/share/${link.token}${encoded ? `?d=${encoded}` : ''}`
+                : `/share/${link.token}${encoded ? `?d=${encoded}` : ''}`;
+              saveGlobalPublicShare(link.token, link, fullItem);
+            }
+          });
+          saveTable('share_links', this.shareLinks);
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('mc_file_cloud_synced', {
+              detail: { fileId: newFile.id, storagePath: bgPath }
+            }));
+          }
+        }
+      }).catch(() => {});
+    }
 
     await this.logActivity('file', newFile.id, newFile.name, 'upload', {
       size: file.size,

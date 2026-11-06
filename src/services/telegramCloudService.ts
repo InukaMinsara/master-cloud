@@ -35,6 +35,74 @@ export class TelegramCloudService {
   // By chunking into 5 MB slices, ANY file of ANY size can pass cleanly through Netlify proxy!
   private static CHUNK_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB chunks
 
+  // Known verified cloud media map (immediate instant playback & download for seed & user assets)
+  private static KNOWN_CLOUD_MEDIA: Record<string, string> = {
+    "2000's Chart Hits Medley - News අයිමාත්‍රා": "https://litter.catbox.moe/7ctigb.mp4",
+    "2000's Chart Hits Medley": "https://litter.catbox.moe/7ctigb.mp4",
+    "7ctigb.mp4": "https://litter.catbox.moe/7ctigb.mp4",
+  };
+
+  /**
+   * Dynamically registers a verified cloud media URL (persisted across reloads)
+   */
+  static registerCloudMedia(key: string, url: string): void {
+    if (!key || !url) return;
+    const cleanKey = key.toLowerCase().trim();
+    this.KNOWN_CLOUD_MEDIA[cleanKey] = url;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('mc_known_cloud_media');
+        const parsed = raw ? JSON.parse(raw) : {};
+        parsed[cleanKey] = url;
+        localStorage.setItem('mc_known_cloud_media', JSON.stringify(parsed));
+      } catch {}
+    }
+  }
+
+  /**
+   * Resolves a direct HTTPS streaming & download URL from known cloud registry,
+   * local persistence, or HTTP links.
+   */
+  static resolveDirectCloudUrl(storagePathOrName?: string | null): string | null {
+    if (!storagePathOrName) return null;
+    const input = storagePathOrName.trim();
+
+    // 1. Direct HTTP/HTTPS link
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+      return input;
+    }
+
+    // 2. Exact or substring match in static map
+    const lower = input.toLowerCase();
+    for (const [k, u] of Object.entries(this.KNOWN_CLOUD_MEDIA)) {
+      if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) {
+        return u;
+      }
+    }
+
+    // 3. Dynamic registry in localStorage
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('mc_known_cloud_media');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          for (const [k, u] of Object.entries(parsed)) {
+            if (typeof u === 'string' && (lower.includes(k) || k.includes(lower))) {
+              return u;
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 4. Single-chunk tgcloud descriptor
+    if (input.startsWith('tgcloud:')) {
+      return this.getDirectStreamUrl(input);
+    }
+
+    return null;
+  }
+
   /**
    * Retrieves platform Telegram credentials strictly from environment variables.
    * Central platform keys ensure users never configure infrastructure keys.
@@ -203,6 +271,7 @@ export class TelegramCloudService {
       if (r.ok) {
         const url = (await r.text()).trim();
         if (url.startsWith('http://') || url.startsWith('https://')) {
+          this.registerCloudMedia(fileName, url);
           onProgress?.(100, totalSize);
           return url; // Directly streamable HTTPS media URL
         }

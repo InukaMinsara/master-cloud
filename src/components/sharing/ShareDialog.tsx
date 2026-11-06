@@ -64,7 +64,15 @@ export function ShareDialog() {
     if (isOpen) {
       loadData();
     }
-  }, [isOpen, loadData]);
+    const onSynced = (e: any) => {
+      if (item && e.detail?.fileId === item.id) {
+        loadData();
+        toast.success('Cloud sync complete! Share link is now live globally.');
+      }
+    };
+    window.addEventListener('mc_file_cloud_synced', onSynced);
+    return () => window.removeEventListener('mc_file_cloud_synced', onSynced);
+  }, [isOpen, loadData, item?.id]);
 
   if (!isOpen || !item) return null;
 
