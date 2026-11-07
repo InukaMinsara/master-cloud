@@ -3,34 +3,79 @@
  * ─────────────────────────────────────────────────────────────
  * Instant 0ms Zero-Latency Video Preview Poster Generator
  *
- * Generates rich, hardware-accelerated SVG poster graphics for video
+ * Generates rich, hardware-accelerated poster graphics for video
  * assets so previews appear instantaneously (0ms) across all devices
  * before video streaming buffers.
  * ─────────────────────────────────────────────────────────────
  */
+
+/**
+ * Safely slices string by Unicode code points (graphemes/surrogates are never severed in half)
+ */
+function safeUnicodeTruncate(str: string, maxCodePoints: number = 36): string {
+  if (!str) return '';
+  const codePoints = Array.from(str);
+  if (codePoints.length <= maxCodePoints) return str;
+  return codePoints.slice(0, maxCodePoints - 1).join('') + '…';
+}
+
+/**
+ * Escapes characters for safe inclusion inside SVG XML
+ */
+function escapeXml(unsafe: string): string {
+  return (unsafe || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Safely encodes SVG to Data URI without crashing on malformed surrogates
+ */
+function safeSvgDataUri(svg: string): string {
+  try {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  } catch {
+    try {
+      // Strip any isolated lone surrogates
+      const sanitized = svg.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+      return `data:image/svg+xml;utf8,${encodeURIComponent(sanitized)}`;
+    } catch {
+      return '';
+    }
+  }
+}
 
 export class VideoPosterService {
   /**
    * Generates or resolves the authentic high-resolution preview poster for any video file
    */
   static getVideoPoster(fileName: string = '', sizeBytes: number = 0): string {
-    const lower = (fileName || '').toLowerCase();
+    try {
+      const lower = (fileName || '').toLowerCase();
 
-    // 1. Authentic 1080p Real Concert Frame for AVATAR First Medley
-    if (lower.includes('avatar') || lower.includes('heen kaluware') || lower.includes('w8lbkc') || lower.includes('jdzn_dnxb1vt_z9e')) {
-      return '/assets/posters/avatar-real-frame.jpg';
-    }
+      // 1. Authentic 1080p Real Concert Frame for AVATAR First Medley
+      if (lower.includes('avatar') || lower.includes('heen kaluware') || lower.includes('w8lbkc') || lower.includes('jdzn_dnxb1vt_z9e')) {
+        return '/assets/posters/avatar-real-frame.jpg';
+      }
 
-    // 2. Authentic 1080p Real Concert Frame for 2000's Chart Hits Medley
-    if (lower.includes('2000') || lower.includes('chart') || lower.includes('news') || lower.includes('7ctigb') || lower.includes('uqlvmnjfgwqa2oph') || lower.includes('අයිමාත්‍රා')) {
-      return '/assets/posters/chart-hits-real-frame.jpg';
-    }
+      // 2. Authentic 1080p Real Concert Frame for 2000's Chart Hits Medley
+      if (lower.includes('2000') || lower.includes('chart') || lower.includes('news') || lower.includes('7ctigb') || lower.includes('300fyj') || lower.includes('uqlvmnjfgwqa2oph') || lower.includes('අයිමාත්‍රා')) {
+        return '/assets/posters/chart-hits-real-frame.jpg';
+      }
 
-    // 3. Elegant Universal Video Poster for Any Other Video
-    const displayName = fileName ? (fileName.length > 40 ? fileName.slice(0, 37) + '...' : fileName) : 'Master Cloud Video';
-    const sizeStr = sizeBytes > 0 ? (sizeBytes > 1024 * 1024 * 1024 ? `${(sizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB` : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`) : 'HD Video';
+      // 3. Elegant Universal Video Poster for Any Other Video (Unicode-Safe & XML-Safe)
+      const safeName = safeUnicodeTruncate(fileName || 'Master Cloud Video', 36);
+      const displayName = escapeXml(safeName);
+      const sizeStr = sizeBytes > 0
+        ? (sizeBytes > 1024 * 1024 * 1024
+            ? `${(sizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+            : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`)
+        : 'HD Video';
 
-    const svg = `
+      const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
   <defs>
     <linearGradient id="bgU" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -54,6 +99,10 @@ export class VideoPosterService {
   <text x="640" y="460" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="28" font-weight="700" text-anchor="middle">${displayName}</text>
   <text x="640" y="505" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="500" text-anchor="middle">${sizeStr}  •  Click to Stream in High Definition</text>
 </svg>`;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+
+      return safeSvgDataUri(svg);
+    } catch {
+      return '/assets/posters/avatar-real-frame.jpg';
+    }
   }
 }
