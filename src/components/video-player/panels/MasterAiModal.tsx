@@ -22,8 +22,16 @@ import {
   Activity,
   Download,
   AlertTriangle,
+  Cpu,
+  HardDrive,
+  Monitor,
+  Gauge,
+  Database,
+  Volume2,
 } from 'lucide-react';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
+import { resourceManager, BrowserCapabilities } from '@/services/resourceManager';
+import { formatBytes } from '@/lib/utils';
 import {
   masterAiEngine,
   ChatMessage,
@@ -49,7 +57,8 @@ function formatTimestamp(seconds: number): string {
 
 export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVideoElement> }) {
   // Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'chapters' | 'search' | 'settings'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'chapters' | 'search' | 'capabilities' | 'export' | 'settings'>('chat');
+  const [capabilities, setCapabilities] = useState<BrowserCapabilities | null>(null);
 
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -117,6 +126,11 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isThinking, activeTab]);
+
+  // Load real browser & hardware capabilities
+  useEffect(() => {
+    resourceManager.getBrowserCapabilities(aiMode).then(setCapabilities);
+  }, [aiMode]);
 
   // Jump to specific timestamp
   const jumpTo = (seconds: number) => {
@@ -219,6 +233,23 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
   const chaptersData = useMemo(() => {
     return masterAiEngine.generateSmartChapters(aiContext);
   }, [aiContext]);
+
+  // Multi-format export trigger (Zero Artificial Limits)
+  const handleExport = (format: 'txt' | 'srt' | 'vtt' | 'json' | 'csv' | 'markdown') => {
+    const safeTitle = (fileName || 'master_cloud_intelligence').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const result = resourceManager.generateExport(format, {
+      title: fileName || 'Master Cloud Video',
+      duration,
+      summary: summaryData.executiveSummary,
+      takeaways: summaryData.keyTakeaways,
+      chapters: chaptersData,
+      cues,
+      scenes: detectedScenes.map((s) => ({ timestamp: s.start, label: s.label })),
+      chatHistory: messages.map((m) => ({ sender: m.sender, text: m.text, timestamp: m.timestamp })),
+    });
+    resourceManager.downloadFile(`${safeTitle}.${result.extension}`, result.content, result.mimeType);
+    toast.success(`Successfully exported report as .${result.extension.toUpperCase()}`);
+  };
 
   // Transcript Keywords
   const keywords = useMemo(() => {
@@ -330,6 +361,28 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
           >
             <Search className="w-3.5 h-3.5" />
             Dialogue Search
+          </button>
+          <button
+            onClick={() => setActiveTab('capabilities')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'capabilities'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            System Specs
+          </button>
+          <button
+            onClick={() => setActiveTab('export')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'export'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export Data
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -703,7 +756,253 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
         )}
 
         {/* ================================================================= */}
-        {/* TAB 5: AI ENGINE & PRIVACY SETTINGS                              */}
+        {/* TAB 5: SYSTEM CAPABILITIES & HARDWARE SPECS (ZERO ARTIFICIAL LIMITS) */}
+        {/* ================================================================= */}
+        {activeTab === 'capabilities' && (
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-cyan-400" />
+                System Capabilities &amp; Resource Dashboard
+              </h3>
+              <p className="text-xs text-white/50">
+                Transparent diagnostics of your browser sandbox, hardware acceleration, and zero-limit architecture.
+              </p>
+            </div>
+
+            {/* Hardware & Sandbox Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-white/70">
+                  <span className="flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" /> Logical CPU Cores
+                  </span>
+                  <span className="font-mono text-cyan-300 font-bold">{capabilities?.cpuCores || 4} Threads</span>
+                </div>
+                <p className="text-[10px] text-white/40">Multi-threaded browser worker concurrency.</p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-white/70">
+                  <span className="flex items-center gap-1.5">
+                    <Monitor className="w-3.5 h-3.5 text-purple-400" /> WebGPU Acceleration
+                  </span>
+                  <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    capabilities?.hasWebGpu ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                  }`}>
+                    {capabilities?.hasWebGpu ? 'Active' : 'WASM/CPU Fallback'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/40 truncate">
+                  {capabilities?.gpuAdapterName || 'Hardware WebGPU accelerated when supported.'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-white/70">
+                  <span className="flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-blue-400" /> Browser Storage Quota
+                  </span>
+                  <span className="font-mono text-[11px] text-blue-300 font-bold">
+                    {capabilities?.storageQuotaBytes ? formatBytes(capabilities.storageQuotaBytes) : 'Dynamic Quota'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/40">
+                  {capabilities?.storageUsageBytes ? `${formatBytes(capabilities.storageUsageBytes)} used (${capabilities.storagePercentUsed || '<1'}%)` : 'IndexedDB persistence available.'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-white/70">
+                  <span className="flex items-center gap-1.5">
+                    <Volume2 className="w-3.5 h-3.5 text-emerald-400" /> Web Audio Engine
+                  </span>
+                  <span className="font-mono text-emerald-300 font-bold">{capabilities?.audioSampleRate || 44100} Hz</span>
+                </div>
+                <p className="text-[10px] text-white/40">10-band ISO equalizer &amp; sub-frame sync.</p>
+              </div>
+            </div>
+
+            {/* Zero Artificial Limits Policy */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-purple-500/10 to-transparent border border-cyan-500/20 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-cyan-300">
+                <Gauge className="w-4 h-4 text-cyan-400" />
+                Zero Artificial Limits Architecture
+              </div>
+              <p className="text-[11px] text-white/70 leading-relaxed">
+                MASTER AI operates without arbitrary product paywalls or artificial caps. Computing boundaries are governed strictly by your device hardware, memory, and browser capabilities:
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-white/80">
+                <li className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  No daily message or question quotas
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Unlimited video length (chunked streaming)
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  No arbitrary chapter or bookmark limits
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Sliding context budgeting for long chats
+                </li>
+              </ul>
+            </div>
+
+            {/* Hardware Codec Support */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <Monitor className="w-3.5 h-3.5 text-cyan-400" />
+                Native Browser Codec Support Matrix
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {capabilities?.supportedVideoCodecs.map((codec) => (
+                  <div key={codec.name} className="flex items-center justify-between p-2 rounded-xl bg-black/40 border border-white/5 text-[11px]">
+                    <span className="font-semibold text-white/80">{codec.name}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      codec.supported ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/40'
+                    }`}>
+                      {codec.supported ? 'Supported' : 'Unavailable'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 6: MULTI-FORMAT ZERO-LIMIT DATA EXPORT                       */}
+        {/* ================================================================= */}
+        {activeTab === 'export' && (
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Download className="w-4 h-4 text-emerald-400" />
+                Multi-Format Data Export Studio
+              </h3>
+              <p className="text-xs text-white/50">
+                Export generated summaries, chapters, spoken dialogue, and analytics in standardized, non-proprietary formats.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Markdown Report (.md)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">Comprehensive</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  Full executive report formatted with GitHub-flavored markdown, timestamped chapters, and key takeaways.
+                </p>
+                <Button
+                  onClick={() => handleExport('markdown')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download Markdown (.md)
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">SubRip Subtitles (.srt)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">Standard</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  Standard subtitle format compatible with VLC, YouTube, Adobe Premiere, and professional media players.
+                </p>
+                <Button
+                  onClick={() => handleExport('srt')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download SubRip (.srt)
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">WebVTT Subtitles (.vtt)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold">Web Native</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  W3C Web Video Text Tracks for HTML5 video players, browsers, and streaming servers.
+                </p>
+                <Button
+                  onClick={() => handleExport('vtt')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download WebVTT (.vtt)
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Tabular Timeline (.csv)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Spreadsheet</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  Structured spreadsheet rows with start timestamps, end timestamps, chapters, and cue text.
+                </p>
+                <Button
+                  onClick={() => handleExport('csv')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download CSV (.csv)
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Full JSON Dataset (.json)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">Developers</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  Complete programmatic payload including raw metadata, cue timestamps, scenes, and conversation state.
+                </p>
+                <Button
+                  onClick={() => handleExport('json')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download JSON (.json)
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Plain Text Transcript (.txt)</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/20 text-white font-bold">Clean</span>
+                </div>
+                <p className="text-[11px] text-white/60">
+                  Unformatted plain text transcript with timeline cues and summary notes.
+                </p>
+                <Button
+                  onClick={() => handleExport('txt')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs rounded-xl gap-1.5 border-white/20 text-white/80 hover:bg-white/10"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download TXT (.txt)
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 7: AI ENGINE & PRIVACY SETTINGS                              */}
         {/* ================================================================= */}
         {activeTab === 'settings' && (
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
