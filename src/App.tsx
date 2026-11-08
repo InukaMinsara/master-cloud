@@ -22,6 +22,7 @@ import { SharedPage } from '@/pages/SharedPage';
 import { RecentPage } from '@/pages/RecentPage';
 import { StarredPage } from '@/pages/StarredPage';
 import { MediaPage } from '@/pages/MediaPage';
+import { VideoPlayerPage } from '@/pages/VideoPlayerPage';
 import { TrashPage } from '@/pages/TrashPage';
 import { StoragePage } from '@/pages/StoragePage';
 import { DevicePage } from '@/pages/DevicePage';
@@ -108,6 +109,8 @@ export function App() {
         <Route path="/recent" element={<RecentPage />} />
         <Route path="/starred" element={<StarredPage />} />
         <Route path="/media" element={<MediaPage />} />
+        <Route path="/player" element={<VideoPlayerPage />} />
+        <Route path="/video-player" element={<VideoPlayerPage />} />
         <Route path="/trash" element={<TrashPage />} />
         <Route path="/storage" element={<StoragePage />} />
         <Route path="/sync" element={<SyncCenterPage />} />

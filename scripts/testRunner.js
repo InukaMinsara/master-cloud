@@ -153,12 +153,20 @@ try {
 }
 assert(caughtError === 'Not enough storage available.', 'Exceeding 10 TB quota throws "Not enough storage available."');
 
-console.log('====================================================');
-console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`);
-console.log('====================================================');
+import('child_process').then(({ execSync }) => {
+  try {
+    execSync('node scripts/testVideoPlayer.mjs', { stdio: 'inherit' });
+  } catch {
+    failed++;
+  }
 
-if (failed > 0) {
-  process.exit(1);
-} else {
-  process.exit(0);
-}
+  console.log('====================================================');
+  console.log(`TEST SUMMARY: ${passed} passed, ${failed} failed`);
+  console.log('====================================================');
+
+  if (failed > 0) {
+    process.exit(1);
+  } else {
+    process.exit(0);
+  }
+});

@@ -8,6 +8,7 @@ import {
   Star,
   Trash2,
   Film,
+  Clapperboard,
   PieChart,
   Plus,
   FolderPlus,
@@ -63,6 +64,7 @@ export function Sidebar() {
     { label: 'Recent', path: '/recent', icon: Clock },
     { label: 'Starred', path: '/starred', icon: Star },
     { label: 'Media Library', path: '/media', icon: Film },
+    { label: 'Video Player', path: '/player', icon: Clapperboard, badge: 'Pro' },
     { label: 'Storage Analytics', path: '/storage', icon: PieChart },
     { label: 'Trash', path: '/trash', icon: Trash2 },
   ];

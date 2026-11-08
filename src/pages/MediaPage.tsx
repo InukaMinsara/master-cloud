@@ -1,5 +1,6 @@
 import React from 'react';
-import { Film, Image as ImageIcon, Video, Music, Play, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Film, Image as ImageIcon, Video, Music, Play, Upload, Clapperboard } from 'lucide-react';
 import { api } from '@/services/api';
 import { TelegramCloudService } from '@/services/telegramCloudService';
 import { VideoPosterService } from '@/services/videoPosterService';
@@ -239,6 +240,7 @@ function MediaCard({ file, allFiles }: { file: FileItem; allFiles: FileItem[] })
 }
 
 export function MediaPage() {
+  const navigate = useNavigate();
   const [mediaType, setMediaType] = React.useState<'all' | 'image' | 'video' | 'audio'>('all');
   const [files, setFiles] = React.useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -324,6 +326,17 @@ export function MediaPage() {
               <Music className="h-3.5 w-3.5 text-rose-500" /> Audio
             </button>
           </div>
+
+          {/* Dedicated Pro Video Player button */}
+          <Button
+            onClick={() => navigate('/player')}
+            variant="outline"
+            size="sm"
+            className="rounded-xl h-9 gap-1.5 text-xs font-semibold border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 shrink-0"
+          >
+            <Clapperboard className="h-3.5 w-3.5" />
+            <span>Open Player</span>
+          </Button>
 
           {/* Upload media button */}
           <Button
