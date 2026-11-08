@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   FolderSync,
   Copy,
@@ -12,9 +12,18 @@ import {
   Sparkles,
   HardDrive,
   Film,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { mediaMetadataDb, MediaLibraryItem, DuplicateGroup } from '@/services/mediaMetadataDb';
-import { identifyDuplicateMedia, MEDIA_CATEGORIES, MediaCategory } from '@/services/mediaOrganizer';
+import {
+  identifyDuplicateMedia,
+  computeMediaChunkHash,
+  probeMediaHealth,
+  guessMediaCategory,
+  MEDIA_CATEGORIES,
+  MediaCategory,
+} from '@/services/mediaOrganizer';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
 import { formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +34,8 @@ export function MediaOrganizerModal() {
   const [activeTab, setActiveTab] = useState<'duplicates' | 'categories' | 'health'>('duplicates');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [tagInput, setTagInput] = useState<{ [itemId: string]: string }>({});
+  const [isScanning, setIsScanning] = useState(false);
+  const fileScanRef = useRef<HTMLInputElement>(null);
 
   const setActivePanel = useVideoPlayerStore((s) => s.setActivePanel);
 
@@ -94,12 +105,56 @@ export function MediaOrganizerModal() {
     toast.success('Media record removed from library.');
   };
 
+  const handleScanFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsScanning(true);
+    toast.info(`Scanning ${files.length} video files for duplicates & health…`);
+
+    for (const f of files) {
+      try {
+        const hash = await computeMediaChunkHash(f);
+        const health = await probeMediaHealth(f);
+        const category = guessMediaCategory(f.name, health.duration);
+        await mediaMetadataDb.saveMediaItem({
+          id: `${f.name}_${f.size}`,
+          name: f.name,
+          size: f.size,
+          duration: health.duration || 0,
+          resolution: health.width && health.height ? `${health.width}×${health.height}` : undefined,
+          lastPlayed: Date.now(),
+          continueTime: 0,
+          isFavorite: false,
+          collections: ['Local Videos'],
+          hash,
+          category,
+          isCorrupt: !health.isReadable,
+        });
+      } catch (err) {
+        console.warn('Scan file error:', err);
+      }
+    }
+
+    await loadItems();
+    setIsScanning(false);
+    toast.success(`Successfully scanned and indexed ${files.length} videos!`);
+    if (fileScanRef.current) fileScanRef.current.value = '';
+  };
+
   return (
     <div
       data-controls="true"
       onClick={(e) => e.stopPropagation()}
       className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-150"
     >
+      <input
+        ref={fileScanRef}
+        type="file"
+        multiple
+        accept="video/*,.mp4,.webm,.mov,.avi,.mkv,.m4v,.flv,.wmv"
+        className="hidden"
+        onChange={handleScanFiles}
+      />
       <div className="relative w-full max-w-3xl rounded-2xl border border-white/10 bg-zinc-950/95 p-6 shadow-2xl backdrop-blur-2xl text-white max-h-[90vh] flex flex-col space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
@@ -116,12 +171,24 @@ export function MediaOrganizerModal() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setActivePanel('none')}
-            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="gradient"
+              size="sm"
+              onClick={() => fileScanRef.current?.click()}
+              disabled={isScanning}
+              className="h-8 px-3 rounded-xl text-xs font-semibold gap-1.5 shadow-md shadow-cyan-500/10"
+            >
+              {isScanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {isScanning ? 'Scanning…' : 'Scan Files for Duplicates'}
+            </Button>
+            <button
+              onClick={() => setActivePanel('none')}
+              className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}

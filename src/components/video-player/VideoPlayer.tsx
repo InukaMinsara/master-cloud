@@ -359,6 +359,7 @@ export function VideoPlayer() {
   }, [setBuffered]);
 
   const handlePlay = useCallback(() => {
+    audioStudioEngine.ensureContextResumed();
     setPlaying(true);
     setPaused(false);
   }, [setPlaying, setPaused]);
@@ -366,7 +367,17 @@ export function VideoPlayer() {
   const handlePause = useCallback(() => {
     setPlaying(false);
     setPaused(true);
-  }, [setPlaying, setPaused]);
+    const video = videoRef.current;
+    if (video && video.currentTime > 2) {
+      const mediaId = `${videoFile?.name || 'video'}_${videoFile?.size || 0}`;
+      analyticsService.recordSession(
+        mediaId,
+        videoFile?.name || fileName || 'Video',
+        video.currentTime,
+        video.duration,
+      );
+    }
+  }, [setPlaying, setPaused, videoFile, fileName]);
 
   const handleEnded = useCallback(() => {
     const { repeatMode, abRepeat: ab, queue: currentQ, currentQueueIndex: cIdx } = useVideoPlayerStore.getState();
@@ -442,6 +453,7 @@ export function VideoPlayer() {
   const togglePlayPause = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
+    audioStudioEngine.ensureContextResumed();
     if (video.paused || video.ended) {
       video.play().catch(() => {
         toast.error('Playback failed — your browser may be blocking playback.');

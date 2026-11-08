@@ -108,6 +108,15 @@ class AudioStudioEngine {
   }
 
   /**
+   * Resumes the AudioContext if suspended by browser autoplay policy
+   */
+  ensureContextResumed(): void {
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
+    }
+  }
+
+  /**
    * Connects the Web Audio API processing graph to a video element
    */
   attachVideo(video: HTMLVideoElement): boolean {

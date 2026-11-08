@@ -23,6 +23,37 @@ export function MiniPlayer({ videoRef }: { videoRef: React.RefObject<HTMLVideoEl
   const toggleMute = useVideoPlayerStore((s) => s.toggleMute);
   const setPlaying = useVideoPlayerStore((s) => s.setPlaying);
   const closeVideo = useVideoPlayerStore((s) => s.closeVideo);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    let animId: number;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video || !isMiniPlayer) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const renderFrame = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        } catch {
+          // ignore CORS tainted stream
+        }
+      }
+      animId = requestAnimationFrame(renderFrame);
+    };
+
+    animId = requestAnimationFrame(renderFrame);
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [isMiniPlayer, videoRef]);
 
   if (!isMiniPlayer || !videoSrc) return null;
 
@@ -72,7 +103,8 @@ export function MiniPlayer({ videoRef }: { videoRef: React.RefObject<HTMLVideoEl
       </div>
 
       {/* Mini Video Mirror Area */}
-      <div className="relative aspect-video bg-black flex items-center justify-center group cursor-pointer" onClick={togglePlay}>
+      <div className="relative aspect-video bg-black flex items-center justify-center group cursor-pointer overflow-hidden" onClick={togglePlay}>
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
         {/* Play Overlay */}
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <div className="w-10 h-10 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg">

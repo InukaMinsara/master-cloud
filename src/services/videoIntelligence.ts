@@ -96,12 +96,23 @@ export async function detectVideoScenes(
 
   const seekAsync = (time: number): Promise<void> => {
     return new Promise((resolve) => {
+      const targetTime = Math.min(time, duration);
+      if (Math.abs(video.currentTime - targetTime) < 0.05) {
+        resolve();
+        return;
+      }
+      let timeoutId: ReturnType<typeof setTimeout>;
       const handleSeeked = () => {
+        clearTimeout(timeoutId);
         video.removeEventListener('seeked', handleSeeked);
         resolve();
       };
-      video.addEventListener('seeked', handleSeeked);
-      video.currentTime = Math.min(time, duration);
+      timeoutId = setTimeout(() => {
+        video.removeEventListener('seeked', handleSeeked);
+        resolve();
+      }, 900);
+      video.addEventListener('seeked', handleSeeked, { once: true });
+      video.currentTime = targetTime;
     });
   };
 

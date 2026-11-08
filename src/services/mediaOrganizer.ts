@@ -37,8 +37,8 @@ export async function computeMediaChunkHash(file: File): Promise<string> {
       tailBlob.arrayBuffer(),
     ]);
 
-    // Combine head, tail, and size string
-    const sizeStr = new TextEncoder().encode(`size:${file.size}_name:${file.name}`);
+    // Combine head, tail, and file byte length (independent of filename for exact duplicate detection)
+    const sizeStr = new TextEncoder().encode(`size:${file.size}`);
     const combined = new Uint8Array(headBuf.byteLength + tailBuf.byteLength + sizeStr.byteLength);
 
     combined.set(new Uint8Array(headBuf), 0);

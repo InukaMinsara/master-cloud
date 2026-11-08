@@ -75,11 +75,7 @@ class ThumbnailGenerator {
     try {
       const video = this.getOffscreenVideo(src);
 
-      // Handle seeking
-      const onSeeked = () => {
-        video.removeEventListener('seeked', onSeeked);
-        video.removeEventListener('error', onError);
-
+      const captureFrame = () => {
         try {
           const canvas = document.createElement('canvas');
           canvas.width = width;
@@ -109,13 +105,38 @@ class ThumbnailGenerator {
         }
       };
 
+      // If video is already at this timestamp, capture immediately
+      if (video.readyState >= 2 && Math.abs(video.currentTime - timestamp) < 0.1) {
+        captureFrame();
+        return;
+      }
+
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      // Handle seeking
+      const onSeeked = () => {
+        clearTimeout(timeoutId);
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        captureFrame();
+      };
+
       const onError = () => {
+        clearTimeout(timeoutId);
         video.removeEventListener('seeked', onSeeked);
         video.removeEventListener('error', onError);
         this.isSeeking = false;
         resolve(null);
         this.processQueue(src, width, height);
       };
+
+      timeoutId = setTimeout(() => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        this.isSeeking = false;
+        resolve(null);
+        this.processQueue(src, width, height);
+      }, 1200);
 
       video.addEventListener('seeked', onSeeked, { once: true });
       video.addEventListener('error', onError, { once: true });

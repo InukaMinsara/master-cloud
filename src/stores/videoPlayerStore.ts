@@ -3,6 +3,7 @@ import { SubtitleTrack, SubtitleCue, parseSubtitleText } from '@/services/subtit
 import { audioStudioEngine, AUDIO_PRESETS } from '@/services/audioStudioEngine';
 import { mediaMetadataDb, MediaBookmark, DetectedScene } from '@/services/mediaMetadataDb';
 import { detectVideoScenes } from '@/services/videoIntelligence';
+import { analyticsService } from '@/services/analyticsService';
 
 export interface QueueItem {
   id: string;
@@ -841,18 +842,36 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
 
   // ── Phase 3: Subtitle Editor Actions ────────────────────────────────────
   addSubtitleCue: (cue) => {
-    const { subtitleTracks, activeSubtitleTrackId } = get();
-    if (!activeSubtitleTrackId || subtitleTracks.length === 0) return;
+    const { subtitleTracks, activeSubtitleTrackId, fileName } = get();
+    let currentTrackId = activeSubtitleTrackId;
+    let nextTracks = [...subtitleTracks];
 
-    const nextTracks = subtitleTracks.map((t) => {
-      if (t.id === activeSubtitleTrackId) {
+    // Auto-create draft subtitle track if none exists yet
+    if (!currentTrackId || nextTracks.length === 0) {
+      currentTrackId = `sub_draft_${Date.now()}`;
+      const newTrack = {
+        id: currentTrackId,
+        label: `${fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Video'} Subtitles`,
+        language: 'en',
+        cues: [cue],
+        isDefault: true,
+      };
+      set({
+        subtitleTracks: [newTrack],
+        activeSubtitleTrackId: currentTrackId,
+      });
+      return;
+    }
+
+    nextTracks = nextTracks.map((t) => {
+      if (t.id === currentTrackId) {
         const nextCues = [...t.cues, cue].sort((a, b) => a.start - b.start);
         return { ...t, cues: nextCues };
       }
       return t;
     });
 
-    set({ subtitleTracks: nextTracks });
+    set({ subtitleTracks: nextTracks, activeSubtitleTrackId: currentTrackId });
   },
 
   updateSubtitleCue: (id, updates) => {
@@ -888,7 +907,16 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
 
   // ── Teardown ────────────────────────────────────────────────────────────
   closeVideo: () => {
-    const { videoSrc } = get();
+    const { videoSrc, videoFile, fileName, currentTime, duration } = get();
+    if (currentTime > 2) {
+      const mediaId = `${videoFile?.name || 'video'}_${videoFile?.size || 0}`;
+      analyticsService.recordSession(
+        mediaId,
+        videoFile?.name || fileName || 'Video',
+        currentTime,
+        duration,
+      );
+    }
     if (videoSrc && videoSrc.startsWith('blob:')) {
       URL.revokeObjectURL(videoSrc);
     }
