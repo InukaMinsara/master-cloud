@@ -42,7 +42,7 @@ import { BookmarksDrawer } from './panels/BookmarksDrawer';
 import { MediaLibraryModal } from './panels/MediaLibraryModal';
 import { SceneDetectionModal } from './panels/SceneDetectionModal';
 import { SubtitleEditorModal } from './panels/SubtitleEditorModal';
-import { VideoIntelligenceModal } from './panels/VideoIntelligenceModal';
+import { MasterAiModal } from './panels/MasterAiModal';
 import { PlaybackAnalyticsModal } from './panels/PlaybackAnalyticsModal';
 import { MediaOrganizerModal } from './panels/MediaOrganizerModal';
 import { toast } from 'sonner';
@@ -1076,8 +1076,8 @@ export function VideoPlayer() {
                     ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
-                title="Video Intelligence & Insights (T)"
-                aria-label="Video intelligence"
+                title="MasterAI Media Intelligence (T)"
+                aria-label="MasterAI media intelligence"
               >
                 <Brain className="w-4 h-4" />
               </button>
@@ -1302,7 +1302,7 @@ export function VideoPlayer() {
       {activePanel === 'bookmarks' && <BookmarksDrawer videoRef={videoRef} />}
       {activePanel === 'library' && <MediaLibraryModal />}
       {activePanel === 'scenes' && <SceneDetectionModal videoRef={videoRef} />}
-      {activePanel === 'intelligence' && <VideoIntelligenceModal videoRef={videoRef} />}
+      {activePanel === 'intelligence' && <MasterAiModal videoRef={videoRef} />}
       {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
       {activePanel === 'organizer' && <MediaOrganizerModal />}
 

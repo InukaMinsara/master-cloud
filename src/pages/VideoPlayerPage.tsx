@@ -6,6 +6,7 @@ import { VideoDropZone } from '@/components/video-player/VideoDropZone';
 import { MediaLibraryModal } from '@/components/video-player/panels/MediaLibraryModal';
 import { PlaybackAnalyticsModal } from '@/components/video-player/panels/PlaybackAnalyticsModal';
 import { MediaOrganizerModal } from '@/components/video-player/panels/MediaOrganizerModal';
+import { MasterAiModal } from '@/components/video-player/panels/MasterAiModal';
 import { formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -159,6 +160,15 @@ export function VideoPlayerPage() {
           <Button
             variant="outline"
             size="lg"
+            onClick={() => setActivePanel('intelligence')}
+            className="rounded-xl gap-2 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+          >
+            <Brain className="h-4 w-4" />
+            Master AI
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
             onClick={() => setActivePanel('library')}
             className="rounded-xl gap-2 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
           >
@@ -233,6 +243,7 @@ export function VideoPlayerPage() {
       </div>
 
       {/* Modals opened from Welcome screen */}
+      {activePanel === 'intelligence' && <MasterAiModal />}
       {activePanel === 'library' && <MediaLibraryModal />}
       {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
       {activePanel === 'organizer' && <MediaOrganizerModal />}
