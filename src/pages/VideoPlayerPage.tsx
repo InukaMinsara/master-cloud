@@ -38,16 +38,14 @@ const KEYBOARD_SHORTCUTS = [
 const VIDEO_ACCEPT = 'video/*,.mp4,.webm,.mov,.avi,.mkv,.ogg,.ogv,.m4v,.3gp,.flv,.wmv,.ts,.m2ts';
 
 export function VideoPlayerPage() {
-  const {
-    videoSrc,
-    fileName,
-    fileSize,
-    isControlsVisible,
-    activePanel,
-    loadVideo,
-    closeVideo,
-    setActivePanel,
-  } = useVideoPlayerStore();
+  const videoSrc = useVideoPlayerStore((s) => s.videoSrc);
+  const fileName = useVideoPlayerStore((s) => s.fileName);
+  const fileSize = useVideoPlayerStore((s) => s.fileSize);
+  const isControlsVisible = useVideoPlayerStore((s) => s.isControlsVisible);
+  const activePanel = useVideoPlayerStore((s) => s.activePanel);
+  const loadVideo = useVideoPlayerStore((s) => s.loadVideo);
+  const closeVideo = useVideoPlayerStore((s) => s.closeVideo);
+  const setActivePanel = useVideoPlayerStore((s) => s.setActivePanel);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileSelect = React.useCallback(

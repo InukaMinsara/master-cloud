@@ -337,10 +337,18 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
     get().loadBookmarksForCurrentVideo();
   },
 
-  setPlaying: (playing) => set({ isPlaying: playing }),
-  setPaused: (paused) => set({ isPaused: paused }),
+  setPlaying: (playing) => {
+    if (get().isPlaying !== playing) {
+      set({ isPlaying: playing, isPaused: !playing });
+    }
+  },
+  setPaused: (paused) => {
+    if (get().isPaused !== paused) {
+      set({ isPaused: paused, isPlaying: !paused });
+    }
+  },
   setCurrentTime: (time) => {
-    const { abRepeat } = get();
+    const { abRepeat, currentTime } = get();
     // A-B Repeat loop enforcement
     if (abRepeat.active && abRepeat.a !== null && abRepeat.b !== null) {
       if (time >= abRepeat.b) {
@@ -348,10 +356,16 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
         return;
       }
     }
-    set({ currentTime: time });
+    if (Math.abs(currentTime - time) > 0.05) {
+      set({ currentTime: time });
+    }
   },
-  setDuration: (duration) => set({ duration }),
-  setBuffered: (percent) => set({ buffered: percent }),
+  setDuration: (duration) => {
+    if (get().duration !== duration) set({ duration });
+  },
+  setBuffered: (percent) => {
+    if (Math.abs(get().buffered - percent) > 0.5) set({ buffered: percent });
+  },
 
   setVolume: (vol) => {
     const update: Partial<VideoPlayerState> = {
@@ -371,12 +385,20 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
     }
   },
 
-  setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
-  setFullscreen: (fs) => set({ isFullscreen: fs }),
-  setLoading: (loading) => set({ isLoading: loading }),
+  setPlaybackSpeed: (speed) => {
+    if (get().playbackSpeed !== speed) set({ playbackSpeed: speed });
+  },
+  setFullscreen: (fs) => {
+    if (get().isFullscreen !== fs) set({ isFullscreen: fs });
+  },
+  setLoading: (loading) => {
+    if (get().isLoading !== loading) set({ isLoading: loading });
+  },
   setError: (message) => set({ hasError: true, errorMessage: message, isLoading: false }),
   clearError: () => set({ hasError: false, errorMessage: null }),
-  setControlsVisible: (visible) => set({ isControlsVisible: visible }),
+  setControlsVisible: (visible) => {
+    if (get().isControlsVisible !== visible) set({ isControlsVisible: visible });
+  },
   setVideoLoaded: () => set({ isVideoLoaded: true, isLoading: false }),
   setResolution: (resolution) => set({ resolution }),
   setCodecInfo: (codecInfo) => set({ codecInfo }),

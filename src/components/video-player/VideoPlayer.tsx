@@ -10,7 +10,6 @@ import {
   SkipForward,
   SkipBack,
   RotateCcw,
-  Settings,
   Loader2,
   AlertTriangle,
   Sparkles,
@@ -82,7 +81,7 @@ export function VideoPlayer() {
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
   const [isPlayerDraggingOver, setIsPlayerDraggingOver] = useState(false);
 
-  // ---- Store Selectors ----------------------------------------------------
+  // ---- Store State Selectors ----------------------------------------------
   const videoSrc = useVideoPlayerStore((s) => s.videoSrc);
   const videoFile = useVideoPlayerStore((s) => s.videoFile);
   const fileName = useVideoPlayerStore((s) => s.fileName);
@@ -101,35 +100,33 @@ export function VideoPlayer() {
   const activePanel = useVideoPlayerStore((s) => s.activePanel);
   const isMiniPlayer = useVideoPlayerStore((s) => s.isMiniPlayer);
   const queue = useVideoPlayerStore((s) => s.queue);
-  const currentQueueIndex = useVideoPlayerStore((s) => s.currentQueueIndex);
   const bookmarks = useVideoPlayerStore((s) => s.bookmarks);
   const abRepeat = useVideoPlayerStore((s) => s.abRepeat);
 
-  const actions = useVideoPlayerStore((s) => ({
-    loadVideo: s.loadVideo,
-    setPlaying: s.setPlaying,
-    setPaused: s.setPaused,
-    setCurrentTime: s.setCurrentTime,
-    setDuration: s.setDuration,
-    setBuffered: s.setBuffered,
-    setVolume: s.setVolume,
-    toggleMute: s.toggleMute,
-    setPlaybackSpeed: s.setPlaybackSpeed,
-    setFullscreen: s.setFullscreen,
-    setLoading: s.setLoading,
-    setError: s.setError,
-    clearError: s.clearError,
-    setControlsVisible: s.setControlsVisible,
-    setVideoLoaded: s.setVideoLoaded,
-    setResolution: s.setResolution,
-    setActivePanel: s.setActivePanel,
-    setMiniPlayer: s.setMiniPlayer,
-    setPointA: s.setPointA,
-    setPointB: s.setPointB,
-    clearAbRepeat: s.clearAbRepeat,
-    playNext: s.playNext,
-    playPrevious: s.playPrevious,
-  }));
+  // ---- Stable Action Selectors (No re-renders from actions) ----------------
+  const loadVideo = useVideoPlayerStore((s) => s.loadVideo);
+  const setPlaying = useVideoPlayerStore((s) => s.setPlaying);
+  const setPaused = useVideoPlayerStore((s) => s.setPaused);
+  const setCurrentTime = useVideoPlayerStore((s) => s.setCurrentTime);
+  const setDuration = useVideoPlayerStore((s) => s.setDuration);
+  const setBuffered = useVideoPlayerStore((s) => s.setBuffered);
+  const setVolume = useVideoPlayerStore((s) => s.setVolume);
+  const toggleMute = useVideoPlayerStore((s) => s.toggleMute);
+  const setPlaybackSpeed = useVideoPlayerStore((s) => s.setPlaybackSpeed);
+  const setFullscreen = useVideoPlayerStore((s) => s.setFullscreen);
+  const setLoading = useVideoPlayerStore((s) => s.setLoading);
+  const setError = useVideoPlayerStore((s) => s.setError);
+  const clearError = useVideoPlayerStore((s) => s.clearError);
+  const setControlsVisible = useVideoPlayerStore((s) => s.setControlsVisible);
+  const setVideoLoaded = useVideoPlayerStore((s) => s.setVideoLoaded);
+  const setResolution = useVideoPlayerStore((s) => s.setResolution);
+  const setActivePanel = useVideoPlayerStore((s) => s.setActivePanel);
+  const setMiniPlayer = useVideoPlayerStore((s) => s.setMiniPlayer);
+  const setPointA = useVideoPlayerStore((s) => s.setPointA);
+  const setPointB = useVideoPlayerStore((s) => s.setPointB);
+  const clearAbRepeat = useVideoPlayerStore((s) => s.clearAbRepeat);
+  const playNext = useVideoPlayerStore((s) => s.playNext);
+  const playPrevious = useVideoPlayerStore((s) => s.playPrevious);
 
   // ---- Codec compatibility pre-check --------------------------------------
   useEffect(() => {
@@ -179,7 +176,7 @@ export function VideoPlayer() {
               break;
             default:
               hls.destroy();
-              actions.setError(`HLS Stream Error: ${data.details || 'Unable to play stream'}`);
+              setError(`HLS Stream Error: ${data.details || 'Unable to play stream'}`);
               break;
           }
         }
@@ -196,11 +193,11 @@ export function VideoPlayer() {
         hlsInstanceRef.current = null;
       }
     };
-  }, [videoSrc, actions]);
+  }, [videoSrc, setError]);
 
   // ---- Controls auto-hide -------------------------------------------------
   const showControls = useCallback(() => {
-    actions.setControlsVisible(true);
+    setControlsVisible(true);
 
     if (controlsTimerRef.current) {
       clearTimeout(controlsTimerRef.current);
@@ -209,22 +206,22 @@ export function VideoPlayer() {
 
     if (useVideoPlayerStore.getState().isPlaying) {
       controlsTimerRef.current = setTimeout(() => {
-        actions.setControlsVisible(false);
+        setControlsVisible(false);
       }, CONTROLS_HIDE_DELAY);
     }
-  }, [actions]);
+  }, [setControlsVisible]);
 
   useEffect(() => {
     if (isPlaying) {
       showControls();
     } else {
-      actions.setControlsVisible(true);
+      setControlsVisible(true);
       if (controlsTimerRef.current) {
         clearTimeout(controlsTimerRef.current);
         controlsTimerRef.current = null;
       }
     }
-  }, [isPlaying, actions, showControls]);
+  }, [isPlaying, showControls, setControlsVisible]);
 
   useEffect(() => {
     return () => {
@@ -237,21 +234,21 @@ export function VideoPlayer() {
   useEffect(() => {
     const handleFsChange = () => {
       const isFull = !!document.fullscreenElement;
-      actions.setFullscreen(isFull);
+      setFullscreen(isFull);
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, [actions]);
+  }, [setFullscreen]);
 
   // ---- Video element event handlers ---------------------------------------
   const handleLoadedMetadata = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    actions.setDuration(video.duration);
-    actions.setVideoLoaded();
+    setDuration(video.duration);
+    setVideoLoaded();
 
     if (video.videoWidth && video.videoHeight) {
-      actions.setResolution({ width: video.videoWidth, height: video.videoHeight });
+      setResolution({ width: video.videoWidth, height: video.videoHeight });
     }
 
     // Attach Web Audio API Studio Engine (10-Band EQ, Tone, Delay, Balance)
@@ -291,13 +288,13 @@ export function VideoPlayer() {
                 onClick: () => {
                   if (videoRef.current) {
                     videoRef.current.currentTime = 0;
-                    actions.setCurrentTime(0);
+                    setCurrentTime(0);
                   }
                 },
               },
             });
             video.currentTime = item.continueTime;
-            actions.setCurrentTime(item.continueTime);
+            setCurrentTime(item.continueTime);
           }
         });
       });
@@ -310,24 +307,24 @@ export function VideoPlayer() {
     video
       .play()
       .then(() => {
-        actions.setPlaying(true);
+        setPlaying(true);
       })
       .catch(() => {
         // Autoplay blocked by browser policy
       });
-  }, [actions, playbackSpeed, volume, isMuted, videoFile, fileName]);
+  }, [playbackSpeed, volume, isMuted, videoFile, fileName, setDuration, setVideoLoaded, setResolution, setCurrentTime, setPlaying]);
 
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    actions.setCurrentTime(video.currentTime);
+    setCurrentTime(video.currentTime);
 
     // Feature 1: A-B Repeat Loop Check
     const state = useVideoPlayerStore.getState();
     if (state.abRepeat.active && state.abRepeat.b !== null && state.abRepeat.a !== null && video.currentTime >= state.abRepeat.b) {
       video.currentTime = state.abRepeat.a;
-      actions.setCurrentTime(state.abRepeat.a);
+      setCurrentTime(state.abRepeat.a);
       return;
     }
 
@@ -338,7 +335,7 @@ export function VideoPlayer() {
       const mediaId = `${videoFile?.name || 'video'}_${videoFile?.size || 0}`;
       mediaMetadataDb.updateContinueTime(mediaId, video.currentTime, video.duration);
     }
-  }, [actions, videoFile]);
+  }, [videoFile, setCurrentTime]);
 
   const handleProgress = useCallback(() => {
     const video = videoRef.current;
@@ -346,27 +343,27 @@ export function VideoPlayer() {
     const buf = video.buffered;
     if (buf.length > 0) {
       const end = buf.end(buf.length - 1);
-      actions.setBuffered((end / video.duration) * 100);
+      setBuffered((end / video.duration) * 100);
     }
-  }, [actions]);
+  }, [setBuffered]);
 
   const handlePlay = useCallback(() => {
-    actions.setPlaying(true);
-    actions.setPaused(false);
-  }, [actions]);
+    setPlaying(true);
+    setPaused(false);
+  }, [setPlaying, setPaused]);
 
   const handlePause = useCallback(() => {
-    actions.setPlaying(false);
-    actions.setPaused(true);
-  }, [actions]);
+    setPlaying(false);
+    setPaused(true);
+  }, [setPlaying, setPaused]);
 
   const handleEnded = useCallback(() => {
-    const { repeatMode, abRepeat, queue: currentQ, currentQueueIndex: cIdx } = useVideoPlayerStore.getState();
+    const { repeatMode, abRepeat: ab, queue: currentQ, currentQueueIndex: cIdx } = useVideoPlayerStore.getState();
     const video = videoRef.current;
 
     // A-B Repeat takes highest precedence
-    if (abRepeat.active && abRepeat.a !== null && video) {
-      video.currentTime = abRepeat.a;
+    if (ab.active && ab.a !== null && video) {
+      video.currentTime = ab.a;
       video.play().catch(() => {});
       return;
     }
@@ -380,20 +377,20 @@ export function VideoPlayer() {
 
     // Advance queue if more items exist or repeat all
     if (currentQ.length > 1 && (repeatMode === 'all' || cIdx < currentQ.length - 1)) {
-      actions.playNext();
+      playNext();
     } else {
-      actions.setPlaying(false);
-      actions.setPaused(true);
+      setPlaying(false);
+      setPaused(true);
     }
-  }, [actions]);
+  }, [playNext, setPlaying, setPaused]);
 
   const handleWaiting = useCallback(() => {
-    actions.setLoading(true);
-  }, [actions]);
+    setLoading(true);
+  }, [setLoading]);
 
   const handleCanPlay = useCallback(() => {
-    actions.setLoading(false);
-  }, [actions]);
+    setLoading(false);
+  }, [setLoading]);
 
   const handleVideoError = useCallback(() => {
     const video = videoRef.current;
@@ -410,14 +407,14 @@ export function VideoPlayer() {
       message = `Your browser cannot decode ${ext}. Browser video engines require standardized codecs like H.264 / AAC (MP4) or VP9 / Opus (WebM). If this file uses HEVC, AC3, or unsupported audio tracks, please convert it or play in a compatible browser.`;
     }
 
-    actions.setError(message);
-  }, [actions, videoFile]);
+    setError(message);
+  }, [videoFile, setError]);
 
   const handleVolumeChange = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    actions.setVolume(video.volume);
-  }, [actions]);
+    setVolume(video.volume);
+  }, [setVolume]);
 
   // ---- Playback control actions -------------------------------------------
   const togglePlayPause = useCallback(() => {
@@ -438,9 +435,9 @@ export function VideoPlayer() {
       if (!video) return;
       const target = Math.max(0, Math.min(video.currentTime + seconds, video.duration || 0));
       video.currentTime = target;
-      actions.setCurrentTime(target);
+      setCurrentTime(target);
     },
-    [actions],
+    [setCurrentTime],
   );
 
   const changeVolume = useCallback(
@@ -450,30 +447,30 @@ export function VideoPlayer() {
       const clamped = Math.max(0, Math.min(1, vol));
       video.volume = clamped;
       video.muted = clamped === 0;
-      actions.setVolume(clamped);
+      setVolume(clamped);
     },
-    [actions],
+    [setVolume],
   );
 
   const handleToggleMute = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    actions.toggleMute();
+    toggleMute();
     const next = useVideoPlayerStore.getState();
     video.volume = next.volume;
     video.muted = next.isMuted;
-  }, [actions]);
+  }, [toggleMute]);
 
   const changePlaybackSpeed = useCallback(
     (speed: number) => {
       const video = videoRef.current;
       if (!video) return;
       video.playbackRate = speed;
-      actions.setPlaybackSpeed(speed);
+      setPlaybackSpeed(speed);
       setSpeedMenuOpen(false);
       toast.success(`Speed: ${speed}x`);
     },
-    [actions],
+    [setPlaybackSpeed],
   );
 
   const toggleFullscreen = useCallback(() => {
@@ -511,18 +508,18 @@ export function VideoPlayer() {
       try {
         await document.exitPictureInPicture();
       } catch {
-        actions.setMiniPlayer(!isMiniPlayer);
+        setMiniPlayer(!isMiniPlayer);
       }
     } else if ('requestPictureInPicture' in video) {
       try {
         await video.requestPictureInPicture();
       } catch {
-        actions.setMiniPlayer(true);
+        setMiniPlayer(true);
       }
     } else {
-      actions.setMiniPlayer(!isMiniPlayer);
+      setMiniPlayer(!isMiniPlayer);
     }
-  }, [actions, isMiniPlayer]);
+  }, [isMiniPlayer, setMiniPlayer]);
 
   // Sync volume / speed to video element on changes
   useEffect(() => {
@@ -578,19 +575,19 @@ export function VideoPlayer() {
           break;
         case 'c':
         case 'C':
-          actions.setActivePanel('subtitles');
+          setActivePanel('subtitles');
           break;
         case 'e':
         case 'E':
-          actions.setActivePanel('audio');
+          setActivePanel('audio');
           break;
         case 'q':
         case 'Q':
-          actions.setActivePanel('queue');
+          setActivePanel('queue');
           break;
         case 'b':
         case 'B':
-          actions.setActivePanel('bookmarks');
+          setActivePanel('bookmarks');
           break;
         case 's':
         case 'S':
@@ -598,26 +595,26 @@ export function VideoPlayer() {
           break;
         case 'n':
         case 'N':
-          actions.playNext();
+          playNext();
           break;
         case 'p':
         case 'P':
-          actions.playPrevious();
+          playPrevious();
           break;
         case 'i':
         case 'I':
           togglePictureInPicture();
           break;
         case '[':
-          actions.setPointA(currentTime);
+          setPointA(currentTime);
           toast.info(`A-B Loop: Point A set at ${formatTime(currentTime)}`);
           break;
         case ']':
-          actions.setPointB(currentTime);
+          setPointB(currentTime);
           toast.info(`A-B Loop: Point B set at ${formatTime(currentTime)}`);
           break;
         case '\\':
-          actions.clearAbRepeat();
+          clearAbRepeat();
           toast.info('A-B Loop cleared');
           break;
         case '.':
@@ -640,7 +637,7 @@ export function VideoPlayer() {
           if (/^[0-9]$/.test(key) && duration > 0) {
             const targetTime = (Number(key) / 10) * duration;
             if (videoRef.current) videoRef.current.currentTime = targetTime;
-            actions.setCurrentTime(targetTime);
+            setCurrentTime(targetTime);
           } else {
             handled = false;
           }
@@ -662,7 +659,13 @@ export function VideoPlayer() {
       showControls,
       takeQuickScreenshot,
       togglePictureInPicture,
-      actions,
+      setActivePanel,
+      playNext,
+      playPrevious,
+      setPointA,
+      setPointB,
+      clearAbRepeat,
+      setCurrentTime,
       volume,
       playbackSpeed,
       duration,
@@ -700,15 +703,15 @@ export function VideoPlayer() {
         file.type.startsWith('video/') || /\.(mp4|mkv|webm|mov|avi|flv|wmv|m4v)$/i.test(file.name),
       );
       if (files.length === 1) {
-        actions.loadVideo(files[0]);
+        loadVideo(files[0]);
         toast.info(`Playing: ${files[0].name}`);
       } else if (files.length > 1) {
-        actions.loadVideo(files[0]);
+        loadVideo(files[0]);
         useVideoPlayerStore.getState().addToQueue(files.slice(1));
         toast.success(`Playing first video, added ${files.length - 1} more to queue!`);
       }
     },
-    [actions],
+    [loadVideo],
   );
 
   // ---- Volume icon helper -------------------------------------------------
@@ -865,7 +868,7 @@ export function VideoPlayer() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                actions.clearError();
+                clearError();
                 const video = videoRef.current;
                 if (video && videoSrc) {
                   video.load();
@@ -930,7 +933,7 @@ export function VideoPlayer() {
               {/* Previous in Queue */}
               {queue.length > 1 && (
                 <button
-                  onClick={actions.playPrevious}
+                  onClick={playPrevious}
                   className="p-1.5 sm:p-2 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-all"
                   title="Previous Video (P)"
                   aria-label="Previous video"
@@ -976,7 +979,7 @@ export function VideoPlayer() {
               {/* Next in Queue */}
               {queue.length > 1 && (
                 <button
-                  onClick={actions.playNext}
+                  onClick={playNext}
                   className="p-1.5 sm:p-2 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-all"
                   title="Next Video (N)"
                   aria-label="Next video"
@@ -1025,7 +1028,7 @@ export function VideoPlayer() {
 
               {/* Subtitles Studio Toggle */}
               <button
-                onClick={() => actions.setActivePanel('subtitles')}
+                onClick={() => setActivePanel('subtitles')}
                 className={`p-1.5 sm:p-2 rounded-xl transition-all ${
                   activePanel === 'subtitles'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
@@ -1039,7 +1042,7 @@ export function VideoPlayer() {
 
               {/* Audio Studio Toggle (10-Band EQ) */}
               <button
-                onClick={() => actions.setActivePanel('audio')}
+                onClick={() => setActivePanel('audio')}
                 className={`p-1.5 sm:p-2 rounded-xl transition-all ${
                   activePanel === 'audio'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
@@ -1053,7 +1056,7 @@ export function VideoPlayer() {
 
               {/* Bookmarks Drawer Toggle */}
               <button
-                onClick={() => actions.setActivePanel('bookmarks')}
+                onClick={() => setActivePanel('bookmarks')}
                 className={`relative p-1.5 sm:p-2 rounded-xl transition-all ${
                   activePanel === 'bookmarks'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
@@ -1082,7 +1085,7 @@ export function VideoPlayer() {
 
               {/* Queue Drawer Toggle */}
               <button
-                onClick={() => actions.setActivePanel('queue')}
+                onClick={() => setActivePanel('queue')}
                 className={`relative p-1.5 sm:p-2 rounded-xl transition-all ${
                   activePanel === 'queue'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
@@ -1101,7 +1104,7 @@ export function VideoPlayer() {
 
               {/* Media Library 2.0 */}
               <button
-                onClick={() => actions.setActivePanel('library')}
+                onClick={() => setActivePanel('library')}
                 className={`p-1.5 sm:p-2 rounded-xl transition-all ${
                   activePanel === 'library'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
