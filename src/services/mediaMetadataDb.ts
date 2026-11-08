@@ -1,7 +1,8 @@
 /**
- * MASTER CLOUD - Media Library 2.0 IndexedDB Persistence Service
+ * MASTER CLOUD - Media Library 2.0 & 3.0 IndexedDB Persistence Service
  * Persists local video metadata, continue watching checkpoints,
- * bookmarks with screenshot previews, collections, and audio/subtitle preferences.
+ * bookmarks with screenshot previews, collections, detected scenes,
+ * playback analytics, duplicates, and audio/subtitle preferences.
  */
 
 export interface MediaLibraryItem {
@@ -15,6 +16,16 @@ export interface MediaLibraryItem {
   isFavorite: boolean;
   collections: string[];
   thumbnailDataUrl?: string;
+  // Phase 3 additions:
+  category?: string; // 'Movies' | 'TV Shows' | 'Clips' | 'Courses' | 'Music' | 'Personal' | 'Other'
+  tags?: string[];
+  hash?: string; // SHA-256 chunk hash
+  codec?: string;
+  bitrate?: number; // in kbps
+  playCount?: number;
+  totalWatchTime?: number; // cumulative seconds watched
+  isCorrupt?: boolean;
+  healthNote?: string;
 }
 
 export interface MediaBookmark {
@@ -36,11 +47,40 @@ export interface StoredQueueItem {
   addedAt: number;
 }
 
+export interface DetectedScene {
+  id: string;
+  mediaId: string;
+  start: number; // in seconds
+  end: number;   // in seconds
+  label: string;
+  thumbnailDataUrl?: string;
+  differenceScore?: number;
+  isCustom?: boolean;
+}
+
+export interface PlaybackSessionLog {
+  id: string;
+  mediaId: string;
+  videoName: string;
+  timestamp: number;
+  watchedSeconds: number;
+  completionPercentage: number;
+  duration: number;
+}
+
+export interface DuplicateGroup {
+  hash: string;
+  totalSize: number;
+  items: MediaLibraryItem[];
+}
+
 class MediaMetadataDbService {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
   private memoryLibrary = new Map<string, MediaLibraryItem>();
   private memoryBookmarks = new Map<string, MediaBookmark>();
   private memoryQueue: StoredQueueItem[] = [];
+  private memoryScenes = new Map<string, DetectedScene>();
+  private memoryAnalytics: PlaybackSessionLog[] = [];
 
   private getDB(): Promise<IDBDatabase | null> {
     if (this.dbPromise) return this.dbPromise;
@@ -52,9 +92,9 @@ class MediaMetadataDbService {
           return;
         }
 
-        const request = indexedDB.open('MasterCloud_MediaStudio_DB', 1);
+        const request = indexedDB.open('MasterCloud_MediaStudio_DB', 2);
 
-        request.onupgradeneeded = () => {
+        request.onupgradeneeded = (event) => {
           const db = request.result;
           if (!db.objectStoreNames.contains('mediaLibrary')) {
             const store = db.createObjectStore('mediaLibrary', { keyPath: 'id' });
@@ -72,6 +112,17 @@ class MediaMetadataDbService {
           }
           if (!db.objectStoreNames.contains('preferences')) {
             db.createObjectStore('preferences');
+          }
+          // Phase 3 stores
+          if (!db.objectStoreNames.contains('scenes')) {
+            const store = db.createObjectStore('scenes', { keyPath: 'id' });
+            store.createIndex('mediaId', 'mediaId', { unique: false });
+            store.createIndex('start', 'start', { unique: false });
+          }
+          if (!db.objectStoreNames.contains('analytics')) {
+            const store = db.createObjectStore('analytics', { keyPath: 'id' });
+            store.createIndex('mediaId', 'mediaId', { unique: false });
+            store.createIndex('timestamp', 'timestamp', { unique: false });
           }
         };
 
@@ -168,6 +219,24 @@ class MediaMetadataDbService {
     }
   }
 
+  async updateMediaMetadata(id: string, updates: Partial<MediaLibraryItem>): Promise<void> {
+    const existing = await this.getMediaItem(id);
+    if (existing) {
+      const merged = { ...existing, ...updates };
+      await this.saveMediaItem(merged);
+    }
+  }
+
+  async incrementPlayCount(id: string, watchedSeconds: number): Promise<void> {
+    const existing = await this.getMediaItem(id);
+    if (existing) {
+      existing.playCount = (existing.playCount || 0) + 1;
+      existing.totalWatchTime = (existing.totalWatchTime || 0) + watchedSeconds;
+      existing.lastPlayed = Date.now();
+      await this.saveMediaItem(existing);
+    }
+  }
+
   async toggleFavorite(id: string): Promise<boolean> {
     const item = await this.getMediaItem(id);
     if (item) {
@@ -178,7 +247,7 @@ class MediaMetadataDbService {
     return false;
   }
 
-  async deleteMediaItem(id: string): Promise<void> {
+  async removeMediaItem(id: string): Promise<void> {
     this.memoryLibrary.delete(id);
     const db = await this.getDB();
     if (!db) return;
@@ -186,8 +255,7 @@ class MediaMetadataDbService {
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('mediaLibrary', 'readwrite');
-        const store = tx.objectStore('mediaLibrary');
-        store.delete(id);
+        tx.objectStore('mediaLibrary').delete(id);
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       } catch {
@@ -196,18 +264,75 @@ class MediaMetadataDbService {
     });
   }
 
-  // ─── Bookmarks ─────────────────────────────────────────────────────────
+  async deleteMediaItem(id: string): Promise<void> {
+    return this.removeMediaItem(id);
+  }
 
-  async saveBookmark(bookmark: MediaBookmark): Promise<void> {
-    this.memoryBookmarks.set(bookmark.id, bookmark);
+  // ─── Phase 3: Smart Scene Detection ───────────────────────────────────
+
+  async saveScenes(mediaId: string, scenes: DetectedScene[]): Promise<void> {
+    try {
+      scenes.forEach((s) => this.memoryScenes.set(s.id, s));
+      const db = await this.getDB();
+      if (!db) return;
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('scenes', 'readwrite');
+          const store = tx.objectStore('scenes');
+          for (const scene of scenes) {
+            store.put(scene);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  async getScenes(mediaId: string): Promise<DetectedScene[]> {
+    try {
+      const db = await this.getDB();
+      if (!db) {
+        return Array.from(this.memoryScenes.values())
+          .filter((s) => s.mediaId === mediaId)
+          .sort((a, b) => a.start - b.start);
+      }
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('scenes', 'readonly');
+          const store = tx.objectStore('scenes');
+          const index = store.index('mediaId');
+          const req = index.getAll(mediaId);
+          req.onsuccess = () => {
+            const list: DetectedScene[] = req.result || [];
+            list.sort((a, b) => a.start - b.start);
+            resolve(list);
+          };
+          req.onerror = () => resolve([]);
+        } catch {
+          resolve([]);
+        }
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteScene(id: string): Promise<void> {
+    this.memoryScenes.delete(id);
     const db = await this.getDB();
     if (!db) return;
 
     return new Promise((resolve) => {
       try {
-        const tx = db.transaction('bookmarks', 'readwrite');
-        const store = tx.objectStore('bookmarks');
-        store.put(bookmark);
+        const tx = db.transaction('scenes', 'readwrite');
+        tx.objectStore('scenes').delete(id);
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       } catch {
@@ -216,37 +341,127 @@ class MediaMetadataDbService {
     });
   }
 
-  async getBookmarks(mediaId?: string): Promise<MediaBookmark[]> {
-    const db = await this.getDB();
-    if (!db) {
-      const list = Array.from(this.memoryBookmarks.values());
-      return mediaId ? list.filter((b) => b.mediaId === mediaId) : list;
+  // ─── Phase 3: Playback Analytics ──────────────────────────────────────
+
+  async recordPlaybackSession(session: PlaybackSessionLog): Promise<void> {
+    try {
+      this.memoryAnalytics.push(session);
+      const db = await this.getDB();
+      if (!db) return;
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('analytics', 'readwrite');
+          tx.objectStore('analytics').put(session);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      // safe fallback
     }
+  }
+
+  async getAllPlaybackSessions(): Promise<PlaybackSessionLog[]> {
+    try {
+      const db = await this.getDB();
+      if (!db) {
+        return [...this.memoryAnalytics].sort((a, b) => b.timestamp - a.timestamp);
+      }
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('analytics', 'readonly');
+          const store = tx.objectStore('analytics');
+          const req = store.getAll();
+          req.onsuccess = () => {
+            const list: PlaybackSessionLog[] = req.result || [];
+            list.sort((a, b) => b.timestamp - a.timestamp);
+            resolve(list);
+          };
+          req.onerror = () => resolve(this.memoryAnalytics);
+        } catch {
+          resolve(this.memoryAnalytics);
+        }
+      });
+    } catch {
+      return this.memoryAnalytics;
+    }
+  }
+
+  async clearPlaybackAnalytics(): Promise<void> {
+    this.memoryAnalytics = [];
+    const db = await this.getDB();
+    if (!db) return;
 
     return new Promise((resolve) => {
       try {
-        const tx = db.transaction('bookmarks', 'readonly');
-        const store = tx.objectStore('bookmarks');
-        const req = store.getAll();
-        req.onsuccess = () => {
-          let list: MediaBookmark[] = req.result || [];
-          if (list.length === 0 && this.memoryBookmarks.size > 0) {
-            list = Array.from(this.memoryBookmarks.values());
-          }
-          if (mediaId) {
-            list = list.filter((b) => b.mediaId === mediaId);
-          }
-          list.sort((a, b) => a.timestamp - b.timestamp);
-          resolve(list);
-        };
-        req.onerror = () => resolve(Array.from(this.memoryBookmarks.values()));
+        const tx = db.transaction('analytics', 'readwrite');
+        tx.objectStore('analytics').clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
       } catch {
-        resolve(Array.from(this.memoryBookmarks.values()));
+        resolve();
       }
     });
   }
 
-  async deleteBookmark(id: string): Promise<void> {
+  // ─── Bookmarks ────────────────────────────────────────────────────────
+
+  async addBookmark(bookmark: MediaBookmark): Promise<void> {
+    try {
+      this.memoryBookmarks.set(bookmark.id, bookmark);
+      const db = await this.getDB();
+      if (!db) return;
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('bookmarks', 'readwrite');
+          tx.objectStore('bookmarks').put(bookmark);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch {
+          resolve();
+        }
+      });
+    } catch {
+      // safe fallback
+    }
+  }
+
+  async getBookmarksForMedia(mediaId: string): Promise<MediaBookmark[]> {
+    try {
+      const db = await this.getDB();
+      if (!db) {
+        return Array.from(this.memoryBookmarks.values())
+          .filter((b) => b.mediaId === mediaId)
+          .sort((a, b) => a.timestamp - b.timestamp);
+      }
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('bookmarks', 'readonly');
+          const store = tx.objectStore('bookmarks');
+          const index = store.index('mediaId');
+          const req = index.getAll(mediaId);
+          req.onsuccess = () => {
+            const list = req.result || [];
+            list.sort((a: MediaBookmark, b: MediaBookmark) => a.timestamp - b.timestamp);
+            resolve(list);
+          };
+          req.onerror = () => resolve([]);
+        } catch {
+          resolve([]);
+        }
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async removeBookmark(id: string): Promise<void> {
     this.memoryBookmarks.delete(id);
     const db = await this.getDB();
     if (!db) return;
@@ -254,8 +469,7 @@ class MediaMetadataDbService {
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('bookmarks', 'readwrite');
-        const store = tx.objectStore('bookmarks');
-        store.delete(id);
+        tx.objectStore('bookmarks').delete(id);
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       } catch {
@@ -264,38 +478,41 @@ class MediaMetadataDbService {
     });
   }
 
-  // ─── Queue Persistence ─────────────────────────────────────────────────
+  // ─── Queue Persistence ────────────────────────────────────────────────
 
   async saveQueue(items: StoredQueueItem[]): Promise<void> {
-    this.memoryQueue = items;
-    const db = await this.getDB();
-    if (!db) return;
+    try {
+      this.memoryQueue = [...items];
+      const db = await this.getDB();
+      if (!db) return;
 
-    return new Promise((resolve) => {
-      try {
-        const tx = db.transaction('queue', 'readwrite');
-        const store = tx.objectStore('queue');
-        store.clear();
-        for (const item of items) {
-          store.put(item);
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('queue', 'readwrite');
+          const store = tx.objectStore('queue');
+          store.clear();
+          for (const item of items) {
+            store.put(item);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch {
+          resolve();
         }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      } catch {
-        resolve();
-      }
-    });
+      });
+    } catch {
+      // safe fallback
+    }
   }
 
-  async getQueue(): Promise<StoredQueueItem[]> {
+  async getStoredQueue(): Promise<StoredQueueItem[]> {
     const db = await this.getDB();
     if (!db) return this.memoryQueue;
 
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('queue', 'readonly');
-        const store = tx.objectStore('queue');
-        const req = store.getAll();
+        const req = tx.objectStore('queue').getAll();
         req.onsuccess = () => resolve(req.result || this.memoryQueue);
         req.onerror = () => resolve(this.memoryQueue);
       } catch {

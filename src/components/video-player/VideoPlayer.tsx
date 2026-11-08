@@ -20,6 +20,10 @@ import {
   Camera,
   Film,
   PictureInPicture,
+  Brain,
+  BarChart3,
+  FolderSync,
+  FileText,
 } from 'lucide-react';
 import Hls from 'hls.js';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
@@ -27,6 +31,7 @@ import { detectBrowserCodecSupport } from '@/lib/videoCodecs';
 import { mediaMetadataDb } from '@/services/mediaMetadataDb';
 import { audioStudioEngine } from '@/services/audioStudioEngine';
 import { downloadVideoScreenshot } from '@/services/screenshotService';
+import { analyticsService } from '@/services/analyticsService';
 import { SmartTimeline } from './SmartTimeline';
 import { SubtitleOverlay } from './SubtitleOverlay';
 import { MiniPlayer } from './MiniPlayer';
@@ -35,6 +40,11 @@ import { SubtitleStudioModal } from './panels/SubtitleStudioModal';
 import { AudioStudioModal } from './panels/AudioStudioModal';
 import { BookmarksDrawer } from './panels/BookmarksDrawer';
 import { MediaLibraryModal } from './panels/MediaLibraryModal';
+import { SceneDetectionModal } from './panels/SceneDetectionModal';
+import { SubtitleEditorModal } from './panels/SubtitleEditorModal';
+import { VideoIntelligenceModal } from './panels/VideoIntelligenceModal';
+import { PlaybackAnalyticsModal } from './panels/PlaybackAnalyticsModal';
+import { MediaOrganizerModal } from './panels/MediaOrganizerModal';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
@@ -102,8 +112,9 @@ export function VideoPlayer() {
   const queue = useVideoPlayerStore((s) => s.queue);
   const bookmarks = useVideoPlayerStore((s) => s.bookmarks);
   const abRepeat = useVideoPlayerStore((s) => s.abRepeat);
+  const detectedScenes = useVideoPlayerStore((s) => s.detectedScenes);
 
-  // ---- Stable Action Selectors (No re-renders from actions) ----------------
+  // ---- Stable Action Selectors --------------------------------------------
   const loadVideo = useVideoPlayerStore((s) => s.loadVideo);
   const setPlaying = useVideoPlayerStore((s) => s.setPlaying);
   const setPaused = useVideoPlayerStore((s) => s.setPaused);
@@ -276,7 +287,7 @@ export function VideoPlayer() {
         lastPlayed: Date.now(),
         continueTime: 0,
         isFavorite: false,
-        collections: [],
+        collections: ['Local Videos'],
       })
       .then(() => {
         mediaMetadataDb.getMediaItem(mediaId).then((item) => {
@@ -361,6 +372,17 @@ export function VideoPlayer() {
     const { repeatMode, abRepeat: ab, queue: currentQ, currentQueueIndex: cIdx } = useVideoPlayerStore.getState();
     const video = videoRef.current;
 
+    // Record session into Playback Analytics
+    if (video && video.currentTime > 3) {
+      const mediaId = `${videoFile?.name || 'video'}_${videoFile?.size || 0}`;
+      analyticsService.recordSession(
+        mediaId,
+        videoFile?.name || fileName || 'Video',
+        video.currentTime,
+        video.duration,
+      );
+    }
+
     // A-B Repeat takes highest precedence
     if (ab.active && ab.a !== null && video) {
       video.currentTime = ab.a;
@@ -382,7 +404,7 @@ export function VideoPlayer() {
       setPlaying(false);
       setPaused(true);
     }
-  }, [playNext, setPlaying, setPaused]);
+  }, [playNext, setPlaying, setPaused, videoFile, fileName]);
 
   const handleWaiting = useCallback(() => {
     setLoading(true);
@@ -577,6 +599,10 @@ export function VideoPlayer() {
         case 'C':
           setActivePanel('subtitles');
           break;
+        case 'u':
+        case 'U':
+          setActivePanel('sub-editor');
+          break;
         case 'e':
         case 'E':
           setActivePanel('audio');
@@ -588,6 +614,22 @@ export function VideoPlayer() {
         case 'b':
         case 'B':
           setActivePanel('bookmarks');
+          break;
+        case 't':
+        case 'T':
+          setActivePanel('intelligence');
+          break;
+        case 'x':
+        case 'X':
+          setActivePanel('scenes');
+          break;
+        case 'y':
+        case 'Y':
+          setActivePanel('analytics');
+          break;
+        case 'o':
+        case 'O':
+          setActivePanel('organizer');
           break;
         case 's':
         case 'S':
@@ -1026,7 +1068,54 @@ export function VideoPlayer() {
                 </span>
               )}
 
-              {/* Subtitles Studio Toggle */}
+              {/* Phase 3: Video Intelligence & Insights */}
+              <button
+                onClick={() => setActivePanel('intelligence')}
+                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+                  activePanel === 'intelligence'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Video Intelligence & Insights (T)"
+                aria-label="Video intelligence"
+              >
+                <Brain className="w-4 h-4" />
+              </button>
+
+              {/* Phase 3: Smart Scene & Chapter Detection */}
+              <button
+                onClick={() => setActivePanel('scenes')}
+                className={`relative p-1.5 sm:p-2 rounded-xl transition-all ${
+                  activePanel === 'scenes'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Smart Scene Detection (X)"
+                aria-label="Smart scene detection"
+              >
+                <Sparkles className="w-4 h-4" />
+                {detectedScenes.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-cyan-400 text-black text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {detectedScenes.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Phase 3: Subtitle Editor Studio */}
+              <button
+                onClick={() => setActivePanel('sub-editor')}
+                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+                  activePanel === 'sub-editor'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Subtitle Editor & Dictation (U)"
+                aria-label="Subtitle editor"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+
+              {/* Subtitles Studio Appearance Toggle */}
               <button
                 onClick={() => setActivePanel('subtitles')}
                 className={`p-1.5 sm:p-2 rounded-xl transition-all ${
@@ -1034,8 +1123,8 @@ export function VideoPlayer() {
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
-                title="Subtitle Studio (C)"
-                aria-label="Subtitle studio"
+                title="Subtitle Settings (C)"
+                aria-label="Subtitle settings"
               >
                 <Captions className="w-4 h-4" />
               </button>
@@ -1100,6 +1189,34 @@ export function VideoPlayer() {
                     {queue.length}
                   </span>
                 )}
+              </button>
+
+              {/* Phase 3: Playback Analytics */}
+              <button
+                onClick={() => setActivePanel('analytics')}
+                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+                  activePanel === 'analytics'
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Playback Analytics (Y)"
+                aria-label="Playback analytics"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </button>
+
+              {/* Phase 3: Media Organizer */}
+              <button
+                onClick={() => setActivePanel('organizer')}
+                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+                  activePanel === 'organizer'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Media Organizer & Deduplicator (O)"
+                aria-label="Media organizer"
+              >
+                <FolderSync className="w-4 h-4" />
               </button>
 
               {/* Media Library 2.0 */}
@@ -1177,12 +1294,17 @@ export function VideoPlayer() {
         </div>
       </div>
 
-      {/* ---- Phase 2 Modals and Drawers ---- */}
+      {/* ---- Phase 2 & Phase 3 Modals and Drawers ---- */}
       {activePanel === 'queue' && <QueueDrawer />}
       {activePanel === 'subtitles' && <SubtitleStudioModal />}
+      {activePanel === 'sub-editor' && <SubtitleEditorModal videoRef={videoRef} />}
       {activePanel === 'audio' && <AudioStudioModal />}
       {activePanel === 'bookmarks' && <BookmarksDrawer videoRef={videoRef} />}
       {activePanel === 'library' && <MediaLibraryModal />}
+      {activePanel === 'scenes' && <SceneDetectionModal videoRef={videoRef} />}
+      {activePanel === 'intelligence' && <VideoIntelligenceModal videoRef={videoRef} />}
+      {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
+      {activePanel === 'organizer' && <MediaOrganizerModal />}
 
       {/* ---- Feature 6: In-App Mini Player ---- */}
       <MiniPlayer videoRef={videoRef} />

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { SubtitleTrack, parseSubtitleText } from '@/services/subtitleParser';
+import { SubtitleTrack, SubtitleCue, parseSubtitleText } from '@/services/subtitleParser';
 import { audioStudioEngine, AUDIO_PRESETS } from '@/services/audioStudioEngine';
-import { mediaMetadataDb, MediaBookmark } from '@/services/mediaMetadataDb';
+import { mediaMetadataDb, MediaBookmark, DetectedScene } from '@/services/mediaMetadataDb';
+import { detectVideoScenes } from '@/services/videoIntelligence';
 
 export interface QueueItem {
   id: string;
@@ -30,7 +31,18 @@ export interface SubtitleSettings {
   bottomOffsetPercent: number; // 2 to 30
 }
 
-export type ActiveDrawerPanel = 'none' | 'queue' | 'subtitles' | 'audio' | 'bookmarks' | 'library';
+export type ActiveDrawerPanel =
+  | 'none'
+  | 'queue'
+  | 'subtitles'
+  | 'audio'
+  | 'bookmarks'
+  | 'library'
+  | 'scenes'
+  | 'sub-editor'
+  | 'intelligence'
+  | 'analytics'
+  | 'organizer';
 
 interface VideoPlayerState {
   // Playback & Source
@@ -87,6 +99,14 @@ interface VideoPlayerState {
 
   // Feature 7: Bookmarks
   bookmarks: MediaBookmark[];
+
+  // Phase 3: Smart Scene Detection
+  detectedScenes: DetectedScene[];
+  isDetectingScenes: boolean;
+  sceneDetectionProgress: number;
+
+  // Phase 3: Transcript Search
+  transcriptQuery: string;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   loadVideo: (file: File) => void;
@@ -149,6 +169,21 @@ interface VideoPlayerState {
   addBookmark: (time: number, note?: string, thumbnailDataUrl?: string) => Promise<void>;
   removeBookmark: (id: string) => Promise<void>;
   loadBookmarksForCurrentVideo: () => Promise<void>;
+
+  // Phase 3 Actions
+  setDetectedScenes: (scenes: DetectedScene[]) => void;
+  startSceneDetection: (sensitivity?: number) => Promise<void>;
+  cancelSceneDetection: () => void;
+  applyScenesAsMarkers: () => void;
+  addCustomScene: (start: number, end: number, label: string) => void;
+  updateSceneLabel: (id: string, label: string) => void;
+  removeScene: (id: string) => void;
+  loadScenesForCurrentVideo: () => Promise<void>;
+
+  addSubtitleCue: (cue: SubtitleCue) => void;
+  updateSubtitleCue: (id: string, updates: Partial<SubtitleCue>) => void;
+  removeSubtitleCue: (id: string) => void;
+  setTranscriptQuery: (q: string) => void;
 
   closeVideo: () => void;
   reset: () => void;
@@ -217,7 +252,15 @@ const initialState = {
 
   // Feature 7
   bookmarks: [] as MediaBookmark[],
+
+  // Phase 3
+  detectedScenes: [] as DetectedScene[],
+  isDetectingScenes: false,
+  sceneDetectionProgress: 0,
+  transcriptQuery: '',
 };
+
+let sceneDetectionAbortController: AbortController | null = null;
 
 export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
   ...initialState,
@@ -230,7 +273,6 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
 
     const newSrc = URL.createObjectURL(file);
 
-    // Check if file is already in queue; if not, add it
     let queueIdx = queue.findIndex((q) => q.name === file.name && q.size === file.size);
     let newQueue = queue;
     if (queueIdx === -1) {
@@ -269,9 +311,9 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       abRepeat: { a: null, b: null, active: false },
       queue: newQueue,
       currentQueueIndex: queueIdx,
+      detectedScenes: [],
     });
 
-    // Record in media metadata database
     mediaMetadataDb.saveMediaItem({
       id: `${file.name}_${file.size}`,
       name: file.name,
@@ -283,8 +325,8 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       collections: ['Local Videos'],
     });
 
-    // Load saved bookmarks
     get().loadBookmarksForCurrentVideo();
+    get().loadScenesForCurrentVideo();
   },
 
   loadUrl: (url, name) => {
@@ -332,9 +374,11 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       abRepeat: { a: null, b: null, active: false },
       queue: newQueue,
       currentQueueIndex: queueIdx,
+      detectedScenes: [],
     });
 
     get().loadBookmarksForCurrentVideo();
+    get().loadScenesForCurrentVideo();
   },
 
   setPlaying: (playing) => {
@@ -349,7 +393,6 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
   },
   setCurrentTime: (time) => {
     const { abRepeat, currentTime } = get();
-    // A-B Repeat loop enforcement
     if (abRepeat.active && abRepeat.a !== null && abRepeat.b !== null) {
       if (time >= abRepeat.b) {
         set({ currentTime: abRepeat.a });
@@ -412,25 +455,26 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       type,
       color,
     };
-    const nextMarkers = [...get().markers, newMarker].sort((a, b) => a.time - b.time);
-    set({ markers: nextMarkers });
+    set((state) => ({
+      markers: [...state.markers, newMarker].sort((a, b) => a.time - b.time),
+    }));
   },
 
   removeMarker: (id) => {
-    set({ markers: get().markers.filter((m) => m.id !== id) });
+    set((state) => ({
+      markers: state.markers.filter((m) => m.id !== id),
+    }));
   },
 
   setPointA: (time) => {
     const t = time !== undefined ? time : get().currentTime;
-    const { abRepeat } = get();
-    const newB = abRepeat.b !== null && abRepeat.b > t ? abRepeat.b : null;
-    set({
+    set((state) => ({
       abRepeat: {
+        ...state.abRepeat,
         a: t,
-        b: newB,
-        active: newB !== null,
+        active: state.abRepeat.b !== null && t < state.abRepeat.b,
       },
-    });
+    }));
   },
 
   setPointB: (time) => {
@@ -550,28 +594,24 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       return;
     }
 
-    if (isShuffled && queue.length > 1) {
-      let randIdx = Math.floor(Math.random() * queue.length);
-      if (randIdx === currentQueueIndex) {
-        randIdx = (randIdx + 1) % queue.length;
+    let nextIndex = currentQueueIndex + 1;
+    if (isShuffled) {
+      nextIndex = Math.floor(Math.random() * queue.length);
+    } else if (nextIndex >= queue.length) {
+      if (repeatMode === 'all') {
+        nextIndex = 0;
+      } else {
+        return;
       }
-      get().playQueueItem(randIdx);
-      return;
     }
 
-    const nextIndex = currentQueueIndex + 1;
-    if (nextIndex < queue.length) {
-      get().playQueueItem(nextIndex);
-    } else if (repeatMode === 'all') {
-      get().playQueueItem(0);
-    }
+    get().playQueueItem(nextIndex);
   },
 
   playPrevious: () => {
     const { queue, currentQueueIndex, currentTime } = get();
     if (queue.length === 0) return;
 
-    // If more than 3 seconds in, restart current track first
     if (currentTime > 3) {
       get().setCurrentTime(0);
       return;
@@ -690,21 +730,161 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       createdAt: Date.now(),
     };
 
-    await mediaMetadataDb.saveBookmark(newBookmark);
+    await mediaMetadataDb.addBookmark(newBookmark);
     set((state) => ({ bookmarks: [...state.bookmarks, newBookmark].sort((a, b) => a.timestamp - b.timestamp) }));
   },
 
   removeBookmark: async (id) => {
-    await mediaMetadataDb.deleteBookmark(id);
+    await mediaMetadataDb.removeBookmark(id);
     set((state) => ({ bookmarks: state.bookmarks.filter((b) => b.id !== id) }));
   },
 
   loadBookmarksForCurrentVideo: async () => {
     const { fileName, fileSize } = get();
     const mediaId = `${fileName || 'unknown'}_${fileSize}`;
-    const list = await mediaMetadataDb.getBookmarks(mediaId);
+    const list = await mediaMetadataDb.getBookmarksForMedia(mediaId);
     set({ bookmarks: list });
   },
+
+  // ── Phase 3: Smart Scene Detection Actions ──────────────────────────────
+  setDetectedScenes: (scenes) => set({ detectedScenes: scenes }),
+
+  startSceneDetection: async (sensitivity = 35) => {
+    const { videoSrc, duration, fileName, fileSize } = get();
+    if (!videoSrc || duration <= 0) return;
+
+    if (sceneDetectionAbortController) {
+      sceneDetectionAbortController.abort();
+    }
+    sceneDetectionAbortController = new AbortController();
+
+    set({ isDetectingScenes: true, sceneDetectionProgress: 0 });
+
+    try {
+      const scenes = await detectVideoScenes(videoSrc, duration, {
+        sensitivity,
+        onProgress: (pct) => set({ sceneDetectionProgress: pct }),
+        signal: sceneDetectionAbortController.signal,
+      });
+
+      const mediaId = `${fileName || 'video'}_${fileSize}`;
+      const mappedScenes = scenes.map((s) => ({ ...s, mediaId }));
+      set({ detectedScenes: mappedScenes, isDetectingScenes: false, sceneDetectionProgress: 100 });
+      await mediaMetadataDb.saveScenes(mediaId, mappedScenes);
+    } catch {
+      set({ isDetectingScenes: false });
+    }
+  },
+
+  cancelSceneDetection: () => {
+    if (sceneDetectionAbortController) {
+      sceneDetectionAbortController.abort();
+      sceneDetectionAbortController = null;
+    }
+    set({ isDetectingScenes: false, sceneDetectionProgress: 0 });
+  },
+
+  applyScenesAsMarkers: () => {
+    const { detectedScenes, markers } = get();
+    if (detectedScenes.length === 0) return;
+
+    const sceneMarkers: TimelineMarker[] = detectedScenes.map((s, idx) => ({
+      id: `marker_scene_${idx}_${Date.now()}`,
+      time: s.start,
+      label: s.label || `Scene ${idx + 1}`,
+      type: 'chapter',
+      color: '#06b6d4',
+    }));
+
+    const otherMarkers = markers.filter((m) => m.type !== 'chapter');
+    set({ markers: [...otherMarkers, ...sceneMarkers] });
+  },
+
+  addCustomScene: (start, end, label) => {
+    const { fileName, fileSize, detectedScenes } = get();
+    const mediaId = `${fileName || 'video'}_${fileSize}`;
+    const newScene: DetectedScene = {
+      id: `custom_scene_${Date.now()}`,
+      mediaId,
+      start,
+      end,
+      label,
+      isCustom: true,
+    };
+    const nextScenes = [...detectedScenes, newScene].sort((a, b) => a.start - b.start);
+    set({ detectedScenes: nextScenes });
+    mediaMetadataDb.saveScenes(mediaId, nextScenes);
+  },
+
+  updateSceneLabel: (id, label) => {
+    const { fileName, fileSize, detectedScenes } = get();
+    const mediaId = `${fileName || 'video'}_${fileSize}`;
+    const nextScenes = detectedScenes.map((s) => (s.id === id ? { ...s, label } : s));
+    set({ detectedScenes: nextScenes });
+    mediaMetadataDb.saveScenes(mediaId, nextScenes);
+  },
+
+  removeScene: (id) => {
+    const { fileName, fileSize, detectedScenes } = get();
+    const mediaId = `${fileName || 'video'}_${fileSize}`;
+    const nextScenes = detectedScenes.filter((s) => s.id !== id);
+    set({ detectedScenes: nextScenes });
+    mediaMetadataDb.deleteScene(id);
+  },
+
+  loadScenesForCurrentVideo: async () => {
+    const { fileName, fileSize } = get();
+    const mediaId = `${fileName || 'video'}_${fileSize}`;
+    const scenes = await mediaMetadataDb.getScenes(mediaId);
+    set({ detectedScenes: scenes });
+  },
+
+  // ── Phase 3: Subtitle Editor Actions ────────────────────────────────────
+  addSubtitleCue: (cue) => {
+    const { subtitleTracks, activeSubtitleTrackId } = get();
+    if (!activeSubtitleTrackId || subtitleTracks.length === 0) return;
+
+    const nextTracks = subtitleTracks.map((t) => {
+      if (t.id === activeSubtitleTrackId) {
+        const nextCues = [...t.cues, cue].sort((a, b) => a.start - b.start);
+        return { ...t, cues: nextCues };
+      }
+      return t;
+    });
+
+    set({ subtitleTracks: nextTracks });
+  },
+
+  updateSubtitleCue: (id, updates) => {
+    const { subtitleTracks, activeSubtitleTrackId } = get();
+    if (!activeSubtitleTrackId) return;
+
+    const nextTracks = subtitleTracks.map((t) => {
+      if (t.id === activeSubtitleTrackId) {
+        const nextCues = t.cues.map((c) => (c.id === id ? { ...c, ...updates } : c));
+        return { ...t, cues: nextCues.sort((a, b) => a.start - b.start) };
+      }
+      return t;
+    });
+
+    set({ subtitleTracks: nextTracks });
+  },
+
+  removeSubtitleCue: (id) => {
+    const { subtitleTracks, activeSubtitleTrackId } = get();
+    if (!activeSubtitleTrackId) return;
+
+    const nextTracks = subtitleTracks.map((t) => {
+      if (t.id === activeSubtitleTrackId) {
+        return { ...t, cues: t.cues.filter((c) => c.id !== id) };
+      }
+      return t;
+    });
+
+    set({ subtitleTracks: nextTracks });
+  },
+
+  setTranscriptQuery: (q) => set({ transcriptQuery: q }),
 
   // ── Teardown ────────────────────────────────────────────────────────────
   closeVideo: () => {

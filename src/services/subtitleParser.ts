@@ -54,6 +54,72 @@ export function formatSrtTimestamp(seconds: number): string {
 }
 
 /**
+ * Formats seconds into WebVTT timestamp (00:00:00.000)
+ */
+export function formatVttTimestamp(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return '00:00:00.000';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+}
+
+/**
+ * Exports cues to standard SubRip (.srt) string format
+ */
+export function exportToSrt(cues: SubtitleCue[]): string {
+  const sorted = [...cues].sort((a, b) => a.start - b.start);
+  return sorted
+    .map((cue, idx) => {
+      const num = idx + 1;
+      const start = formatSrtTimestamp(cue.start);
+      const end = formatSrtTimestamp(cue.end);
+      return `${num}\n${start} --> ${end}\n${cue.text}\n`;
+    })
+    .join('\n');
+}
+
+/**
+ * Exports cues to standard WebVTT (.vtt) format
+ */
+export function exportToVtt(cues: SubtitleCue[], title?: string): string {
+  const sorted = [...cues].sort((a, b) => a.start - b.start);
+  let out = 'WEBVTT\n';
+  if (title) out += `NOTE ${title}\n\n`;
+  else out += '\n';
+
+  out += sorted
+    .map((cue, idx) => {
+      const start = formatVttTimestamp(cue.start);
+      const end = formatVttTimestamp(cue.end);
+      return `${idx + 1}\n${start} --> ${end}\n${cue.text}\n`;
+    })
+    .join('\n');
+  return out;
+}
+
+/**
+ * Triggers a browser file download of exported subtitle content
+ */
+export function downloadSubtitleFile(
+  filename: string,
+  content: string,
+  mimeType: 'text/plain' | 'text/vtt' = 'text/plain',
+) {
+  if (typeof window === 'undefined') return;
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
  * Cleans styling or tag annotations from subtitle text (e.g. <b>, <i>, <font>, <v Voice>)
  */
 export function cleanSubtitleText(rawText: string): string {

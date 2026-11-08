@@ -488,6 +488,261 @@ assert(handlePiPToggle(true, false).mode === 'native-pip', 'Uses native Picture-
 assert(handlePiPToggle(false).mode === 'in-app-mini-player', 'Falls back to in-app floating mini-player when PiP is unsupported');
 assert(handlePiPToggle(true, true).mode === 'in-app-mini-player', 'Falls back to in-app mini-player when requestPictureInPicture throws');
 
+// ============================================================================
+// PHASE 3: SMART MEDIA INTELLIGENCE VERIFICATION
+// ============================================================================
+
+// ----------------------------------------------------
+// 12. Smart Scene Transition Detection
+// ----------------------------------------------------
+console.log('\n--- PHASE 3: SMART SCENE TRANSITION DETECTION ---');
+
+function calculateFrameDifference(data1, data2) {
+  if (!data1 || !data2 || data1.length !== data2.length) return 0;
+  let totalDelta = 0;
+  const pixelCount = data1.length / 4;
+  for (let i = 0; i < data1.length; i += 4) {
+    const lum1 = 0.299 * data1[i] + 0.587 * data1[i + 1] + 0.114 * data1[i + 2];
+    const lum2 = 0.299 * data2[i] + 0.587 * data2[i + 1] + 0.114 * data2[i + 2];
+    totalDelta += Math.abs(lum1 - lum2);
+  }
+  return totalDelta / pixelCount;
+}
+
+const blackFrame = new Uint8ClampedArray(64 * 36 * 4).fill(0);
+const whiteFrame = new Uint8ClampedArray(64 * 36 * 4).fill(255);
+const grayFrame = new Uint8ClampedArray(64 * 36 * 4).fill(128);
+
+assert(calculateFrameDifference(blackFrame, blackFrame) === 0, 'Identical frames have 0 delta');
+assert(calculateFrameDifference(blackFrame, whiteFrame) === 255, 'Black to white cut has maximum 255 delta');
+const midDelta = calculateFrameDifference(blackFrame, grayFrame);
+assert(Math.round(midDelta) === 128, 'Black to 50% gray frame has ~128 delta');
+
+// Scene cut detection thresholding
+const threshold = 35;
+assert(calculateFrameDifference(blackFrame, whiteFrame) > threshold, 'Dramatic transition triggers scene cut');
+assert(calculateFrameDifference(blackFrame, blackFrame) < threshold, 'Continuous scene remains below threshold');
+
+// Scene to Chapter Marker conversion
+const mockScenes = [
+  { id: 'sc_1', start: 0, end: 120, label: 'Intro & Title' },
+  { id: 'sc_2', start: 120, end: 450, label: 'Key Presentation' },
+  { id: 'sc_3', start: 450, end: 700, label: 'Q&A & Outro' },
+];
+const sceneMarkers = mockScenes.map((s, idx) => ({
+  id: `marker_scene_${idx}`,
+  time: s.start,
+  label: s.label || `Scene ${idx + 1}`,
+  type: 'chapter',
+  color: '#06b6d4',
+}));
+
+assert(sceneMarkers.length === 3, 'All detected scenes convert to chapter markers');
+assert(sceneMarkers[0].time === 0 && sceneMarkers[0].label === 'Intro & Title', 'First marker preserves time and label');
+assert(sceneMarkers[1].type === 'chapter', 'Marker type tagged as chapter');
+
+// ----------------------------------------------------
+// 13. Subtitle Export & Synchronization
+// ----------------------------------------------------
+console.log('\n--- PHASE 3: SUBTITLE EXPORT & SYNC ---');
+
+function formatSrtTimestamp(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+}
+
+function formatVttTimestamp(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+}
+
+function exportToSrt(cues) {
+  return cues
+    .map((cue, index) => {
+      return `${index + 1}\n${formatSrtTimestamp(cue.start)} --> ${formatSrtTimestamp(cue.end)}\n${cue.text}\n`;
+    })
+    .join('\n');
+}
+
+function exportToVtt(cues, title) {
+  const header = title ? `WEBVTT - ${title}\n\n` : 'WEBVTT\n\n';
+  const body = cues
+    .map((cue, index) => {
+      return `${index + 1}\n${formatVttTimestamp(cue.start)} --> ${formatVttTimestamp(cue.end)}\n${cue.text}\n`;
+    })
+    .join('\n');
+  return header + body;
+}
+
+const sampleCues = [
+  { id: '1', start: 1.5, end: 4.25, text: 'Welcome to MASTER CLOUD Media Studio.' },
+  { id: '2', start: 5.0, end: 9.125, text: 'Experience Smart Media Intelligence in your browser.' },
+];
+
+const srtExport = exportToSrt(sampleCues);
+assert(srtExport.includes('00:00:01,500 --> 00:00:04,250'), 'SRT formats comma millisecond timestamps');
+assert(srtExport.includes('Welcome to MASTER CLOUD Media Studio.'), 'SRT preserves cue text');
+
+const vttExport = exportToVtt(sampleCues, 'Demo');
+assert(vttExport.startsWith('WEBVTT - Demo'), 'VTT includes proper WEBVTT header');
+assert(vttExport.includes('00:00:01.500 --> 00:00:04.250'), 'VTT formats period millisecond timestamps');
+
+// ----------------------------------------------------
+// 14. Video Intelligence: Keywords, Summary & Search
+// ----------------------------------------------------
+console.log('\n--- PHASE 3: VIDEO INTELLIGENCE & KEYWORDS ---');
+
+const STOPWORDS = new Set([
+  'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'it', 'this', 'that', 'you', 'we', 'are', 'was'
+]);
+
+function extractTranscriptKeywords(cues, maxKeywords = 10) {
+  const freqMap = new Map();
+  for (const cue of cues) {
+    const words = cue.text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/);
+    for (const word of words) {
+      if (word.length >= 3 && !STOPWORDS.has(word)) {
+        freqMap.set(word, (freqMap.get(word) || 0) + 1);
+      }
+    }
+  }
+  return Array.from(freqMap.entries())
+    .map(([keyword, count]) => ({ keyword, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, maxKeywords);
+}
+
+const speechCues = [
+  { id: 'c1', start: 0, end: 5, text: 'Quantum computing revolutionizes cryptography and physics.' },
+  { id: 'c2', start: 5, end: 10, text: 'Quantum algorithms enable super-fast encryption and quantum teleportation.' },
+  { id: 'c3', start: 10, end: 15, text: 'Classical computing cannot match quantum supremacy.' },
+];
+
+const keywords = extractTranscriptKeywords(speechCues, 5);
+assert(keywords[0].keyword === 'quantum', 'Most frequent non-stopword "quantum" ranks first');
+assert(keywords[0].count === 4, '"quantum" appears 4 times');
+assert(!keywords.some(k => STOPWORDS.has(k.keyword)), 'Stopwords are filtered out');
+
+// Dialogue search
+function searchTranscriptCues(cues, query) {
+  const cleanQ = query.trim().toLowerCase();
+  if (!cleanQ) return [];
+  return cues
+    .filter((cue) => cue.text.toLowerCase().includes(cleanQ))
+    .map((cue) => ({
+      cue,
+      matchSnippet: cue.text,
+    }));
+}
+
+const searchHits = searchTranscriptCues(speechCues, 'encryption');
+assert(searchHits.length === 1, 'Search finds matching cue for "encryption"');
+assert(searchHits[0].cue.start === 5, 'Search returns accurate cue start timestamp for 1-click jump');
+
+// ----------------------------------------------------
+// 15. Smart Media Organizer: Duplicates & Categories
+// ----------------------------------------------------
+console.log('\n--- PHASE 3: SMART MEDIA ORGANIZER ---');
+
+function identifyDuplicateMedia(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = `${item.size}_${Math.round(item.duration)}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(item);
+  }
+  const duplicates = [];
+  for (const [key, groupItems] of groups.entries()) {
+    if (groupItems.length > 1) {
+      const totalSize = groupItems.reduce((acc, curr) => acc + curr.size, 0);
+      duplicates.push({
+        groupKey: key,
+        items: groupItems,
+        totalSize,
+      });
+    }
+  }
+  return duplicates;
+}
+
+const mockLibrary = [
+  { id: '1', name: 'Trailer_1080p.mp4', size: 50000000, duration: 120 },
+  { id: '2', name: 'Trailer_1080p (copy).mp4', size: 50000000, duration: 120 },
+  { id: '3', name: 'Movie.mp4', size: 1500000000, duration: 7200 },
+];
+
+const dups = identifyDuplicateMedia(mockLibrary);
+assert(dups.length === 1, 'Identifies 1 duplicate group');
+assert(dups[0].items.length === 2, 'Duplicate group contains both copies');
+assert(dups[0].totalSize === 100000000, 'Total duplicate size summed accurately');
+
+// Heuristic Category Classifier
+function guessMediaCategory(name, duration) {
+  const lower = name.toLowerCase();
+  if (duration >= 3600 || /(movie|film|1080p|uhd|bluray|director)/i.test(lower)) return 'Movies';
+  if (/s\d{2}e\d{2}|ep\d+|season|episode/i.test(lower)) return 'TV Shows';
+  if (duration <= 600 && /(music|mv|official[\s_]+video|audio|lyric|vevo)/i.test(lower)) return 'Music Videos';
+  if (/(tutorial|lesson|lecture|course|masterclass|learn)/i.test(lower)) return 'Courses';
+  if (duration < 180) return 'Clips';
+  return 'Personal';
+}
+
+assert(guessMediaCategory('Inception.2010.1080p.mp4', 8880) === 'Movies', 'Inception classified as Movies');
+assert(guessMediaCategory('Breaking.Bad.S01E01.720p.mkv', 3480) === 'TV Shows', 'S01E01 classified as TV Shows');
+assert(guessMediaCategory('Taylor_Swift_Official_Video.mp4', 240) === 'Music Videos', 'Music video classified as Music Videos');
+assert(guessMediaCategory('React_Tutorial_Course_Part_1.mp4', 1800) === 'Courses', 'Tutorial classified as Courses');
+assert(guessMediaCategory('Quick_Short_Clip.mp4', 45) === 'Clips', 'Short video under 3m classified as Clips');
+
+// ----------------------------------------------------
+// 16. Playback Analytics Aggregation
+// ----------------------------------------------------
+console.log('\n--- PHASE 3: PLAYBACK ANALYTICS ---');
+
+function aggregateAnalytics(sessions) {
+  let totalWatchTime = 0;
+  let totalDuration = 0;
+  const playCounts = new Map();
+
+  for (const s of sessions) {
+    totalWatchTime += s.watchedSeconds;
+    totalDuration += s.totalDuration;
+    playCounts.set(s.mediaName, (playCounts.get(s.mediaName) || 0) + 1);
+  }
+
+  const completionRate = totalDuration > 0 ? Math.min(100, Math.round((totalWatchTime / totalDuration) * 100)) : 0;
+  const mostWatched = Array.from(playCounts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    totalWatchTime,
+    completionRate,
+    mostWatched,
+  };
+}
+
+const mockSessions = [
+  { mediaName: 'Matrix.mp4', watchedSeconds: 3600, totalDuration: 7200, timestamp: Date.now() },
+  { mediaName: 'Matrix.mp4', watchedSeconds: 3600, totalDuration: 7200, timestamp: Date.now() },
+  { mediaName: 'Short.mp4', watchedSeconds: 60, totalDuration: 60, timestamp: Date.now() },
+];
+
+const analytics = aggregateAnalytics(mockSessions);
+assert(analytics.totalWatchTime === 7260, 'Total watch time aggregates accurately');
+assert(analytics.completionRate === 50, 'Completion rate computed correctly (7260 / 14460 = 50%)');
+assert(analytics.mostWatched[0].name === 'Matrix.mp4' && analytics.mostWatched[0].count === 2, 'Most watched video ranked at top');
+
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);
 console.log('====================================================');

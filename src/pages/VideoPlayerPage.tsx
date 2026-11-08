@@ -1,9 +1,11 @@
 import React from 'react';
-import { Film, Upload, FileVideo, Info, Keyboard, X, HardDrive, Sparkles } from 'lucide-react';
+import { Film, Upload, FileVideo, Info, Keyboard, X, HardDrive, Sparkles, BarChart3, FolderSync, Brain } from 'lucide-react';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
 import { VideoPlayer } from '@/components/video-player/VideoPlayer';
 import { VideoDropZone } from '@/components/video-player/VideoDropZone';
 import { MediaLibraryModal } from '@/components/video-player/panels/MediaLibraryModal';
+import { PlaybackAnalyticsModal } from '@/components/video-player/panels/PlaybackAnalyticsModal';
+import { MediaOrganizerModal } from '@/components/video-player/panels/MediaOrganizerModal';
 import { formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -25,9 +27,14 @@ const KEYBOARD_SHORTCUTS = [
   { keys: '0–9', action: 'Seek 0%–90%' },
   { keys: '< >', action: 'Speed Down / Up' },
   { keys: 'C', action: 'Subtitle Studio' },
+  { keys: 'U', action: 'Subtitle Editor & STT' },
   { keys: 'E', action: 'Audio Studio & EQ' },
   { keys: 'Q', action: 'Playback Queue' },
   { keys: 'B', action: 'Bookmarks' },
+  { keys: 'T', action: 'Video Intelligence' },
+  { keys: 'X', action: 'Smart Scene Detection' },
+  { keys: 'Y', action: 'Playback Analytics' },
+  { keys: 'O', action: 'Media Organizer' },
   { keys: 'S', action: 'Screenshot Frame' },
   { keys: '[ ]', action: 'Set Loop A / B' },
   { keys: '\\', action: 'Clear A-B Loop' },
@@ -158,6 +165,24 @@ export function VideoPlayerPage() {
             <Film className="h-4 w-4" />
             Media Library 2.0
           </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setActivePanel('analytics')}
+            className="rounded-xl gap-2 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setActivePanel('organizer')}
+            className="rounded-xl gap-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+          >
+            <FolderSync className="h-4 w-4" />
+            Organizer
+          </Button>
         </div>
 
         {/* ── Supported Formats ── */}
@@ -207,8 +232,10 @@ export function VideoPlayerPage() {
         </div>
       </div>
 
-      {/* Media Library Modal opened from Welcome screen */}
+      {/* Modals opened from Welcome screen */}
       {activePanel === 'library' && <MediaLibraryModal />}
+      {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
+      {activePanel === 'organizer' && <MediaOrganizerModal />}
     </div>
   );
 }
