@@ -155,6 +155,10 @@ __pycache__/
 models/master-ai-core/*.pt
 models/master-ai-core/*.data
 
+# Test Media Binaries
+public/test_media/*.mp4
+public/test_media/*.webm
+
 
 
 

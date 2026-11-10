@@ -357,21 +357,39 @@ export class ToolAssistedLocalOrchestrator {
    * BM25 / Keyword Search over local documentation
    */
   public searchLocalDocs(queryText: string): MasterCloudDocItem[] {
-    const qTokens = queryText.toLowerCase().replace(/[^a-z0-9\u0D80-\u0DFF\s]/g, ' ').split(/\s+/).filter(Boolean);
+    const rawTokens = queryText.toLowerCase().replace(/[^a-z0-9\u0D80-\u0DFF\s]/g, ' ').split(/\s+/).filter(Boolean);
+    if (rawTokens.length === 0) return [];
+
+    const stopWords = new Set(['a', 'an', 'the', 'is', 'in', 'it', 'to', 'of', 'for', 'on', 'with', 'at', 'by', 'this', 'that', 'me', 'my', 'about', 'and', 'or', 'so', 'tell', 'can', 'you', 'how', 'do', 'i', 'what']);
+    const hotkeySingleLetters = new Set(['k', 'f', 'm', 'e', 'j', 'l', 's', '.', ',']);
+
+    // Filter out common stopwords, but preserve hotkey single letters
+    const qTokens = rawTokens.filter((t) => !stopWords.has(t) || hotkeySingleLetters.has(t));
     if (qTokens.length === 0) return [];
 
     const scored = MASTER_CLOUD_LOCAL_DOCS.map((doc) => {
       let score = 0;
-      const combined = (doc.topic + ' ' + doc.content + ' ' + doc.keywords.join(' ')).toLowerCase();
+      const docWords = new Set((doc.topic + ' ' + doc.content).toLowerCase().replace(/[^a-z0-9\u0D80-\u0DFF\s]/g, ' ').split(/\s+/).filter(Boolean));
+      const docKeywords = doc.keywords.map((k) => k.toLowerCase());
+
       qTokens.forEach((t) => {
-        if (doc.keywords.some((k) => k.includes(t) || t.includes(k))) score += 4;
-        if (combined.includes(t)) score += 1;
+        // Keyword exact match
+        if (docKeywords.includes(t)) {
+          score += 4;
+        } else if (t.length > 2 && docKeywords.some((k) => k.length > 2 && (k.includes(t) || t.includes(k)))) {
+          score += 2;
+        }
+
+        // Full word match in topic/content
+        if (docWords.has(t)) {
+          score += 1;
+        }
       });
       return { doc, score };
     });
 
     return scored
-      .filter((s) => s.score > 1)
+      .filter((s) => s.score >= 2)
       .sort((a, b) => b.score - a.score)
       .map((s) => s.doc);
   }
@@ -396,7 +414,7 @@ export class ToolAssistedLocalOrchestrator {
     const rh = h / divisor;
     if (rw === 16 && rh === 9) return '16:9 (Widescreen)';
     if (rw === 4 && rh === 3) return '4:3 (Classic Standard)';
-    if (rw === 21 && rh === 9) return '21:9 (Ultrawide)';
+    if ((rw === 21 && rh === 9) || (rw === 64 && rh === 27)) return '21:9 (Ultrawide)';
     return `${rw}:${rh}`;
   }
 

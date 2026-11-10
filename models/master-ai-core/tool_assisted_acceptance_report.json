@@ -1,0 +1,308 @@
+{
+  "timestamp": "2026-11-10T14:14:49.863Z",
+  "totalPassed": 60,
+  "totalFailed": 0,
+  "successRate": 100,
+  "tests": [
+    {
+      "testName": "Hotkey Play/Pause lookup returns doc_hotkeys_playback",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Play/Pause doc explicitly mentions Spacebar or K",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Equalizer lookup returns doc_audio_equalizer",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Equalizer doc includes frequency bands",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Equalizer doc includes presets",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Audio sync lookup returns doc_audio_sync",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Audio sync doc specifies 50ms increments",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Privacy doc lookup returns doc_privacy_security",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Privacy doc specifies 100% local zero telemetry",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Sinhala keyword lookup for hotkeys returns doc_hotkeys_playback",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "A-B repeat lookup returns doc_ab_repeat",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "A-B repeat doc specifies [ and ] keys",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Aspect ratio 1920x1080 is 16:9 (Widescreen)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Aspect ratio 1280x720 is 16:9 (Widescreen)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Aspect ratio 1440x1080 is 4:3 (Classic Standard)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Aspect ratio 2560x1080 is 21:9 (Ultrawide)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Aspect ratio 1080x1920 (Vertical/Reel) is 9:16",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "sample_test.mp4 bitrate is exactly 4,285 kbps (calculated: 4285)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "MasterCloud_Introducing_1080p.mp4 bitrate is exactly 5,890 kbps (calculated: 5890)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "formatTime(0) === \"00:00\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "formatTime(30) === \"00:30\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "formatTime(120) === \"02:00\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "formatTime(3665) === \"1:01:05\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "BM25 retrieves exact cue #2 for \"10-band equalizer\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Timestamp for equalizer cue is 12.0s",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "BM25 retrieves exact cue #3 for \"cloud tracking local device\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Timestamp for privacy cue is 22.1s",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "BM25 retrieves exact cue #4 for \"scene detection chapter markers\"",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Timestamp for scene cue is 35.0s",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Bitrate query routed to deterministic_calc",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "deterministic_calc flagged as isDeterministic: true",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Deterministic calc contains exact 4285 kbps",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Deterministic calc contains exact 16:9",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Transcript query routed to transcript_grounding",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "transcript_grounding flagged as isDeterministic: true",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Transcript grounding contains timestamp [00:12]",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Fullscreen query routed to doc_retrieval",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "doc_retrieval flagged as isDeterministic: true",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Doc retrieval returns authentic doc string",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Out-of-domain query routed to neural_core",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "neural_core flagged as isDeterministic: false",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Neural core response clearly tags neural origin",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Real MP4 test file exists on disk (sample_test.mp4)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Real WebM test file exists on disk (sample_test.webm)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "sample_test.mp4 container header verified as ISO BMFF (\"ftyp\" box)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "sample_test.webm container header verified as EBML (0x1A 0x45 0xDF 0xA3)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Audio extracted: exactly 160,000 float32 samples for 10s at 16,000 Hz (got 160000)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Calculated audio RMS energy is non-zero: 0.0961 (valid audio signal)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "10s of audio yields exactly 1 chunk of 30s window (got 1)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "MKV container correctly rejected with browser incompatibility warning",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "AVI container correctly rejected with browser incompatibility warning",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "FLV container correctly rejected with browser incompatibility warning",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "16 MB file utilizes high-speed direct ArrayBuffer decode",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "250 MB file activates streaming demuxer bypass to protect browser heap from OOM",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Audio ASR transparently declared as \"RESEARCH / NOT YET TRAINED\" (no fake transcription)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "MasterAI Core and Tool-Assisted mode execute completely offline",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Zero cloud telemetry or tracking calls made during inference/lookup",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Zero outgoing HTTP/WebSocket connections established for local AI operations",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Gemini Cloud execution strictly blocked when user has not provided an API key",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "testName": "Gemini Cloud permitted only when user explicitly configures API key",
+      "status": "PASS",
+      "details": ""
+    }
+  ]
+}
