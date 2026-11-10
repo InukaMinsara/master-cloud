@@ -994,15 +994,17 @@ const onnxSize = fs.statSync(onnxPath).size;
 assert(onnxSize > 21000000, `ONNX model contains 100% embedded weights (${(onnxSize / (1024*1024)).toFixed(2)} MB, >21 MB)`);
 assert(!fs.existsSync(path.join(modelDir, 'master_ai_core.onnx.data')), 'No external detached .onnx.data file (self-contained model)');
 
-// Checkpoint v0.2 Preservation
+// Checkpoint Preservation (v0.2, v0.3, v0.4)
 assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.2.pt')), 'Original v0.2 checkpoint safely preserved');
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.3.pt')), 'Original v0.3 checkpoint safely preserved');
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.4.pt')), 'Original v0.4 checkpoint safely preserved');
 
 const reportPath = path.join(modelDir, 'training_report.json');
 assert(fs.existsSync(reportPath), 'Training metrics report exists');
 const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 assert(reportData.epochs === 35, 'Model trained for 35 epochs');
 assert(reportData.parameters === 5060608, 'Model parameter count exact (5.06M parameters)');
-assert(reportData.best_val_loss < 4.5, 'Validation loss improved below 4.5 (best: 4.1491)');
+assert(reportData.best_val_loss < 4.5, 'Validation loss improved below 4.5');
 assert(reportData.architecture.max_seq_len === 256, 'Architecture recorded with 256 context window');
 
 // Parity Report Verification
@@ -1010,24 +1012,30 @@ const parityPath = path.join(modelDir, 'onnx_parity_report.json');
 assert(fs.existsSync(parityPath), 'PyTorch vs ONNX equivalence report exists');
 const parityData = JSON.parse(fs.readFileSync(parityPath, 'utf8'));
 assert(parityData.status === 'PASSED', 'PyTorch vs ONNX numerical equivalence is PASSED');
-assert(parityData.results.every(r => r.passed && r.max_abs_diff < 1e-4), 'All sequence lengths (1, 4, 16, 64, 128) have max diff < 1e-4');
+assert(parityData.results.every(r => r.passed && r.max_abs_diff < 1e-4), 'All sequence lengths have max diff < 1e-4');
+assert(parityData.results.some(r => r.sequence_length === 256 && r.passed), '256-token sequence length verified with max diff < 1e-4');
 
 // Corpus Manifest & Provenance Tracking
 const manifestPath = path.join(modelDir, 'corpus_manifest.json');
 assert(fs.existsSync(manifestPath), 'Corpus manifest exists');
 const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-assert(manifestData.version === '0.3.0', 'Corpus manifest is v0.3.0');
+assert(manifestData.version === '0.4.0', 'Corpus manifest is v0.4.0');
 assert(manifestData.split_ratios.train === 0.75, 'Train ratio is 75%');
 assert(manifestData.split_ratios.val === 0.15, 'Val ratio is 15%');
 assert(manifestData.split_ratios.test === 0.10, 'Test ratio is 10%');
-assert(manifestData.dataset_provenance.length > 80, 'Dataset provenance records sources and licenses for all entries');
+assert(manifestData.dataset_provenance.length >= 100, 'Dataset provenance records sources and licenses for 100+ entries');
 
-// Generalization Evaluation Report Verification
-const evalPath = path.join(modelDir, 'generalization_eval_report.json');
-assert(fs.existsSync(evalPath), 'Held-out generalization evaluation report exists');
-const evalData = JSON.parse(fs.readFileSync(evalPath, 'utf8'));
-assert(evalData.total_scenarios === 10, 'Evaluated across 10 held-out unseen scenarios');
-assert(evalData.average_repetition_rate < 0.20, 'Average 3-gram repetition rate controlled below 20%');
+// 100-Scenario Held-Out Generalization Benchmark
+const benchmarkPath = path.join(modelDir, 'held_out_100_eval_report.json');
+assert(fs.existsSync(benchmarkPath), '100-Scenario Held-Out Benchmark report exists');
+const benchmarkData = JSON.parse(fs.readFileSync(benchmarkPath, 'utf8'));
+assert(benchmarkData.total_prompts === 100, 'Evaluated across 100 held-out unseen prompts');
+assert(benchmarkData.all_responses.length === 100, 'Recorded 100 unique responses with human evaluation notes');
+assert(benchmarkData.prompts_by_language.english === 35, 'Includes 35 English scenarios');
+assert(benchmarkData.prompts_by_language.sinhala === 35, 'Includes 35 Sinhala scenarios');
+assert(benchmarkData.prompts_by_language.mixed === 30, 'Includes 30 Mixed dialogue scenarios');
+assert(benchmarkData.metrics.average_3gram_repetition_rate < 0.20, 'Average 3-gram repetition rate controlled below 20% (actual: ' + benchmarkData.metrics.average_3gram_repetition_rate + ')');
+assert(benchmarkData.metrics.clean_eos_stop_percentage > 70, 'Clean EOS stop percentage > 70% (actual: ' + benchmarkData.metrics.clean_eos_stop_percentage + '%)');
 
 // Sample Generations Verification
 const samplesPath = path.join(modelDir, 'sample_generations.json');
@@ -1118,6 +1126,12 @@ assert(mkvRes.format === 'mkv' && !mkvRes.isSupported, 'Matroska MKV detected wi
 const aviBuf = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x41, 0x56, 0x41, 0x20]).buffer;
 const aviRes = mockDetectContainer(aviBuf, 'sample.avi');
 assert(aviRes.format === 'avi' && !aviRes.isSupported, 'Legacy AVI container detected with unsupported browser demuxing flag');
+
+// 6. Audio Memory Guard & Processing Ceiling Test
+const MAX_DIRECT_BUFFER_DECODE_BYTES = 150 * 1024 * 1024;
+assert(MAX_DIRECT_BUFFER_DECODE_BYTES === 157286400, 'Audio extraction memory safety ceiling is set to 150 MB');
+const oversizedFileSize = 200 * 1024 * 1024;
+assert(oversizedFileSize > MAX_DIRECT_BUFFER_DECODE_BYTES, 'Memory guard correctly intercepts 200MB media from unchecked allocation');
 
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);

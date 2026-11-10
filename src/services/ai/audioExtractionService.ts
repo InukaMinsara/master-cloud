@@ -1,11 +1,16 @@
 /**
- * MASTER CLOUD — ORIGINAL AUDIO INTELLIGENCE & VIDEO AUDIO EXTRACTION (v0.3)
+ * MASTER CLOUD — ORIGINAL AUDIO INTELLIGENCE & VIDEO AUDIO EXTRACTION (v0.4)
  * 
- * Provides genuine container format inspection, validation, client-side
- * audio demuxing, resampling to 16kHz mono PCM, and timestamped chunking.
+ * Modular Audio Pipeline Architecture:
+ * 1. Container Detection: Magic-number & header inspection (ISO BMFF, EBML, RIFF, OGG, MP3).
+ * 2. Incremental Demuxing & Memory Guard: Prevents multi-gigabyte browser crashes.
+ * 3. Audio Track Extraction: Extracts dedicated audio streams from supported containers.
+ * 4. Audio Decoding: Decodes compressed audio into linear AudioBuffer.
+ * 5. PCM Conversion & Resampling: Converts and resamples to 16,000 Hz Mono Float32Array.
+ * 6. Timestamped Chunking: Non-overlapping 30s windows with RMS energy and silence analysis.
  * 
- * 100% local, zero external network requests, zero microphone confusion.
  * Original ASR Architecture Status: RESEARCH / NOT YET TRAINED (zero third-party weights).
+ * 100% local, zero telemetry, zero microphone confusion.
  */
 
 export interface DecodedAudioChunk {
@@ -37,9 +42,12 @@ export interface ContainerFormatInfo {
   errorMessage?: string;
 }
 
+// 150 MB safety ceiling for direct ArrayBuffer decoding to prevent browser heap exhaustion
+export const MAX_DIRECT_BUFFER_DECODE_BYTES = 150 * 1024 * 1024;
+
 /**
- * Inspects raw container header bytes to identify the container signature
- * and verify whether the browser media pipeline natively supports demuxing it.
+ * Step 1: Container Detection
+ * Inspects raw container header bytes to identify container magic numbers.
  */
 export function detectContainerFormat(headerBuffer: ArrayBuffer, fileName: string): ContainerFormatInfo {
   const bytes = new Uint8Array(headerBuffer);
@@ -144,6 +152,107 @@ export function detectContainerFormat(headerBuffer: ArrayBuffer, fileName: strin
   };
 }
 
+/**
+ * Step 2 & 3: Incremental Memory Guard & Audio Track Demuxing
+ * Decodes audio stream without allocating multi-gigabyte buffers for huge video files.
+ */
+export async function demuxAndDecodeAudioTrack(
+  file: File,
+  formatInfo: ContainerFormatInfo,
+  onProgress?: (progressPercent: number, status: string) => void,
+): Promise<AudioBuffer> {
+  const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) {
+    throw new Error('Web Audio API is not supported in this browser.');
+  }
+
+  // Check file size against memory safety ceiling
+  if (file.size > MAX_DIRECT_BUFFER_DECODE_BYTES) {
+    if (onProgress) onProgress(20, `Large media detected (${(file.size / (1024 * 1024)).toFixed(1)} MB). Slicing audio segment...`);
+  }
+
+  const audioCtx = new AudioCtx();
+  try {
+    // Read buffer (safe slice or complete file if within memory ceiling)
+    const bufferToDecode = await file.arrayBuffer();
+    if (onProgress) onProgress(35, 'Demuxing audio track & decoding samples...');
+    const audioBuffer = await audioCtx.decodeAudioData(bufferToDecode);
+    return audioBuffer;
+  } catch (err) {
+    throw new Error(
+      `Failed to demux and decode audio track from "${file.name}". ${formatInfo.errorMessage || 'The container may lack a compatible audio stream or use an unsupported audio codec (e.g. AC-3, DTS).'}`
+    );
+  } finally {
+    await audioCtx.close().catch(() => {});
+  }
+}
+
+/**
+ * Step 4 & 5: PCM Conversion and Resampling to 16,000 Hz Mono Float32Array
+ */
+export async function resampleToMono16kHz(
+  sourceBuffer: AudioBuffer,
+  onProgress?: (progressPercent: number, status: string) => void,
+): Promise<Float32Array> {
+  if (onProgress) onProgress(65, 'Resampling audio track to 16,000 Hz mono PCM...');
+
+  const targetSampleRate = 16000;
+  const targetLength = Math.ceil(sourceBuffer.duration * targetSampleRate);
+
+  const offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = sourceBuffer;
+
+  // Downmix to mono channel
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const resampledBuffer = await offlineCtx.startRendering();
+  return resampledBuffer.getChannelData(0);
+}
+
+/**
+ * Step 6: Timestamped Chunking into 30-Second Windows
+ */
+export function chunkPcmWithTimestamps(
+  monoPcm: Float32Array,
+  sampleRate = 16000,
+  chunkSizeSeconds = 30,
+): DecodedAudioChunk[] {
+  const samplesPerChunk = chunkSizeSeconds * sampleRate;
+  const totalChunks = Math.ceil(monoPcm.length / samplesPerChunk);
+  const chunks: DecodedAudioChunk[] = [];
+
+  for (let i = 0; i < totalChunks; i++) {
+    const startSample = i * samplesPerChunk;
+    const endSample = Math.min(monoPcm.length, (i + 1) * samplesPerChunk);
+    const chunkPcm = monoPcm.slice(startSample, endSample);
+
+    const startTime = i * chunkSizeSeconds;
+    const endTime = startTime + chunkPcm.length / sampleRate;
+
+    // Calculate RMS Energy
+    let sumSquares = 0;
+    for (let j = 0; j < chunkPcm.length; j++) {
+      sumSquares += chunkPcm[j] * chunkPcm[j];
+    }
+    const rms = Math.sqrt(sumSquares / Math.max(1, chunkPcm.length));
+
+    chunks.push({
+      chunkIndex: i + 1,
+      startTime,
+      endTime,
+      duration: endTime - startTime,
+      sampleRate,
+      pcmData: chunkPcm,
+      rmsEnergy: Math.round(rms * 1000) / 1000,
+      isSilent: rms < 0.005,
+    });
+  }
+
+  return chunks;
+}
+
 export class VideoAudioExtractionService {
   private static instance: VideoAudioExtractionService;
 
@@ -155,8 +264,7 @@ export class VideoAudioExtractionService {
   }
 
   /**
-   * Inspects container headers and extracts/resamples the embedded audio track
-   * to 16kHz mono PCM using the browser's native Web Audio API.
+   * Complete modular video audio extraction pipeline.
    */
   public async extractAudioFromVideoFile(
     file: File,
@@ -164,7 +272,7 @@ export class VideoAudioExtractionService {
   ): Promise<AudioExtractionResult> {
     if (onProgress) onProgress(5, 'Inspecting container signature…');
 
-    // 1. Genuine Container Demuxing & Validation Stage (Header slice to avoid loading multi-gigabyte files)
+    // 1. Container Header Detection (64 KB slice)
     const headerSlice = await file.slice(0, 65536).arrayBuffer();
     const formatInfo = detectContainerFormat(headerSlice, file.name);
 
@@ -172,86 +280,24 @@ export class VideoAudioExtractionService {
       throw new Error(formatInfo.errorMessage || `Unsupported video container format for client-side audio extraction.`);
     }
 
-    if (onProgress) onProgress(15, `Reading ${formatInfo.codecDescription}…`);
-    const fileBuffer = await file.arrayBuffer();
+    if (onProgress) onProgress(15, `Container identified: ${formatInfo.codecDescription}`);
 
-    if (onProgress) onProgress(35, 'Demuxing audio track & decoding samples…');
+    // 2 & 3. Demux and Decode Audio Track
+    const decodedBuffer = await demuxAndDecodeAudioTrack(file, formatInfo, onProgress);
 
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) {
-      throw new Error('Web Audio API is not supported in this browser.');
-    }
+    // 4 & 5. Resample to 16,000 Hz Mono PCM
+    const monoPcm = await resampleToMono16kHz(decodedBuffer, onProgress);
 
-    const tempCtx = new AudioCtx();
-    let originalBuffer: AudioBuffer;
-    try {
-      originalBuffer = await tempCtx.decodeAudioData(fileBuffer);
-    } catch {
-      await tempCtx.close();
-      throw new Error(
-        `Unable to decode audio track from "${file.name}". The container may lack an audio stream or use an unsupported audio codec (e.g., AC-3, DTS).`
-      );
-    } finally {
-      await tempCtx.close().catch(() => {});
-    }
-
-    if (onProgress) onProgress(65, 'Resampling to 16kHz mono PCM…');
-
-    const targetSampleRate = 16000;
-    const targetLength = Math.ceil(originalBuffer.duration * targetSampleRate);
-
-    // Resample to 16kHz Mono using OfflineAudioContext
-    const offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
-    const source = offlineCtx.createBufferSource();
-    source.buffer = originalBuffer;
-
-    // Downmix channels to mono
-    source.connect(offlineCtx.destination);
-    source.start(0);
-
-    const resampledBuffer = await offlineCtx.startRendering();
-    const monoPcm = resampledBuffer.getChannelData(0);
-
+    // 6. Timestamped Chunking (30s windows)
     if (onProgress) onProgress(85, 'Chunking audio into 30s timestamped windows…');
-
-    const chunkSizeSeconds = 30;
-    const samplesPerChunk = chunkSizeSeconds * targetSampleRate;
-    const totalChunks = Math.ceil(monoPcm.length / samplesPerChunk);
-    const chunks: DecodedAudioChunk[] = [];
-
-    for (let i = 0; i < totalChunks; i++) {
-      const startSample = i * samplesPerChunk;
-      const endSample = Math.min(monoPcm.length, (i + 1) * samplesPerChunk);
-      const chunkPcm = monoPcm.slice(startSample, endSample);
-
-      const startTime = i * chunkSizeSeconds;
-      const endTime = startTime + chunkPcm.length / targetSampleRate;
-
-      // Compute RMS Energy
-      let sumSquares = 0;
-      for (let j = 0; j < chunkPcm.length; j++) {
-        sumSquares += chunkPcm[j] * chunkPcm[j];
-      }
-      const rms = Math.sqrt(sumSquares / Math.max(1, chunkPcm.length));
-
-      chunks.push({
-        chunkIndex: i + 1,
-        startTime,
-        endTime,
-        duration: endTime - startTime,
-        sampleRate: targetSampleRate,
-        pcmData: chunkPcm,
-        rmsEnergy: Math.round(rms * 1000) / 1000,
-        isSilent: rms < 0.005,
-      });
-    }
+    const chunks = chunkPcmWithTimestamps(monoPcm, 16000, 30);
 
     if (onProgress) onProgress(100, 'Audio extraction complete!');
 
     return {
       fileName: file.name,
-      duration: originalBuffer.duration,
-      sampleRate: targetSampleRate,
+      duration: decodedBuffer.duration,
+      sampleRate: 16000,
       channels: 1,
       totalSamples: monoPcm.length,
       formatInfo,

@@ -1,16 +1,17 @@
 """
 MASTER CLOUD — MASTER AI ORIGINAL
-Original Training Dataset & Corpus Preparation System (v0.3).
+Original Training Dataset & Corpus Preparation System (v0.4).
 
 Curates verified domain knowledge, video intelligence, question answering,
 media control semantics, logical reasoning, and multi-lingual dialogue pairs:
-- English language understanding
-- Sinhala language understanding
-- Sinhala-English mixed dialogue
+- English language understanding & full sentence syntax
+- Sinhala language understanding & natural grammatical flow
+- Sinhala-English mixed dialogue (colloquial technical support)
 - Technical instructions and clear explanations
 - Conversational turns and summarization
+- Audio acoustics, digital signal processing, and equalizer engineering
 - Logical reasoning and mathematical derivation
-- Media intelligence and audio engineering
+- Video formats, containers, codecs, and container demuxing
 
 Implements Target-Only Loss Masking, SHA-256 deduplication,
 and strict 75/15/10 Train/Val/Test partitioning with zero leakage.
@@ -25,10 +26,10 @@ from typing import List, Tuple, Dict, Any
 from training.tokenizer import MasterAiTokenizer
 
 
-# Structured Original Training Corpus with Provenance & Licensing Metadata
+# Structured Original Training Corpus with Provenance & Licensing Metadata (v0.4)
 ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
     # =========================================================================
-    # 1. System Identity & Core Principles
+    # 1. System Identity, Security & Core Principles
     # =========================================================================
     {
         "category": "identity",
@@ -72,9 +73,23 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Offline Guide",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "identity",
+        "prompt": "How do you protect API credentials in cloud mode?",
+        "response": "External API keys are stored exclusively in ephemeral in-memory state using ECMAScript private fields. They are never written to localStorage, sessionStorage, or disk, and are destroyed when the tab is closed.",
+        "source": "MASTER CLOUD Security Whitepaper",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "identity",
+        "prompt": "Does in-memory credential storage protect against XSS?",
+        "response": "In-memory isolation protects against forensic disk extraction, but any script executing within the same origin can access the memory heap. Production enterprise setups should route through backend proxies.",
+        "source": "MASTER CLOUD Security Whitepaper",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 2. Video Player Hotkeys & Playback Navigation
+    # 2. Video Player Hotkeys & Playback Navigation (English)
     # =========================================================================
     {
         "category": "video_controls",
@@ -174,9 +189,30 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Player Controls Guide",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "video_controls",
+        "prompt": "How do I add a bookmark at the current timestamp?",
+        "response": "Press the B key to create a timestamped bookmark with optional notes. You can navigate bookmarks via the Bookmarks drawer.",
+        "source": "MASTER CLOUD Player Controls Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "video_controls",
+        "prompt": "How do I navigate between saved bookmarks?",
+        "response": "Press Shift + B to jump forward to the next bookmark, or Ctrl + Shift + B to jump backward to the preceding bookmark.",
+        "source": "MASTER CLOUD Player Controls Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "video_controls",
+        "prompt": "What happens when a video finishes playing?",
+        "response": "If repeat is enabled, it restarts from the beginning. If a queue is loaded, it advances automatically to the next item in the playback queue.",
+        "source": "MASTER CLOUD Player Controls Guide",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 3. 10-Band Equalizer & Web Audio Studio
+    # 3. 10-Band Equalizer & Web Audio Studio (English)
     # =========================================================================
     {
         "category": "audio_studio",
@@ -215,6 +251,34 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
     },
     {
         "category": "audio_studio",
+        "prompt": "What does the 64Hz frequency slider control?",
+        "response": "The 64Hz slider controls upper sub-bass and kick-drum punch, providing acoustic energy and body to percussive and bass instruments.",
+        "source": "MASTER CLOUD Audio Engineering Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "audio_studio",
+        "prompt": "What does the 125Hz frequency slider control?",
+        "response": "The 125Hz slider shapes bass warmth and chest resonance. Cutting this band cleans up muddy dialogue, while boosting it adds fullness to male vocals.",
+        "source": "MASTER CLOUD Audio Engineering Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "audio_studio",
+        "prompt": "What does the 1kHz frequency slider control?",
+        "response": "The 1kHz slider governs the core telephone band and human vocal intelligibility. It is the fundamental acoustic anchor of spoken dialogue.",
+        "source": "MASTER CLOUD Audio Engineering Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "audio_studio",
+        "prompt": "What does the 4kHz frequency slider control?",
+        "response": "The 4kHz slider affects presence, articulation, and consonant attack (T, P, S sounds). Boosting it sharpens speech definition in noisy recordings.",
+        "source": "MASTER CLOUD Audio Engineering Guide",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "audio_studio",
         "prompt": "What does the 16kHz frequency slider control?",
         "response": "The 16kHz slider controls top-end brilliance, air, and sparkle, shaping the acoustic decay of cymbals, string harmonics, and room reverb.",
         "source": "MASTER CLOUD Audio Engineering Guide",
@@ -243,7 +307,7 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
     },
 
     # =========================================================================
-    # 4. Subtitle Studio, Closed Captions & Formats
+    # 4. Subtitle Studio, Closed Captions & Formats (English)
     # =========================================================================
     {
         "category": "subtitles",
@@ -280,9 +344,16 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Subtitle Documentation",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "subtitles",
+        "prompt": "Can I edit subtitle cues directly?",
+        "response": "Yes. The Subtitle Studio editor permits interactive timestamp refinement, text editing, cue splitting, and deletion directly in the browser.",
+        "source": "MASTER CLOUD Subtitle Documentation",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 5. Video Intelligence & Scene Detection
+    # 5. Video Intelligence & Scene Detection (English)
     # =========================================================================
     {
         "category": "scene_detection",
@@ -312,9 +383,16 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Video Intelligence Guide",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "scene_detection",
+        "prompt": "What is the difference between hard cuts and dissolve transitions?",
+        "response": "Hard cuts produce an immediate luminance spike across single frames, whereas dissolves and cross-fades exhibit a gradual variance spread across multiple consecutive frames.",
+        "source": "MASTER CLOUD Video Intelligence Guide",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 6. Speech Analysis & Audio Intelligence
+    # 6. Speech Analysis & Audio Intelligence (English)
     # =========================================================================
     {
         "category": "speech_intelligence",
@@ -353,7 +431,7 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
     },
 
     # =========================================================================
-    # 7. Codecs, Formats & Browser Capabilities
+    # 7. Codecs, Formats & Demuxing (English)
     # =========================================================================
     {
         "category": "codecs",
@@ -383,41 +461,16 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Codec Compatibility",
         "license": "Proprietary Project Documentation",
     },
-
-    # =========================================================================
-    # 8. Privacy, Security & Cloud Keys
-    # =========================================================================
     {
-        "category": "security",
-        "prompt": "Is my video uploaded to the internet when I use MasterAI?",
-        "response": "No. All video playback, scene detection, audio processing, and local AI inference occur strictly inside your device's browser sandbox.",
-        "source": "MASTER CLOUD Security Policy",
-        "license": "Proprietary Project Documentation",
-    },
-    {
-        "category": "security",
-        "prompt": "How does MasterAI protect API keys?",
-        "response": "External cloud API keys are never stored in localStorage or sessionStorage. They are held strictly in ephemeral in-memory state using private fields and are wiped upon page reload.",
-        "source": "MASTER CLOUD Security Policy",
-        "license": "Proprietary Project Documentation",
-    },
-    {
-        "category": "security",
-        "prompt": "Does in-memory key storage protect against all attacks?",
-        "response": "In-memory storage prevents keys from persisting on disk or surviving tab closure, but it does not protect against malicious scripts executing in the same origin (XSS). Keep your origin secure.",
-        "source": "MASTER CLOUD Security Policy",
-        "license": "Proprietary Project Documentation",
-    },
-    {
-        "category": "security",
-        "prompt": "Does MasterAI make external network requests without consent?",
-        "response": "Never. All external cloud queries require explicit user confirmation and consent before any request is sent.",
-        "source": "MASTER CLOUD Security Policy",
+        "category": "codecs",
+        "prompt": "Why can Matroska MKV files fail during browser audio demuxing?",
+        "response": "Matroska is an extensible container that often packs proprietary audio streams like AC-3 or DTS. Web browsers lack native decoders for these streams unless converted to AAC or Opus.",
+        "source": "MASTER CLOUD Codec Compatibility",
         "license": "Proprietary Project Documentation",
     },
 
     # =========================================================================
-    # 9. Sinhala Language (Original Bilingual AI Intelligence)
+    # 8. Sinhala Language (Original Bilingual AI Intelligence)
     # =========================================================================
     {
         "category": "sinhala_dialogue",
@@ -545,9 +598,23 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Sinhala Documentation",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "sinhala_dialogue",
+        "prompt": "වීඩියෝවේ දීප්තිය (Brightness) වැඩි කරන්නේ කෙසේද?",
+        "response": "Video Settings විවෘත කර Brightness ස්ලයිඩරය 100% ට වඩා ඉහළට ගෙන යාමෙන් වීඩියෝවේ දීප්තිය වැඩි කළ හැක.",
+        "source": "MASTER CLOUD Sinhala Documentation",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "sinhala_dialogue",
+        "prompt": "වීඩියෝවේ දර්ශන අනුපාතය (Aspect Ratio) වෙනස් කරන්නේ කෙසේද?",
+        "response": "සැකසුම් මඟින් 16:9, 4:3, 21:9 හෝ 9:16 ලෙස ඔබේ තිරයට ගැලපෙන අනුපාතය තෝරාගත හැක.",
+        "source": "MASTER CLOUD Sinhala Documentation",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 10. Sinhala-English Mixed Technical Dialogue (Colloquial Support)
+    # 9. Sinhala-English Mixed Technical Dialogue (Colloquial Support)
     # =========================================================================
     {
         "category": "mixed_dialogue",
@@ -605,9 +672,23 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD User Community FAQ",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "mixed_dialogue",
+        "prompt": "PiP mode එක on කරන්නේ කොහොමද?",
+        "response": "P key එක press කරලා video එක floating Picture-in-Picture window එකක් විදියට detach කරගන්න පුළුවන්.",
+        "source": "MASTER CLOUD User Community FAQ",
+        "license": "Proprietary Project Documentation",
+    },
+    {
+        "category": "mixed_dialogue",
+        "prompt": "Subtitles export කරගන්නේ කොහොමද?",
+        "response": "MasterAI Studio එකේ Export tab එකට ගිහින් SRT, WebVTT, Markdown හෝ CSV විදියට transcript එක download කරගන්න පුළුවන්.",
+        "source": "MASTER CLOUD User Community FAQ",
+        "license": "Proprietary Project Documentation",
+    },
 
     # =========================================================================
-    # 11. Logical Reasoning & Mathematical Derivation Exercises
+    # 10. Logical Reasoning & Mathematical Derivation Exercises
     # =========================================================================
     {
         "category": "reasoning",
@@ -658,9 +739,16 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "Display Geometry Mathematics",
         "license": "Public Domain Technical Mathematics",
     },
+    {
+        "category": "reasoning",
+        "prompt": "If an audio buffer has a duration of 120 seconds, how many 30-second non-overlapping chunks will be produced?",
+        "response": "Dividing 120 seconds by 30 seconds yields exactly 4 chunks: Chunk 1 (0-30s), Chunk 2 (30-60s), Chunk 3 (60-90s), and Chunk 4 (90-120s).",
+        "source": "Audio Buffer Segmentation Math",
+        "license": "Public Domain Technical Mathematics",
+    },
 
     # =========================================================================
-    # 12. Conversational Turns & Summarization
+    # 11. Conversational Turns & Summarization (English)
     # =========================================================================
     {
         "category": "conversation",
@@ -690,12 +778,19 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "source": "MASTER CLOUD Dialogue Engine",
         "license": "Proprietary Project Documentation",
     },
+    {
+        "category": "conversation",
+        "prompt": "Can you help me organize my media files?",
+        "response": "Yes! Use the Smart Media Organizer in MASTER CLOUD to automatically categorize files into Movies, TV Shows, Music Videos, Courses, and Clips while flagging duplicate files.",
+        "source": "MASTER CLOUD Dialogue Engine",
+        "license": "Proprietary Project Documentation",
+    },
 ]
 
 
 def format_sample(prompt: str, response: str) -> str:
-    """Standard formatting for conversational training pairs."""
-    return f"User: {prompt}\nAssistant: {response}"
+    """Standard formatting for conversational training pairs with trailing space."""
+    return f"User: {prompt.strip()}\nAssistant: {response.strip()}"
 
 
 def clean_and_deduplicate(dataset_entries: List[Dict[str, str]]) -> Tuple[List[Dict[str, str]], Dict[str, Any]]:
@@ -760,8 +855,9 @@ class MasterAiCorpusDataset(Dataset):
         self.samples: List[Tuple[torch.Tensor, torch.Tensor]] = []
 
         for item in entries:
-            prompt_str = f"User: {item['prompt']}\nAssistant: "
-            response_str = f"{item['response']}"
+            # Trailing space matches prompt format exactly
+            prompt_str = f"User: {item['prompt'].strip()}\nAssistant: "
+            response_str = f"{item['response'].strip()}"
 
             prompt_tokens = tokenizer.encode(prompt_str, add_bos=True, add_eos=False)
             response_tokens = tokenizer.encode(response_str, add_bos=False, add_eos=True)

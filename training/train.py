@@ -1,6 +1,6 @@
 """
 MASTER CLOUD — MASTER AI ORIGINAL
-Original Model Training Pipeline (v0.3).
+Original Model Training Pipeline (v0.4).
 
 Features:
 - Word-boundary-aware Byte-Level BPE Tokenizer (1024 vocabulary, zero UNK)
@@ -77,7 +77,7 @@ def train_master_ai(
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(
             {
-                "version": "0.3.0",
+                "version": "0.4.0",
                 "total_samples": len(deduped_corpus),
                 "train_samples": len(train_entries),
                 "val_samples": len(val_entries),
@@ -209,6 +209,12 @@ def train_master_ai(
     total_time = time.time() - start_time
     print(f"\n[*] Training Complete in {total_time:.2f}s! Best Val Loss: {best_val_loss:.4f}")
 
+    # Archive v0.4 checkpoint
+    v04_path = os.path.join(output_dir, "checkpoint_v0.4.pt")
+    import shutil
+    shutil.copyfile(checkpoint_path, v04_path)
+    print(f"  ✓ Preserved v0.4 checkpoint to {v04_path}")
+
     # 7. Evaluate on Held-Out Test Set (Zero Leakage)
     print("\n[6/6] Evaluating on held-out Test split (Zero-leakage test set)...")
     best_cp = torch.load(checkpoint_path, map_location=device)
@@ -230,7 +236,7 @@ def train_master_ai(
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump({
             "model_name": "MasterAiCore",
-            "version": "0.3.0-original",
+            "version": "0.4.0-original",
             "parameters": num_params,
             "architecture": {
                 "d_model": d_model,
@@ -254,14 +260,14 @@ def train_master_ai(
     print("\n[*] Testing autoregressive generation with repetition penalty & top-p...")
     sample_generations = []
     test_prompts = [
-        "User: How do I pause or play a video?\nAssistant:",
-        "User: How do I open the 10-Band Equalizer?\nAssistant:",
-        "User: Explain speech pacing.\nAssistant:",
-        "User: MasterAI යනු කුමක්ද?\nAssistant:",
-        "User: වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?\nAssistant:",
-        "User: MASTER CLOUD එකේ video play කරන්නේ කොහොමද?\nAssistant:",
-        "User: What is A-B Repeat and how do I use it?\nAssistant:",
-        "User: How do I fix audio sync delay or lip-sync mismatch?\nAssistant:",
+        "User: How do I pause or play a video?\nAssistant: ",
+        "User: How do I open the 10-Band Equalizer?\nAssistant: ",
+        "User: Explain speech pacing.\nAssistant: ",
+        "User: MasterAI යනු කුමක්ද?\nAssistant: ",
+        "User: වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?\nAssistant: ",
+        "User: MASTER CLOUD එකේ video play කරන්නේ කොහොමද?\nAssistant: ",
+        "User: What is A-B Repeat and how do I use it?\nAssistant: ",
+        "User: How do I fix audio sync delay or lip-sync mismatch?\nAssistant: ",
     ]
 
     for p in test_prompts:

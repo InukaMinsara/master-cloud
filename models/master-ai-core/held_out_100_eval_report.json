@@ -1,0 +1,1534 @@
+{
+  "benchmark_name": "MASTER CLOUD MasterAI Core 100-Scenario Held-Out Benchmark",
+  "model_version": "0.4.0",
+  "total_prompts": 100,
+  "prompts_by_language": {
+    "english": 35,
+    "sinhala": 35,
+    "mixed": 30
+  },
+  "metrics": {
+    "average_3gram_repetition_rate": 0.0851,
+    "clean_eos_stop_percentage": 88.0,
+    "keyword_relevance_rate": 9.0
+  },
+  "all_responses": [
+    {
+      "id": "en_01",
+      "category": "English Hotkeys",
+      "prompt": "Which key pauses and plays the video in MASTER CLOUD?",
+      "generated_response": "The your the Yes, and and the the (it-M f and red A to deing Ox and and the or and and and in Cy.",
+      "tokens_generated": 60,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2414,
+      "expected_keywords": [
+        "Spacebar",
+        "K"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_02",
+      "category": "English Hotkeys",
+      "prompt": "How do I toggle fullscreen mode using my keyboard?",
+      "generated_response": "key the to Press Audio Arrow B Studio, to Shift + key key to open to to or Arrow jump to to the Arrow to step 5 හ.",
+      "tokens_generated": 58,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2143,
+      "expected_keywords": [
+        "F"
+      ],
+      "matched_keywords": [
+        "F"
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (F)"
+    },
+    {
+      "id": "en_03",
+      "category": "English Hotkeys",
+      "prompt": "What key jumps forward by 10 seconds?",
+      "generated_response": "Press to your the Studio යතt Audio Arrow සින් හුර, වැවත, ස් ක.",
+      "tokens_generated": 38,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Right Arrow",
+        "L"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_04",
+      "category": "English Hotkeys",
+      "prompt": "What key jumps backward by 10 seconds?",
+      "generated_response": "the Press B Arrow MasterAI Yes, Studio your and යතt Boost.",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Left Arrow",
+        "J"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_05",
+      "category": "English Hotkeys",
+      "prompt": "How do I step forward frame by frame?",
+      "generated_response": "Press the key Audio B Arrow key Shift වික.",
+      "tokens_generated": 21,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0526,
+      "expected_keywords": [
+        "Period",
+        "."
+      ],
+      "matched_keywords": [
+        "."
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (.)"
+    },
+    {
+      "id": "en_06",
+      "category": "English Hotkeys",
+      "prompt": "How do I step backward frame by frame?",
+      "generated_response": "the to key Shift Press key or Arrow හ් to යත, කළ වුෝ එබ් හි",
+      "tokens_generated": 36,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0588,
+      "expected_keywords": [
+        "Comma",
+        ","
+      ],
+      "matched_keywords": [
+        ","
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (,)"
+    },
+    {
+      "id": "en_07",
+      "category": "English Hotkeys",
+      "prompt": "What is the shortcut to instantly mute audio?",
+      "generated_response": "in and and and the and The to your and (l, and con deer.",
+      "tokens_generated": 32,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2,
+      "expected_keywords": [
+        "M"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_08",
+      "category": "English Hotkeys",
+      "prompt": "How do I increase the volume by 5% increments?",
+      "generated_response": "to Studio or press Shift key to Arrow to and to to + step Shift to to video to jump Comma to to",
+      "tokens_generated": 47,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2444,
+      "expected_keywords": [
+        "Up Arrow"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_09",
+      "category": "English Hotkeys",
+      "prompt": "How do I decrease the volume by 5% increments?",
+      "generated_response": "key and to press Arrow to to the to any to to the or to the to to to to Studio.",
+      "tokens_generated": 43,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.4634,
+      "expected_keywords": [
+        "Down Arrow"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "High repetition loop"
+    },
+    {
+      "id": "en_10",
+      "category": "English Hotkeys",
+      "prompt": "What key captures a high-resolution PNG screenshot?",
+      "generated_response": "slider The in slider and in fit the in and hd, in the an is ps repon audio to or and and (er.",
+      "tokens_generated": 55,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1321,
+      "expected_keywords": [
+        "S"
+      ],
+      "matched_keywords": [
+        "S"
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (S)"
+    },
+    {
+      "id": "en_11",
+      "category": "English Hotkeys",
+      "prompt": "How do I detach the video into Picture-in-Picture mode?",
+      "generated_response": "Press key the to the (, to adjust your or and the recs or the the the + to to to to to to or to to to to to to",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.4762,
+      "expected_keywords": [
+        "P"
+      ],
+      "matched_keywords": [
+        "P"
+      ],
+      "human_evaluation_note": "High repetition loop"
+    },
+    {
+      "id": "en_12",
+      "category": "English Hotkeys",
+      "prompt": "What key opens the Web Audio Studio and 10-Band Equalizer?",
+      "generated_response": "B The in slider MASTER Yes, The controls slider is and ret is and fid in hes. and your and and and a and to the dey (l,",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1905,
+      "expected_keywords": [
+        "E"
+      ],
+      "matched_keywords": [
+        "E"
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (E)"
+    },
+    {
+      "id": "en_13",
+      "category": "English Hotkeys",
+      "prompt": "What key opens Subtitle Studio for caption customization?",
+      "generated_response": "The in-feon-Mp The is the slider and (d, your audio and a rean and to or and det (es and to to to to conil.",
+      "tokens_generated": 65,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1746,
+      "expected_keywords": [
+        "C"
+      ],
+      "matched_keywords": [
+        "C"
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (C)"
+    },
+    {
+      "id": "en_14",
+      "category": "English Hotkeys",
+      "prompt": "How do I trigger Smart Scene Detection from the keyboard?",
+      "generated_response": "to key Press the the the Press the Press Studio, or the and the the to the to to the to the to + the to the to the the press) jump",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.5556,
+      "expected_keywords": [
+        "X"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "High repetition loop"
+    },
+    {
+      "id": "en_15",
+      "category": "English Hotkeys",
+      "prompt": "What keys set Point A and Point B for A-B Repeat loop?",
+      "generated_response": "The in MASTER CLOUD, in Yes. the audio your a to the in is and and and or and (er and with and Cs, ret, de), and to",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1746,
+      "expected_keywords": [
+        "[",
+        "]"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_16",
+      "category": "English Audio",
+      "prompt": "What does the 32Hz slider on the equalizer control?",
+      "generated_response": "MASTER The controls slider in-an, and CLOUD (ds a ct bass and and ins fl in hing con and dey M exeer.",
+      "tokens_generated": 57,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0545,
+      "expected_keywords": [
+        "sub-bass",
+        "rumble"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_17",
+      "category": "English Audio",
+      "prompt": "What does the 16kHz slider on the equalizer control?",
+      "generated_response": "The CLOUD, ft MASTER your in ht-memory and an bass cd, audio fts in pars and and and and exl) and and and in is and",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2381,
+      "expected_keywords": [
+        "treble",
+        "brilliance",
+        "sparkle"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_18",
+      "category": "English Audio",
+      "prompt": "What frequency band enhances human speech intelligibility?",
+      "generated_response": "in ( B the in ft, is in-feP a and res conpde, the and and the to M and and your and and and and and audio or",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.254,
+      "expected_keywords": [
+        "1kHz",
+        "2kHz",
+        "vocal"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_19",
+      "category": "English Audio",
+      "prompt": "What audio presets are built into the equalizer?",
+      "generated_response": "The Yes, MASTER CLOUD run Vocal and 125Hz, slider slider and MasterAI is in and ft, your and and a, Boosting is cls, media and and local.",
+      "tokens_generated": 64,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1452,
+      "expected_keywords": [
+        "Flat",
+        "Bass Boost",
+        "Vocal Clarity"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_20",
+      "category": "English Audio",
+      "prompt": "How do I fix dialogue that is slightly behind the actor's lips?",
+      "generated_response": "key a (t the B or in and to your Studio and to and the the video to to adjust to and 10 video to to to and to to and to",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.4444,
+      "expected_keywords": [
+        "Audio Delay",
+        "lip-sync",
+        "milliseconds"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "High repetition loop"
+    },
+    {
+      "id": "en_21",
+      "category": "English Subtitles",
+      "prompt": "What subtitle formats can I upload into Subtitle Studio?",
+      "generated_response": "MASTER The the slider and in is slider slider fit, in hui (. and Mp and and and a to reer, and or and in and and exly",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2381,
+      "expected_keywords": [
+        "SRT",
+        "WebVTT"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_22",
+      "category": "English Subtitles",
+      "prompt": "How does subtitle sync offset work?",
+      "generated_response": "the The slider fct and B (d and in-an, exions hance, is a reus, to to and or to and video and and and the and",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1587,
+      "expected_keywords": [
+        "milliseconds",
+        "offset",
+        "sync"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_23",
+      "category": "English Subtitles",
+      "prompt": "Can I export my subtitles as a Markdown transcript?",
+      "generated_response": "the Yes, MasterAI and and is The to in reiue and slider fs and video and the your (es and and and and and and and con0 and it",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2857,
+      "expected_keywords": [
+        "Markdown",
+        "Export"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_24",
+      "category": "English Intelligence",
+      "prompt": "How does the scene detection algorithm detect cuts?",
+      "generated_response": "The is in slider and your fs (, in repcon-M fan audio a h the and and det is ex or in to it and and conl.",
+      "tokens_generated": 65,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.127,
+      "expected_keywords": [
+        "luminance",
+        "delta",
+        "threshold",
+        "frame"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_25",
+      "category": "English Intelligence",
+      "prompt": "What is conversational speech pacing measured in?",
+      "generated_response": "Yes, The the slider (d-ft and cy ft in to reuonMel, and and deis and and it (es.",
+      "tokens_generated": 53,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1176,
+      "expected_keywords": [
+        "WPM",
+        "Words Per Minute"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_26",
+      "category": "English Intelligence",
+      "prompt": "What decibel level is classified as silence in audio analysis?",
+      "generated_response": "The (-on the and fan in exo M the ht to in a and ppe and video O0, or re.",
+      "tokens_generated": 50,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0833,
+      "expected_keywords": [
+        "-40",
+        "dBFS",
+        "RMS"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_27",
+      "category": "English Privacy",
+      "prompt": "Does MasterAI Core upload video frames to any remote server?",
+      "generated_response": "in ft a slider is and h, ins-dears pan and in c) and the and and (s and and coniy or and Ol, on and it",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1429,
+      "expected_keywords": [
+        "No",
+        "local",
+        "sandbox"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_28",
+      "category": "English Privacy",
+      "prompt": "Can MasterAI function without an internet connection?",
+      "generated_response": "in The and slider is CLOUD, Core the your the a slider reie B-pon and in det, and exiar.",
+      "tokens_generated": 49,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0851,
+      "expected_keywords": [
+        "Yes",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_29",
+      "category": "English Codecs",
+      "prompt": "What container formats are natively supported by the player?",
+      "generated_response": "a bass in-on an The and fd (t de and and audio p is, Mes in in- Ot and cing it.",
+      "tokens_generated": 53,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0784,
+      "expected_keywords": [
+        "MP4",
+        "WebM",
+        "HLS"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_30",
+      "category": "English Codecs",
+      "prompt": "Does MASTER CLOUD support AV1 and VP9 video decoding?",
+      "generated_response": "in the B-The and a and (, to and conan M the pon to is or the reer. fs and (.",
+      "tokens_generated": 51,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1429,
+      "expected_keywords": [
+        "Yes",
+        "AV1",
+        "VP9"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_31",
+      "category": "English Reasoning",
+      "prompt": "If a video is 5 minutes long and contains 750 words, what is the WPM rate?",
+      "generated_response": "audio to in the (c. reip or C with and O and coni and de.",
+      "tokens_generated": 36,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0588,
+      "expected_keywords": [
+        "150",
+        "WPM"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_32",
+      "category": "English Reasoning",
+      "prompt": "What is the uncompressed size of 60 seconds of 16kHz 32-bit float audio?",
+      "generated_response": "to and (t in on the to M the or rean, and and Ccs con video to O to pe the and a rex.",
+      "tokens_generated": 56,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1296,
+      "expected_keywords": [
+        "3.66",
+        "3,840,000",
+        "MB"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_33",
+      "category": "English Reasoning",
+      "prompt": "If I skip forward 10 seconds 5 times and back 10 seconds twice, what is the net advance?",
+      "generated_response": "B your the to press Press Studio Arrow to video the to Arrow and jump frame and Shift or and to to Shift to to and to step backward.",
+      "tokens_generated": 59,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2807,
+      "expected_keywords": [
+        "30",
+        "seconds"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_34",
+      "category": "English Conversation",
+      "prompt": "Good morning MasterAI, are you ready to assist me?",
+      "generated_response": "and The slider ht (s pit-ps in the ficer an is is and and the and and and and and audio and de.",
+      "tokens_generated": 57,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2364,
+      "expected_keywords": [
+        "MasterAI",
+        "ready",
+        "assist"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "en_35",
+      "category": "English Explanation",
+      "prompt": "Explain the difference between local neural AI and cloud AI.",
+      "generated_response": "The is your The The, fs-is controls audio cs and slider deearly, and M ht inan to and a rei, and sp ex or and cony",
+      "tokens_generated": 65,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0794,
+      "expected_keywords": [
+        "local",
+        "privacy",
+        "cloud",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_01",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝව නවත්වන්නේ සහ වාදනය කරන්නේ කුමන යතුරෙන්ද?",
+      "generated_response": "හැන් ස්ත.",
+      "tokens_generated": 10,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Spacebar",
+        "K"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_02",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝව සම්පූර්ණ තිරය (Fullscreen) කරන්නේ කෙසේද?",
+      "generated_response": "වැරුරුන් යතුාතිැමි හීා හිිරුන.",
+      "tokens_generated": 30,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0357,
+      "expected_keywords": [
+        "F"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_03",
+      "category": "Sinhala Hotkeys",
+      "prompt": "තත්පර 10ක් ඉදිරියට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
+      "generated_response": "වීතෙැන් එබුරීම් හැසැන් කළ එබ් වැවතිේ.",
+      "tokens_generated": 34,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0625,
+      "expected_keywords": [
+        "Right Arrow",
+        "L"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_04",
+      "category": "Sinhala Hotkeys",
+      "prompt": "තත්පර 10ක් පසුපසට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
+      "generated_response": "එබිේ, වැඩ්ීුරීැස් සැවැරි්ක් හි වෙ",
+      "tokens_generated": 33,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Left Arrow",
+        "J"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_05",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝව එක රාමුව බැගින් ඉදිරියට ගෙනියන්නේ කෙසේද?",
+      "generated_response": "වි හ් යතින් වීය වත.",
+      "tokens_generated": 18,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Period",
+        "."
+      ],
+      "matched_keywords": [
+        "."
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (.)"
+    },
+    {
+      "id": "si_06",
+      "category": "Sinhala Hotkeys",
+      "prompt": "ශබ්දය ක්ෂණිකව නිශ්ශබ්ද (Mute) කරන්නේ කුමන යතුරෙන්ද?",
+      "generated_response": "සැන.",
+      "tokens_generated": 5,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "M"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Truncated or empty generation"
+    },
+    {
+      "id": "si_07",
+      "category": "Sinhala Hotkeys",
+      "prompt": "ශබ්දය 5% කින් වැඩි කරන්නේ කෙසේද?",
+      "generated_response": "යතුරීමාරීයෝ හැවැන.",
+      "tokens_generated": 18,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Up Arrow"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_08",
+      "category": "Sinhala Hotkeys",
+      "prompt": "ශබ්දය 5% කින් අඩු කරන්නේ කෙසේද?",
+      "generated_response": "යතීමැව් හය එබ් හ් යතාරුවත් ස්තැක.",
+      "tokens_generated": 30,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0357,
+      "expected_keywords": [
+        "Down Arrow"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_09",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝවෙන් screenshot එකක් ගන්නේ කෙසේද?",
+      "generated_response": "හැමුරුරුරුක.",
+      "tokens_generated": 13,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2727,
+      "expected_keywords": [
+        "S",
+        "PNG"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_10",
+      "category": "Sinhala Hotkeys",
+      "prompt": "Picture-in-Picture කවුළුවක් ලෙස වීඩියෝව තබන්නේ කෙසේද?",
+      "generated_response": "එබැමීාරිැර හ්රිැරිිි් හ්මුමැ",
+      "tokens_generated": 28,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1154,
+      "expected_keywords": [
+        "P"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_11",
+      "category": "Sinhala Hotkeys",
+      "prompt": "Equalizer සහ Web Audio Studio විවෘත කරන්නේ කෙසේද?",
+      "generated_response": "යතුරුමීැඩ් එබියෝ හා එබැන් වැවත.",
+      "tokens_generated": 28,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "E"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_12",
+      "category": "Sinhala Hotkeys",
+      "prompt": "උපසිරැසි සැකසුම් (Subtitle Studio) විවෘත කරන්නේ කුමන යතුරෙන්ද?",
+      "generated_response": "න්රීය හාන.",
+      "tokens_generated": 11,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "C"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_13",
+      "category": "Sinhala Hotkeys",
+      "prompt": "Smart Scene Detection ක්‍රියාත්මක කරන්නේ කෙසේද?",
+      "generated_response": "යතුඩිීැන් එබ් වුවැවතුරුරීරැන් හිමිැරීැක.",
+      "tokens_generated": 38,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0556,
+      "expected_keywords": [
+        "X"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_14",
+      "category": "Sinhala Hotkeys",
+      "prompt": "A-B Repeat ලූප් එකක් සකසන්නේ කෙසේද?",
+      "generated_response": "එබුරිමීාවැරිය හැඩ් යතීමිතිමැැමි් ක.",
+      "tokens_generated": 34,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "[",
+        "]"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_15",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝව අංශක 90 කින් කරකවන්නේ (Rotate) කුමන යතුරෙන්ද?",
+      "generated_response": "එබැහීාන් සහ ස් වුවත් ස්තිරුන",
+      "tokens_generated": 26,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0417,
+      "expected_keywords": [
+        "R"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_16",
+      "category": "Sinhala Audio",
+      "prompt": "Equalizer එකේ 32Hz ස්ලයිඩරයෙන් පාලනය වන්නේ කුමක්ද?",
+      "generated_response": "වැී් යතීැන්මැමුවතීි විමුරි",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "sub-bass",
+        "ශබ්ද"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_17",
+      "category": "Sinhala Audio",
+      "prompt": "Equalizer එකේ 16kHz ස්ලයිඩරයෙන් පාලනය වන්නේ කුමක්ද?",
+      "generated_response": "යතීැවුරීිරුත් එබ්ෝ හිමැරිැන.",
+      "tokens_generated": 27,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "treble",
+        "උසස්"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_18",
+      "category": "Sinhala Audio",
+      "prompt": "කටහඬ පැහැදිලි කිරීමට හොඳම Preset එක කුමක්ද?",
+      "generated_response": "යතෙන්වියතුම්මා සේෝවුවති.",
+      "tokens_generated": 23,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Vocal Clarity"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_19",
+      "category": "Sinhala Audio",
+      "prompt": "ශබ්දය සහ රූපය අතර ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද?",
+      "generated_response": "වුඩ් වීැනිය යතුරිම් වැරැක.",
+      "tokens_generated": 26,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0417,
+      "expected_keywords": [
+        "Audio Delay",
+        "මිලි තත්පර"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_20",
+      "category": "Sinhala Audio",
+      "prompt": "Equalizer සැකසුම් වලින් මුල් වීඩියෝ ගොනුව වෙනස් වේද?",
+      "generated_response": "රුාක්ත් හැක.",
+      "tokens_generated": 13,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "නැත",
+        "වෙනස් නොවේ"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_21",
+      "category": "Sinhala Subtitles",
+      "prompt": "සහය දක්වන උපසිරැසි ගොනු ආකෘති මොනවාද?",
+      "generated_response": "යතුවීීඩින්ෙරුරුව් එබැන.",
+      "tokens_generated": 22,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "SRT",
+        "WebVTT"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_22",
+      "category": "Sinhala Subtitles",
+      "prompt": "උපසිරැසි ප්‍රමාද වී පෙන්වන්නේ නම් කළ යුත්තේ කුමක්ද?",
+      "generated_response": "යත් හුවුව්ෝමිැැ වතිය විමියෙන.",
+      "tokens_generated": 28,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Sync Offset",
+        "මිලි තත්පර"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_23",
+      "category": "Sinhala Subtitles",
+      "prompt": "උපසිරැසි අකුරු වල ප්‍රමාණය වෙනස් කළ හැකිද?",
+      "generated_response": "යතීේ, න් ව් එබුවතුන් වැරුම්මීන.",
+      "tokens_generated": 29,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0741,
+      "expected_keywords": [
+        "ඔව්",
+        "Subtitle Studio"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_24",
+      "category": "Sinhala Intelligence",
+      "prompt": "දර්ශන හඳුනාගැනීම (Scene Detection) කරන්නේ කෙසේද?",
+      "generated_response": "වියත් යතුවතික. එබ් හ් න",
+      "tokens_generated": 21,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "luminance",
+        "දර්ශන",
+        "X"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_25",
+      "category": "Sinhala Intelligence",
+      "prompt": "කථන වේගය (Speech Pacing) මනින්නේ කෙසේද?",
+      "generated_response": "යතුරීාරිය එබැවත, හ් හුත් කළ වීාය හ්ර්රුරීක.",
+      "tokens_generated": 40,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0526,
+      "expected_keywords": [
+        "WPM",
+        "විනාඩියකට"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_26",
+      "category": "Sinhala Privacy",
+      "prompt": "මගේ වීඩියෝ කිසිවක් අන්තර්ජාලයට උඩුගත වේද?",
+      "generated_response": "එබෙන. වැරුන්ත්ම් කළ හිය න් හුීැක.",
+      "tokens_generated": 32,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "නැත",
+        "පරිගණකය"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_27",
+      "category": "Sinhala Privacy",
+      "prompt": "MasterAI අන්තර්ජාලය නොමැතිව (Offline) ක්‍රියා කරයිද?",
+      "generated_response": "යතුසීාරීඩිෙේ්ෝ හීන් සැැන.",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "ඔව්",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_28",
+      "category": "Sinhala Codecs",
+      "prompt": "MASTER CLOUD හි වාදනය කළ හැකි වීඩියෝ වර්ග මොනවාද?",
+      "generated_response": "යතුතුන් සුන.",
+      "tokens_generated": 12,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "MP4",
+        "WebM",
+        "HLS"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_29",
+      "category": "Sinhala Codecs",
+      "prompt": "පරිගණකයෙන් වීඩියෝ ඇද දමා (Drag and Drop) වාදනය කළ හැකිද?",
+      "generated_response": "යතුරුන් යතුර සැම.",
+      "tokens_generated": 16,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0714,
+      "expected_keywords": [
+        "ඔව්",
+        "drag"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_30",
+      "category": "Sinhala Conversation",
+      "prompt": "ආයුබෝවන් MasterAI! ඔබට කළ හැක්කේ කුමක්ද?",
+      "generated_response": "වීරුන් යතුරොරුරින් සුඩ් හාරුමි",
+      "tokens_generated": 31,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.069,
+      "expected_keywords": [
+        "MasterAI",
+        "වීඩියෝ",
+        "සහාය"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_31",
+      "category": "Sinhala Conversation",
+      "prompt": "වීඩියෝවේ ප්‍රධාන කරුණු සාරාංශ කර පෙන්වන්න.",
+      "generated_response": "හැමීි යතුද, ක් එබුවැවතුවී",
+      "tokens_generated": 23,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "සාරාංශය",
+        "කරුණු"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_32",
+      "category": "Sinhala Explanation",
+      "prompt": "දේශීය AI (Local AI) භාවිතයේ වාසි මොනවාද?",
+      "generated_response": "යතුරෙඩ් වැවති් එබ් හ් වැක.",
+      "tokens_generated": 24,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0909,
+      "expected_keywords": [
+        "රහස්‍යභාවය",
+        "වේගය",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_33",
+      "category": "Sinhala Hotkeys",
+      "prompt": "වීඩියෝවේ වේගය වැඩි කරන්නේ කෙසේද?",
+      "generated_response": "යතුරුරුමිාවුවතිීත.",
+      "tokens_generated": 17,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0667,
+      "expected_keywords": [
+        "Shift",
+        "Period",
+        ">"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_34",
+      "category": "Sinhala Hotkeys",
+      "prompt": "Bookmark එකක් දමන්නේ කුමන යතුරෙන්ද?",
+      "generated_response": "වීැන. එබියාරැම් ස් හිවතැරික.",
+      "tokens_generated": 27,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "B"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "si_35",
+      "category": "Sinhala Conversation",
+      "prompt": "ඔබට බොහොම ස්තූතියි MasterAI!",
+      "generated_response": "යතුරීන. එබෙවැක්ඩි යතුරුන්රෝ හැන් ව්න්ා සිි් වැවතුර් හි කළ ක් හ් න",
+      "tokens_generated": 61,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0508,
+      "expected_keywords": [
+        "සාදරයෙන්",
+        "MasterAI"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_01",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක play හෝ pause කරන්න shortcut key එක මොකක්ද?",
+      "generated_response": "යතුර වීා යතුවිය සැන.",
+      "tokens_generated": 19,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Spacebar",
+        "K"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_02",
+      "category": "Mixed Hotkeys",
+      "prompt": "Player එක fullscreen කරගන්නේ කොහොමද?",
+      "generated_response": "යතුරීතිඩිය වෙන.",
+      "tokens_generated": 15,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "F"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_03",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක තත්පර 10ක් forward කරන්නේ මොන key එකෙන්ද?",
+      "generated_response": "වුරුවිාවැය යතීයෝ සින් හ් ක.",
+      "tokens_generated": 27,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Right Arrow",
+        "L"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_04",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක තත්පර 10ක් backward කරන්නේ කොහොමද?",
+      "generated_response": "යතුරුවීඩිැරෙය එබිිතැක.",
+      "tokens_generated": 21,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Left Arrow",
+        "J"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_05",
+      "category": "Mixed Hotkeys",
+      "prompt": "Sound එක mute කරන්නේ keyboard එකේ මොන key එකෙන්ද?",
+      "generated_response": "වුරියෝ යතීැසාත, හ් එබ් ක.",
+      "tokens_generated": 24,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "M"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_06",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එකෙන් screenshot එකක් capture කරගන්නේ කොහොමද?",
+      "generated_response": "යතුරිැවීය යතුරිාන.",
+      "tokens_generated": 17,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1333,
+      "expected_keywords": [
+        "S",
+        "PNG"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_07",
+      "category": "Mixed Hotkeys",
+      "prompt": "Picture in Picture mode එකට switch වෙන්නේ කොහොමද?",
+      "generated_response": "යතුරුස් හැමිය වීාත් කළ හු වැන.",
+      "tokens_generated": 29,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "P"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_08",
+      "category": "Mixed Audio",
+      "prompt": "Equalizer එක open කරන්න shortcut key එක මොකක්ද?",
+      "generated_response": "යතුරීය වුත.",
+      "tokens_generated": 11,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "E"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_09",
+      "category": "Mixed Audio",
+      "prompt": "Audio එකේ bass වැඩි කරගන්න හොඳම preset එක මොකක්ද?",
+      "generated_response": "යතුරුන් එබාෙන්ය සිරීය කළ ක.",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Bass Boost",
+        "32Hz"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_10",
+      "category": "Mixed Audio",
+      "prompt": "Vocal Clarity preset එකෙන් වෙන්නේ මොකක්ද?",
+      "generated_response": "යතුරියීතැස් එබැනාන.",
+      "tokens_generated": 18,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "කටහඬ",
+        "vocal",
+        "1kHz"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_11",
+      "category": "Mixed Audio",
+      "prompt": "Audio සහ video lip-sync mismatch එකක් ආවොත් හදන්නේ කොහොමද?",
+      "generated_response": "යතුර එබුයෙන",
+      "tokens_generated": 10,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Audio Delay",
+        "slider"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_12",
+      "category": "Mixed Subtitles",
+      "prompt": "Subtitle Studio එක open කරන්නේ කොහොමද?",
+      "generated_response": "යතුරිැවුවීන් කළ එබිය ශබ් Audio ස්ෝඩ් හොරිරුන් වැන.",
+      "tokens_generated": 44,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0238,
+      "expected_keywords": [
+        "C"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_13",
+      "category": "Mixed Subtitles",
+      "prompt": "SRT subtitles sync නැත්නම් හදාගන්නේ කොහොමද?",
+      "generated_response": "යතුරියෙවතීන් එබැන්වුසුක.",
+      "tokens_generated": 22,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Sync Offset",
+        "milliseconds"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_14",
+      "category": "Mixed Subtitles",
+      "prompt": "Subtitle font size එක customize කරන්න පුළුවන්ද?",
+      "generated_response": "The the The MasterAI in Yes, and slider is and ret audio a () the video and to or in your the and and to and C.",
+      "tokens_generated": 58,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1786,
+      "expected_keywords": [
+        "ඔව්",
+        "Subtitle Studio"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_15",
+      "category": "Mixed Intelligence",
+      "prompt": "Scenes auto detect කරන්නේ මොන shortcut එකෙන්ද?",
+      "generated_response": "යතුවිරීය එබැන. යතුෝරුක, හාත් ස් කළ හ් සි",
+      "tokens_generated": 37,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0286,
+      "expected_keywords": [
+        "X",
+        "Scene Detection"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_16",
+      "category": "Mixed Intelligence",
+      "prompt": "Timeline එකේ chapters generate කරගන්නේ කොහොමද?",
+      "generated_response": "MASTER Bass Electronic, Clarity.",
+      "tokens_generated": 10,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "chapters",
+        "Scene Detection"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_17",
+      "category": "Mixed Intelligence",
+      "prompt": "Transcript එකේ dialogue search කරන්නේ කොහොමද?",
+      "generated_response": "යතie යතිීන් එබැන.",
+      "tokens_generated": 15,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "T",
+        "Search"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_18",
+      "category": "Mixed Privacy",
+      "prompt": "MasterAI එක use කරද්දී video cloud එකට upload වෙනවද?",
+      "generated_response": "යතුරික.",
+      "tokens_generated": 7,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "නැත",
+        "upload",
+        "local"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_19",
+      "category": "Mixed Privacy",
+      "prompt": "Internet නැතුව MasterAI offline වැඩ කරනවද?",
+      "generated_response": "යතුරිමී් හින් හාෙක.",
+      "tokens_generated": 19,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0588,
+      "expected_keywords": [
+        "ඔව්",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_20",
+      "category": "Mixed Codecs",
+      "prompt": "MP4 සහ WebM formats දෙකම player එකේ play වෙනවද?",
+      "generated_response": "එබුරුඩt යතan සුත, වී් හැනිැය කළ ව් න් වි.",
+      "tokens_generated": 38,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "ඔව්",
+        "MP4",
+        "WebM"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_21",
+      "category": "Mixed Codecs",
+      "prompt": "MKV files වල audio demux කරන්න පුළුවන්ද?",
+      "generated_response": "The the and in-fd, is in the B and the or a res to con your your to and to and (i.",
+      "tokens_generated": 51,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1837,
+      "expected_keywords": [
+        "MP4",
+        "WebM",
+        "re-wrap"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_22",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video playback speed එක 1.5x හෝ 2x කරන්නේ කොහොමද?",
+      "generated_response": "යතe, යතිය Arrow වුරෙනිැන් සුක.",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Shift",
+        ">",
+        "Period"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_23",
+      "category": "Mixed Hotkeys",
+      "prompt": "Speed එක ආයේ 1.0x standard speed එකට reset කරන්නේ කොහොමද?",
+      "generated_response": "එබුරෙීඩt විැත, යතුරුෝ සුරෙ",
+      "tokens_generated": 25,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0435,
+      "expected_keywords": [
+        "Shift",
+        "0"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_24",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක loop කරන්න A-B repeat කරන්නේ කොහොමද?",
+      "generated_response": "යතිවැර යතුඩ් වීෙය සැන් කළ යතැරෝ එබ්ත වා වීය් න් හ්.",
+      "tokens_generated": 47,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0444,
+      "expected_keywords": [
+        "[",
+        "]"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_25",
+      "category": "Mixed Hotkeys",
+      "prompt": "Specific timestamp එකකට Bookmark එකක් දාන්නේ කොහොමද?",
+      "generated_response": "යතුරිසැවීය එබුව් කළ හැක, Studio එබෙඩ් වුෝත් රුමුක.",
+      "tokens_generated": 42,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "B"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_26",
+      "category": "Mixed Hotkeys",
+      "prompt": "Sideways තියෙන video එකක් 90 degrees rotate කරන්නේ කොහොමද?",
+      "generated_response": "යතුරීැවීැනිමා Arrow සි.",
+      "tokens_generated": 19,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "R"
+      ],
+      "matched_keywords": [
+        "R"
+      ],
+      "human_evaluation_note": "Domain relevance demonstrated (R)"
+    },
+    {
+      "id": "mix_27",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක 50% midpoint එකට jump කරන්න ඔබන්න ඕන number එක මොකක්ද?",
+      "generated_response": "Arrow සිරුය වැවීත.",
+      "tokens_generated": 15,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "5"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_28",
+      "category": "Mixed Conversation",
+      "prompt": "Hello MasterAI! මගේ media library එක organize කරන්න help එකක් දෙන්න පුළුවන්ද?",
+      "generated_response": "වැරියක.",
+      "tokens_generated": 8,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "MasterAI",
+        "help",
+        "media"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_29",
+      "category": "Mixed Conversation",
+      "prompt": "Thank you so much MasterAI!",
+      "generated_response": "The in slider The in MASTER fld, and CLOUD bass ct ft p-and and is the and and prot exily.",
+      "tokens_generated": 51,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1224,
+      "expected_keywords": [
+        "welcome",
+        "සාදරයෙන්"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    },
+    {
+      "id": "mix_30",
+      "category": "Mixed Explanation",
+      "prompt": "Local AI එකයි Google Gemini Cloud mode එකයි අතර වෙනස මොකක්ද?",
+      "generated_response": "The එබුරීා එබැන.",
+      "tokens_generated": 13,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "expected_keywords": [
+        "Local",
+        "Cloud",
+        "privacy"
+      ],
+      "matched_keywords": [],
+      "human_evaluation_note": "Syntactically fragmented / general subwords"
+    }
+  ]
+}

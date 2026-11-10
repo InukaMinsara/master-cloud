@@ -1,27 +1,26 @@
 {
-  "version": "0.3.0",
-  "total_samples": 88,
-  "train_samples": 66,
-  "val_samples": 13,
-  "test_samples": 9,
+  "version": "0.4.0",
+  "total_samples": 102,
+  "train_samples": 76,
+  "val_samples": 15,
+  "test_samples": 11,
   "split_ratios": {
     "train": 0.75,
     "val": 0.15,
     "test": 0.1
   },
   "category_counts": {
-    "identity": 6,
-    "video_controls": 14,
-    "audio_studio": 9,
-    "subtitles": 5,
-    "scene_detection": 4,
+    "identity": 8,
+    "video_controls": 17,
+    "audio_studio": 13,
+    "subtitles": 6,
+    "scene_detection": 5,
     "speech_intelligence": 5,
-    "codecs": 4,
-    "security": 4,
-    "sinhala_dialogue": 18,
-    "mixed_dialogue": 8,
-    "reasoning": 7,
-    "conversation": 4
+    "codecs": 5,
+    "sinhala_dialogue": 20,
+    "mixed_dialogue": 10,
+    "reasoning": 8,
+    "conversation": 5
   },
   "dataset_provenance": [
     {
@@ -58,6 +57,18 @@
       "category": "identity",
       "prompt": "Can MasterAI run without internet access?",
       "source": "MASTER CLOUD Offline Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "How do you protect API credentials in cloud mode?",
+      "source": "MASTER CLOUD Security Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "Does in-memory credential storage protect against XSS?",
+      "source": "MASTER CLOUD Security Whitepaper",
       "license": "Proprietary Project Documentation"
     },
     {
@@ -145,6 +156,24 @@
       "license": "Proprietary Project Documentation"
     },
     {
+      "category": "video_controls",
+      "prompt": "How do I add a bookmark at the current timestamp?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I navigate between saved bookmarks?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "What happens when a video finishes playing?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
       "category": "audio_studio",
       "prompt": "How do I open the 10-Band Equalizer?",
       "source": "MASTER CLOUD Audio Engineering Guide",
@@ -171,6 +200,30 @@
     {
       "category": "audio_studio",
       "prompt": "What does the 32Hz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 64Hz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 125Hz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 1kHz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 4kHz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
@@ -229,6 +282,12 @@
       "license": "Proprietary Project Documentation"
     },
     {
+      "category": "subtitles",
+      "prompt": "Can I edit subtitle cues directly?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
       "category": "scene_detection",
       "prompt": "How do I detect scenes in my video?",
       "source": "MASTER CLOUD Video Intelligence Guide",
@@ -249,6 +308,12 @@
     {
       "category": "scene_detection",
       "prompt": "Generate chapters for my video.",
+      "source": "MASTER CLOUD Video Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "prompt": "What is the difference between hard cuts and dissolve transitions?",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
@@ -307,27 +372,9 @@
       "license": "Proprietary Project Documentation"
     },
     {
-      "category": "security",
-      "prompt": "Is my video uploaded to the internet when I use MasterAI?",
-      "source": "MASTER CLOUD Security Policy",
-      "license": "Proprietary Project Documentation"
-    },
-    {
-      "category": "security",
-      "prompt": "How does MasterAI protect API keys?",
-      "source": "MASTER CLOUD Security Policy",
-      "license": "Proprietary Project Documentation"
-    },
-    {
-      "category": "security",
-      "prompt": "Does in-memory key storage protect against all attacks?",
-      "source": "MASTER CLOUD Security Policy",
-      "license": "Proprietary Project Documentation"
-    },
-    {
-      "category": "security",
-      "prompt": "Does MasterAI make external network requests without consent?",
-      "source": "MASTER CLOUD Security Policy",
+      "category": "codecs",
+      "prompt": "Why can Matroska MKV files fail during browser audio demuxing?",
+      "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
@@ -439,6 +486,18 @@
       "license": "Proprietary Project Documentation"
     },
     {
+      "category": "sinhala_dialogue",
+      "prompt": "වීඩියෝවේ දීප්තිය (Brightness) වැඩි කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "වීඩියෝවේ දර්ශන අනුපාතය (Aspect Ratio) වෙනස් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
       "category": "mixed_dialogue",
       "prompt": "MASTER CLOUD එකේ video play කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
@@ -487,6 +546,18 @@
       "license": "Proprietary Project Documentation"
     },
     {
+      "category": "mixed_dialogue",
+      "prompt": "PiP mode එක on කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Subtitles export කරගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
       "category": "reasoning",
       "prompt": "If a video is 10 minutes long and has 1500 spoken words, what is the speech pacing in WPM?",
       "source": "Speech Rate Analytics & Mathematics",
@@ -529,6 +600,12 @@
       "license": "Public Domain Technical Mathematics"
     },
     {
+      "category": "reasoning",
+      "prompt": "If an audio buffer has a duration of 120 seconds, how many 30-second non-overlapping chunks will be produced?",
+      "source": "Audio Buffer Segmentation Math",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
       "category": "conversation",
       "prompt": "Hello MasterAI! How are you today?",
       "source": "MASTER CLOUD Dialogue Engine",
@@ -549,6 +626,12 @@
     {
       "category": "conversation",
       "prompt": "Thank you MasterAI!",
+      "source": "MASTER CLOUD Dialogue Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "prompt": "Can you help me organize my media files?",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
     }

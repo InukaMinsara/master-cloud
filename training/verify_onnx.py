@@ -3,7 +3,7 @@ MASTER CLOUD — MASTER AI ORIGINAL
 Deterministic PyTorch vs. ONNX Runtime Numerical Equivalence Suite.
 
 Verifies:
-- Logit output shapes across dynamic sequence lengths (1, 4, 16, 64, 128)
+- Logit output shapes across dynamic sequence lengths (1, 4, 16, 64, 128, 256)
 - Numerical parity between PyTorch and ONNX Runtime: max |y_pytorch - y_onnx| < 1e-4
 - Non-trivial learned weight distribution
 - Tokenizer encoding/decoding parity
@@ -28,7 +28,7 @@ from training.tokenizer import MasterAiTokenizer
 def verify_pytorch_onnx_parity(
     checkpoint_dir: str = "models/master-ai-core",
     onnx_filename: str = "master_ai_core.onnx",
-    seq_lengths: list = [1, 4, 16, 64, 128],
+    seq_lengths: list = [1, 4, 16, 64, 128, 256],
     max_tolerance: float = 1e-4,
 ):
     print("=" * 65)
