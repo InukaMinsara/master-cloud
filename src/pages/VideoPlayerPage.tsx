@@ -7,6 +7,7 @@ import { MediaLibraryModal } from '@/components/video-player/panels/MediaLibrary
 import { PlaybackAnalyticsModal } from '@/components/video-player/panels/PlaybackAnalyticsModal';
 import { MediaOrganizerModal } from '@/components/video-player/panels/MediaOrganizerModal';
 import { MasterAiModal } from '@/components/video-player/panels/MasterAiModal';
+import { QualityBoostModal } from '@/components/video-player/panels/QualityBoostModal';
 import { formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -41,6 +42,7 @@ const KEYBOARD_SHORTCUTS = [
   { keys: '\\', action: 'Clear A-B Loop' },
   { keys: 'N / P', action: 'Next / Prev Media' },
   { keys: 'I', action: 'Mini Player / PiP' },
+  { keys: 'V', action: 'Quality Boost & 4K' },
 ];
 
 const MEDIA_ACCEPT =
@@ -265,6 +267,7 @@ export function VideoPlayerPage() {
       {activePanel === 'library' && <MediaLibraryModal />}
       {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
       {activePanel === 'organizer' && <MediaOrganizerModal />}
+      {activePanel === 'quality' && <QualityBoostModal />}
     </div>
   );
 }

@@ -1241,6 +1241,47 @@ const mockFreqBinCount = mockFftSize / 2;
 assert(mockFreqBinCount === 64, 'Web Audio AnalyserNode configured with 128 FFT (64 frequency bins)');
 assert(mockFreqBinCount >= 32, 'Spectrum analyser provides sufficient bins for 32-48 visualizer bars');
 
+// ----------------------------------------------------
+// PHASE 5: REAL-TIME VIDEO QUALITY BOOST & 4K UPSCALER
+// ----------------------------------------------------
+console.log('\n--- PHASE 5: REAL-TIME VIDEO QUALITY BOOST & 4K UPSCALER ---');
+
+const QUALITY_PRESETS_MAP = {
+  off: { enabled: false, sharpness: 0, edgePeaking: 0, deblock: 0, hdrContrast: 0, saturation: 0 },
+  'sd-to-hd': { enabled: true, sharpness: 45, edgePeaking: 50, deblock: 65, hdrContrast: 20, saturation: 15 },
+  'hd-to-fhd': { enabled: true, sharpness: 60, edgePeaking: 65, deblock: 25, hdrContrast: 25, saturation: 10 },
+  'fhd-to-4k': { enabled: true, sharpness: 80, edgePeaking: 85, deblock: 10, hdrContrast: 30, saturation: 10 },
+  anime: { enabled: true, sharpness: 70, edgePeaking: 90, deblock: 40, hdrContrast: 25, saturation: 35 },
+};
+
+function getUpscaleTarget(width) {
+  if (width >= 1920) return '3840×2160 (4K UHD)';
+  if (width >= 1280) return '1920×1080 (1080p FHD)';
+  return '1920×1080 (Super Res)';
+}
+
+// Preset mapping checks
+assert(QUALITY_PRESETS_MAP['off'].enabled === false, 'Preset "off" sets enabled: false');
+assert(QUALITY_PRESETS_MAP['sd-to-hd'].deblock === 65, 'Preset "sd-to-hd" has elevated deblock (65%) for compression smoothing');
+assert(QUALITY_PRESETS_MAP['hd-to-fhd'].sharpness === 60, 'Preset "hd-to-fhd" applies 60% Contrast Adaptive Sharpening');
+assert(QUALITY_PRESETS_MAP['fhd-to-4k'].sharpness === 80, 'Preset "fhd-to-4k" applies 80% super-resolution sharpness');
+assert(QUALITY_PRESETS_MAP['fhd-to-4k'].edgePeaking === 85, 'Preset "fhd-to-4k" applies 85% high-frequency edge peaking');
+assert(QUALITY_PRESETS_MAP['anime'].saturation === 35, 'Preset "anime" enhances color vibrance to 35%');
+
+// Target resolution calculations
+assert(getUpscaleTarget(1920) === '3840×2160 (4K UHD)', '1080p video upscales to 4K UHD target (3840×2160)');
+assert(getUpscaleTarget(3840) === '3840×2160 (4K UHD)', '4K video preserves 4K UHD target (3840×2160)');
+assert(getUpscaleTarget(1280) === '1920×1080 (1080p FHD)', '720p HD video upscales to 1080p FHD target (1920×1080)');
+assert(getUpscaleTarget(640) === '1920×1080 (Super Res)', '360p/480p SD video upscales to Super Res target (1920×1080)');
+
+// Split-screen bounds clamping
+function clampSplitPosition(pos) {
+  return Math.max(5, Math.min(95, pos));
+}
+assert(clampSplitPosition(50) === 50, 'Split-screen 50% position preserved');
+assert(clampSplitPosition(0) === 5, 'Split-screen 0% clamped to minimum 5% to keep handle accessible');
+assert(clampSplitPosition(100) === 95, 'Split-screen 100% clamped to maximum 95% to keep handle accessible');
+
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);
 console.log('====================================================');

@@ -43,7 +43,68 @@ export type ActiveDrawerPanel =
   | 'sub-editor'
   | 'intelligence'
   | 'analytics'
-  | 'organizer';
+  | 'organizer'
+  | 'quality';
+
+export type QualityBoostPreset = 'off' | 'sd-to-hd' | 'hd-to-fhd' | 'fhd-to-4k' | 'anime' | 'custom';
+
+export interface QualityBoostSettings {
+  enabled: boolean;
+  preset: QualityBoostPreset;
+  sharpness: number;        // 0 to 100
+  edgePeaking: number;      // 0 to 100
+  deblock: number;          // 0 to 100
+  hdrContrast: number;      // 0 to 100
+  saturation: number;       // 0 to 100
+  splitScreen: boolean;     // Before/After comparison mode
+  splitPosition: number;    // 0 to 100
+}
+
+export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoostSettings>> = {
+  off: {
+    enabled: false,
+    sharpness: 0,
+    edgePeaking: 0,
+    deblock: 0,
+    hdrContrast: 0,
+    saturation: 0,
+  },
+  'sd-to-hd': {
+    enabled: true,
+    sharpness: 45,
+    edgePeaking: 50,
+    deblock: 65,
+    hdrContrast: 20,
+    saturation: 15,
+  },
+  'hd-to-fhd': {
+    enabled: true,
+    sharpness: 60,
+    edgePeaking: 65,
+    deblock: 25,
+    hdrContrast: 25,
+    saturation: 10,
+  },
+  'fhd-to-4k': {
+    enabled: true,
+    sharpness: 80,
+    edgePeaking: 85,
+    deblock: 10,
+    hdrContrast: 30,
+    saturation: 10,
+  },
+  anime: {
+    enabled: true,
+    sharpness: 70,
+    edgePeaking: 90,
+    deblock: 40,
+    hdrContrast: 25,
+    saturation: 35,
+  },
+  custom: {
+    enabled: true,
+  },
+};
 
 interface VideoPlayerState {
   // Playback & Source
@@ -110,6 +171,9 @@ interface VideoPlayerState {
 
   // Phase 3: Transcript Search
   transcriptQuery: string;
+
+  // Phase 4: Video Quality Boost & Shader Upscaler
+  qualitySettings: QualityBoostSettings;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   loadVideo: (file: File) => void;
@@ -189,6 +253,12 @@ interface VideoPlayerState {
   removeSubtitleCue: (id: string) => void;
   setTranscriptQuery: (q: string) => void;
 
+  // Phase 4: Quality Boost Actions
+  setQualityBoostPreset: (preset: QualityBoostPreset) => void;
+  updateQualityBoostSettings: (partial: Partial<QualityBoostSettings>) => void;
+  toggleQualitySplitScreen: () => void;
+  setQualitySplitPosition: (pos: number) => void;
+
   closeVideo: () => void;
   reset: () => void;
 }
@@ -200,6 +270,18 @@ const defaultSubtitleStyles: SubtitleSettings = {
   backgroundOpacity: 0.65,
   position: 'bottom',
   bottomOffsetPercent: 8,
+};
+
+const defaultQualitySettings: QualityBoostSettings = {
+  enabled: false,
+  preset: 'off',
+  sharpness: 0,
+  edgePeaking: 0,
+  deblock: 0,
+  hdrContrast: 0,
+  saturation: 0,
+  splitScreen: false,
+  splitPosition: 50,
 };
 
 const initialState = {
@@ -264,6 +346,9 @@ const initialState = {
   isDetectingScenes: false,
   sceneDetectionProgress: 0,
   transcriptQuery: '',
+
+  // Phase 4
+  qualitySettings: defaultQualitySettings,
 };
 
 let sceneDetectionAbortController: AbortController | null = null;
@@ -919,6 +1004,58 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
   },
 
   setTranscriptQuery: (q) => set({ transcriptQuery: q }),
+
+  // ── Phase 4: Quality Boost Actions ────────────────────────────────────────
+  setQualityBoostPreset: (preset) => {
+    const presetValues = QUALITY_PRESETS_MAP[preset];
+    if (preset === 'custom') {
+      set((state) => ({
+        qualitySettings: {
+          ...state.qualitySettings,
+          preset: 'custom',
+          enabled: true,
+        },
+      }));
+    } else {
+      set((state) => ({
+        qualitySettings: {
+          ...state.qualitySettings,
+          ...presetValues,
+          preset,
+        },
+      }));
+    }
+  },
+
+  updateQualityBoostSettings: (partial) => {
+    set((state) => ({
+      qualitySettings: {
+        ...state.qualitySettings,
+        ...partial,
+        preset: 'custom',
+        enabled: partial.enabled !== undefined ? partial.enabled : true,
+      },
+    }));
+  },
+
+  toggleQualitySplitScreen: () => {
+    set((state) => ({
+      qualitySettings: {
+        ...state.qualitySettings,
+        splitScreen: !state.qualitySettings.splitScreen,
+      },
+    }));
+  },
+
+  setQualitySplitPosition: (pos) => {
+    const clamped = Math.max(5, Math.min(95, pos));
+    set((state) => ({
+      qualitySettings: {
+        ...state.qualitySettings,
+        splitPosition: clamped,
+      },
+    }));
+  },
 
   // ── Teardown ────────────────────────────────────────────────────────────
   closeVideo: () => {

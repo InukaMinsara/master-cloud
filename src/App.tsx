@@ -29,8 +29,8 @@ import { DevicePage } from '@/pages/DevicePage';
 import { ActivityPage } from '@/pages/ActivityPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { SettingsPage } from '@/pages/SettingsPage';
-// import { CanvasPage } from '@/pages/CanvasPage';
-// import { CanvasEditorPage } from '@/pages/CanvasEditorPage';
+import { CanvasPage } from '@/pages/CanvasPage';
+import { CanvasEditorPage } from '@/pages/CanvasEditorPage';
 import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { OfflineCenterPage } from '@/pages/OfflineCenterPage';
 import { SecurityCenterPage } from '@/pages/SecurityCenterPage';
@@ -119,9 +119,10 @@ export function App() {
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
         <Route path="/devices" element={<DevicePage />} />
         <Route path="/activity" element={<ActivityPage />} />
-        {/* Master Canvas temporarily hidden until upcoming full upgrade */}
-        <Route path="/canvas" element={<Navigate to="/drive" replace />} />
-        <Route path="/canvas/*" element={<Navigate to="/drive" replace />} />
+        {/* Master Canvas Routes */}
+        <Route path="/canvas" element={<CanvasPage />} />
+        <Route path="/canvas/:app" element={<CanvasEditorPage />} />
+        <Route path="/canvas/:app/:id" element={<CanvasEditorPage />} />
 
 
         <Route path="/quantum-vgpu" element={<Navigate to="/settings" replace />} />

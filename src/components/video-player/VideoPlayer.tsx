@@ -36,6 +36,7 @@ import { analyticsService } from '@/services/analyticsService';
 import { SmartTimeline } from './SmartTimeline';
 import { SubtitleOverlay } from './SubtitleOverlay';
 import { AudioVisualizerView } from './AudioVisualizerView';
+import { VideoQualityCanvas } from './VideoQualityCanvas';
 import { MiniPlayer } from './MiniPlayer';
 import { QueueDrawer } from './panels/QueueDrawer';
 import { SubtitleStudioModal } from './panels/SubtitleStudioModal';
@@ -47,6 +48,7 @@ import { SubtitleEditorModal } from './panels/SubtitleEditorModal';
 import { MasterAiModal } from './panels/MasterAiModal';
 import { PlaybackAnalyticsModal } from './panels/PlaybackAnalyticsModal';
 import { MediaOrganizerModal } from './panels/MediaOrganizerModal';
+import { QualityBoostModal } from './panels/QualityBoostModal';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
@@ -110,6 +112,7 @@ export function VideoPlayer() {
   const isControlsVisible = useVideoPlayerStore((s) => s.isControlsVisible);
   const resolution = useVideoPlayerStore((s) => s.resolution);
   const isAudioOnly = useVideoPlayerStore((s) => s.isAudioOnly);
+  const qualitySettings = useVideoPlayerStore((s) => s.qualitySettings);
   const activePanel = useVideoPlayerStore((s) => s.activePanel);
   const isMiniPlayer = useVideoPlayerStore((s) => s.isMiniPlayer);
   const queue = useVideoPlayerStore((s) => s.queue);
@@ -662,6 +665,10 @@ export function VideoPlayer() {
         case 'I':
           togglePictureInPicture();
           break;
+        case 'v':
+        case 'V':
+          setActivePanel(activePanel === 'quality' ? 'none' : 'quality');
+          break;
         case '[':
           setPointA(currentTime);
           toast.info(`A-B Loop: Point A set at ${formatTime(currentTime)}`);
@@ -897,6 +904,9 @@ export function VideoPlayer() {
       {/* ---- Audio-Only Music Studio & Live Visualizer ---- */}
       {isAudioOnly && <AudioVisualizerView />}
 
+      {/* ---- Phase 4: Real-Time GPU Quality Boost & 4K Super-Resolution Canvas ---- */}
+      {!isAudioOnly && <VideoQualityCanvas videoRef={videoRef} />}
+
       {/* ---- Feature 3: Subtitle Overlay (Video Only) ---- */}
       {!isAudioOnly && <SubtitleOverlay />}
 
@@ -1113,6 +1123,25 @@ export function VideoPlayer() {
                     {resBadge}
                   </span>
                 )
+              )}
+
+              {/* Phase 4: Video Quality Boost & 4K Super-Resolution */}
+              {!isAudioOnly && (
+                <button
+                  onClick={() => setActivePanel('quality')}
+                  className={`relative p-1.5 sm:p-2 rounded-xl transition-all ${
+                    activePanel === 'quality' || qualitySettings.enabled
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/20'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                  title="Quality Boost & 4K Super-Resolution (V)"
+                  aria-label="Quality boost"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  {qualitySettings.enabled && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+                  )}
+                </button>
               )}
 
               {/* Phase 3: Video Intelligence & Insights */}
@@ -1341,7 +1370,7 @@ export function VideoPlayer() {
         </div>
       </div>
 
-      {/* ---- Phase 2 & Phase 3 Modals and Drawers ---- */}
+      {/* ---- Phase 2, Phase 3 & Phase 4 Modals and Drawers ---- */}
       {activePanel === 'queue' && <QueueDrawer />}
       {activePanel === 'subtitles' && <SubtitleStudioModal />}
       {activePanel === 'sub-editor' && <SubtitleEditorModal videoRef={videoRef} />}
@@ -1352,6 +1381,7 @@ export function VideoPlayer() {
       {activePanel === 'intelligence' && <MasterAiModal videoRef={videoRef} />}
       {activePanel === 'analytics' && <PlaybackAnalyticsModal />}
       {activePanel === 'organizer' && <MediaOrganizerModal />}
+      {activePanel === 'quality' && <QualityBoostModal />}
 
       {/* ---- Feature 6: In-App Mini Player ---- */}
       <MiniPlayer videoRef={videoRef} />

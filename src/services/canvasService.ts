@@ -122,10 +122,20 @@ export class CanvasService {
   static getDefaultDocData(title = 'Untitled Document'): CanvasDocData {
     return {
       title,
-      content: `# ${title}\n\nWelcome to **Master Docs** on Master Cloud.\n\nStart typing your content here. You can use markdown shortcuts, format lists, write tables, and collaborate seamlessly.\n\n### Key Features:\n- ⚡ Real-time automatic cloud save\n- 🔒 Backed by your free 10 TB Master Cloud storage\n- 📝 Rich markdown and formatting support\n- 📤 Export to Markdown, Plain Text, or Print to PDF`,
+      content: `<h1 style="color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">${title}</h1>
+<p>Welcome to <strong>Master Docs</strong> on Master Cloud.</p>
+<p>Start typing your document content here. You can format text, create multi-level lists, insert tables, add citations, and collaborate seamlessly.</p>
+<h3>Key Features:</h3>
+<ul>
+  <li>⚡ <strong>Real-time Cloud Autosave:</strong> Continuously backed up to your Master Cloud Drive.</li>
+  <li>🔒 <strong>Unlimited Enterprise Storage:</strong> Backed by your 10 TB free storage allocation.</li>
+  <li>📝 <strong>Advanced Typography &amp; Ribbon:</strong> Full Word-compatible formatting tools, rulers, styles, and themes.</li>
+  <li>📤 <strong>Universal Export:</strong> Export to PDF, Word DOCX, Markdown, HTML, or Print.</li>
+</ul>
+<p></p>`,
       version: 1,
-      wordCount: 52,
-      charCount: 320,
+      wordCount: 54,
+      charCount: 330,
       lastSavedAt: new Date().toISOString(),
     };
   }
