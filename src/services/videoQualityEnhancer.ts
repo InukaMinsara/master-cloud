@@ -28,7 +28,8 @@ const FRAGMENT_SHADER_SRC = `
   precision mediump float;
 
   uniform sampler2D u_video;
-  uniform vec2 u_resolution; // Canvas / Video resolution
+  uniform vec2 u_resolution; // Canvas target / upscale output resolution
+  uniform vec2 u_source_res; // Native source video resolution
   uniform float u_sharpness; // 0.0 to 1.0
   uniform float u_edge_peaking; // 0.0 to 1.0
   uniform float u_deblock; // 0.0 to 1.0
@@ -74,11 +75,57 @@ const FRAGMENT_SHADER_SRC = `
     return mix(center, filtered, u_deblock * 0.75);
   }
 
-  // 2. Contrast Adaptive Sharpening (CAS / FSR Algorithm)
+  // 2. Edge-Adaptive Spatial Reconstruction (EASU direction gradient filter for upscaling)
+  vec3 applyEASUUpscale(vec2 uv, vec2 dxSrc, vec2 dySrc, vec3 center) {
+    if (u_resolution.x <= u_source_res.x * 1.05) {
+      return center;
+    }
+
+    vec3 colL = texture2D(u_video, uv - dxSrc).rgb;
+    vec3 colR = texture2D(u_video, uv + dxSrc).rgb;
+    vec3 colU = texture2D(u_video, uv - dySrc).rgb;
+    vec3 colD = texture2D(u_video, uv + dySrc).rgb;
+
+    float lumaL = getLuma(colL);
+    float lumaR = getLuma(colR);
+    float lumaU = getLuma(colU);
+    float lumaD = getLuma(colD);
+
+    vec3 colUL = texture2D(u_video, uv - dxSrc - dySrc).rgb;
+    vec3 colUR = texture2D(u_video, uv + dxSrc - dySrc).rgb;
+    vec3 colDL = texture2D(u_video, uv - dxSrc + dySrc).rgb;
+    vec3 colDR = texture2D(u_video, uv + dxSrc + dySrc).rgb;
+
+    float lumaUL = getLuma(colUL);
+    float lumaUR = getLuma(colUR);
+    float lumaDL = getLuma(colDL);
+    float lumaDR = getLuma(colDR);
+
+    float dirH = abs(lumaL - lumaR);
+    float dirV = abs(lumaU - lumaD);
+    float dirD1 = abs(lumaUL - lumaDR);
+    float dirD2 = abs(lumaUR - lumaDL);
+
+    float wH = 1.0 / (1.0 + dirH * 4.0);
+    float wV = 1.0 / (1.0 + dirV * 4.0);
+    float wD1 = 1.0 / (1.0 + dirD1 * 4.0);
+    float wD2 = 1.0 / (1.0 + dirD2 * 4.0);
+
+    vec3 edgeBlend = (colL + colR) * wH * 0.5 +
+                     (colU + colD) * wV * 0.5 +
+                     (colUL + colDR) * wD1 * 0.25 +
+                     (colUR + colDL) * wD2 * 0.25;
+    float totalW = wH + wV + (wD1 + wD2) * 0.5;
+
+    vec3 reconstructed = mix(center, edgeBlend / max(totalW, 0.001), 0.45);
+    return reconstructed;
+  }
+
+  // 3. Contrast Adaptive Sharpening (CAS / FSR Algorithm on output grid)
   vec3 applyCAS(vec2 uv, vec2 dx, vec2 dy, vec3 baseColor) {
     if (u_sharpness <= 0.01 && u_edge_peaking <= 0.01) return baseColor;
 
-    // 4-tap cross neighborhood
+    // 4-tap cross neighborhood on target resolution
     vec3 colUp    = texture2D(u_video, uv - dy).rgb;
     vec3 colDown  = texture2D(u_video, uv + dy).rgb;
     vec3 colLeft  = texture2D(u_video, uv - dx).rgb;
@@ -113,15 +160,13 @@ const FRAGMENT_SHADER_SRC = `
     return clamp(sharpened, 0.0, 1.0);
   }
 
-  // 3. Dynamic Contrast & Color Vibrance Tone
+  // 4. Dynamic Contrast & Color Vibrance Tone
   vec3 applyGrading(vec3 col) {
-    // Contrast S-Curve
     if (u_hdr_contrast > 0.01) {
       vec3 cont = (col - 0.5) * (1.0 + u_hdr_contrast * 0.4) + 0.5;
       col = clamp(cont, 0.0, 1.0);
     }
 
-    // Color Saturation & Vibrance
     if (u_saturation > 0.01) {
       float luma = getLuma(col);
       col = mix(vec3(luma), col, 1.0 + u_saturation * 0.45);
@@ -135,7 +180,6 @@ const FRAGMENT_SHADER_SRC = `
 
     // Split-Screen Before/After View
     if (u_split_screen == 1) {
-      // 2px Glowing Divider Line
       float splitDist = abs(v_uv.x - u_split_pos);
       float lineThresh = 2.0 / u_resolution.x;
       if (splitDist < lineThresh) {
@@ -150,15 +194,20 @@ const FRAGMENT_SHADER_SRC = `
       }
     }
 
-    // Step 1: Pixel unit coordinates
-    vec2 dx = vec2(1.0 / u_resolution.x, 0.0);
-    vec2 dy = vec2(0.0, 1.0 / u_resolution.y);
+    // Source vs Target coordinate deltas
+    vec2 dxSrc = vec2(1.0 / u_source_res.x, 0.0);
+    vec2 dySrc = vec2(0.0, 1.0 / u_source_res.y);
+    vec2 dxDst = vec2(1.0 / u_resolution.x, 0.0);
+    vec2 dyDst = vec2(0.0, 1.0 / u_resolution.y);
 
-    // Step 2: Denoise & Deblocking
-    vec3 deblocked = applyDeblock(v_uv, dx, dy, rawColor);
+    // Step 1: Denoise & Deblocking on source scale
+    vec3 deblocked = applyDeblock(v_uv, dxSrc, dySrc, rawColor);
 
-    // Step 3: Contrast Adaptive Sharpening & Edge Peaking
-    vec3 sharpened = applyCAS(v_uv, dx, dy, deblocked);
+    // Step 2: Edge-Adaptive Spatial Upscaling (EASU direction reconstruction)
+    vec3 upscaled = applyEASUUpscale(v_uv, dxSrc, dySrc, deblocked);
+
+    // Step 3: Contrast Adaptive Sharpening & Edge Peaking on high-res target grid
+    vec3 sharpened = applyCAS(v_uv, dxDst, dyDst, upscaled);
 
     // Step 4: HDR Tone & Vibrance
     vec3 finalColor = applyGrading(sharpened);
@@ -178,6 +227,7 @@ export class VideoQualityEnhancer {
   // Uniform locations
   private uVideoLoc: WebGLUniformLocation | null = null;
   private uResLoc: WebGLUniformLocation | null = null;
+  private uSourceResLoc: WebGLUniformLocation | null = null;
   private uSharpnessLoc: WebGLUniformLocation | null = null;
   private uEdgePeakingLoc: WebGLUniformLocation | null = null;
   private uDeblockLoc: WebGLUniformLocation | null = null;
@@ -266,6 +316,7 @@ export class VideoQualityEnhancer {
     // Cache Uniforms
     this.uVideoLoc = gl.getUniformLocation(program, 'u_video');
     this.uResLoc = gl.getUniformLocation(program, 'u_resolution');
+    this.uSourceResLoc = gl.getUniformLocation(program, 'u_source_res');
     this.uSharpnessLoc = gl.getUniformLocation(program, 'u_sharpness');
     this.uEdgePeakingLoc = gl.getUniformLocation(program, 'u_edge_peaking');
     this.uDeblockLoc = gl.getUniformLocation(program, 'u_deblock');
@@ -288,14 +339,39 @@ export class VideoQualityEnhancer {
       return false;
     }
 
-    // Match canvas dimensions to video or viewport
-    const displayWidth = video.videoWidth;
-    const displayHeight = video.videoHeight;
+    // Super-Resolution Upscaling: Compute target output resolution
+    let targetWidth = video.videoWidth;
+    let targetHeight = video.videoHeight;
 
-    if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
-      this.canvas.width = displayWidth;
-      this.canvas.height = displayHeight;
-      gl.viewport(0, 0, displayWidth, displayHeight);
+    if (settings.enabled && settings.preset !== 'off') {
+      const aspect = (video.videoWidth || 16) / Math.max(video.videoHeight || 9, 1);
+      if (settings.preset === 'fhd-to-4k') {
+        // 4K UHD Target (3840×2160)
+        targetWidth = Math.max(video.videoWidth, 3840);
+        targetHeight = Math.round(targetWidth / aspect);
+      } else if (settings.preset === 'hd-to-fhd' || settings.preset === 'sd-to-hd') {
+        // 1080p FHD Target (1920×1080)
+        targetWidth = Math.max(video.videoWidth, 1920);
+        targetHeight = Math.round(targetWidth / aspect);
+      } else {
+        // Anime or Custom: match container viewport * devicePixelRatio, min video resolution
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (rect.width > 0 && rect.height > 0) {
+          targetWidth = Math.max(video.videoWidth, Math.round(rect.width * dpr));
+          targetHeight = Math.max(video.videoHeight, Math.round(rect.height * dpr));
+        }
+      }
+    }
+
+    // Clamp to maximum safe WebGL texture/framebuffer dimensions
+    targetWidth = Math.min(Math.max(targetWidth, 16), 3840);
+    targetHeight = Math.min(Math.max(targetHeight, 16), 2160);
+
+    if (this.canvas.width !== targetWidth || this.canvas.height !== targetHeight) {
+      this.canvas.width = targetWidth;
+      this.canvas.height = targetHeight;
+      gl.viewport(0, 0, targetWidth, targetHeight);
     }
 
     gl.useProgram(this.program);
@@ -307,7 +383,8 @@ export class VideoQualityEnhancer {
     gl.uniform1i(this.uVideoLoc, 0);
 
     // Pass parameters
-    gl.uniform2f(this.uResLoc, displayWidth, displayHeight);
+    gl.uniform2f(this.uResLoc, targetWidth, targetHeight);
+    gl.uniform2f(this.uSourceResLoc, video.videoWidth, video.videoHeight);
     gl.uniform1f(this.uSharpnessLoc, settings.sharpness / 100);
     gl.uniform1f(this.uEdgePeakingLoc, settings.edgePeaking / 100);
     gl.uniform1f(this.uDeblockLoc, settings.deblock / 100);

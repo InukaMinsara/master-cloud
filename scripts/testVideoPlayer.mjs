@@ -1274,6 +1274,30 @@ assert(getUpscaleTarget(3840) === '3840×2160 (4K UHD)', '4K video preserves 4K 
 assert(getUpscaleTarget(1280) === '1920×1080 (1080p FHD)', '720p HD video upscales to 1080p FHD target (1920×1080)');
 assert(getUpscaleTarget(640) === '1920×1080 (Super Res)', '360p/480p SD video upscales to Super Res target (1920×1080)');
 
+// True resolution buffer dimensions calculation
+function computeTargetDimensions(srcW, srcH, preset) {
+  const aspect = srcW / Math.max(srcH, 1);
+  let tw = srcW;
+  let th = srcH;
+  if (preset === 'fhd-to-4k') {
+    tw = Math.max(srcW, 3840);
+    th = Math.round(tw / aspect);
+  } else if (preset === 'hd-to-fhd' || preset === 'sd-to-hd') {
+    tw = Math.max(srcW, 1920);
+    th = Math.round(tw / aspect);
+  }
+  return { width: Math.min(tw, 3840), height: Math.min(th, 2160) };
+}
+
+const dims720p = computeTargetDimensions(1280, 720, 'hd-to-fhd');
+assert(dims720p.width === 1920 && dims720p.height === 1080, '720p scales to true 1920x1080 render buffer');
+
+const dims360p = computeTargetDimensions(640, 360, 'sd-to-hd');
+assert(dims360p.width === 1920 && dims360p.height === 1080, '360p scales to true 1920x1080 render buffer');
+
+const dims1080p = computeTargetDimensions(1920, 1080, 'fhd-to-4k');
+assert(dims1080p.width === 3840 && dims1080p.height === 2160, '1080p scales to true 3840x2160 4K UHD render buffer');
+
 // Split-screen bounds clamping
 function clampSplitPosition(pos) {
   return Math.max(5, Math.min(95, pos));
