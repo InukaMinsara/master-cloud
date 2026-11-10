@@ -30,7 +30,7 @@ export function MasterDocsTemplateModal({ isOpen, onClose, onSelectTemplate }: M
               <LayoutTemplate className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-foreground">Master Docs Template Gallery</h3>
+              <h3 className="text-lg font-bold text-foreground">Docs Template Gallery</h3>
               <p className="text-xs text-muted-foreground">Select a professionally formatted document template to start.</p>
             </div>
           </div>

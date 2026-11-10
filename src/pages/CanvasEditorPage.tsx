@@ -37,7 +37,7 @@ export function CanvasEditorPage() {
 
     // Fast path for new document: INSTANT ZERO-LATENCY LOAD!
     if (!id || id === 'new') {
-      const defaultTitle = `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
+      const defaultTitle = (canvasApp === 'docs' || canvasApp === 'word') ? 'Untitled Document' : `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
       const initial = CanvasService.getDefaultData(canvasApp, defaultTitle);
       setDocData(initial);
       setLoading(false);
@@ -76,7 +76,7 @@ export function CanvasEditorPage() {
   const handleSave = async (updatedData: any) => {
     let target = currentFileRef.current;
     if (!target) {
-      const defaultTitle = `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
+      const defaultTitle = (canvasApp === 'docs' || canvasApp === 'word') ? 'Untitled Document' : `Untitled ${canvasApp.charAt(0).toUpperCase() + canvasApp.slice(1)}`;
       const { file } = await CanvasService.createCanvasDocument(canvasApp, defaultTitle);
       target = file;
       setCurrentFile(file);
@@ -91,7 +91,7 @@ export function CanvasEditorPage() {
       <div className="flex-1 flex flex-col items-center justify-center bg-background space-y-3">
         <Clock className="h-8 w-8 text-primary animate-spin" />
         <p className="text-sm font-medium text-muted-foreground">
-          Loading Master Canvas Document...
+          Loading Document...
         </p>
       </div>
     );

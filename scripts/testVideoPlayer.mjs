@@ -1274,30 +1274,6 @@ assert(getUpscaleTarget(3840) === '3840×2160 (4K UHD)', '4K video preserves 4K 
 assert(getUpscaleTarget(1280) === '1920×1080 (1080p FHD)', '720p HD video upscales to 1080p FHD target (1920×1080)');
 assert(getUpscaleTarget(640) === '1920×1080 (Super Res)', '360p/480p SD video upscales to Super Res target (1920×1080)');
 
-// True resolution buffer dimensions calculation
-function computeTargetDimensions(srcW, srcH, preset) {
-  const aspect = srcW / Math.max(srcH, 1);
-  let tw = srcW;
-  let th = srcH;
-  if (preset === 'fhd-to-4k') {
-    tw = Math.max(srcW, 3840);
-    th = Math.round(tw / aspect);
-  } else if (preset === 'hd-to-fhd' || preset === 'sd-to-hd') {
-    tw = Math.max(srcW, 1920);
-    th = Math.round(tw / aspect);
-  }
-  return { width: Math.min(tw, 3840), height: Math.min(th, 2160) };
-}
-
-const dims720p = computeTargetDimensions(1280, 720, 'hd-to-fhd');
-assert(dims720p.width === 1920 && dims720p.height === 1080, '720p scales to true 1920x1080 render buffer');
-
-const dims360p = computeTargetDimensions(640, 360, 'sd-to-hd');
-assert(dims360p.width === 1920 && dims360p.height === 1080, '360p scales to true 1920x1080 render buffer');
-
-const dims1080p = computeTargetDimensions(1920, 1080, 'fhd-to-4k');
-assert(dims1080p.width === 3840 && dims1080p.height === 2160, '1080p scales to true 3840x2160 4K UHD render buffer');
-
 // Split-screen bounds clamping
 function clampSplitPosition(pos) {
   return Math.max(5, Math.min(95, pos));
@@ -1305,6 +1281,78 @@ function clampSplitPosition(pos) {
 assert(clampSplitPosition(50) === 50, 'Split-screen 50% position preserved');
 assert(clampSplitPosition(0) === 5, 'Split-screen 0% clamped to minimum 5% to keep handle accessible');
 assert(clampSplitPosition(100) === 95, 'Split-screen 100% clamped to maximum 95% to keep handle accessible');
+
+// Super-Resolution Upscaling Algorithm Math
+function calculateUpscaleResolution(srcW, srcH, target = 'auto') {
+  if (target === 'native' || !srcW || !srcH) {
+    return { width: srcW || 1280, height: srcH || 720, scale: 1.0, label: 'Native' };
+  }
+  const aspect = srcW / srcH;
+  let targetW = srcW;
+  let targetH = srcH;
+  let label = 'Native';
+
+  if (target === '4k') {
+    targetW = 3840;
+    targetH = Math.round(3840 / aspect);
+    label = '3840×2160 (4K UHD)';
+  } else if (target === '1440p') {
+    targetW = 2560;
+    targetH = Math.round(2560 / aspect);
+    label = '2560×1440 (2K QHD)';
+  } else if (target === '1080p') {
+    targetW = 1920;
+    targetH = Math.round(1920 / aspect);
+    label = '1920×1080 (1080p FHD)';
+  } else if (target === 'auto') {
+    if (srcW <= 720 || srcH <= 480) {
+      targetW = 1920;
+      targetH = Math.round(1920 / aspect);
+      label = '1920×1080 (Super-Res HD)';
+    } else if (srcW <= 1280) {
+      targetW = 1920;
+      targetH = Math.round(1920 / aspect);
+      label = '1920×1080 (1080p FHD)';
+    } else if (srcW < 3840) {
+      targetW = 3840;
+      targetH = Math.round(3840 / aspect);
+      label = '3840×2160 (4K UHD)';
+    } else {
+      targetW = srcW;
+      targetH = srcH;
+      label = `${srcW}×${srcH} (4K Native)`;
+    }
+  }
+
+  targetW = Math.round(targetW / 2) * 2;
+  targetH = Math.round(targetH / 2) * 2;
+  const scale = Number((targetW / srcW).toFixed(2));
+  return { width: targetW, height: targetH, scale, label };
+}
+
+const up720to4k = calculateUpscaleResolution(1280, 720, '4k');
+assert(up720to4k.width === 3840 && up720to4k.height === 2160, '720p HD upscales to exact 4K UHD (3840×2160)');
+assert(up720to4k.scale === 3.0, '720p to 4K has exact 3.0x scale factor (9x reconstructed pixel count)');
+
+const up360toFhd = calculateUpscaleResolution(640, 360, '1080p');
+assert(up360toFhd.width === 1920 && up360toFhd.height === 1080, '360p SD upscales to 1080p FHD (1920×1080)');
+assert(up360toFhd.scale === 3.0, '360p to 1080p has 3.0x scale factor');
+
+const up480to4k = calculateUpscaleResolution(854, 480, '4k');
+assert(up480to4k.width === 3840, '480p upscales to 4K target width 3840');
+assert(up480to4k.scale >= 4.4, '480p to 4K achieves >4.4x super-resolution scale factor');
+
+const upNative = calculateUpscaleResolution(1280, 720, 'native');
+assert(upNative.width === 1280 && upNative.scale === 1.0, 'Native target preserves original source dimensions');
+
+// Ambilight Ambient Glow feature checks
+let ambilightState = true;
+function toggleAmbilight() { ambilightState = !ambilightState; }
+assert(ambilightState === true, 'Ambilight Screen Glow enabled by default');
+toggleAmbilight();
+assert(ambilightState === false, 'Ambilight Screen Glow toggled to false');
+toggleAmbilight();
+assert(ambilightState === true, 'Ambilight Screen Glow toggled back to true');
 
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);

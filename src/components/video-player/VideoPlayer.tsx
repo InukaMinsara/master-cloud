@@ -25,6 +25,7 @@ import {
   FolderSync,
   FileText,
   Music,
+  Sun,
 } from 'lucide-react';
 import Hls from 'hls.js';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
@@ -37,6 +38,7 @@ import { SmartTimeline } from './SmartTimeline';
 import { SubtitleOverlay } from './SubtitleOverlay';
 import { AudioVisualizerView } from './AudioVisualizerView';
 import { VideoQualityCanvas } from './VideoQualityCanvas';
+import { AmbilightGlow } from './AmbilightGlow';
 import { MiniPlayer } from './MiniPlayer';
 import { QueueDrawer } from './panels/QueueDrawer';
 import { SubtitleStudioModal } from './panels/SubtitleStudioModal';
@@ -113,6 +115,7 @@ export function VideoPlayer() {
   const resolution = useVideoPlayerStore((s) => s.resolution);
   const isAudioOnly = useVideoPlayerStore((s) => s.isAudioOnly);
   const qualitySettings = useVideoPlayerStore((s) => s.qualitySettings);
+  const isAmbilightEnabled = useVideoPlayerStore((s) => s.isAmbilightEnabled);
   const activePanel = useVideoPlayerStore((s) => s.activePanel);
   const isMiniPlayer = useVideoPlayerStore((s) => s.isMiniPlayer);
   const queue = useVideoPlayerStore((s) => s.queue);
@@ -144,6 +147,7 @@ export function VideoPlayer() {
   const clearAbRepeat = useVideoPlayerStore((s) => s.clearAbRepeat);
   const playNext = useVideoPlayerStore((s) => s.playNext);
   const playPrevious = useVideoPlayerStore((s) => s.playPrevious);
+  const toggleAmbilight = useVideoPlayerStore((s) => s.toggleAmbilight);
 
   // ---- Codec compatibility pre-check --------------------------------------
   useEffect(() => {
@@ -669,6 +673,11 @@ export function VideoPlayer() {
         case 'V':
           setActivePanel(activePanel === 'quality' ? 'none' : 'quality');
           break;
+        case 'a':
+        case 'A':
+          toggleAmbilight();
+          toast.info(`Ambilight Glow: ${!isAmbilightEnabled ? 'Enabled' : 'Disabled'}`);
+          break;
         case '[':
           setPointA(currentTime);
           toast.info(`A-B Loop: Point A set at ${formatTime(currentTime)}`);
@@ -734,6 +743,8 @@ export function VideoPlayer() {
       playbackSpeed,
       duration,
       currentTime,
+      toggleAmbilight,
+      isAmbilightEnabled,
     ],
   );
 
@@ -880,6 +891,9 @@ export function VideoPlayer() {
           width: 72px;
         }
       `}</style>
+
+      {/* ---- Dynamic Ambient Screen Glow (Ambilight) ---- */}
+      <AmbilightGlow videoRef={videoRef} />
 
       {/* ---- Video Element (handles both video and audio playback) ---- */}
       <video
@@ -1117,13 +1131,44 @@ export function VideoPlayer() {
                   <Music className="w-3 h-3 text-purple-400" />
                   <span>AUDIO MODE</span>
                 </span>
+              ) : qualitySettings.enabled ? (
+                <button
+                  onClick={() => setActivePanel('quality')}
+                  className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 hidden md:flex items-center gap-1 shadow-sm shadow-amber-500/20 hover:bg-amber-500/30 transition-all cursor-pointer"
+                  title="Super-Resolution Upscaling Active. Click to adjust."
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>
+                    {qualitySettings.upscaleTarget === '4k' || (qualitySettings.upscaleTarget === 'auto' && (resolution?.width || 0) >= 1280)
+                      ? '4K UHD UPSCALE ⚡'
+                      : '1080p FHD UPSCALE ⚡'}
+                  </span>
+                </button>
               ) : (
                 resBadge && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hidden md:inline-block">
+                  <button
+                    onClick={() => setActivePanel('quality')}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hidden md:inline-block hover:bg-cyan-500/30 transition-all cursor-pointer"
+                    title="Click to boost resolution & quality"
+                  >
                     {resBadge}
-                  </span>
+                  </button>
                 )
               )}
+
+              {/* Ambilight Screen Glow Toggle */}
+              <button
+                onClick={toggleAmbilight}
+                className={`p-1.5 sm:p-2 rounded-xl transition-all ${
+                  isAmbilightEnabled
+                    ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30 shadow-sm shadow-amber-400/10'
+                    : 'text-white/60 hover:bg-white/10 hover:text-white'
+                }`}
+                title="Ambilight Screen Glow (A)"
+                aria-label="Ambilight screen glow"
+              >
+                <Sun className="w-4 h-4 text-amber-300" />
+              </button>
 
               {/* Phase 4: Video Quality Boost & 4K Super-Resolution */}
               {!isAudioOnly && (

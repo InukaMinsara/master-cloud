@@ -246,7 +246,7 @@ export function ContextMenu() {
               className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 text-left transition-colors font-semibold"
             >
               <FileText className="h-4 w-4 text-blue-600" />
-              <span>Edit in Master Docs</span>
+              <span>Open in Docs</span>
             </button>
           )}
 

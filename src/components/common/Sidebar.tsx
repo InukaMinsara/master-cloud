@@ -61,7 +61,7 @@ export function Sidebar() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
-    { label: 'Master Canvas', path: '/canvas', icon: Sparkles, badge: 'Docs' },
+    { label: 'Docs', path: '/canvas', icon: FileText },
 
     { label: 'Shared with me', path: '/shared', icon: Users },
     { label: 'Recent', path: '/recent', icon: Clock },

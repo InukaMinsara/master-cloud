@@ -121,6 +121,7 @@ export function App() {
         <Route path="/activity" element={<ActivityPage />} />
         {/* Master Canvas Routes */}
         <Route path="/canvas" element={<CanvasPage />} />
+        <Route path="/docs" element={<Navigate to="/canvas" replace />} />
         <Route path="/canvas/:app" element={<CanvasEditorPage />} />
         <Route path="/canvas/:app/:id" element={<CanvasEditorPage />} />
 

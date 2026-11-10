@@ -47,10 +47,12 @@ export type ActiveDrawerPanel =
   | 'quality';
 
 export type QualityBoostPreset = 'off' | 'sd-to-hd' | 'hd-to-fhd' | 'fhd-to-4k' | 'anime' | 'custom';
+export type UpscaleTarget = 'auto' | '1080p' | '1440p' | '4k' | 'native';
 
 export interface QualityBoostSettings {
   enabled: boolean;
   preset: QualityBoostPreset;
+  upscaleTarget: UpscaleTarget;
   sharpness: number;        // 0 to 100
   edgePeaking: number;      // 0 to 100
   deblock: number;          // 0 to 100
@@ -63,6 +65,7 @@ export interface QualityBoostSettings {
 export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoostSettings>> = {
   off: {
     enabled: false,
+    upscaleTarget: 'native',
     sharpness: 0,
     edgePeaking: 0,
     deblock: 0,
@@ -71,6 +74,7 @@ export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoos
   },
   'sd-to-hd': {
     enabled: true,
+    upscaleTarget: '1080p',
     sharpness: 45,
     edgePeaking: 50,
     deblock: 65,
@@ -79,6 +83,7 @@ export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoos
   },
   'hd-to-fhd': {
     enabled: true,
+    upscaleTarget: '1080p',
     sharpness: 60,
     edgePeaking: 65,
     deblock: 25,
@@ -87,6 +92,7 @@ export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoos
   },
   'fhd-to-4k': {
     enabled: true,
+    upscaleTarget: '4k',
     sharpness: 80,
     edgePeaking: 85,
     deblock: 10,
@@ -95,6 +101,7 @@ export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoos
   },
   anime: {
     enabled: true,
+    upscaleTarget: '4k',
     sharpness: 70,
     edgePeaking: 90,
     deblock: 40,
@@ -103,6 +110,7 @@ export const QUALITY_PRESETS_MAP: Record<QualityBoostPreset, Partial<QualityBoos
   },
   custom: {
     enabled: true,
+    upscaleTarget: 'auto',
   },
 };
 
@@ -174,6 +182,7 @@ interface VideoPlayerState {
 
   // Phase 4: Video Quality Boost & Shader Upscaler
   qualitySettings: QualityBoostSettings;
+  isAmbilightEnabled: boolean;
 
   // ── Actions ─────────────────────────────────────────────────────────────
   loadVideo: (file: File) => void;
@@ -255,9 +264,12 @@ interface VideoPlayerState {
 
   // Phase 4: Quality Boost Actions
   setQualityBoostPreset: (preset: QualityBoostPreset) => void;
+  setQualityUpscaleTarget: (target: UpscaleTarget) => void;
   updateQualityBoostSettings: (partial: Partial<QualityBoostSettings>) => void;
   toggleQualitySplitScreen: () => void;
   setQualitySplitPosition: (pos: number) => void;
+  toggleAmbilight: () => void;
+  setAmbilightEnabled: (enabled: boolean) => void;
 
   closeVideo: () => void;
   reset: () => void;
@@ -275,6 +287,7 @@ const defaultSubtitleStyles: SubtitleSettings = {
 const defaultQualitySettings: QualityBoostSettings = {
   enabled: false,
   preset: 'off',
+  upscaleTarget: 'auto',
   sharpness: 0,
   edgePeaking: 0,
   deblock: 0,
@@ -349,6 +362,7 @@ const initialState = {
 
   // Phase 4
   qualitySettings: defaultQualitySettings,
+  isAmbilightEnabled: true,
 };
 
 let sceneDetectionAbortController: AbortController | null = null;
@@ -1055,6 +1069,24 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
         splitPosition: clamped,
       },
     }));
+  },
+
+  setQualityUpscaleTarget: (target) => {
+    set((state) => ({
+      qualitySettings: {
+        ...state.qualitySettings,
+        upscaleTarget: target,
+        enabled: target !== 'native' ? true : state.qualitySettings.enabled,
+      },
+    }));
+  },
+
+  toggleAmbilight: () => {
+    set((state) => ({ isAmbilightEnabled: !state.isAmbilightEnabled }));
+  },
+
+  setAmbilightEnabled: (enabled) => {
+    set({ isAmbilightEnabled: enabled });
   },
 
   // ── Teardown ────────────────────────────────────────────────────────────

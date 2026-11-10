@@ -614,7 +614,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           <button
             onClick={() => navigate('/canvas')}
             className="p-1.5 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title="Back to Master Canvas"
+            title="Back to Docs"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>

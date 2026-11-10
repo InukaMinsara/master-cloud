@@ -20,7 +20,7 @@ export const CANVAS_APP_CONFIG: Record<CanvasAppType, {
   description: string;
 }> = {
   docs: {
-    name: 'Master Docs',
+    name: 'Docs',
     ext: 'mdoc',
     mime: 'application/x-master-doc',
     iconName: 'FileText',
@@ -123,7 +123,7 @@ export class CanvasService {
     return {
       title,
       content: `<h1 style="color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">${title}</h1>
-<p>Welcome to <strong>Master Docs</strong> on Master Cloud.</p>
+<p>Welcome to <strong>Docs</strong> on Master Cloud.</p>
 <p>Start typing your document content here. You can format text, create multi-level lists, insert tables, add citations, and collaborate seamlessly.</p>
 <h3>Key Features:</h3>
 <ul>
@@ -435,13 +435,17 @@ export class CanvasService {
   // Create a brand new file in Master Cloud with zero delay
   static async createCanvasDocument(
     type: CanvasAppType,
-    title = 'Untitled',
-    parentFolderId: string | null = null
+    title = 'Untitled Document',
+    parentFolderId: string | null = null,
+    customContent?: string
   ): Promise<{ file: FileItem; initialData: any }> {
     const config = CANVAS_APP_CONFIG[type] || CANVAS_APP_CONFIG.docs;
-    const filename = `${title.trim() || 'Untitled'}.${config.ext}`;
+    const filename = `${title.trim() || 'Untitled Document'}.${config.ext}`;
 
     const initialData = this.getDefaultData(type, title);
+    if (customContent && (type === 'docs' || type === 'word')) {
+      initialData.content = customContent;
+    }
     const jsonString = JSON.stringify(initialData, null, 2);
 
     const createdFile = await api.createDocumentFile(

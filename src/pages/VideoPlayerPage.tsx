@@ -43,6 +43,7 @@ const KEYBOARD_SHORTCUTS = [
   { keys: 'N / P', action: 'Next / Prev Media' },
   { keys: 'I', action: 'Mini Player / PiP' },
   { keys: 'V', action: 'Quality Boost & 4K' },
+  { keys: 'A', action: 'Ambilight Screen Glow' },
 ];
 
 const MEDIA_ACCEPT =
