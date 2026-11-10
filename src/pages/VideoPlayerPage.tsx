@@ -1,5 +1,5 @@
 import React from 'react';
-import { Film, Upload, FileVideo, Info, Keyboard, X, HardDrive, Sparkles, BarChart3, FolderSync, Brain } from 'lucide-react';
+import { Film, Upload, FileVideo, Music, Disc3, Info, Keyboard, X, HardDrive, Sparkles, BarChart3, FolderSync, Brain } from 'lucide-react';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
 import { VideoPlayer } from '@/components/video-player/VideoPlayer';
 import { VideoDropZone } from '@/components/video-player/VideoDropZone';
@@ -11,12 +11,12 @@ import { formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 const SUPPORTED_FORMATS = [
-  { ext: 'MP4', note: 'H.264 / AAC / AV1' },
-  { ext: 'WebM', note: 'VP8 / VP9 / Opus' },
-  { ext: 'MOV', note: 'QuickTime / H.264' },
-  { ext: 'MKV', note: 'Matroska' },
-  { ext: 'AVI', note: 'Standard Containers' },
-  { ext: 'OGG', note: 'Theora / Vorbis' },
+  { ext: 'MP4', note: 'H.264 / AAC / AV1 Video', isAudio: false },
+  { ext: 'WebM', note: 'VP8 / VP9 / Opus Video', isAudio: false },
+  { ext: 'MKV', note: 'Matroska Video Container', isAudio: false },
+  { ext: 'MP3', note: 'MPEG-1/2 Audio Layer III', isAudio: true },
+  { ext: 'FLAC', note: 'Free Lossless Audio Codec', isAudio: true },
+  { ext: 'WAV', note: 'Linear PCM Uncompressed', isAudio: true },
 ];
 
 const KEYBOARD_SHORTCUTS = [
@@ -39,16 +39,18 @@ const KEYBOARD_SHORTCUTS = [
   { keys: 'S', action: 'Screenshot Frame' },
   { keys: '[ ]', action: 'Set Loop A / B' },
   { keys: '\\', action: 'Clear A-B Loop' },
-  { keys: 'N / P', action: 'Next / Prev Video' },
+  { keys: 'N / P', action: 'Next / Prev Media' },
   { keys: 'I', action: 'Mini Player / PiP' },
 ];
 
-const VIDEO_ACCEPT = 'video/*,.mp4,.webm,.mov,.avi,.mkv,.ogg,.ogv,.m4v,.3gp,.flv,.wmv,.ts,.m2ts';
+const MEDIA_ACCEPT =
+  'video/*,audio/*,.mp4,.webm,.mov,.avi,.mkv,.ogg,.ogv,.m4v,.3gp,.flv,.wmv,.ts,.m2ts,.mp3,.wav,.flac,.aac,.m4a,.opus,.wma';
 
 export function VideoPlayerPage() {
   const videoSrc = useVideoPlayerStore((s) => s.videoSrc);
   const fileName = useVideoPlayerStore((s) => s.fileName);
   const fileSize = useVideoPlayerStore((s) => s.fileSize);
+  const isAudioOnly = useVideoPlayerStore((s) => s.isAudioOnly);
   const isControlsVisible = useVideoPlayerStore((s) => s.isControlsVisible);
   const activePanel = useVideoPlayerStore((s) => s.activePanel);
   const loadVideo = useVideoPlayerStore((s) => s.loadVideo);
@@ -76,14 +78,14 @@ export function VideoPlayerPage() {
     <input
       ref={fileInputRef}
       type="file"
-      accept={VIDEO_ACCEPT}
+      accept={MEDIA_ACCEPT}
       className="hidden"
       onChange={handleFileSelect}
     />
   );
 
   // ═══════════════════════════════════════════════
-  //  VIDEO LOADED → Full-size player
+  //  MEDIA LOADED → Full-size player
   // ═══════════════════════════════════════════════
   if (videoSrc) {
     return (
@@ -96,8 +98,17 @@ export function VideoPlayerPage() {
             bg-gradient-to-b from-black/80 via-black/40 to-transparent backdrop-blur-sm
             transition-opacity duration-300 ${isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <FileVideo className="h-4 w-4 text-cyan-400 shrink-0" />
+          {isAudioOnly ? (
+            <Music className="h-4 w-4 text-purple-400 shrink-0" />
+          ) : (
+            <FileVideo className="h-4 w-4 text-cyan-400 shrink-0" />
+          )}
           <span className="text-sm font-semibold text-white truncate">{fileName}</span>
+          {isAudioOnly && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 tracking-wider">
+              MUSIC
+            </span>
+          )}
           {fileSize != null && fileSize > 0 && (
             <span className="text-xs text-white/50 font-mono shrink-0 flex items-center gap-1">
               <HardDrive className="h-3 w-3" />
@@ -132,14 +143,17 @@ export function VideoPlayerPage() {
       <div className="flex flex-col items-center justify-center flex-1 max-w-3xl mx-auto w-full py-8 gap-7">
         {/* ── Branding ── */}
         <div className="flex flex-col items-center text-center gap-3">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/5">
-            <Film className="h-8 w-8 text-cyan-400" />
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/20 to-purple-500/20 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/5">
+            <div className="flex items-center gap-1">
+              <Film className="h-6 w-6 text-cyan-400" />
+              <Music className="h-6 w-6 text-purple-400" />
+            </div>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             MASTER CLOUD Media Studio
           </h1>
           <p className="text-sm text-muted-foreground max-w-lg">
-            Professional browser video player with Smart Timeline, 10-Band Equalizer, Subtitle Studio, Bookmarks, and Local Media Library.
+            High-performance Video & Music Player with Smart Timeline, 10-Band Equalizer, Live Audio Spectrum, Subtitle Studio, and Local Media Library.
           </p>
         </div>
 
@@ -155,7 +169,7 @@ export function VideoPlayerPage() {
             className="rounded-xl gap-2 font-semibold shadow-lg shadow-blue-500/10"
           >
             <Upload className="h-4 w-4" />
-            Open Video File
+            Open Media File
           </Button>
           <Button
             variant="outline"
@@ -202,12 +216,16 @@ export function VideoPlayerPage() {
             Supported Formats & Browser Decoders
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {SUPPORTED_FORMATS.map(({ ext, note }) => (
+            {SUPPORTED_FORMATS.map(({ ext, note, isAudio }) => (
               <div
                 key={ext}
                 className="flex items-center gap-2.5 rounded-xl bg-white/5 border border-border/40 px-3 py-2"
               >
-                <FileVideo className="h-3.5 w-3.5 text-cyan-400/70 shrink-0" />
+                {isAudio ? (
+                  <Music className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                ) : (
+                  <FileVideo className="h-3.5 w-3.5 text-cyan-400/70 shrink-0" />
+                )}
                 <div className="min-w-0">
                   <span className="text-xs font-bold text-foreground">{ext}</span>
                   <span className="text-[10px] text-muted-foreground ml-1.5">{note}</span>

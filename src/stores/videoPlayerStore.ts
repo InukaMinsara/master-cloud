@@ -69,6 +69,8 @@ interface VideoPlayerState {
   isVideoLoaded: boolean;
   resolution: { width: number; height: number } | null;
   codecInfo: string | null;
+  isAudioOnly: boolean;
+  audioVisualizerMode: 'bars' | 'wave' | 'circle' | 'off';
 
   // Feature 1: Smart Timeline & A-B Repeat
   markers: TimelineMarker[];
@@ -128,6 +130,7 @@ interface VideoPlayerState {
   setVideoLoaded: () => void;
   setResolution: (res: { width: number; height: number } | null) => void;
   setCodecInfo: (info: string | null) => void;
+  setAudioVisualizerMode: (mode: 'bars' | 'wave' | 'circle' | 'off') => void;
 
   // Feature 1 Actions
   addMarker: (time: number, label: string, type?: 'custom' | 'chapter', color?: string) => void;
@@ -222,6 +225,8 @@ const initialState = {
   isVideoLoaded: false,
   resolution: null as { width: number; height: number } | null,
   codecInfo: null as string | null,
+  isAudioOnly: false,
+  audioVisualizerMode: 'bars' as 'bars' | 'wave' | 'circle' | 'off',
 
   // Feature 1
   markers: [] as TimelineMarker[],
@@ -274,6 +279,10 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
 
     const newSrc = URL.createObjectURL(file);
 
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'alac'];
+    const isAudioOnly = (file.type && file.type.startsWith('audio/')) || audioExtensions.includes(ext);
+
     let queueIdx = queue.findIndex((q) => q.name === file.name && q.size === file.size);
     let newQueue = queue;
     if (queueIdx === -1) {
@@ -295,6 +304,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       fileName: file.name,
       fileSize: file.size,
       fileMimeType: file.type || null,
+      isAudioOnly,
       isPlaying: false,
       isPaused: false,
       currentTime: 0,
@@ -308,7 +318,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       isControlsVisible: true,
       isVideoLoaded: false,
       resolution: null,
-      codecInfo: null,
+      codecInfo: isAudioOnly ? 'Audio Stream' : null,
       abRepeat: { a: null, b: null, active: false },
       queue: newQueue,
       currentQueueIndex: queueIdx,
@@ -323,7 +333,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       lastPlayed: Date.now(),
       continueTime: 0,
       isFavorite: false,
-      collections: ['Local Videos'],
+      collections: isAudioOnly ? ['Local Music'] : ['Local Videos'],
     });
 
     get().loadBookmarksForCurrentVideo();
@@ -336,7 +346,10 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       URL.revokeObjectURL(videoSrc);
     }
 
-    const guessedName = name || url.split('?')[0].split('/').pop() || 'Video Stream';
+    const guessedName = name || url.split('?')[0].split('/').pop() || 'Media Stream';
+    const ext = guessedName.split('.').pop()?.toLowerCase() || '';
+    const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'alac'];
+    const isAudioOnly = audioExtensions.includes(ext);
 
     let queueIdx = queue.findIndex((q) => q.url === url);
     let newQueue = queue;
@@ -358,6 +371,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       fileName: guessedName,
       fileSize: 0,
       fileMimeType: url.includes('.m3u8') ? 'application/x-mpegURL' : null,
+      isAudioOnly,
       isPlaying: false,
       isPaused: false,
       currentTime: 0,
@@ -371,7 +385,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
       isControlsVisible: true,
       isVideoLoaded: false,
       resolution: null,
-      codecInfo: url.includes('.m3u8') ? 'HLS Stream' : null,
+      codecInfo: url.includes('.m3u8') ? 'HLS Stream' : (isAudioOnly ? 'Audio Stream' : null),
       abRepeat: { a: null, b: null, active: false },
       queue: newQueue,
       currentQueueIndex: queueIdx,
@@ -446,6 +460,7 @@ export const useVideoPlayerStore = create<VideoPlayerState>((set, get) => ({
   setVideoLoaded: () => set({ isVideoLoaded: true, isLoading: false }),
   setResolution: (resolution) => set({ resolution }),
   setCodecInfo: (codecInfo) => set({ codecInfo }),
+  setAudioVisualizerMode: (audioVisualizerMode) => set({ audioVisualizerMode }),
 
   // ── Feature 1: Smart Timeline Markers & A-B Repeat ──────────────────────
   addMarker: (time, label, type = 'custom', color = '#06b6d4') => {

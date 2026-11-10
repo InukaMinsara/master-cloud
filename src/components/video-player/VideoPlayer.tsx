@@ -24,6 +24,7 @@ import {
   BarChart3,
   FolderSync,
   FileText,
+  Music,
 } from 'lucide-react';
 import Hls from 'hls.js';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
@@ -34,6 +35,7 @@ import { downloadVideoScreenshot } from '@/services/screenshotService';
 import { analyticsService } from '@/services/analyticsService';
 import { SmartTimeline } from './SmartTimeline';
 import { SubtitleOverlay } from './SubtitleOverlay';
+import { AudioVisualizerView } from './AudioVisualizerView';
 import { MiniPlayer } from './MiniPlayer';
 import { QueueDrawer } from './panels/QueueDrawer';
 import { SubtitleStudioModal } from './panels/SubtitleStudioModal';
@@ -107,6 +109,7 @@ export function VideoPlayer() {
   const errorMessage = useVideoPlayerStore((s) => s.errorMessage);
   const isControlsVisible = useVideoPlayerStore((s) => s.isControlsVisible);
   const resolution = useVideoPlayerStore((s) => s.resolution);
+  const isAudioOnly = useVideoPlayerStore((s) => s.isAudioOnly);
   const activePanel = useVideoPlayerStore((s) => s.activePanel);
   const isMiniPlayer = useVideoPlayerStore((s) => s.isMiniPlayer);
   const queue = useVideoPlayerStore((s) => s.queue);
@@ -871,12 +874,14 @@ export function VideoPlayer() {
         }
       `}</style>
 
-      {/* ---- Video Element ---- */}
+      {/* ---- Video Element (handles both video and audio playback) ---- */}
       <video
         ref={videoRef}
         preload="metadata"
         playsInline
-        className="absolute inset-0 w-full h-full object-contain bg-black"
+        className={`absolute inset-0 w-full h-full object-contain bg-black ${
+          isAudioOnly ? 'opacity-0 pointer-events-none' : ''
+        }`}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onProgress={handleProgress}
@@ -889,15 +894,18 @@ export function VideoPlayer() {
         onVolumeChange={handleVolumeChange}
       />
 
-      {/* ---- Feature 3: Subtitle Overlay ---- */}
-      <SubtitleOverlay />
+      {/* ---- Audio-Only Music Studio & Live Visualizer ---- */}
+      {isAudioOnly && <AudioVisualizerView />}
+
+      {/* ---- Feature 3: Subtitle Overlay (Video Only) ---- */}
+      {!isAudioOnly && <SubtitleOverlay />}
 
       {/* ---- Drag Over Drop Overlay ---- */}
       {isPlayerDraggingOver && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-cyan-950/80 backdrop-blur-md border-2 border-dashed border-cyan-400">
           <Sparkles className="w-12 h-12 text-cyan-300 animate-pulse mb-2" />
-          <span className="text-base font-bold text-white">Drop video to play / enqueue</span>
-          <span className="text-xs text-cyan-200/70 mt-1">Single video replaces current; multiple videos enqueue</span>
+          <span className="text-base font-bold text-white">Drop video or audio to play / enqueue</span>
+          <span className="text-xs text-cyan-200/70 mt-1">Single file replaces current; multiple files enqueue</span>
         </div>
       )}
 
@@ -905,7 +913,7 @@ export function VideoPlayer() {
       {isLoading && !hasError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none">
           <Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
-          <span className="mt-3 text-xs text-white/80 font-medium">Buffering video…</span>
+          <span className="mt-3 text-xs text-white/80 font-medium">Buffering media…</span>
         </div>
       )}
 
@@ -960,12 +968,32 @@ export function VideoPlayer() {
         </button>
       )}
 
-      {/* ---- Top Gradient ---- */}
+      {/* ---- Top Gradient & Media Title Bar ---- */}
       <div
-        className={`absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${
+        className={`absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/80 via-black/40 to-transparent z-10 pointer-events-none transition-opacity duration-300 px-4 pt-3 flex items-start justify-between ${
           isControlsVisible ? 'opacity-100' : 'opacity-0'
         }`}
-      />
+      >
+        <div className="flex items-center gap-2 max-w-[70%] pointer-events-auto">
+          {isAudioOnly ? (
+            <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <Music className="w-4 h-4" />
+            </div>
+          ) : (
+            <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <Film className="w-4 h-4" />
+            </div>
+          )}
+          <span className="text-xs sm:text-sm font-medium text-white/90 truncate" title={fileName || 'Media'}>
+            {fileName || 'Media'}
+          </span>
+          {isAudioOnly && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 tracking-wider">
+              MUSIC
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* ---- Bottom Controls Bar ---- */}
       <div
@@ -1073,11 +1101,18 @@ export function VideoPlayer() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-1 sm:gap-1.5">
-              {/* Resolution Badge */}
-              {resBadge && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hidden md:inline-block">
-                  {resBadge}
+              {/* Resolution or Audio Badge */}
+              {isAudioOnly ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1 shadow-sm shadow-purple-500/10">
+                  <Music className="w-3 h-3 text-purple-400" />
+                  <span>AUDIO MODE</span>
                 </span>
+              ) : (
+                resBadge && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hidden md:inline-block">
+                    {resBadge}
+                  </span>
+                )
               )}
 
               {/* Phase 3: Video Intelligence & Insights */}

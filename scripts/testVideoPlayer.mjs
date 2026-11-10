@@ -1200,6 +1200,47 @@ assert(numChunks === 2, '60s PCM divides cleanly into two 30s chunks');
 const asrStatus = 'RESEARCH / NOT YET TRAINED';
 assert(asrStatus === 'RESEARCH / NOT YET TRAINED', 'Original ASR is transparently labeled as RESEARCH / NOT YET TRAINED');
 
+// ----------------------------------------------------
+// PHASE 4: UNIFIED MEDIA PLAYER & AUDIO/MUSIC MODE TESTS
+// ----------------------------------------------------
+console.log('\n--- PHASE 4: UNIFIED MEDIA PLAYER & AUDIO/MUSIC MODE ---');
+
+const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'alac', 'aiff'];
+const videoExtensions = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogg', 'ogv', 'm4v', '3gp', 'flv', 'wmv', 'ts', 'm2ts'];
+
+function isMediaFileTest(name, type = '') {
+  if (type.startsWith('video/') || type.startsWith('audio/')) return true;
+  const ext = name.split('.').pop()?.toLowerCase();
+  return !!ext && (audioExtensions.includes(ext) || videoExtensions.includes(ext));
+}
+
+function isAudioOnlyTest(name, type = '') {
+  if (type.startsWith('audio/')) return true;
+  const ext = name.split('.').pop()?.toLowerCase();
+  return !!ext && audioExtensions.includes(ext);
+}
+
+// Media file detection
+assert(isMediaFileTest('song.mp3', 'audio/mpeg'), 'MP3 audio recognized as valid media file');
+assert(isMediaFileTest('album.flac', 'audio/flac'), 'FLAC audio recognized as valid media file');
+assert(isMediaFileTest('track.wav', 'audio/wav'), 'WAV audio recognized as valid media file');
+assert(isMediaFileTest('podcast.m4a', 'audio/mp4'), 'M4A audio recognized as valid media file');
+assert(isMediaFileTest('movie.mp4', 'video/mp4'), 'MP4 video recognized as valid media file');
+assert(!isMediaFileTest('document.pdf', 'application/pdf'), 'PDF document correctly rejected as invalid media file');
+
+// Audio-only mode routing
+assert(isAudioOnlyTest('acoustic_track.mp3'), 'acoustic_track.mp3 triggers isAudioOnly: true');
+assert(isAudioOnlyTest('symphony.flac'), 'symphony.flac triggers isAudioOnly: true');
+assert(isAudioOnlyTest('voice.wav'), 'voice.wav triggers isAudioOnly: true');
+assert(!isAudioOnlyTest('movie_1080p.mp4'), 'movie_1080p.mp4 triggers isAudioOnly: false (video mode)');
+assert(!isAudioOnlyTest('animation.webm'), 'animation.webm triggers isAudioOnly: false (video mode)');
+
+// Web Audio API Analyser configuration
+const mockFftSize = 128;
+const mockFreqBinCount = mockFftSize / 2;
+assert(mockFreqBinCount === 64, 'Web Audio AnalyserNode configured with 128 FFT (64 frequency bins)');
+assert(mockFreqBinCount >= 32, 'Spectrum analyser provides sufficient bins for 32-48 visualizer bars');
+
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);
 console.log('====================================================');

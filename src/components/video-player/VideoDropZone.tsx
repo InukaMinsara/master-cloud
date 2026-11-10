@@ -1,22 +1,24 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Upload, FileVideo } from 'lucide-react';
+import { Upload, FileVideo, Music, Disc3 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface VideoDropZoneProps {
   onFileSelect: (file: File) => void;
 }
 
-const ACCEPTED_VIDEO_TYPES = 'video/*,.mp4,.webm,.mov,.avi,.mkv,.ogg,.ogv,.m4v,.3gp,.flv,.wmv,.ts,.m2ts';
+const ACCEPTED_MEDIA_TYPES =
+  'video/*,audio/*,.mp4,.webm,.mov,.avi,.mkv,.ogg,.ogv,.m4v,.3gp,.flv,.wmv,.ts,.m2ts,.mp3,.wav,.flac,.aac,.m4a,.opus,.wma,.alac,.aiff';
 
-function isVideoFile(file: File): boolean {
-  if (file.type.startsWith('video/')) return true;
+function isMediaFile(file: File): boolean {
+  if (file.type.startsWith('video/') || file.type.startsWith('audio/')) return true;
 
   const ext = file.name.split('.').pop()?.toLowerCase();
-  const videoExtensions = [
+  const mediaExtensions = [
     'mp4', 'webm', 'mov', 'avi', 'mkv', 'ogg', 'ogv',
     'm4v', '3gp', 'flv', 'wmv', 'ts', 'm2ts',
+    'mp3', 'wav', 'flac', 'aac', 'm4a', 'opus', 'wma', 'alac', 'aiff',
   ];
-  return !!ext && videoExtensions.includes(ext);
+  return !!ext && mediaExtensions.includes(ext);
 }
 
 export function VideoDropZone({ onFileSelect }: VideoDropZoneProps) {
@@ -26,9 +28,9 @@ export function VideoDropZone({ onFileSelect }: VideoDropZoneProps) {
 
   const handleFile = useCallback(
     (file: File) => {
-      if (!isVideoFile(file)) {
-        toast.error('Invalid file type', {
-          description: `"${file.name}" is not a supported video file.`,
+      if (!isMediaFile(file)) {
+        toast.error('Invalid media file type', {
+          description: `"${file.name}" is not a supported video or audio file.`,
         });
         return;
       }
@@ -121,19 +123,22 @@ export function VideoDropZone({ onFileSelect }: VideoDropZoneProps) {
       {/* Icon */}
       <div
         className={`
-          flex items-center justify-center w-16 h-16 rounded-xl
+          flex items-center justify-center w-16 h-16 rounded-2xl
           transition-all duration-300
           ${
             isDraggingOver
-              ? 'bg-cyan-500/15 text-cyan-400 scale-110'
-              : 'bg-white/5 text-white/40'
+              ? 'bg-cyan-500/20 text-cyan-300 scale-110 shadow-lg shadow-cyan-500/20 border border-cyan-400/40'
+              : 'bg-white/5 text-white/50 border border-white/10'
           }
         `}
       >
         {isDraggingOver ? (
-          <FileVideo className="w-8 h-8" />
+          <Disc3 className="w-8 h-8 animate-spin" style={{ animationDuration: '4s' }} />
         ) : (
-          <Upload className="w-8 h-8" />
+          <div className="flex items-center gap-1">
+            <FileVideo className="w-5 h-5 text-cyan-400" />
+            <Music className="w-5 h-5 text-purple-400" />
+          </div>
         )}
       </div>
 
@@ -142,15 +147,18 @@ export function VideoDropZone({ onFileSelect }: VideoDropZoneProps) {
         <p
           className={`
             text-base font-medium transition-colors duration-300
-            ${isDraggingOver ? 'text-cyan-300' : 'text-white/60'}
+            ${isDraggingOver ? 'text-cyan-300' : 'text-white/80'}
           `}
         >
-          {isDraggingOver ? 'Drop your video here' : 'Drag and drop a video file here'}
+          {isDraggingOver ? 'Drop your video or audio file here' : 'Drag and drop any video or audio file here'}
         </p>
-        <p className="text-sm text-white/30">
+        <p className="text-xs text-white/40">
+          Supports MP4, WebM, MKV, MP3, WAV, FLAC, AAC, M4A & more
+        </p>
+        <p className="text-xs text-white/30 mt-1">
           or{' '}
-          <span className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">
-            click to browse
+          <span className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 font-medium">
+            click to browse files
           </span>
         </p>
       </div>
@@ -159,7 +167,7 @@ export function VideoDropZone({ onFileSelect }: VideoDropZoneProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept={ACCEPTED_VIDEO_TYPES}
+        accept={ACCEPTED_MEDIA_TYPES}
         onChange={handleInputChange}
         className="hidden"
         tabIndex={-1}

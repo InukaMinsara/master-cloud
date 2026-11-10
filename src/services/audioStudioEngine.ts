@@ -87,6 +87,7 @@ class AudioStudioEngine {
   private trebleFilter: BiquadFilterNode | null = null;
   private stereoPanner: StereoPannerNode | null = null;
   private gainNode: GainNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
 
   private isConnected = false;
 
@@ -205,8 +206,14 @@ class AudioStudioEngine {
         lastNode = this.stereoPanner;
       }
 
+      // 8. Real-time Audio Spectrum Analyser Node
+      this.analyserNode = ctx.createAnalyser();
+      this.analyserNode.fftSize = 128;
+      this.analyserNode.smoothingTimeConstant = 0.82;
+
       lastNode.connect(this.gainNode);
-      this.gainNode.connect(ctx.destination);
+      this.gainNode.connect(this.analyserNode);
+      this.analyserNode.connect(ctx.destination);
 
       this.isConnected = true;
       return true;
@@ -214,6 +221,22 @@ class AudioStudioEngine {
       console.warn('AudioStudio: Web Audio graph connection failed (falling back to direct output):', err);
       this.isConnected = false;
       return false;
+    }
+  }
+
+  getAnalyserNode(): AnalyserNode | null {
+    return this.analyserNode;
+  }
+
+  getByteFrequencyData(outputArray: any): void {
+    if (this.analyserNode) {
+      this.analyserNode.getByteFrequencyData(outputArray);
+    }
+  }
+
+  getByteTimeDomainData(outputArray: any): void {
+    if (this.analyserNode) {
+      this.analyserNode.getByteTimeDomainData(outputArray);
     }
   }
 
