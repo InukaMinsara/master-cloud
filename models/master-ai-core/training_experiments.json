@@ -1,0 +1,24 @@
+[
+  {
+    "stage": "stage_a",
+    "timestamp": "2026-11-10 18:18:18",
+    "total_tokens": 25090,
+    "samples": 211,
+    "epochs": 30,
+    "best_val_loss": 3.7513,
+    "final_test_loss": 4.0447,
+    "final_test_perplexity": 57.09,
+    "checkpoint": "checkpoint_v0.5_stageA.pt"
+  },
+  {
+    "stage": "stage_b",
+    "timestamp": "2026-11-10 18:30:34",
+    "total_tokens": 48694,
+    "samples": 369,
+    "epochs": 25,
+    "best_val_loss": 3.6004,
+    "final_test_loss": 3.6668,
+    "final_test_perplexity": 39.13,
+    "checkpoint": "checkpoint_v0.5_stageB.pt"
+  }
+]

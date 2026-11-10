@@ -1,13 +1,14 @@
 """
 MASTER CLOUD — MASTER AI ORIGINAL
-Original Model Training Pipeline (v0.4).
+Original Model Training & Staged Experiment Pipeline (v0.5).
 
 Features:
+- Staged Corpus Progression: Stage A (25K+ tokens) and Stage B (50K+ tokens)
+- Rigorous Data Governance: Exact & near-duplicate purging, Unicode validation
+- Group-Based Partitioning: Zero document leakage between Train, Val, and Test
 - Word-boundary-aware Byte-Level BPE Tokenizer (1024 vocabulary, zero UNK)
 - Target-Only Loss Masking (supervised learning exclusively on Assistant response tokens)
-- Expanded Context Window: 256 tokens
-- Provenance & License Tracking in corpus manifest
-- Strict 75/15/10 Train/Val/Test partitioning (Zero Leakage)
+- Preserved Architecture: 5,060,608 parameters, context window 256 tokens
 - Multi-core CPU acceleration (torch.set_num_threads)
 - Regularized AdamW (weight decay 0.05, dropout 0.15, gradient clipping 1.0)
 - Cosine annealing learning rate scheduling with warmup
@@ -17,10 +18,12 @@ Features:
 import json
 import math
 import os
+import shutil
 import sys
 import time
 import torch
 from torch.utils.data import DataLoader
+from typing import Dict, Any, Tuple
 
 # Add workspace root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -29,16 +32,18 @@ from training.tokenizer import MasterAiTokenizer
 from training.model import MasterAiConfig, MasterAiCore
 from training.dataset import (
     ORIGINAL_DATASET_ENTRIES,
-    clean_and_deduplicate,
-    partition_dataset,
+    STAGE_A_EXPANDED_ENTRIES,
+    STAGE_B_EXPANDED_ENTRIES,
     format_sample,
     MasterAiCorpusDataset,
 )
+from training.dataset_qc import audit_and_clean_corpus, group_partition_dataset
 
 
 def train_master_ai(
-    epochs: int = 35,
-    batch_size: int = 4,
+    stage: str = "stage_b",
+    epochs: int = 25,
+    batch_size: int = 8,
     learning_rate: float = 6e-4,
     d_model: int = 256,
     n_layers: int = 6,
@@ -47,9 +52,9 @@ def train_master_ai(
     dropout: float = 0.15,
     weight_decay: float = 0.05,
     output_dir: str = "models/master-ai-core",
-):
+) -> Tuple[Any, Any, Any]:
     print("=" * 65)
-    print(" MASTER CLOUD — MASTER AI ORIGINAL TRAINING PIPELINE v0.3")
+    print(f" MASTER CLOUD — MASTER AI ORIGINAL TRAINING PIPELINE v0.5 [{stage.upper()}]")
     print("=" * 65)
 
     # Multi-core CPU optimization
@@ -63,30 +68,59 @@ def train_master_ai(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # 1. Corpus Deduplication, Provenance & Strict 75/15/10 Partitioning
-    print("\n[1/6] Preparing dataset with SHA-256 deduplication and 75/15/10 partitioning...")
-    deduped_corpus, stats = clean_and_deduplicate(ORIGINAL_DATASET_ENTRIES)
-    train_entries, val_entries, test_entries = partition_dataset(deduped_corpus, train_ratio=0.75, val_ratio=0.15)
-    print(f"  ✓ Raw corpus entries: {stats['total_raw']}")
-    print(f"  ✓ Deduplicated entries: {stats['final_count']} (Duplicates removed: {stats['duplicates_removed']})")
-    print(f"  ✓ Category distribution: {stats['categories']}")
-    print(f"  ✓ Train split: {len(train_entries)} | Val split: {len(val_entries)} | Test split: {len(test_entries)}")
+    # 1. Corpus Selection according to experiment stage
+    if stage == "stage_a":
+        raw_corpus = STAGE_A_EXPANDED_ENTRIES
+        stage_checkpoint_name = "checkpoint_v0.5_stageA.pt"
+    elif stage == "stage_b":
+        raw_corpus = STAGE_B_EXPANDED_ENTRIES
+        stage_checkpoint_name = "checkpoint_v0.5_stageB.pt"
+    elif stage == "baseline":
+        raw_corpus = ORIGINAL_DATASET_ENTRIES
+        stage_checkpoint_name = "checkpoint_v0.4.pt"
+    else:
+        raise ValueError(f"Unknown stage: {stage}. Choose from: baseline, stage_a, stage_b")
+
+    # Temporary tokenizer for audit token census
+    temp_tokenizer = MasterAiTokenizer()
+    if os.path.exists(os.path.join(output_dir, "vocab.json")):
+        temp_tokenizer.load(output_dir)
+
+    print(f"\n[1/6] Running 8-point Quality Control Audit on {stage.upper()} corpus ({len(raw_corpus)} raw entries)...")
+    deduped_corpus, audit_report = audit_and_clean_corpus(raw_corpus, temp_tokenizer)
+    print(f"  ✓ Cleaned valid entries: {audit_report['cleaned_valid_entries']}")
+    print(f"  ✓ Exact duplicates purged: {audit_report['exact_duplicates_purged']}")
+    print(f"  ✓ Near duplicates purged: {audit_report['near_duplicates_purged']}")
+    print(f"  ✓ Malformed samples purged: {audit_report['malformed_purged']}")
+    print(f"  ✓ Unicode errors detected: {audit_report['unicode_errors_detected']}")
+    print(f"  ✓ Total corpus tokens: {audit_report['total_corpus_tokens']:,}")
+    print(f"  ✓ Language breakdown: {audit_report['language_distribution']}")
+
+    # Group-based partition to eliminate intra-document leakage
+    train_entries, val_entries, test_entries = group_partition_dataset(deduped_corpus, train_ratio=0.75, val_ratio=0.15)
+    print(f"  ✓ Group Partition: Train={len(train_entries)}, Val={len(val_entries)}, Test={len(test_entries)}")
 
     # Save detailed corpus manifest with license and provenance
     manifest_path = os.path.join(output_dir, "corpus_manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(
             {
-                "version": "0.4.0",
+                "version": "0.5.0",
+                "stage": stage,
                 "total_samples": len(deduped_corpus),
+                "total_tokens": audit_report["total_corpus_tokens"],
                 "train_samples": len(train_entries),
                 "val_samples": len(val_entries),
                 "test_samples": len(test_entries),
                 "split_ratios": {"train": 0.75, "val": 0.15, "test": 0.10},
-                "category_counts": stats["categories"],
+                "language_distribution": audit_report["language_distribution"],
+                "category_counts": audit_report["category_distribution"],
+                "audit_metrics": audit_report,
                 "dataset_provenance": [
                     {
                         "category": item["category"],
+                        "group": item.get("group", item["category"]),
+                        "language": item.get("language", "english"),
                         "prompt": item["prompt"],
                         "source": item["source"],
                         "license": item["license"],
@@ -120,7 +154,7 @@ def train_master_ai(
     print(f"  ✓ DataLoaders ready: Train batches={len(train_loader)}, Val batches={len(val_loader)}, Test batches={len(test_loader)}")
 
     # 4. Initialize MasterAiCore Architecture (256 Context Window)
-    print("\n[4/6] Initializing MasterAiCore Transformer with random weights (Context Window = 256)...")
+    print("\n[4/6] Initializing MasterAiCore Transformer (Preserved 5.06M parameter architecture)...")
     config = MasterAiConfig(
         vocab_size=tokenizer.vocab_size,
         d_model=d_model,
@@ -147,10 +181,11 @@ def train_master_ai(
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
     # 6. Training Loop with Early Checkpointing
-    print(f"\n[5/6] Training for {epochs} epochs (Regularization: dropout={dropout}, weight_decay={weight_decay})...")
+    print(f"\n[5/6] Training for {epochs} epochs (batch_size={batch_size}, lr={learning_rate})...")
     history = []
     best_val_loss = float("inf")
-    checkpoint_path = os.path.join(output_dir, "checkpoint_best.pt")
+    checkpoint_best_path = os.path.join(output_dir, "checkpoint_best.pt")
+    stage_checkpoint_path = os.path.join(output_dir, stage_checkpoint_name)
     start_time = time.time()
 
     for epoch in range(1, epochs + 1):
@@ -195,29 +230,34 @@ def train_master_ai(
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save({
+            state = {
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "val_loss": val_loss,
                 "config": config.__dict__,
-            }, checkpoint_path)
+                "stage": stage,
+            }
+            torch.save(state, stage_checkpoint_path)
+            # Only update checkpoint_best if this stage improves or equals validation
+            torch.save(state, checkpoint_best_path)
 
         if epoch % 5 == 0 or epoch == 1 or epoch == epochs:
             print(f"  Epoch {epoch:2d}/{epochs} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | Perplexity: {perplexity:6.2f}")
 
     total_time = time.time() - start_time
     print(f"\n[*] Training Complete in {total_time:.2f}s! Best Val Loss: {best_val_loss:.4f}")
+    print(f"  ✓ Saved stage checkpoint to {stage_checkpoint_path}")
 
-    # Archive v0.4 checkpoint
-    v04_path = os.path.join(output_dir, "checkpoint_v0.4.pt")
-    import shutil
-    shutil.copyfile(checkpoint_path, v04_path)
-    print(f"  ✓ Preserved v0.4 checkpoint to {v04_path}")
+    # If stage B, also archive checkpoint_v0.5.pt
+    if stage == "stage_b":
+        v05_path = os.path.join(output_dir, "checkpoint_v0.5.pt")
+        shutil.copyfile(checkpoint_best_path, v05_path)
+        print(f"  ✓ Archived final v0.5 release checkpoint to {v05_path}")
 
     # 7. Evaluate on Held-Out Test Set (Zero Leakage)
     print("\n[6/6] Evaluating on held-out Test split (Zero-leakage test set)...")
-    best_cp = torch.load(checkpoint_path, map_location=device)
+    best_cp = torch.load(checkpoint_best_path, map_location=device)
     model.load_state_dict(best_cp["model_state_dict"])
     model.eval()
 
@@ -236,7 +276,8 @@ def train_master_ai(
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump({
             "model_name": "MasterAiCore",
-            "version": "0.4.0-original",
+            "version": "0.5.0-original",
+            "stage": stage,
             "parameters": num_params,
             "architecture": {
                 "d_model": d_model,
@@ -248,7 +289,15 @@ def train_master_ai(
                 "dropout": dropout,
                 "weight_decay": weight_decay,
             },
+            "corpus_stats": {
+                "total_samples": len(deduped_corpus),
+                "total_tokens": audit_report["total_corpus_tokens"],
+                "train_samples": len(train_entries),
+                "val_samples": len(val_entries),
+                "test_samples": len(test_entries),
+            },
             "epochs": epochs,
+            "batch_size": batch_size,
             "total_time_seconds": round(total_time, 2),
             "best_val_loss": round(best_val_loss, 4),
             "final_test_loss": round(test_loss, 4),
@@ -256,7 +305,31 @@ def train_master_ai(
             "history": history,
         }, f, indent=2)
 
-    # 8. Autoregressive Sample Generation on Unseen Prompts (With Repetition Penalty & Top-P)
+    # Update experiments comparison manifest
+    exp_log_path = os.path.join(output_dir, "training_experiments.json")
+    exp_history = []
+    if os.path.exists(exp_log_path):
+        try:
+            with open(exp_log_path, "r", encoding="utf-8") as f:
+                exp_history = json.load(f)
+        except Exception:
+            exp_history = []
+
+    exp_history.append({
+        "stage": stage,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "total_tokens": audit_report["total_corpus_tokens"],
+        "samples": len(deduped_corpus),
+        "epochs": epochs,
+        "best_val_loss": round(best_val_loss, 4),
+        "final_test_loss": round(test_loss, 4),
+        "final_test_perplexity": round(test_perplexity, 2),
+        "checkpoint": stage_checkpoint_name,
+    })
+    with open(exp_log_path, "w", encoding="utf-8") as f:
+        json.dump(exp_history, f, indent=2)
+
+    # 8. Autoregressive Sample Generation on Unseen Prompts
     print("\n[*] Testing autoregressive generation with repetition penalty & top-p...")
     sample_generations = []
     test_prompts = [
@@ -275,14 +348,13 @@ def train_master_ai(
         inp = torch.tensor([prompt_tokens], dtype=torch.long, device=device)
         out_tokens = model.generate(
             inp,
-            max_new_tokens=60,
-            temperature=0.5,
+            max_new_tokens=65,
+            temperature=0.45,
             top_k=20,
             top_p=0.85,
             repetition_penalty=1.25,
             eos_id=tokenizer.EOS_ID,
         )
-        # Extract only the newly generated tokens (slice off the prompt tokens)
         new_token_ids = out_tokens[0][len(prompt_tokens):].tolist()
         generated_answer = tokenizer.decode(new_token_ids, skip_special=True)
         sample_generations.append({
@@ -301,4 +373,5 @@ def train_master_ai(
 
 
 if __name__ == "__main__":
-    train_master_ai()
+    stage_arg = sys.argv[1] if len(sys.argv) > 1 else "stage_b"
+    train_master_ai(stage=stage_arg)

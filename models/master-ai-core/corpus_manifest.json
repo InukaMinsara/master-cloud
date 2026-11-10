@@ -1,639 +1,3076 @@
 {
-  "version": "0.4.0",
-  "total_samples": 102,
-  "train_samples": 76,
-  "val_samples": 15,
-  "test_samples": 11,
+  "version": "0.5.0",
+  "stage": "stage_b",
+  "total_samples": 369,
+  "total_tokens": 48694,
+  "train_samples": 246,
+  "val_samples": 66,
+  "test_samples": 57,
   "split_ratios": {
     "train": 0.75,
     "val": 0.15,
     "test": 0.1
   },
+  "language_distribution": {
+    "english": 238,
+    "sinhala": 70,
+    "mixed": 61
+  },
   "category_counts": {
     "identity": 8,
-    "video_controls": 17,
-    "audio_studio": 13,
-    "subtitles": 6,
-    "scene_detection": 5,
-    "speech_intelligence": 5,
-    "codecs": 5,
-    "sinhala_dialogue": 20,
-    "mixed_dialogue": 10,
-    "reasoning": 8,
-    "conversation": 5
+    "video_controls": 32,
+    "audio_studio": 41,
+    "subtitles": 10,
+    "scene_detection": 7,
+    "speech_intelligence": 7,
+    "codecs": 25,
+    "sinhala_dialogue": 77,
+    "mixed_dialogue": 54,
+    "reasoning": 54,
+    "conversation": 54
+  },
+  "audit_metrics": {
+    "raw_entries_inspected": 370,
+    "cleaned_valid_entries": 369,
+    "exact_duplicates_purged": 0,
+    "near_duplicates_purged": 1,
+    "malformed_purged": 0,
+    "incomplete_purged": 0,
+    "unicode_errors_detected": 0,
+    "unicode_error_details": [],
+    "total_corpus_tokens": 48694,
+    "total_prompt_tokens": 13883,
+    "total_response_tokens": 34811,
+    "average_tokens_per_sample": 131.96,
+    "language_distribution": {
+      "english": 238,
+      "sinhala": 70,
+      "mixed": 61
+    },
+    "category_distribution": {
+      "identity": 8,
+      "video_controls": 32,
+      "audio_studio": 41,
+      "subtitles": 10,
+      "scene_detection": 7,
+      "speech_intelligence": 7,
+      "codecs": 25,
+      "sinhala_dialogue": 77,
+      "mixed_dialogue": 54,
+      "reasoning": 54,
+      "conversation": 54
+    },
+    "group_distribution": {
+      "identity": 8,
+      "video_controls": 17,
+      "audio_studio": 13,
+      "subtitles": 6,
+      "scene_detection": 5,
+      "speech_intelligence": 5,
+      "codecs": 5,
+      "sinhala_dialogue": 20,
+      "mixed_dialogue": 10,
+      "reasoning": 8,
+      "conversation": 5,
+      "english_conversation": 10,
+      "sinhala_conversation": 10,
+      "mixed_conversation": 8,
+      "video_player_architecture": 5,
+      "digital_audio_dsp": 6,
+      "subtitle_studio": 4,
+      "media_intelligence": 6,
+      "mathematical_reasoning": 5,
+      "english_instructions": 10,
+      "sinhala_instructions": 8,
+      "mixed_instructions": 6,
+      "media_acoustics_fundamentals": 6,
+      "container_codecs_deepdive": 5,
+      "sinhala_general_dialogue": 5,
+      "english_reasoning_logic": 5,
+      "english_summarization": 5,
+      "mixed_advanced_support": 5,
+      "pd_audio_acoustics": 10,
+      "pd_video_codecs": 8,
+      "pd_computer_science": 5,
+      "sinhala_deep_conversations": 7,
+      "english_general_knowledge": 5,
+      "formal_logic_reasoning": 5,
+      "english_media_workflows": 8,
+      "sinhala_media_acoustics": 6,
+      "mixed_production_dialogue": 5,
+      "english_science_and_math": 5,
+      "pd_physics_optics": 5,
+      "pd_mathematics_statistics": 5,
+      "sinhala_cultural_dialogue": 5,
+      "english_software_engineering": 5,
+      "mixed_everyday_troubleshooting": 5,
+      "pd_dsp_filters": 6,
+      "pd_video_compression": 5,
+      "sinhala_science_and_life": 5,
+      "english_interactive_dialogue": 5,
+      "mixed_advanced_practical": 5,
+      "pd_math_discrete": 5,
+      "english_web_standards": 6,
+      "sinhala_interactive_qa": 6,
+      "mixed_advanced_workflows": 5,
+      "english_mathematical_derivations": 6,
+      "english_conversational_dialogues": 5,
+      "sinhala_conversational_fluency": 5,
+      "mixed_everyday_practical": 5
+    }
   },
   "dataset_provenance": [
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "Who are you?",
       "source": "MASTER CLOUD Architectural Specification",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "What is MASTER CLOUD?",
       "source": "MASTER CLOUD Product Overview",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "What makes MasterAI original?",
       "source": "MASTER CLOUD AI Policy",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "Are you running in the cloud or locally?",
       "source": "MASTER CLOUD Security Whitepaper",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "Do you send my videos to OpenAI or Google?",
       "source": "MASTER CLOUD Privacy Architecture",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "Can MasterAI run without internet access?",
       "source": "MASTER CLOUD Offline Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "How do you protect API credentials in cloud mode?",
       "source": "MASTER CLOUD Security Whitepaper",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "identity",
+      "group": "identity",
+      "language": "english",
       "prompt": "Does in-memory credential storage protect against XSS?",
       "source": "MASTER CLOUD Security Whitepaper",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I pause or play a video?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How can I toggle fullscreen mode?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I seek 10 seconds forward or backward?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I seek 5 seconds precisely?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I frame-step through video?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I mute or unmute audio?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I adjust playback volume with keys?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I adjust playback speed?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I capture a screenshot frame?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "What is Picture-in-Picture mode and how do I activate it?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "What is A-B Repeat and how do I use it?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "Can I jump to a percentage of the video using numbers?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I rotate a sideways video?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I zoom into video details?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I add a bookmark at the current timestamp?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "How do I navigate between saved bookmarks?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "video_controls",
+      "group": "video_controls",
+      "language": "english",
       "prompt": "What happens when a video finishes playing?",
       "source": "MASTER CLOUD Player Controls Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "How do I open the 10-Band Equalizer?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What are the 10 frequency bands in the equalizer?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What audio presets are built into MASTER CLOUD?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "How does the Vocal Clarity preset work?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 32Hz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 64Hz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 125Hz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 1kHz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 4kHz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What does the 16kHz frequency slider control?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "How do I fix audio sync delay or lip-sync mismatch?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "What is stereo balance?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "audio_studio",
+      "group": "audio_studio",
+      "language": "english",
       "prompt": "Does adjusting the equalizer alter the original video file?",
       "source": "MASTER CLOUD Audio Engineering Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "How do I open Subtitle Studio?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "What subtitle file formats are supported?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "How do I fix out-of-sync subtitles?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "Can I customize subtitle styling?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "How can I export video subtitles?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "subtitles",
+      "group": "subtitles",
+      "language": "english",
       "prompt": "Can I edit subtitle cues directly?",
       "source": "MASTER CLOUD Subtitle Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "scene_detection",
+      "group": "scene_detection",
+      "language": "english",
       "prompt": "How do I detect scenes in my video?",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "scene_detection",
+      "group": "scene_detection",
+      "language": "english",
       "prompt": "How does scene detection work mathematically?",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "scene_detection",
+      "group": "scene_detection",
+      "language": "english",
       "prompt": "Can I jump to detected scenes on the timeline?",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "scene_detection",
+      "group": "scene_detection",
+      "language": "english",
       "prompt": "Generate chapters for my video.",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "scene_detection",
+      "group": "scene_detection",
+      "language": "english",
       "prompt": "What is the difference between hard cuts and dissolve transitions?",
       "source": "MASTER CLOUD Video Intelligence Guide",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "speech_intelligence",
+      "group": "speech_intelligence",
+      "language": "english",
       "prompt": "Explain speech pacing.",
       "source": "MASTER CLOUD Speech Metrics",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "speech_intelligence",
+      "group": "speech_intelligence",
+      "language": "english",
       "prompt": "How do you detect silence in video audio?",
       "source": "MASTER CLOUD Speech Metrics",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "speech_intelligence",
+      "group": "speech_intelligence",
+      "language": "english",
       "prompt": "How do I search transcript dialogue?",
       "source": "MASTER CLOUD Transcript Search",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "speech_intelligence",
+      "group": "speech_intelligence",
+      "language": "english",
       "prompt": "How does local transcript indexing work?",
       "source": "MASTER CLOUD Transcript Search",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "speech_intelligence",
+      "group": "speech_intelligence",
+      "language": "english",
       "prompt": "How is audio extracted from a local video file?",
       "source": "MASTER CLOUD Audio Pipeline",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "codecs",
+      "group": "codecs",
+      "language": "english",
       "prompt": "What video formats are supported natively in MASTER CLOUD?",
       "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "codecs",
+      "group": "codecs",
+      "language": "english",
       "prompt": "Can MASTER CLOUD play 4K video at 60 frames per second?",
       "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "codecs",
+      "group": "codecs",
+      "language": "english",
       "prompt": "What is HLS adaptive streaming?",
       "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "codecs",
+      "group": "codecs",
+      "language": "english",
       "prompt": "Can I drag and drop local media files?",
       "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "codecs",
+      "group": "codecs",
+      "language": "english",
       "prompt": "Why can Matroska MKV files fail during browser audio demuxing?",
       "source": "MASTER CLOUD Codec Compatibility",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "MasterAI යනු කුමක්ද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "Fullscreen කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "Equalizer එක විවෘත කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "දර්ශන හඳුනාගැනීම කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "ශබ්දය වැඩි හෝ අඩු කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "තත්පර 10ක් ඉදිරියට හෝ පසුපසට යන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "mixed",
       "prompt": "උපසිරැසි (Subtitles) එකතු කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "මගේ වීඩියෝ අන්තර්ජාලයට උඩුගත වේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "A-B Repeat භාවිත කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "Screenshot එකක් ගන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "mixed",
       "prompt": "ශබ්ද සැකසුම් වල Presets මොනවාද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "සිංහල භාෂාවෙන් උපසිරැසි සහය දක්වනවාද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "වේගය වෙනස් කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "වීඩියෝව කරකවන්නේ (Rotate) කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "ශබ්ද ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "Bookmark එකක් දාන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "Picture in Picture භාවිත කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "වීඩියෝවේ දීප්තිය (Brightness) වැඩි කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "sinhala_dialogue",
+      "group": "sinhala_dialogue",
+      "language": "sinhala",
       "prompt": "වීඩියෝවේ දර්ශන අනුපාතය (Aspect Ratio) වෙනස් කරන්නේ කෙසේද?",
       "source": "MASTER CLOUD Sinhala Documentation",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "MASTER CLOUD එකේ video play කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Equalizer එකේ bass වැඩි කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Subtitles sync නැත්නම් හදාගන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Scenes auto detect කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Audio delay එකක් ආවොත් මොකද කරන්නේ?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Playback speed එක 2x කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "MasterAI එක offline වැඩ කරනවද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Video එකෙන් screenshot frame එකක් save කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "PiP mode එක on කරන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "mixed_dialogue",
+      "group": "mixed_dialogue",
+      "language": "mixed",
       "prompt": "Subtitles export කරගන්නේ කොහොමද?",
       "source": "MASTER CLOUD User Community FAQ",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "If a video is 10 minutes long and has 1500 spoken words, what is the speech pacing in WPM?",
       "source": "Speech Rate Analytics & Mathematics",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "What is the uncompressed data size of a 90-second 16kHz 32-bit float mono audio stream?",
       "source": "Digital Signal Processing Fundamentals",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "If a video has 4 scene transitions detected at 00:00, 02:00, 05:00, and 08:00, how many scenes exist and what is the longest scene?",
       "source": "Video Timeline Logic",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "A user seeks forward 10 seconds 3 times and backward 5 seconds twice. What is the net time change?",
       "source": "Playback Navigation Logic",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "Why does doubling the frequency from 1kHz to 2kHz represent exactly one octave in audio acoustics?",
       "source": "Acoustics & ISO Octave Standards",
       "license": "Public Domain Audio Standards"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "Calculate the file size of a 60-second video stream with a video bitrate of 5000 kbps and audio bitrate of 192 kbps.",
       "source": "Digital Video Bitrate Calculations",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "What aspect ratio does a 1920x1080 resolution video have?",
       "source": "Display Geometry Mathematics",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "reasoning",
+      "group": "reasoning",
+      "language": "english",
       "prompt": "If an audio buffer has a duration of 120 seconds, how many 30-second non-overlapping chunks will be produced?",
       "source": "Audio Buffer Segmentation Math",
       "license": "Public Domain Technical Mathematics"
     },
     {
       "category": "conversation",
+      "group": "conversation",
+      "language": "english",
       "prompt": "Hello MasterAI! How are you today?",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "conversation",
+      "group": "conversation",
+      "language": "english",
       "prompt": "Summarize this video.",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "conversation",
+      "group": "conversation",
+      "language": "english",
       "prompt": "What are the key takeaways from the video?",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "conversation",
+      "group": "conversation",
+      "language": "english",
       "prompt": "Thank you MasterAI!",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
     },
     {
       "category": "conversation",
+      "group": "conversation",
+      "language": "english",
       "prompt": "Can you help me organize my media files?",
       "source": "MASTER CLOUD Dialogue Engine",
       "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "Hello! How can you help me today?",
+      "source": "MASTER CLOUD Dialogue Engineering",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "What should I do if my video playback is stuttering?",
+      "source": "MASTER CLOUD Video Playback Troubleshooting",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "Can you summarize what makes a good video watching experience?",
+      "source": "MASTER CLOUD Media Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "Thank you for the explanation!",
+      "source": "MASTER CLOUD Dialogue Engineering",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "Can you explain what a media player buffer is?",
+      "source": "Digital Media Architecture Handbook",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "Why is local processing important for personal media files?",
+      "source": "MASTER CLOUD Privacy Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "How do I take a clean screenshot of a video frame?",
+      "source": "MASTER CLOUD Hotkey Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "What is the difference between pausing and stopping a video?",
+      "source": "Media Player UI Standards",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "How do I adjust playback speed for fast learning?",
+      "source": "MASTER CLOUD User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversation",
+      "language": "english",
+      "prompt": "What does pitch correction do when speeding up playback?",
+      "source": "Digital Audio DSP Principles",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "ආයුබෝවන්! මට උදව්වක් අවශ්‍යයි.",
+      "source": "MASTER CLOUD Sinhala Dialogue Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් නතර කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "ශබ්දය ක්ෂණිකව නිශ්ශබ්ද (Mute) කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "තිරය විශාල (Fullscreen) කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවේ හඬ පැහැදිලි නැතිනම් කුමක් කළ යුතුද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "උපසිරැසි ගොනුවක් ඇතුළත් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Subtitle Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවෙන් ඡායාරූපයක් ලබාගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "තත්පර 10ක් ඉදිරියට පනින්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "තත්පර 10ක් පසුපසට පනින්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversation",
+      "language": "sinhala",
+      "prompt": "බොහොම ස්තූතියි ඔබේ උපකාරයට!",
+      "source": "MASTER CLOUD Sinhala Dialogue Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Video player එකේ speed එක වෙනස් කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Forum",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "sinhala",
+      "prompt": "A-B Repeat loop එකක් set කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Forum",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Audio sync delay එකක් හදාගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Audio FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Subtitles වල timing mismatch නම් මොකද කරන්නේ?",
+      "source": "MASTER CLOUD Subtitle FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Smart Scene Detection run කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Intelligence FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Transcript එකක් export කරගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Export Studio Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "Mini player එක active කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_conversation",
+      "language": "mixed",
+      "prompt": "MKV files play කරන්න බැරි ඇයි?",
+      "source": "MASTER CLOUD Codec Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "video_player_architecture",
+      "language": "english",
+      "prompt": "How does frame stepping work in MASTER CLOUD?",
+      "source": "MASTER CLOUD Video Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "video_player_architecture",
+      "language": "english",
+      "prompt": "What happens when a video file is dropped into the player drop zone?",
+      "source": "MASTER CLOUD VideoDropZone Implementation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "video_player_architecture",
+      "language": "english",
+      "prompt": "Why are previous Object URLs revoked when loading a new video?",
+      "source": "Web Media Resource Management",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "video_controls",
+      "group": "video_player_architecture",
+      "language": "english",
+      "prompt": "How is aspect ratio preserved across different monitor sizes?",
+      "source": "MASTER CLOUD UI Layout Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "video_player_architecture",
+      "language": "english",
+      "prompt": "What is the function of the Smart Timeline scrubber?",
+      "source": "MASTER CLOUD Timeline Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "What are the 10 ISO standard frequencies on the equalizer?",
+      "source": "ISO 266 Acoustic Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "Why is the equalizer gain clamped between -12dB and +12dB?",
+      "source": "Web Audio API DSP Architecture",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "How does stereo panning work in the Web Audio Studio?",
+      "source": "Web Audio API Panner Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "What is the purpose of the Bass Boost audio preset?",
+      "source": "MASTER CLOUD Audio Preset Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "What is the purpose of the Vocal Clarity preset?",
+      "source": "MASTER CLOUD Audio Preset Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "digital_audio_dsp",
+      "language": "english",
+      "prompt": "How does audio delay correct lip-sync errors?",
+      "source": "Audio-Video Synchronization Engineering",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "subtitles",
+      "group": "subtitle_studio",
+      "language": "english",
+      "prompt": "What is the difference between SubRip (SRT) and WebVTT timestamps?",
+      "source": "W3C WebVTT Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "subtitles",
+      "group": "subtitle_studio",
+      "language": "english",
+      "prompt": "How are HTML tags stripped from subtitle cues?",
+      "source": "MASTER CLOUD Subtitle Parser",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "group": "subtitle_studio",
+      "language": "english",
+      "prompt": "What happens when a subtitle cue has no end timestamp?",
+      "source": "MASTER CLOUD Subtitle Parser",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "group": "subtitle_studio",
+      "language": "english",
+      "prompt": "Can subtitles be exported to other formats?",
+      "source": "MASTER CLOUD Export Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "How does luminance delta cut detection work?",
+      "source": "MASTER CLOUD Video Intelligence",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "What are visual chapter markers used for?",
+      "source": "MASTER CLOUD Video Intelligence",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "How is speech pacing calculated in words per minute?",
+      "source": "Linguistic Speech Analysis",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "speech_intelligence",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "What speech rate is considered conversational versus rapid?",
+      "source": "Speech Communication Metrics",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "codecs",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "Why is MP4 with H.264 video and AAC audio the most universal format?",
+      "source": "Digital Video Codec Engineering",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "media_intelligence",
+      "language": "english",
+      "prompt": "What are the advantages of WebM with VP9 and Opus audio?",
+      "source": "IETF Opus and WebM Specifications",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "mathematical_reasoning",
+      "language": "english",
+      "prompt": "If a video file has a bitrate of 8 Mbps, how much storage will a 10-minute video consume?",
+      "source": "Digital Media Storage Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "mathematical_reasoning",
+      "language": "english",
+      "prompt": "How many seconds are in a timestamp of 01:24:30?",
+      "source": "Time Unit Conversion Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "mathematical_reasoning",
+      "language": "english",
+      "prompt": "If a screen has a 16:9 aspect ratio and a height of 1080 pixels, what is its width?",
+      "source": "Display Geometry Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "mathematical_reasoning",
+      "language": "english",
+      "prompt": "How many audio samples are in 45 seconds of 48kHz stereo audio?",
+      "source": "Digital Sampling Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "mathematical_reasoning",
+      "language": "english",
+      "prompt": "If an audio buffer has a duration of 180 seconds, how many 30-second chunks will it produce?",
+      "source": "Buffer Segmentation Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I create an A-B loop to study a specific scene?",
+      "source": "MASTER CLOUD Feature Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I organize my media library into categories?",
+      "source": "MASTER CLOUD Media Organizer Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How can I detect and delete duplicate video files?",
+      "source": "MASTER CLOUD Storage Maintenance Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I use bookmark markers to remember important moments?",
+      "source": "MASTER CLOUD Bookmarks Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I adjust audio balance if one earphone is quieter?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I export subtitles after adjusting their timing?",
+      "source": "MASTER CLOUD Subtitle Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I switch between full player view and mini player mode?",
+      "source": "MASTER CLOUD UI Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I reset all equalizer sliders back to flat neutral?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "What should I do if a subtitle file displays garbled text?",
+      "source": "MASTER CLOUD Subtitle Troubleshooting",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "group": "english_instructions",
+      "language": "english",
+      "prompt": "How do I navigate a playlist of multiple video episodes?",
+      "source": "MASTER CLOUD Playlist Management Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවක නිශ්චිත කොටසක් නැවත නැවත වාදනය (Loop) කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "ප්‍රියතම ස්ථාන (Bookmarks) සටහන් කරගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "ශබ්ද සැකසුම් (Equalizer) යථා තත්ත්වයට (Reset) පත් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "උපසිරැසි වල කාලය ශබ්දයට සමපාත (Sync) කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Subtitle Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ ධාවන වේගය වෙනස් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "වීඩියෝව එක් රාමුව බැගින් (Frame by Frame) නරඹන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "Picture-in-Picture ආකාරයෙන් වීඩියෝව තබන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_instructions",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවෙන් පැහැදිලි ඡායාරූපයක් (Snapshot) ගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Playlist එකට අලුත් videos add කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Duplicate video files delete කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Background noise එක අඩු කරගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Audio FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Shortcuts full list එක බලාගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Speech pacing metric එකෙන් මනින්නේ මොකක්ද?",
+      "source": "MASTER CLOUD Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_instructions",
+      "language": "mixed",
+      "prompt": "Subtitles වල font size එක ලොකු කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Subtitle Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "What is the Nyquist-Shannon sampling theorem?",
+      "source": "Information Theory and Digital Communications",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "Why is 44.1kHz the standard sample rate for CD audio?",
+      "source": "Compact Disc Digital Audio Standard",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "What is the difference between peak amplitude and RMS energy?",
+      "source": "Acoustical Measurements Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "What does a decibel measure in digital audio?",
+      "source": "Audio Engineering Society Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "What is total harmonic distortion in sound amplification?",
+      "source": "Audio Engineering Society Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "media_acoustics_fundamentals",
+      "language": "english",
+      "prompt": "How does dynamic range compression affect audio?",
+      "source": "Sound Reinforcement Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "container_codecs_deepdive",
+      "language": "english",
+      "prompt": "What is the structure of an MP4 ISO base media file?",
+      "source": "ISO/IEC 14496-12 Standard",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "container_codecs_deepdive",
+      "language": "english",
+      "prompt": "What are I-frames, P-frames, and B-frames in video compression?",
+      "source": "MPEG Video Compression Fundamentals",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "container_codecs_deepdive",
+      "language": "english",
+      "prompt": "Why can an MP4 video play smoothly while its audio fails to play?",
+      "source": "Web Video Architecture Guide",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "container_codecs_deepdive",
+      "language": "english",
+      "prompt": "What is the role of an audio demuxer?",
+      "source": "Digital Media Pipeline Engineering",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "container_codecs_deepdive",
+      "language": "english",
+      "prompt": "What makes the Opus audio codec superior for internet streaming?",
+      "source": "IETF RFC 6716 Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_general_dialogue",
+      "language": "sinhala",
+      "prompt": "ඔබට කළ හැකි දේවල් මොනවාද?",
+      "source": "MASTER CLOUD Sinhala Introduction",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_general_dialogue",
+      "language": "sinhala",
+      "prompt": "මගේ පරිගණකයේ ගොනු ආරක්ෂිතද?",
+      "source": "MASTER CLOUD Privacy Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_general_dialogue",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකේ ශබ්දය එක පැත්තකට වැඩි නම් කුමක් කළ යුතුද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_general_dialogue",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවක නම වෙනස් කරන්නේ හෝ delete කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_general_dialogue",
+      "language": "mixed",
+      "prompt": "වීඩියෝවේ දීප්තිය සහ වර්ණ වෙනස් කළ හැකිද?",
+      "source": "MASTER CLOUD Video Filters Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_reasoning_logic",
+      "language": "english",
+      "prompt": "If a video has a frame rate of 60 frames per second, how many frames occur in 2.5 minutes?",
+      "source": "Frame Rate Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_reasoning_logic",
+      "language": "english",
+      "prompt": "If a movie is 120 minutes long and I watch it at 1.5x speed, how long will it take to finish?",
+      "source": "Playback Duration Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_reasoning_logic",
+      "language": "english",
+      "prompt": "What is the uncompressed bit depth size of 10 seconds of 24-bit 96kHz stereo PCM audio?",
+      "source": "Digital Audio Bandwidth Calculation",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_reasoning_logic",
+      "language": "english",
+      "prompt": "If a transcript contains 1,200 words delivered over 8 minutes, what is the speaking pace?",
+      "source": "Speech Pacing Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_reasoning_logic",
+      "language": "english",
+      "prompt": "If an aspect ratio is 4:3 and the display width is 1024 pixels, what is the corresponding height?",
+      "source": "Display Aspect Ratio Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "conversation",
+      "group": "english_summarization",
+      "language": "english",
+      "prompt": "Can you summarize the purpose of the 10-band equalizer in MASTER CLOUD?",
+      "source": "MASTER CLOUD Equalizer Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_summarization",
+      "language": "english",
+      "prompt": "Summarize how scene detection enhances media navigation.",
+      "source": "MASTER CLOUD Scene Intelligence Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_summarization",
+      "language": "english",
+      "prompt": "Summarize the key advantages of running AI locally inside the browser.",
+      "source": "MASTER CLOUD Local AI Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_summarization",
+      "language": "english",
+      "prompt": "Can you explain how the playlist queue handles repeat modes?",
+      "source": "MASTER CLOUD Queue Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_summarization",
+      "language": "english",
+      "prompt": "Explain what occurs during subtitle synchronization.",
+      "source": "MASTER CLOUD Subtitle Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_support",
+      "language": "mixed",
+      "prompt": "Audio එක cut වෙන්නේ ඇයි video එක play වෙද්දි?",
+      "source": "MASTER CLOUD Audio Troubleshooting",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_support",
+      "language": "mixed",
+      "prompt": "Browser cache එක clear කරාම media history නැති වෙනවද?",
+      "source": "MASTER CLOUD Storage FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_support",
+      "language": "mixed",
+      "prompt": "HLS streaming video links play කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Streaming Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_support",
+      "language": "mixed",
+      "prompt": "Audio spectrum visualizer එක on කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Audio Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_support",
+      "language": "mixed",
+      "prompt": "Chapters export කරගන්නේ කොහොමද YouTube description එකකට?",
+      "source": "MASTER CLOUD Export Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is the Haas effect in auditory perception?",
+      "source": "Acoustical Society of America Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "How does acoustic phase cancellation occur in stereo microphones?",
+      "source": "Microphone Engineering Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is comb filtering in audio signal processing?",
+      "source": "Digital Signal Processing Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is the speed of sound in dry air at room temperature?",
+      "source": "Physics of Waves and Acoustics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is the difference between fundamental frequency and harmonics?",
+      "source": "Musical Acoustics and Timbre Theory",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What are equal-loudness contours in human hearing?",
+      "source": "ISO 226 Acoustics Standard",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is dither in digital audio quantization?",
+      "source": "Principles of Digital Audio",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is the dynamic range of a 16-bit audio file?",
+      "source": "Digital Audio Quantization Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "What is the dynamic range of a 24-bit audio file?",
+      "source": "Digital Audio Quantization Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_audio_acoustics",
+      "language": "english",
+      "prompt": "How does a parametric equalizer differ from a graphic equalizer?",
+      "source": "Audio Filter Design Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is chroma subsampling in digital video?",
+      "source": "ITU-R Recommendation BT.601",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is the difference between 4:4:4 and 4:2:0 chroma subsampling?",
+      "source": "Digital Video Encoding Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is the difference between Rec.709 and BT.2020 color spaces?",
+      "source": "ITU-R Colorimetry Recommendations",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is an intra-frame (I-frame) in video encoding?",
+      "source": "MPEG Video Engineering Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is motion compensation in inter-frame video compression?",
+      "source": "Video Codec Motion Estimation Algorithms",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is the difference between constant bitrate (CBR) and variable bitrate (VBR)?",
+      "source": "Digital Video Encoding Architectures",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is high dynamic range (HDR) video?",
+      "source": "SMPTE ST 2084 HDR Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_codecs",
+      "language": "english",
+      "prompt": "What is an EBML container in WebM and MKV?",
+      "source": "IETF RFC 8794 Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_computer_science",
+      "language": "english",
+      "prompt": "How does UTF-8 encoding represent Unicode characters?",
+      "source": "Unicode Standard RFC 3629",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_computer_science",
+      "language": "english",
+      "prompt": "What is the purpose of an operating system virtual memory page cache?",
+      "source": "Operating System Concepts and Design",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_computer_science",
+      "language": "english",
+      "prompt": "How does a cryptographic hash function like SHA-256 work?",
+      "source": "NIST FIPS 180-4 Secure Hash Standard",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_computer_science",
+      "language": "english",
+      "prompt": "What is the difference between TCP and UDP transmission for media?",
+      "source": "Internet Protocol Suite RFC 793 and 768",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_computer_science",
+      "language": "english",
+      "prompt": "What is the difference between stack memory and heap memory?",
+      "source": "Computer Systems: A Programmer's Perspective",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් නරඹන විට ශබ්දය පැහැදිලිව ඇසීමට උපදෙස් මොනවාද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "ස්වයංක්‍රීයව පරිච්ඡේද (Chapters) සාදාගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "උපසිරැසි වල අකුරු පැහැදිලි නැතිනම් කුමක් කළ හැකිද?",
+      "source": "MASTER CLOUD Sinhala Subtitle Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවේ කොටසක් නැවත නැවත බැලීමට ඇති පහසුකම කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "මගේ පරිගණකයේ ඉඩ ඉතිරි කරගැනීමට ඔබට උදව් කළ හැකිද?",
+      "source": "MASTER CLOUD Sinhala Organizer Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් සාමාන්‍ය වේගයෙන් 2 ගුණයක් වේගයෙන් නැරඹිය හැකිද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_deep_conversations",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ ධාවනය ක්ෂණිකව නවතා තැබීමට කෙටිමං යතුර කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_general_knowledge",
+      "language": "english",
+      "prompt": "What are the core components of an artificial neural network?",
+      "source": "Deep Learning Fundamentals",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_general_knowledge",
+      "language": "english",
+      "prompt": "How does multi-head self-attention work in a Transformer model?",
+      "source": "Transformer Architecture Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_general_knowledge",
+      "language": "english",
+      "prompt": "What is causal masking in autoregressive language models?",
+      "source": "Causal Language Modeling Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_general_knowledge",
+      "language": "english",
+      "prompt": "Why are residual connections used in deep neural networks?",
+      "source": "Deep Residual Learning Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_general_knowledge",
+      "language": "english",
+      "prompt": "What does layer normalization do in a Transformer block?",
+      "source": "Neural Normalization Techniques",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "formal_logic_reasoning",
+      "language": "english",
+      "prompt": "If all MP4 files contain compressed streams, and video A is an MP4 file, what follows?",
+      "source": "Classical Propositional Logic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "formal_logic_reasoning",
+      "language": "english",
+      "prompt": "What is the truth value of: (True AND False) OR (NOT False)?",
+      "source": "Boolean Algebra Fundamentals",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "formal_logic_reasoning",
+      "language": "english",
+      "prompt": "If an audio track is muted, the volume output is zero. If the volume output is not zero, is the track muted?",
+      "source": "Deductive Logic and Inference",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "formal_logic_reasoning",
+      "language": "english",
+      "prompt": "What is De Morgan's Law for the negation of a conjunction (A AND B)?",
+      "source": "Boolean Logic and Set Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "formal_logic_reasoning",
+      "language": "english",
+      "prompt": "If a storage drive has 10 Terabytes (TB), how many Gigabytes (GB) is that in decimal standard?",
+      "source": "Digital Storage Measurement Standards",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is the difference between lossy and lossless audio compression?",
+      "source": "Digital Audio Production Principles",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is container re-wrapping or remuxing?",
+      "source": "Digital Video Processing Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is audio normalization and why is it useful?",
+      "source": "EBU R128 Broadcast Loudness Standard",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What causes video tearing during playback?",
+      "source": "Computer Graphics and Display Pipeline",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is the difference between progressive and interlaced video?",
+      "source": "Broadcast Video Standards Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is color grading in video post-production?",
+      "source": "Cinematic Video Color Science",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "What is a bitstream in digital media processing?",
+      "source": "Data Communications and Media Streams",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_media_workflows",
+      "language": "english",
+      "prompt": "How does acoustic feedback occur in live sound amplification?",
+      "source": "Live Sound Reinforcement Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "sinhala",
+      "prompt": "ශබ්දයේ ඩෙසිබල් (dB) මිනුම යනු කුමක්ද?",
+      "source": "Acoustic Science in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "sinhala",
+      "prompt": "ඩිජිටල් වීඩියෝවක Frame Rate යනු කුමක්ද?",
+      "source": "Digital Video Science in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවක Resolution යන්නෙන් අදහස් කරන්නේ කුමක්ද?",
+      "source": "Display Technology in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක Subtitles පෙනෙන්නේ නැතිනම් මොකද කරන්නේ?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "mixed",
+      "prompt": "වීඩියෝවේ හඬ ගොනුව පමණක් (Audio) වෙන් කරගත හැකිද?",
+      "source": "MASTER CLOUD Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_media_acoustics",
+      "language": "sinhala",
+      "prompt": "හෙඩ්ෆෝන් එකක් පාවිච්චි කරන විට ශබ්දය හොඳින් ඇසෙන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_production_dialogue",
+      "language": "mixed",
+      "prompt": "4K video එකක් play කරද්දි lag වෙනවා නම් මොකද කරන්නේ?",
+      "source": "MASTER CLOUD Production FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_production_dialogue",
+      "language": "mixed",
+      "prompt": "Audio track එක 16kHz mono වලට resample කරන්නේ ඇයි?",
+      "source": "MASTER CLOUD Audio Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_production_dialogue",
+      "language": "mixed",
+      "prompt": "Video එකක luminance delta එක කියන්නේ මොකක්ද?",
+      "source": "MASTER CLOUD Scene Intelligence",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_production_dialogue",
+      "language": "mixed",
+      "prompt": "Media files වල metadata බලන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Player Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_production_dialogue",
+      "language": "mixed",
+      "prompt": "WebVTT subtitle file එකක් edit කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Subtitle Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_science_and_math",
+      "language": "english",
+      "prompt": "If a video file has a size of 1.8 Gigabytes, how many Megabytes is that in decimal standard?",
+      "source": "Digital Unit Conversion",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_science_and_math",
+      "language": "english",
+      "prompt": "If an audio buffer has 960,000 samples at 48kHz, what is its duration in seconds?",
+      "source": "Audio Duration Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_science_and_math",
+      "language": "english",
+      "prompt": "If a speaker delivers 450 words in 3 minutes, what is the speaking rate in WPM?",
+      "source": "Speech Pacing Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_science_and_math",
+      "language": "english",
+      "prompt": "What is the aspect ratio of a 3840x2160 4K UHD video?",
+      "source": "Display Aspect Ratio Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_science_and_math",
+      "language": "english",
+      "prompt": "If an audio track has an RMS energy of 0.001, is it classified as silent?",
+      "source": "Audio Processing Metrics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_physics_optics",
+      "language": "english",
+      "prompt": "What is the speed of light in a vacuum?",
+      "source": "Fundamental Physical Constants Standards",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_physics_optics",
+      "language": "english",
+      "prompt": "What is Snell's Law of refraction?",
+      "source": "Principles of Classical Optics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_physics_optics",
+      "language": "english",
+      "prompt": "How does an OLED display differ from a standard LCD display?",
+      "source": "Display Engineering Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_physics_optics",
+      "language": "english",
+      "prompt": "What is the electromagnetic spectrum range of human vision?",
+      "source": "Optical Physics and Vision Science",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_physics_optics",
+      "language": "english",
+      "prompt": "What is the Doppler effect for sound waves?",
+      "source": "Classical Mechanics and Wave Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_mathematics_statistics",
+      "language": "english",
+      "prompt": "What is the Pythagorean theorem for right triangles?",
+      "source": "Euclidean Geometry Principles",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_mathematics_statistics",
+      "language": "english",
+      "prompt": "What is the formula for the circumference and area of a circle?",
+      "source": "Elementary Geometry Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_mathematics_statistics",
+      "language": "english",
+      "prompt": "What is the difference between mean, median, and mode in statistics?",
+      "source": "Introductory Statistics Handbook",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_mathematics_statistics",
+      "language": "english",
+      "prompt": "What is the derivative of x^n with respect to x?",
+      "source": "Calculus and Mathematical Analysis",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_mathematics_statistics",
+      "language": "english",
+      "prompt": "What is a prime number in arithmetic?",
+      "source": "Elementary Number Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_cultural_dialogue",
+      "language": "sinhala",
+      "prompt": "ශ්‍රී ලංකාවේ අගනුවර කුමක්ද?",
+      "source": "General Knowledge in Sinhala",
+      "license": "Public Domain Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_cultural_dialogue",
+      "language": "sinhala",
+      "prompt": "පරිගණකයක මධ්‍යම සැකසුම් ඒකකය (CPU) යනු කුමක්ද?",
+      "source": "Computer Science in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_cultural_dialogue",
+      "language": "sinhala",
+      "prompt": "අන්තර්ජාලය (Internet) ක්‍රියාත්මක වන්නේ කෙසේද?",
+      "source": "Networking Concepts in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_cultural_dialogue",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් නරඹන විට ඇස් වෙහෙසට පත් නොවීමට කුමක් කළ යුතුද?",
+      "source": "Health & Eye Care in Sinhala",
+      "license": "Public Domain Health Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_cultural_dialogue",
+      "language": "mixed",
+      "prompt": "වීඩියෝවක Volume එක 100% ට වඩා වැඩි කළ හැකිද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_software_engineering",
+      "language": "english",
+      "prompt": "How does asynchronous programming work in JavaScript with Promises?",
+      "source": "ECMAScript Language Specifications",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_software_engineering",
+      "language": "english",
+      "prompt": "What is the difference between client-side rendering and server-side rendering?",
+      "source": "Web Architecture Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_software_engineering",
+      "language": "english",
+      "prompt": "What is the DOM in web browser technology?",
+      "source": "W3C DOM Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_software_engineering",
+      "language": "english",
+      "prompt": "Why is WebGL and WebGPU important for browser performance?",
+      "source": "W3C WebGPU Working Group",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_software_engineering",
+      "language": "english",
+      "prompt": "How does indexedDB store large amounts of client-side data?",
+      "source": "W3C Indexed Database API",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_troubleshooting",
+      "language": "mixed",
+      "prompt": "Full HD video එකක් 4K display එකක play කරද්දි blur වෙන්නේ නැත්තේ ඇයි?",
+      "source": "MASTER CLOUD Display FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_troubleshooting",
+      "language": "mixed",
+      "prompt": "Audio channels 2ක් (Left and Right) තියෙද්දි එක earphone එකක් විතරක් වැඩ නම් මොකද කරන්නේ?",
+      "source": "MASTER CLOUD Hardware FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_troubleshooting",
+      "language": "mixed",
+      "prompt": "Export කරපු SRT subtitle file එකක් notepad එකෙන් open කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Subtitle FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_troubleshooting",
+      "language": "mixed",
+      "prompt": "Video player එකේ volume 0 කළාම mute වෙනවද?",
+      "source": "MASTER CLOUD Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_troubleshooting",
+      "language": "mixed",
+      "prompt": "Video එකක් backward frame-by-frame යන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Hotkeys Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "What is the difference between an IIR filter and an FIR filter?",
+      "source": "Digital Signal Processing Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "What is a biquad filter in digital audio equalizers?",
+      "source": "Audio EQ Cookbook by Robert Bristow-Johnson",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "What is filter Q factor in parametric equalization?",
+      "source": "Audio Engineering Society Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "What is aliasing in digital audio conversion?",
+      "source": "Principles of Digital Audio",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "How do anti-aliasing low-pass filters work in ADCs?",
+      "source": "Data Conversion Handbook",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "audio_studio",
+      "group": "pd_dsp_filters",
+      "language": "english",
+      "prompt": "What is latency in a digital audio workstation or player?",
+      "source": "Audio Driver Architecture Guide",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_compression",
+      "language": "english",
+      "prompt": "What is a Group of Pictures (GOP) in video compression?",
+      "source": "MPEG-4 Part 10 AVC Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_compression",
+      "language": "english",
+      "prompt": "What is the difference between H.264 (AVC) and H.265 (HEVC)?",
+      "source": "ITU-T H.265 Recommendation",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_compression",
+      "language": "english",
+      "prompt": "What is the AV1 open-source video codec?",
+      "source": "Alliance for Open Media AV1 Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_compression",
+      "language": "english",
+      "prompt": "What is macroblocking in digital video artifacts?",
+      "source": "Digital Video Quality Metrics",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "codecs",
+      "group": "pd_video_compression",
+      "language": "english",
+      "prompt": "What is bit depth in digital video color representation?",
+      "source": "Digital Video Color Standards",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_science_and_life",
+      "language": "sinhala",
+      "prompt": "පෘථිවියේ වායුගෝලයේ වැඩිපුරම අඩංගු වායුව කුමක්ද?",
+      "source": "General Science in Sinhala",
+      "license": "Public Domain Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_science_and_life",
+      "language": "sinhala",
+      "prompt": "ශාක ප්‍රභාසංශ්ලේෂණය (Photosynthesis) සිදුකරන්නේ කෙසේද?",
+      "source": "Biological Science in Sinhala",
+      "license": "Public Domain Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_science_and_life",
+      "language": "sinhala",
+      "prompt": "පරිගණකයක RAM (Random Access Memory) හි කාර්යභාරය කුමක්ද?",
+      "source": "Computer Hardware in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_science_and_life",
+      "language": "sinhala",
+      "prompt": "වලාකුළු නිර්මාණය වන්නේ කෙසේද?",
+      "source": "Earth Science in Sinhala",
+      "license": "Public Domain Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_science_and_life",
+      "language": "sinhala",
+      "prompt": "නිරෝගී සිරුරක් පවත්වා ගැනීමට දිනකට වතුර කොපමණ ප්‍රමාණයක් පානය කළ යුතුද?",
+      "source": "Health Science in Sinhala",
+      "license": "Public Domain Health Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_interactive_dialogue",
+      "language": "english",
+      "prompt": "Can you explain how a computer CPU executes machine instructions?",
+      "source": "Computer Architecture Fundamentals",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "conversation",
+      "group": "english_interactive_dialogue",
+      "language": "english",
+      "prompt": "What is the purpose of caching in software architecture?",
+      "source": "Software Architecture Principles",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_interactive_dialogue",
+      "language": "english",
+      "prompt": "What is the difference between synchronous and asynchronous operations?",
+      "source": "Concurrent Systems Engineering",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_interactive_dialogue",
+      "language": "english",
+      "prompt": "How does an operating system manage file system directories?",
+      "source": "File System Design and Implementation",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_interactive_dialogue",
+      "language": "english",
+      "prompt": "What is the role of an audio buffer in web browsers?",
+      "source": "Web Audio API Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_practical",
+      "language": "mixed",
+      "prompt": "Subtitle file එකක milliseconds commas වෙනුවට dots තිබ්බොත් වැඩ කරනවද?",
+      "source": "MASTER CLOUD Subtitle Parser",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_practical",
+      "language": "mixed",
+      "prompt": "Browser එකේ Local Storage capacity එක කොච්චරද?",
+      "source": "MASTER CLOUD Storage Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_practical",
+      "language": "mixed",
+      "prompt": "Equalizer එකේ Q factor එක adjust කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Audio FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_practical",
+      "language": "mixed",
+      "prompt": "Video එකක් slow motion වලින් play කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_practical",
+      "language": "mixed",
+      "prompt": "Timeline scrubber එකෙන් exact second එකට seek කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_math_discrete",
+      "language": "english",
+      "prompt": "What is the remainder when 125 is divided by 7?",
+      "source": "Modular Arithmetic Fundamentals",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_math_discrete",
+      "language": "english",
+      "prompt": "What is the factorial of 5 (5!)?",
+      "source": "Combinatorial Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_math_discrete",
+      "language": "english",
+      "prompt": "What is the sum of the first 100 positive integers?",
+      "source": "Arithmetic Progressions and Series",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_math_discrete",
+      "language": "english",
+      "prompt": "If a right triangle has legs of lengths 6 and 8, what is the hypotenuse?",
+      "source": "Euclidean Geometry Principles",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "pd_math_discrete",
+      "language": "english",
+      "prompt": "If an event has a probability of 0.25 of occurring in a single trial, what is the probability that it does NOT occur?",
+      "source": "Elementary Probability Theory",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "How does the HTML5 video element handle network buffering states?",
+      "source": "W3C HTML5 Media Element Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "What is the role of an OfflineAudioContext in Web Audio?",
+      "source": "W3C Web Audio API Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "How does canvas getImageData extract video frame pixels?",
+      "source": "W3C HTML Canvas 2D Context",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "Why can an HTML5 canvas become tainted by cross-origin video?",
+      "source": "W3C Cross-Origin Security Model",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "How do web workers enable background media processing without freezing the UI?",
+      "source": "W3C Web Workers Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් Fullscreen කළ විට controls සඟවන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "mixed",
+      "prompt": "වීඩියෝ එකක Audio Track කිහිපයක් තිබේ නම් තෝරාගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "sinhala",
+      "prompt": "පරිගණකයේ බැටරි ආයු කාලය ඉතිරි කරගැනීමට වීඩියෝ බලන විට කළ හැක්කේ කුමක්ද?",
+      "source": "Energy Conservation in Sinhala",
+      "license": "Public Domain Technical Education"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "sinhala",
+      "prompt": "අන්තර්ජාල සම්බන්ධතාවයක් නැතිව වීඩියෝ නැරඹිය හැකිද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවේ හඬ වැඩි කළ විට ශබ්දය විකෘති (Distortion) නොවීමට කුමක් කළ යුතුද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_workflows",
+      "language": "mixed",
+      "prompt": "Video player එකේ keyboard shortcuts customize කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_workflows",
+      "language": "mixed",
+      "prompt": "SRT file එකක් WebVTT වලට convert කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Subtitle Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_workflows",
+      "language": "mixed",
+      "prompt": "Video play වෙද්දි browser tab එක switch කළොත් playback stop වෙනවද?",
+      "source": "MASTER CLOUD Player FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_workflows",
+      "language": "mixed",
+      "prompt": "Local AI එක train කරලා තියෙන්නේ මොන architecture එකෙන්ද?",
+      "source": "MASTER CLOUD AI Architecture Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_advanced_workflows",
+      "language": "mixed",
+      "prompt": "Media organizer එකෙන් duplicate files හොයන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Organizer Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "If a video file of 4.5 GB takes 15 minutes to download, what is the average download speed in Megabits per second?",
+      "source": "Network Bandwidth Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "If an audio track of 3 minutes is resampled from 44.1kHz to 16kHz, how many samples are in the output?",
+      "source": "Resampling Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "If a 2-hour movie has an average scene length of 4 seconds, how many total scenes does it contain?",
+      "source": "Film Editing Scene Metrics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "What is the aspect ratio of a 1280x720 video?",
+      "source": "Video Geometry Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "If a media library contains 250 movies averaging 1.5 GB each, how much total storage do they occupy?",
+      "source": "Storage Capacity Arithmetic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversational_dialogues",
+      "language": "english",
+      "prompt": "Can you explain what MasterAI does when I open a video?",
+      "source": "MASTER CLOUD User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversational_dialogues",
+      "language": "english",
+      "prompt": "How does the player remember where I stopped watching?",
+      "source": "MASTER CLOUD Persistence Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversational_dialogues",
+      "language": "english",
+      "prompt": "What are the benefits of using keyboard shortcuts while watching videos?",
+      "source": "MASTER CLOUD Interaction Design",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversational_dialogues",
+      "language": "english",
+      "prompt": "Why is the 10-band equalizer split into specific frequency bands?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_conversational_dialogues",
+      "language": "english",
+      "prompt": "Can I use MASTER CLOUD on mobile devices?",
+      "source": "MASTER CLOUD Mobile Specification",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversational_fluency",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවක නම වෙනස් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversational_fluency",
+      "language": "mixed",
+      "prompt": "Player එකේ background theme එක වෙනස් කළ හැකිද?",
+      "source": "MASTER CLOUD Sinhala UI Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversational_fluency",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් මුල සිට නැවත නරඹන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversational_fluency",
+      "language": "sinhala",
+      "prompt": "වීඩියෝ එකක් අවසානයටම ගෙනියන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Hotkeys",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_conversational_fluency",
+      "language": "sinhala",
+      "prompt": "ප්‍රියතම වීඩියෝ ලැයිස්තුවක් (Favorites) සාදාගත හැකිද?",
+      "source": "MASTER CLOUD Sinhala Library Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_practical",
+      "language": "mixed",
+      "prompt": "Video එකක් fullscreen කරද්දි aspect ratio එක වෙනස් නොවී තියාගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Video Layout Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_practical",
+      "language": "mixed",
+      "prompt": "Subtitles වල timing delay එක milliseconds කීයකින් shift කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Subtitle Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_practical",
+      "language": "mixed",
+      "prompt": "Equalizer preset එකක් save කරගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_practical",
+      "language": "mixed",
+      "prompt": "Playback speed එක 0.25x වලට වඩා අඩුවෙන් play කරන්න පුළුවන්ද?",
+      "source": "MASTER CLOUD Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "group": "mixed_everyday_practical",
+      "language": "mixed",
+      "prompt": "MasterAI Core offline වැඩ කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD AI Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "group": "english_web_standards",
+      "language": "english",
+      "prompt": "How does the Web Audio API connect audio processing nodes?",
+      "source": "W3C Web Audio API Specification",
+      "license": "Public Domain Technical Standards"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "group": "sinhala_interactive_qa",
+      "language": "mixed",
+      "prompt": "වීඩියෝ එකක් නරඹන අතරතුර ශබ්ද ප්‍රයෝග (Audio Effects) එකතු කළ හැකිද?",
+      "source": "MASTER CLOUD Sinhala Audio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "group": "english_mathematical_derivations",
+      "language": "english",
+      "prompt": "If a video has a duration of 3,600 seconds, what is that in standard hours and minutes?",
+      "source": "Time Unit Conversion Mathematics",
+      "license": "Public Domain Technical Mathematics"
     }
   ]
 }

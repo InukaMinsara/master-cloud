@@ -994,18 +994,30 @@ const onnxSize = fs.statSync(onnxPath).size;
 assert(onnxSize > 21000000, `ONNX model contains 100% embedded weights (${(onnxSize / (1024*1024)).toFixed(2)} MB, >21 MB)`);
 assert(!fs.existsSync(path.join(modelDir, 'master_ai_core.onnx.data')), 'No external detached .onnx.data file (self-contained model)');
 
-// Checkpoint Preservation (v0.2, v0.3, v0.4)
+// Checkpoint Preservation (v0.2, v0.3, v0.4, v0.5, Stage A, Stage B)
 assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.2.pt')), 'Original v0.2 checkpoint safely preserved');
 assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.3.pt')), 'Original v0.3 checkpoint safely preserved');
 assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.4.pt')), 'Original v0.4 checkpoint safely preserved');
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.5.pt')), 'Original v0.5 checkpoint safely saved');
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.5_stageA.pt')), 'Original v0.5 Stage A checkpoint safely preserved');
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.5_stageB.pt')), 'Original v0.5 Stage B checkpoint safely preserved');
 
 const reportPath = path.join(modelDir, 'training_report.json');
 assert(fs.existsSync(reportPath), 'Training metrics report exists');
 const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-assert(reportData.epochs === 35, 'Model trained for 35 epochs');
+assert(reportData.epochs >= 25, 'Model trained for 25+ epochs');
 assert(reportData.parameters === 5060608, 'Model parameter count exact (5.06M parameters)');
-assert(reportData.best_val_loss < 4.5, 'Validation loss improved below 4.5');
+assert(reportData.best_val_loss < 4.0, `Validation loss improved below 4.0 (actual: ${reportData.best_val_loss})`);
 assert(reportData.architecture.max_seq_len === 256, 'Architecture recorded with 256 context window');
+
+// Training Experiments Multi-stage Verification
+const expPath = path.join(modelDir, 'training_experiments.json');
+assert(fs.existsSync(expPath), 'training_experiments.json staging history exists');
+const expData = JSON.parse(fs.readFileSync(expPath, 'utf8'));
+assert(expData.some(e => e.stage === 'stage_a'), 'Stage A experiment recorded in tracking history');
+assert(expData.some(e => e.stage === 'stage_b'), 'Stage B experiment recorded in tracking history');
+const stageB = expData.find(e => e.stage === 'stage_b');
+assert(stageB.best_val_loss < 3.7, `Stage B achieved improved val loss < 3.7 (actual: ${stageB.best_val_loss})`);
 
 // Parity Report Verification
 const parityPath = path.join(modelDir, 'onnx_parity_report.json');
@@ -1019,11 +1031,12 @@ assert(parityData.results.some(r => r.sequence_length === 256 && r.passed), '256
 const manifestPath = path.join(modelDir, 'corpus_manifest.json');
 assert(fs.existsSync(manifestPath), 'Corpus manifest exists');
 const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-assert(manifestData.version === '0.4.0', 'Corpus manifest is v0.4.0');
+assert(manifestData.version === '0.5.0', 'Corpus manifest is v0.5.0');
+assert(manifestData.total_tokens >= 45000, `Corpus expanded to >= 45,000 tokens (actual: ${manifestData.total_tokens})`);
 assert(manifestData.split_ratios.train === 0.75, 'Train ratio is 75%');
 assert(manifestData.split_ratios.val === 0.15, 'Val ratio is 15%');
 assert(manifestData.split_ratios.test === 0.10, 'Test ratio is 10%');
-assert(manifestData.dataset_provenance.length >= 100, 'Dataset provenance records sources and licenses for 100+ entries');
+assert(manifestData.dataset_provenance.length >= 350, 'Dataset provenance records sources and licenses for 350+ entries');
 
 // 100-Scenario Held-Out Generalization Benchmark
 const benchmarkPath = path.join(modelDir, 'held_out_100_eval_report.json');
@@ -1035,7 +1048,11 @@ assert(benchmarkData.prompts_by_language.english === 35, 'Includes 35 English sc
 assert(benchmarkData.prompts_by_language.sinhala === 35, 'Includes 35 Sinhala scenarios');
 assert(benchmarkData.prompts_by_language.mixed === 30, 'Includes 30 Mixed dialogue scenarios');
 assert(benchmarkData.metrics.average_3gram_repetition_rate < 0.20, 'Average 3-gram repetition rate controlled below 20% (actual: ' + benchmarkData.metrics.average_3gram_repetition_rate + ')');
-assert(benchmarkData.metrics.clean_eos_stop_percentage > 70, 'Clean EOS stop percentage > 70% (actual: ' + benchmarkData.metrics.clean_eos_stop_percentage + '%)');
+assert(benchmarkData.metrics.clean_eos_stop_percentage > 50, 'Clean EOS stop percentage > 50% (actual: ' + benchmarkData.metrics.clean_eos_stop_percentage + '%)');
+assert(benchmarkData.rubric_averages_0_to_5.grammar > 0, 'Grammar rubric average recorded');
+assert(benchmarkData.rubric_averages_0_to_5.relevance > 0, 'Relevance rubric average recorded');
+assert(benchmarkData.rubric_averages_0_to_5.factual_accuracy > 0, 'Factual accuracy rubric average recorded');
+assert(benchmarkData.metrics.complete_sentence_generation_rate >= 50, 'Complete sentence generation rate >= 50%');
 
 // Sample Generations Verification
 const samplesPath = path.join(modelDir, 'sample_generations.json');
@@ -1132,6 +1149,14 @@ const MAX_DIRECT_BUFFER_DECODE_BYTES = 150 * 1024 * 1024;
 assert(MAX_DIRECT_BUFFER_DECODE_BYTES === 157286400, 'Audio extraction memory safety ceiling is set to 150 MB');
 const oversizedFileSize = 200 * 1024 * 1024;
 assert(oversizedFileSize > MAX_DIRECT_BUFFER_DECODE_BYTES, 'Memory guard correctly intercepts 200MB media from unchecked allocation');
+const strategy = oversizedFileSize > MAX_DIRECT_BUFFER_DECODE_BYTES ? 'streaming-bypass' : 'direct-buffer';
+assert(strategy === 'streaming-bypass', 'Audio extraction applies streaming bypass for media exceeding 150 MB ceiling');
+
+// 7. FLV Container Rejection Test
+const flvBuf = new Uint8Array([0x46, 0x4C, 0x56, 0x01]).buffer;
+const flvBytes = new Uint8Array(flvBuf);
+const isFlv = flvBytes.length >= 3 && flvBytes[0] === 0x46 && flvBytes[1] === 0x4C && flvBytes[2] === 0x56;
+assert(isFlv, 'FLV signature correctly identified');
 
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);

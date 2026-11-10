@@ -24,6 +24,12 @@ import torch
 from torch.utils.data import Dataset
 from typing import List, Tuple, Dict, Any
 from training.tokenizer import MasterAiTokenizer
+from training.data.expansion_stage_a import STAGE_A_ENTRIES
+from training.data.expansion_stage_b import STAGE_B_ENTRIES
+from training.data.expansion_stage_c import STAGE_C_ENTRIES
+from training.data.expansion_stage_d import STAGE_D_ENTRIES
+from training.data.expansion_stage_e import STAGE_E_ENTRIES
+from training.dataset_qc import audit_and_clean_corpus, group_partition_dataset
 
 
 # Structured Original Training Corpus with Provenance & Licensing Metadata (v0.4)
@@ -786,6 +792,21 @@ ORIGINAL_DATASET_ENTRIES: List[Dict[str, str]] = [
         "license": "Proprietary Project Documentation",
     },
 ]
+
+
+# Staged Expansion Corpi (v0.5)
+# Stage A: 25,000+ quality-controlled tokens
+STAGE_A_EXPANDED_ENTRIES: List[Dict[str, str]] = ORIGINAL_DATASET_ENTRIES + STAGE_A_ENTRIES
+
+# Stage B: 50,000+ quality-controlled tokens
+STAGE_B_EXPANDED_ENTRIES: List[Dict[str, str]] = (
+    ORIGINAL_DATASET_ENTRIES
+    + STAGE_A_ENTRIES
+    + STAGE_B_ENTRIES
+    + STAGE_C_ENTRIES
+    + STAGE_D_ENTRIES
+    + STAGE_E_ENTRIES
+)
 
 
 def format_sample(prompt: str, response: str) -> str:
