@@ -29,6 +29,10 @@ from training.data.expansion_stage_b import STAGE_B_ENTRIES
 from training.data.expansion_stage_c import STAGE_C_ENTRIES
 from training.data.expansion_stage_d import STAGE_D_ENTRIES
 from training.data.expansion_stage_e import STAGE_E_ENTRIES
+from training.data.expansion_v06_english import V06_ENGLISH_ENTRIES
+from training.data.expansion_v06_sinhala import V06_SINHALA_ENTRIES
+from training.data.expansion_v06_mixed import V06_MIXED_ENTRIES
+from training.data.expansion_v06_advanced import V06_ADVANCED_ENTRIES
 from training.dataset_qc import audit_and_clean_corpus, group_partition_dataset
 
 
@@ -808,6 +812,15 @@ STAGE_B_EXPANDED_ENTRIES: List[Dict[str, str]] = (
     + STAGE_E_ENTRIES
 )
 
+# Version 0.6: Genuine Answer Quality, Natural Sinhala & Concise Multi-Step Instructions
+V06_EXPANDED_ENTRIES: List[Dict[str, str]] = (
+    STAGE_B_EXPANDED_ENTRIES
+    + V06_ENGLISH_ENTRIES
+    + V06_SINHALA_ENTRIES
+    + V06_MIXED_ENTRIES
+    + V06_ADVANCED_ENTRIES
+)
+
 
 def format_sample(prompt: str, response: str) -> str:
     """Standard formatting for conversational training pairs with trailing space."""
@@ -885,7 +898,7 @@ class MasterAiCorpusDataset(Dataset):
 
             full_tokens = prompt_tokens + response_tokens
             if len(full_tokens) > max_seq_len:
-                full_tokens = full_tokens[:max_seq_len]
+                full_tokens = full_tokens[: max_seq_len - 1] + [tokenizer.EOS_ID]
 
             if len(full_tokens) < 4:
                 continue

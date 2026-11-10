@@ -34,6 +34,7 @@ from training.dataset import (
     ORIGINAL_DATASET_ENTRIES,
     STAGE_A_EXPANDED_ENTRIES,
     STAGE_B_EXPANDED_ENTRIES,
+    V06_EXPANDED_ENTRIES,
     format_sample,
     MasterAiCorpusDataset,
 )
@@ -41,7 +42,7 @@ from training.dataset_qc import audit_and_clean_corpus, group_partition_dataset
 
 
 def train_master_ai(
-    stage: str = "stage_b",
+    stage: str = "v06",
     epochs: int = 25,
     batch_size: int = 8,
     learning_rate: float = 6e-4,
@@ -69,17 +70,24 @@ def train_master_ai(
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. Corpus Selection according to experiment stage
-    if stage == "stage_a":
-        raw_corpus = STAGE_A_EXPANDED_ENTRIES
-        stage_checkpoint_name = "checkpoint_v0.5_stageA.pt"
+    if stage == "v06":
+        raw_corpus = V06_EXPANDED_ENTRIES
+        stage_checkpoint_name = "checkpoint_v0.6.pt"
+        version_label = "0.6.0"
     elif stage == "stage_b":
         raw_corpus = STAGE_B_EXPANDED_ENTRIES
         stage_checkpoint_name = "checkpoint_v0.5_stageB.pt"
+        version_label = "0.5.0"
+    elif stage == "stage_a":
+        raw_corpus = STAGE_A_EXPANDED_ENTRIES
+        stage_checkpoint_name = "checkpoint_v0.5_stageA.pt"
+        version_label = "0.5.0"
     elif stage == "baseline":
         raw_corpus = ORIGINAL_DATASET_ENTRIES
         stage_checkpoint_name = "checkpoint_v0.4.pt"
+        version_label = "0.4.0"
     else:
-        raise ValueError(f"Unknown stage: {stage}. Choose from: baseline, stage_a, stage_b")
+        raise ValueError(f"Unknown stage: {stage}. Choose from: baseline, stage_a, stage_b, v06")
 
     # Temporary tokenizer for audit token census
     temp_tokenizer = MasterAiTokenizer()
@@ -105,7 +113,7 @@ def train_master_ai(
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(
             {
-                "version": "0.5.0",
+                "version": version_label,
                 "stage": stage,
                 "total_samples": len(deduped_corpus),
                 "total_tokens": audit_report["total_corpus_tokens"],
@@ -180,13 +188,17 @@ def train_master_ai(
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
-    # 6. Training Loop with Early Checkpointing
+    # 6. Training Loop with Targeted EOS Loss Weighting & Checkpointing
     print(f"\n[5/6] Training for {epochs} epochs (batch_size={batch_size}, lr={learning_rate})...")
     history = []
     best_val_loss = float("inf")
     checkpoint_best_path = os.path.join(output_dir, "checkpoint_best.pt")
     stage_checkpoint_path = os.path.join(output_dir, stage_checkpoint_name)
     start_time = time.time()
+
+    # Targeted EOS loss weight to reinforce decisive sentence termination
+    loss_weights = torch.ones(tokenizer.vocab_size, device=device)
+    loss_weights[tokenizer.EOS_ID] = 2.0
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -196,7 +208,7 @@ def train_master_ai(
             x, y = x.to(device), y.to(device)
 
             optimizer.zero_grad()
-            _, loss = model(x, targets=y)
+            _, loss = model(x, targets=y, loss_weights=loss_weights)
             loss.backward()
 
             # Gradient clipping at 1.0 to ensure numerical stability
@@ -208,7 +220,7 @@ def train_master_ai(
         train_loss /= max(1, len(train_loader))
         scheduler.step()
 
-        # Validation evaluation pass
+        # Validation evaluation pass (unweighted for standard perplexity)
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
@@ -249,8 +261,12 @@ def train_master_ai(
     print(f"\n[*] Training Complete in {total_time:.2f}s! Best Val Loss: {best_val_loss:.4f}")
     print(f"  ✓ Saved stage checkpoint to {stage_checkpoint_path}")
 
-    # If stage B, also archive checkpoint_v0.5.pt
-    if stage == "stage_b":
+    # If v06, also archive checkpoint_v0.6.pt
+    if stage == "v06":
+        v06_path = os.path.join(output_dir, "checkpoint_v0.6.pt")
+        shutil.copyfile(checkpoint_best_path, v06_path)
+        print(f"  ✓ Archived final v0.6 release checkpoint to {v06_path}")
+    elif stage == "stage_b":
         v05_path = os.path.join(output_dir, "checkpoint_v0.5.pt")
         shutil.copyfile(checkpoint_best_path, v05_path)
         print(f"  ✓ Archived final v0.5 release checkpoint to {v05_path}")
@@ -276,7 +292,7 @@ def train_master_ai(
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump({
             "model_name": "MasterAiCore",
-            "version": "0.5.0-original",
+            "version": f"{version_label}-original",
             "stage": stage,
             "parameters": num_params,
             "architecture": {
@@ -348,7 +364,7 @@ def train_master_ai(
         inp = torch.tensor([prompt_tokens], dtype=torch.long, device=device)
         out_tokens = model.generate(
             inp,
-            max_new_tokens=65,
+            max_new_tokens=85,
             temperature=0.45,
             top_k=20,
             top_p=0.85,

@@ -173,11 +173,11 @@ def run_benchmark_100(
     top_k: int = 20,
     top_p: float = 0.85,
     repetition_penalty: float = 1.25,
-    max_new_tokens: int = 65,
+    max_new_tokens: int = 85,
 ) -> Dict[str, Any]:
     print("=" * 65)
-    print(" MASTER CLOUD — 100-SCENARIO HELD-OUT GENERALIZATION BENCHMARK (v0.5)")
-    print(f" Sampling: T={temperature}, top_k={top_k}, top_p={top_p}, rep_pen={repetition_penalty}")
+    print(" MASTER CLOUD — 100-SCENARIO HELD-OUT GENERALIZATION BENCHMARK (v0.6)")
+    print(f" Sampling: T={temperature}, top_k={top_k}, top_p={top_p}, rep_pen={repetition_penalty}, max_new={max_new_tokens}")
     print("=" * 65)
 
     if not os.path.exists(benchmark_file):
@@ -296,7 +296,7 @@ def run_benchmark_100(
     num_p = len(prompts)
     summary = {
         "benchmark_name": "MASTER CLOUD MasterAI Core 100-Scenario Held-Out Benchmark",
-        "model_version": "0.5.0",
+        "model_version": "0.6.0",
         "checkpoint_evaluated": checkpoint_file,
         "sampling_parameters": {
             "temperature": temperature,

@@ -145,6 +145,7 @@ class MasterAiCore(nn.Module):
         self,
         input_ids: torch.Tensor,
         targets: Optional[torch.Tensor] = None,
+        loss_weights: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         batch_size, seq_len = input_ids.shape
         assert seq_len <= self.config.max_seq_len, f"Sequence length {seq_len} exceeds max {self.config.max_seq_len}"
@@ -165,7 +166,12 @@ class MasterAiCore(nn.Module):
         loss = None
         if targets is not None:
             # Flatten across batch and sequence dimensions for CrossEntropyLoss
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            loss = F.cross_entropy(
+                logits.view(-1, logits.size(-1)),
+                targets.view(-1),
+                weight=loss_weights,
+                ignore_index=-100,
+            )
 
         return logits, loss
 
@@ -198,10 +204,13 @@ class MasterAiCore(nn.Module):
             # Focus on next-token prediction
             next_logits = logits[:, -1, :].clone()
 
-            # Apply repetition penalty to tokens already generated
+            # Apply repetition penalty to tokens already generated (exempting EOS, punctuation)
             if repetition_penalty != 1.0:
+                exempt_tokens = {0, 1, 2, 32, 46, 10}
+                if eos_id is not None:
+                    exempt_tokens.add(eos_id)
                 for b in range(input_ids.shape[0]):
-                    generated_tokens = set(input_ids[b].tolist())
+                    generated_tokens = set(input_ids[b].tolist()) - exempt_tokens
                     for token_id in generated_tokens:
                         if next_logits[b, token_id] > 0:
                             next_logits[b, token_id] /= repetition_penalty

@@ -1,20 +1,20 @@
 {
-  "version": "0.5.0",
-  "stage": "stage_b",
-  "total_samples": 369,
-  "total_tokens": 48694,
-  "train_samples": 246,
-  "val_samples": 66,
-  "test_samples": 57,
+  "version": "0.6.0",
+  "stage": "v06",
+  "total_samples": 442,
+  "total_tokens": 57839,
+  "train_samples": 293,
+  "val_samples": 80,
+  "test_samples": 69,
   "split_ratios": {
     "train": 0.75,
     "val": 0.15,
     "test": 0.1
   },
   "language_distribution": {
-    "english": 238,
-    "sinhala": 70,
-    "mixed": 61
+    "english": 273,
+    "sinhala": 90,
+    "mixed": 79
   },
   "category_counts": {
     "identity": 8,
@@ -27,25 +27,39 @@
     "sinhala_dialogue": 77,
     "mixed_dialogue": 54,
     "reasoning": 54,
-    "conversation": 54
+    "conversation": 54,
+    "hotkeys": 12,
+    "audio": 6,
+    "privacy": 4,
+    "instructions": 5,
+    "video_controls_si": 8,
+    "audio_si": 5,
+    "privacy_si": 2,
+    "instructions_si": 1,
+    "mixed_controls": 5,
+    "mixed_audio": 3,
+    "mixed_privacy": 4,
+    "troubleshooting": 8,
+    "troubleshooting_si": 5,
+    "mixed_advanced": 5
   },
   "audit_metrics": {
-    "raw_entries_inspected": 370,
-    "cleaned_valid_entries": 369,
+    "raw_entries_inspected": 448,
+    "cleaned_valid_entries": 442,
     "exact_duplicates_purged": 0,
-    "near_duplicates_purged": 1,
+    "near_duplicates_purged": 6,
     "malformed_purged": 0,
     "incomplete_purged": 0,
     "unicode_errors_detected": 0,
     "unicode_error_details": [],
-    "total_corpus_tokens": 48694,
-    "total_prompt_tokens": 13883,
-    "total_response_tokens": 34811,
-    "average_tokens_per_sample": 131.96,
+    "total_corpus_tokens": 57839,
+    "total_prompt_tokens": 16687,
+    "total_response_tokens": 41152,
+    "average_tokens_per_sample": 130.86,
     "language_distribution": {
-      "english": 238,
-      "sinhala": 70,
-      "mixed": 61
+      "english": 273,
+      "sinhala": 90,
+      "mixed": 79
     },
     "category_distribution": {
       "identity": 8,
@@ -58,7 +72,21 @@
       "sinhala_dialogue": 77,
       "mixed_dialogue": 54,
       "reasoning": 54,
-      "conversation": 54
+      "conversation": 54,
+      "hotkeys": 12,
+      "audio": 6,
+      "privacy": 4,
+      "instructions": 5,
+      "video_controls_si": 8,
+      "audio_si": 5,
+      "privacy_si": 2,
+      "instructions_si": 1,
+      "mixed_controls": 5,
+      "mixed_audio": 3,
+      "mixed_privacy": 4,
+      "troubleshooting": 8,
+      "troubleshooting_si": 5,
+      "mixed_advanced": 5
     },
     "group_distribution": {
       "identity": 8,
@@ -116,7 +144,21 @@
       "english_mathematical_derivations": 6,
       "english_conversational_dialogues": 5,
       "sinhala_conversational_fluency": 5,
-      "mixed_everyday_practical": 5
+      "mixed_everyday_practical": 5,
+      "v06_en_controls": 12,
+      "v06_en_audio": 6,
+      "v06_en_privacy": 4,
+      "v06_en_instructions": 5,
+      "v06_si_controls": 8,
+      "v06_si_audio": 5,
+      "v06_si_privacy": 2,
+      "v06_si_instructions": 1,
+      "v06_mix_controls": 5,
+      "v06_mix_audio": 3,
+      "v06_mix_privacy": 4,
+      "v06_en_troubleshooting": 8,
+      "v06_si_troubleshooting": 5,
+      "v06_mix_advanced": 5
     }
   },
   "dataset_provenance": [
@@ -3071,6 +3113,590 @@
       "prompt": "If a video has a duration of 3,600 seconds, what is that in standard hours and minutes?",
       "source": "Time Unit Conversion Mathematics",
       "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "What is the primary key to toggle video play and pause in the player?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I enter or exit fullscreen mode?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I seek 10 seconds forward in a video?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I seek 10 seconds backward in a video?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How can I advance playback by individual video frames?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How can I rewind playback by individual video frames?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "What shortcut instantly mutes the audio in MASTER CLOUD?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I increase the playback volume using the keyboard?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I decrease the playback volume using the keyboard?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "What key captures a high-resolution screenshot of the current frame?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "Which keyboard shortcut brings up the 10-Band Equalizer panel?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "hotkeys",
+      "group": "v06_en_controls",
+      "language": "english",
+      "prompt": "How do I open MasterAI Studio?",
+      "source": "MASTER CLOUD Official Keyboard Shortcuts",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "What frequency bands are available in the 10-Band Equalizer?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "What is the decibel adjustment range for each equalizer band?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "What does the Bass Boost preset do in the Audio Studio?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "What does the Vocal Clarity preset do?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "How do I fix dialogue that is delayed behind the actor's lips?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio",
+      "group": "v06_en_audio",
+      "language": "english",
+      "prompt": "What is stereo balance and how do I pan audio left or right?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy",
+      "group": "v06_en_privacy",
+      "language": "english",
+      "prompt": "Does MasterAI Core send my private video files to the internet?",
+      "source": "MASTER CLOUD Privacy Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy",
+      "group": "v06_en_privacy",
+      "language": "english",
+      "prompt": "How does MASTER CLOUD store external cloud API keys?",
+      "source": "MASTER CLOUD Security Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy",
+      "group": "v06_en_privacy",
+      "language": "english",
+      "prompt": "Can MasterAI function when there is no internet connection?",
+      "source": "MASTER CLOUD Architectural Specification",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy",
+      "group": "v06_en_privacy",
+      "language": "english",
+      "prompt": "What makes MasterAI Core different from third-party wrappers?",
+      "source": "MASTER CLOUD Architectural Specification",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions",
+      "group": "v06_en_instructions",
+      "language": "english",
+      "prompt": "How do I set up an A-B loop to repeat a scene continuously?",
+      "source": "MASTER CLOUD Practical Workflows",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions",
+      "group": "v06_en_instructions",
+      "language": "english",
+      "prompt": "How do I load external subtitles and fix timing offset?",
+      "source": "MASTER CLOUD Practical Workflows",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions",
+      "group": "v06_en_instructions",
+      "language": "english",
+      "prompt": "Why won't my MKV file play with audio in the browser?",
+      "source": "MASTER CLOUD Video Demuxing Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions",
+      "group": "v06_en_instructions",
+      "language": "english",
+      "prompt": "How do I export my video chapters to an SRT or CSV file?",
+      "source": "MASTER CLOUD Export Studio Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions",
+      "group": "v06_en_instructions",
+      "language": "english",
+      "prompt": "What is the difference between Local AI mode and Cloud Gemini mode?",
+      "source": "MASTER CLOUD Dual AI Overview",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "පූර්ණ තිර ප්‍රකාරයට (Fullscreen) පිවිසෙන්නේ හෝ එයින් ඉවත් වන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "වීඩියෝව තත්පර 10 ක් ඉදිරියට ගෙනියන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "වීඩියෝව තත්පර 10 ක් ආපස්සට ගෙනියන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවේ ඊළඟ රාමුව (next frame) වෙත මාරු වන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "වීඩියෝව එක රාමුව බැගින් ආපස්සට ගෙනියන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "ශබ්දය ක්ෂණිකව නිහඬ (Mute) කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "ශබ්දය වැඩි කරන්නේ සහ අඩු කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls_si",
+      "group": "v06_si_controls",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවේ පැහැදිලි ඡායාරූපයක් (Screenshot) ලබා ගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_si",
+      "group": "v06_si_audio",
+      "language": "sinhala",
+      "prompt": "10-Band Equalizer ශබ්ද සැකසුම් පුවරුව ලබා ගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_si",
+      "group": "v06_si_audio",
+      "language": "mixed",
+      "prompt": "10-Band Equalizer එකේ ඇති සංඛ්‍යාත මොනවාද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_si",
+      "group": "v06_si_audio",
+      "language": "sinhala",
+      "prompt": "Equalizer එකෙහි Bass Boost පෙරසිටුවම (Preset) භාවිත කරන්නේ ඇයි?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_si",
+      "group": "v06_si_audio",
+      "language": "sinhala",
+      "prompt": "Vocal Clarity පෙරසිටුවමෙන් සිදු වන්නේ කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_si",
+      "group": "v06_si_audio",
+      "language": "sinhala",
+      "prompt": "ශබ්ද ප්‍රමාදය (Audio Sync Delay) නිවැරදි කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy_si",
+      "group": "v06_si_privacy",
+      "language": "sinhala",
+      "prompt": "MasterAI Core මගින් මගේ වීඩියෝ අන්තර්ජාලයට යවනවාද?",
+      "source": "MASTER CLOUD Privacy Architecture (Sinhala)",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "privacy_si",
+      "group": "v06_si_privacy",
+      "language": "sinhala",
+      "prompt": "අන්තර්ජාලය නොමැතිව MasterAI භාවිතා කළ හැකිද?",
+      "source": "MASTER CLOUD Privacy Architecture (Sinhala)",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "instructions_si",
+      "group": "v06_si_instructions",
+      "language": "sinhala",
+      "prompt": "A-B Repeat භාවිතයෙන් වීඩියෝ කොටසක් නැවත නැවත වාදනය කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Workflows",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_controls",
+      "group": "v06_mix_controls",
+      "language": "mixed",
+      "prompt": "Video එක fullscreen දාගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_controls",
+      "group": "v06_mix_controls",
+      "language": "mixed",
+      "prompt": "Video එක තත්පර 10 ක් forward කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_controls",
+      "group": "v06_mix_controls",
+      "language": "mixed",
+      "prompt": "Video එක තත්පර 10 ක් rewind කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_controls",
+      "group": "v06_mix_controls",
+      "language": "mixed",
+      "prompt": "Frame by frame video එක බලන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_controls",
+      "group": "v06_mix_controls",
+      "language": "mixed",
+      "prompt": "High quality screenshot එකක් ගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_audio",
+      "group": "v06_mix_audio",
+      "language": "mixed",
+      "prompt": "Audio Studio එක සහ 10-band equalizer එක screen එකට ගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_audio",
+      "group": "v06_mix_audio",
+      "language": "mixed",
+      "prompt": "Vocal Clarity කියන sound preset එකෙන් මොන වගේ වෙනසක්ද වෙන්නේ?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_audio",
+      "group": "v06_mix_audio",
+      "language": "mixed",
+      "prompt": "Bass Boost preset එකෙන් වෙන්නේ මොකක්ද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_privacy",
+      "group": "v06_mix_privacy",
+      "language": "mixed",
+      "prompt": "MasterAI Core එකෙන් මගේ video cloud එකට upload වෙනවද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_privacy",
+      "group": "v06_mix_privacy",
+      "language": "mixed",
+      "prompt": "MASTER CLOUD එකේ Local AI සහ Gemini Cloud AI ක්‍රම දෙකේ ප්‍රධාන වෙනස්කම් මොනවාද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_privacy",
+      "group": "v06_mix_privacy",
+      "language": "mixed",
+      "prompt": "MKV video එකක sound ඇහෙන්නේ නැත්තේ ඇයි?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_privacy",
+      "group": "v06_mix_privacy",
+      "language": "mixed",
+      "prompt": "A-B Repeat ක්‍රමයෙන් වීඩියෝවේ කොටසක් දිගටම loop කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "What should I do if a 4K 60fps video drops frames or stutters during playback?",
+      "source": "MASTER CLOUD Performance Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "How does hardware acceleration improve playback in MASTER CLOUD?",
+      "source": "MASTER CLOUD Technical Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "Can I play audio-only files like MP3, WAV, or FLAC in MASTER CLOUD?",
+      "source": "MASTER CLOUD Media Formats Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "Why do my subtitles show broken question marks or weird boxes instead of letters?",
+      "source": "MASTER CLOUD Subtitle Troubleshooting",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "How do I create and manage video bookmarks in MASTER CLOUD?",
+      "source": "MASTER CLOUD Bookmarks Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "What does the Flat preset do in the 10-Band Equalizer?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "What is the difference between peak volume gain and audio clipping?",
+      "source": "MASTER CLOUD Audio Studio Manual",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting",
+      "group": "v06_en_troubleshooting",
+      "language": "english",
+      "prompt": "How does MasterAI generate video chapters from visual transitions?",
+      "source": "MASTER CLOUD Scene Detection Specification",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting_si",
+      "group": "v06_si_troubleshooting",
+      "language": "sinhala",
+      "prompt": "4K වීඩියෝවක් play වෙද්දී හිරවෙනවා (stutter) නම් කළ යුත්තේ කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala Troubleshooting Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting_si",
+      "group": "v06_si_troubleshooting",
+      "language": "sinhala",
+      "prompt": "සිංහල උපසිරැසි (Sinhala Subtitles) නිවැරදිව දර්ශනය නොවන්නේ ඇයි?",
+      "source": "MASTER CLOUD Sinhala Troubleshooting Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting_si",
+      "group": "v06_si_troubleshooting",
+      "language": "sinhala",
+      "prompt": "වීඩියෝවක වැදගත් තැනක් සලකුණු කර (Bookmark) තබා ගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting_si",
+      "group": "v06_si_troubleshooting",
+      "language": "sinhala",
+      "prompt": "Equalizer එකේ Flat පෙරසිටුවමෙන් සිදු වන්නේ කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala User Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "troubleshooting_si",
+      "group": "v06_si_troubleshooting",
+      "language": "sinhala",
+      "prompt": "MasterAI Core මගින් පරිගණකයේ RAM මතකය අධික ලෙස භාවිත වෙනවාද?",
+      "source": "MASTER CLOUD Sinhala Architecture Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_advanced",
+      "group": "v06_mix_advanced",
+      "language": "mixed",
+      "prompt": "Video එකක් play වෙද්දී laptop battery එක ඉක්මනට බහින්නේ ඇයි?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_advanced",
+      "group": "v06_mix_advanced",
+      "language": "mixed",
+      "prompt": "Subtitles වල timing mismatch එකක් තත්පර 2 කින් හදන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_advanced",
+      "group": "v06_mix_advanced",
+      "language": "mixed",
+      "prompt": "Audio crackle හෝ distortion එන එක නවත්තන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_advanced",
+      "group": "v06_mix_advanced",
+      "language": "mixed",
+      "prompt": "Chapters export කරලා SRT file එකක් විදිහට download කරගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_advanced",
+      "group": "v06_mix_advanced",
+      "language": "mixed",
+      "prompt": "MasterAI Core එකට GPU එකක්ම ඕනෙද run වෙන්න?",
+      "source": "MASTER CLOUD Bilingual Support Guide",
+      "license": "Proprietary Project Documentation"
     }
   ]
 }

@@ -1,13 +1,13 @@
 {
   "benchmark_name": "MASTER CLOUD MasterAI Core 100-Scenario Held-Out Benchmark",
-  "model_version": "0.5.0",
+  "model_version": "0.6.0",
   "checkpoint_evaluated": "checkpoint_best.pt",
   "sampling_parameters": {
     "temperature": 0.45,
     "top_k": 20,
     "top_p": 0.85,
     "repetition_penalty": 1.25,
-    "max_new_tokens": 65
+    "max_new_tokens": 85
   },
   "total_prompts": 100,
   "prompts_by_language": {
@@ -16,52 +16,54 @@
     "mixed": 30
   },
   "metrics": {
-    "average_3gram_repetition_rate": 0.114,
-    "clean_eos_stop_percentage": 56.0,
+    "average_3gram_repetition_rate": 0.1501,
+    "clean_eos_stop_percentage": 60.0,
     "keyword_relevance_rate": 18.0,
-    "complete_sentence_generation_rate": 51.0
+    "complete_sentence_generation_rate": 52.0
   },
   "rubric_averages_0_to_5": {
-    "correctness": 1.18,
+    "correctness": 1.25,
     "grammar": 1.94,
-    "naturalness": 1.94,
-    "relevance": 1.26,
-    "instruction_following": 1.76,
-    "factual_accuracy": 1.18
+    "naturalness": 1.88,
+    "relevance": 1.35,
+    "instruction_following": 1.89,
+    "factual_accuracy": 1.25
   },
   "all_responses": [
     {
       "id": "en_01",
       "category": "English Hotkeys",
       "prompt": "Which key pauses and plays the video in MASTER CLOUD?",
-      "generated_response": "The of the is to audio the is the the or is the in a reed-an a the as fy in and or a video, a a the the the",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.3175,
+      "generated_response": "to your any in reg playback by frame, video in that video seconds. your exactly to directly seconds.",
+      "tokens_generated": 40,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1053,
       "expected_keywords": [
         "Spacebar",
         "K"
       ],
-      "matched_keywords": [],
+      "matched_keywords": [
+        "K"
+      ],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
+        "correctness_0_to_5": 3.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 3.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Meaningful sentence with domain relevance (K)"
     },
     {
       "id": "en_02",
       "category": "English Hotkeys",
       "prompt": "How do I toggle fullscreen mode using my keyboard?",
-      "generated_response": "the Press key to press, to the to to video or your or audio the your the your your your equalizer.",
-      "tokens_generated": 44,
+      "generated_response": "Press key the to the in or key your set, jump to on video your any to to your your to to video seconds.",
+      "tokens_generated": 50,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2857,
+      "repetition_rate_3gram": 0.25,
       "expected_keywords": [
         "F"
       ],
@@ -81,44 +83,18 @@
       "id": "en_03",
       "category": "English Hotkeys",
       "prompt": "What key jumps forward by 10 seconds?",
-      "generated_response": "The the to your keyboard the the press, key video Core a to your the you and equalizer your any the detection.",
-      "tokens_generated": 46,
+      "generated_response": "to Press the The video any to jump or to keyboard the to frame.",
+      "tokens_generated": 29,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1818,
+      "repetition_rate_3gram": 0.1111,
       "expected_keywords": [
         "Right Arrow",
         "L"
       ],
-      "matched_keywords": [
-        "L"
-      ],
-      "rubric_scores": {
-        "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 2.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 3.0,
-        "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 3.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Meaningful sentence with domain relevance (L)"
-    },
-    {
-      "id": "en_04",
-      "category": "English Hotkeys",
-      "prompt": "What key jumps backward by 10 seconds?",
-      "generated_response": "Press the to Studio the video, your key your your local your your you keyboard to offset and scene click to your to audio markers.",
-      "tokens_generated": 53,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1961,
-      "expected_keywords": [
-        "Left Arrow",
-        "J"
-      ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 2.0,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 2.0,
         "instruction_following_0_to_5": 3.0,
@@ -128,13 +104,39 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
+      "id": "en_04",
+      "category": "English Hotkeys",
+      "prompt": "What key jumps backward by 10 seconds?",
+      "generated_response": "any the your to keyboard or on-frame, slider to and adjusts seconds.",
+      "tokens_generated": 29,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.037,
+      "expected_keywords": [
+        "Left Arrow",
+        "J"
+      ],
+      "matched_keywords": [
+        "J"
+      ],
+      "rubric_scores": {
+        "correctness_0_to_5": 3.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 3.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Meaningful sentence with domain relevance (J)"
+    },
+    {
       "id": "en_05",
       "category": "English Hotkeys",
       "prompt": "How do I step forward frame by frame?",
-      "generated_response": "Press key the to your press the video MasterAI scene Core, equalizer.",
-      "tokens_generated": 26,
+      "generated_response": "the key Press to the to or 0 key in video seconds.",
+      "tokens_generated": 25,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0417,
+      "repetition_rate_3gram": 0.087,
       "expected_keywords": [
         "Period",
         "."
@@ -157,61 +159,57 @@
       "id": "en_06",
       "category": "English Hotkeys",
       "prompt": "How do I step backward frame by frame?",
-      "generated_response": "key Press to the or the press), video to your the any you playback.",
-      "tokens_generated": 31,
+      "generated_response": "key Press the to key or video key in the seconds.",
+      "tokens_generated": 23,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1034,
+      "repetition_rate_3gram": 0.0952,
       "expected_keywords": [
         "Comma",
         ","
       ],
-      "matched_keywords": [
-        ","
-      ],
+      "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 3.5,
+        "correctness_0_to_5": 1.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 2.0,
         "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 3.5,
+        "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": true
       },
-      "human_evaluation_note": "Meaningful sentence with domain relevance (,)"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "en_07",
       "category": "English Hotkeys",
       "prompt": "What is the shortcut to instantly mute audio?",
-      "generated_response": "The a real the an A-me. of the red reading and a with of and is while or the the as re that to the of of video re",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1429,
+      "generated_response": "The SA-p C HOLeoes, the an farit RL of in reg a st with a that dear and by video the the in hter (.",
+      "tokens_generated": 68,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0606,
       "expected_keywords": [
         "M"
       ],
-      "matched_keywords": [
-        "M"
-      ],
+      "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 2.5,
-        "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 3.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 2.5,
-        "is_complete_sentence": false
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Domain keyword matched (M) but syntax fragmented"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "en_08",
       "category": "English Hotkeys",
       "prompt": "How do I increase the volume by 5% increments?",
-      "generated_response": "key to the or the and the the the to the to video your to scene to to to to playback on your directly jump.",
-      "tokens_generated": 51,
+      "generated_response": "the Press key to to to the to to key to and or the video press to in to the to . in in jump directly backward to to keyboard to any to 10-seconds, jump to to forward Arrow seconds.",
+      "tokens_generated": 84,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.3673,
+      "repetition_rate_3gram": 0.3293,
       "expected_keywords": [
         "Up Arrow"
       ],
@@ -225,39 +223,39 @@
         "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": false
       },
-      "human_evaluation_note": "High repetition loop (rate: 36.7%)"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "en_09",
       "category": "English Hotkeys",
       "prompt": "How do I decrease the volume by 5% increments?",
-      "generated_response": "key to the the or video a to the to the or and directly the the to or press the to or to to your click to to you the the on the",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.4444,
+      "generated_response": "Press to key to to the or key to frame key to 0. the keyboard to video jump your directly any seconds, to to playback seconds.",
+      "tokens_generated": 55,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2453,
       "expected_keywords": [
         "Down Arrow"
       ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 0.5,
+        "grammar_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 3.0,
         "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "High repetition loop (rate: 44.4%)"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "en_10",
       "category": "English Hotkeys",
       "prompt": "What key captures a high-resolution PNG screenshot?",
-      "generated_response": "the A-re video in to a or f with the and an of in e as the a is a audio and a of rever to the the and bar de",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1905,
+      "generated_response": "your reegterarous the to or your and video only in audio your you video or the local frames.",
+      "tokens_generated": 43,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0976,
       "expected_keywords": [
         "S"
       ],
@@ -265,24 +263,24 @@
         "S"
       ],
       "rubric_scores": {
-        "correctness_0_to_5": 2.5,
-        "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 1.0,
+        "correctness_0_to_5": 3.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 3.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 2.5,
-        "is_complete_sentence": false
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 3.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Domain keyword matched (S) but syntax fragmented"
+      "human_evaluation_note": "Meaningful sentence with domain relevance (S)"
     },
     {
       "id": "en_11",
       "category": "English Hotkeys",
       "prompt": "How do I detach the video into Picture-in-Picture mode?",
-      "generated_response": "Press key to or press to your the a key on the to the the or any to and keyboard jump, to click or scene to playback.",
-      "tokens_generated": 56,
+      "generated_response": "Press key to to the to the your the or to to your to You and the any s 10 to video.",
+      "tokens_generated": 45,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2037,
+      "repetition_rate_3gram": 0.2791,
       "expected_keywords": [
         "P"
       ],
@@ -304,10 +302,10 @@
       "id": "en_12",
       "category": "English Hotkeys",
       "prompt": "What key opens the Web Audio Studio and 10-Band Equalizer?",
-      "generated_response": "The A COGoa your I audio in to the video, p local the and or the and Core. and the your scene detection, resting offer your you scene",
-      "tokens_generated": 65,
+      "generated_response": "your I Core, slider dear subing and and in and mal and and and to and deecor and f. and wo. prevt. and and for rexk, and and for and for to and nevery",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
+      "repetition_rate_3gram": 0.3012,
       "expected_keywords": [
         "E"
       ],
@@ -329,10 +327,10 @@
       "id": "en_13",
       "category": "English Hotkeys",
       "prompt": "What key opens Subtitle Studio for caption customization?",
-      "generated_response": "video, to The media the and the you offt-regy to your pon in or scene your local and and files.",
-      "tokens_generated": 48,
+      "generated_response": "to in in you your your equalizer, octave 32Hz, sub-ver band tranamp local local and frames.",
+      "tokens_generated": 39,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1087,
+      "repetition_rate_3gram": 0.0811,
       "expected_keywords": [
         "C"
       ],
@@ -342,7 +340,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 3.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 3.0,
         "factual_accuracy_0_to_5": 3.5,
@@ -354,12 +352,38 @@
       "id": "en_14",
       "category": "English Hotkeys",
       "prompt": "How do I trigger Smart Scene Detection from the keyboard?",
-      "generated_response": "key to to and or key you video any to to scene to s.",
-      "tokens_generated": 29,
+      "generated_response": "key the to the to any to to seconds. 5, to exactly video seconds.",
+      "tokens_generated": 31,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1852,
+      "repetition_rate_3gram": 0.2414,
       "expected_keywords": [
         "X"
+      ],
+      "matched_keywords": [
+        "X"
+      ],
+      "rubric_scores": {
+        "correctness_0_to_5": 3.5,
+        "grammar_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 3.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Meaningful sentence with domain relevance (X)"
+    },
+    {
+      "id": "en_15",
+      "category": "English Hotkeys",
+      "prompt": "What keys set Point A and Point B for A-B Repeat loop?",
+      "generated_response": "to the in to the your or video or the to to playback to to seconds. to jump any seconds.",
+      "tokens_generated": 42,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.275,
+      "expected_keywords": [
+        "[",
+        "]"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -374,49 +398,25 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
-      "id": "en_15",
-      "category": "English Hotkeys",
-      "prompt": "What keys set Point A and Point B for A-B Repeat loop?",
-      "generated_response": "Press the Fn key to the the key to or press your a open key keyboard jump, to to you any to to to the your the video, directly click on",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.2698,
-      "expected_keywords": [
-        "[",
-        "]"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
       "id": "en_16",
       "category": "English Audio",
       "prompt": "What does the 32Hz slider on the equalizer control?",
-      "generated_response": "The the audio video a fal or is in-md and to rels, of the ber a as aning and st the the and cing the to the the",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1587,
+      "generated_response": "64Hz cenes, 1kHz, 125Hz, 500Hz, 2kHz, s 2kHz, 4kHz, and and 1kHz 8, 5kHz, 2kHz, 4kHz, k, 350kHz, 8kHz.",
+      "tokens_generated": 63,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2459,
       "expected_keywords": [
         "sub-bass",
         "rumble"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
+        "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
         "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
@@ -425,10 +425,10 @@
       "id": "en_17",
       "category": "English Audio",
       "prompt": "What does the 16kHz slider on the equalizer control?",
-      "generated_response": "The video in-a exo AV, to media and audio re of and and with and a fe mos and is or by. de-red and cing audio",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0952,
+      "generated_response": "The 32Hz, band-bass and 125Hz. and provient to fan bass retips demic for and cy thar acoustic st s retigal and s res in per as and ving and mote and rech.",
+      "tokens_generated": 84,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0976,
       "expected_keywords": [
         "treble",
         "brilliance",
@@ -436,24 +436,24 @@
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "en_18",
       "category": "English Audio",
       "prompt": "What frequency band enhances human speech intelligibility?",
-      "generated_response": "the The A a is re or video and in to the the e re of regy the rem and de s in reduence fod reditipl the in",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
+      "generated_response": "The ree the is deamy audio of is a v, with the is by and 120 4 4 of 5 per 168 4kHz.",
+      "tokens_generated": 54,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1154,
       "expected_keywords": [
         "1kHz",
         "2kHz",
@@ -462,23 +462,23 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 3.0,
         "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "en_19",
       "category": "English Audio",
       "prompt": "What audio presets are built into the equalizer?",
-      "generated_response": "Ce PBoan MasterAI VO-Core, analyllivry pon your local to buuting and the offan text a and in (G.",
-      "tokens_generated": 55,
+      "generated_response": "The The 32Hz, 64Hz, 125Hz, dey and and 2kHz, and man to and prostal bass and 500Hz, 850kHz, 8kHz.",
+      "tokens_generated": 54,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0189,
+      "repetition_rate_3gram": 0.1154,
       "expected_keywords": [
         "Flat",
         "Bass Boost",
@@ -488,7 +488,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -500,10 +500,10 @@
       "id": "en_20",
       "category": "English Audio",
       "prompt": "How do I fix dialogue that is slightly behind the actor's lips?",
-      "generated_response": "(B a A S (C the the to video The the a a of and of the is or the a the the the of the the the the the the the",
-      "tokens_generated": 65,
+      "generated_response": "a dean recy a of btiplic st fe a of of a a of of of of a of of of per 1 by = (. of WPM a suving 3, bits * 72 Dividing 198",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.4444,
+      "repetition_rate_3gram": 0.2892,
       "expected_keywords": [
         "Audio Delay",
         "lip-sync",
@@ -511,82 +511,9 @@
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 0.5,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "High repetition loop (rate: 44.4%)"
-    },
-    {
-      "id": "en_21",
-      "category": "English Subtitles",
-      "prompt": "What subtitle formats can I upload into Subtitle Studio?",
-      "generated_response": "VOOB, MasterAI SMe C CD A-pan P CLOUD your V. the V-and to or a to your G your your Core local E.",
-      "tokens_generated": 60,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.069,
-      "expected_keywords": [
-        "SRT",
-        "WebVTT"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "en_22",
-      "category": "English Subtitles",
-      "prompt": "How does subtitle sync offset work?",
-      "generated_response": "V-bistying a Bhar and the Oe in p fens, reming pan red CDP or nt and pes.",
-      "tokens_generated": 55,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0189,
-      "expected_keywords": [
-        "milliseconds",
-        "offset",
-        "sync"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "en_23",
-      "category": "English Subtitles",
-      "prompt": "Can I export my subtitles as a Markdown transcript?",
-      "generated_response": "A The an a is the ind to a of de and ce f or motion is bes, re with diic proping s acti ad cove tres",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0317,
-      "expected_keywords": [
-        "Markdown",
-        "Export"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -595,13 +522,86 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
+      "id": "en_21",
+      "category": "English Subtitles",
+      "prompt": "What subtitle formats can I upload into Subtitle Studio?",
+      "generated_response": "The Core The in-p fan your the media locally bterar, a dee. or with and prostt regy audio and to deat in nete rera computing and wo re in al rects c",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0361,
+      "expected_keywords": [
+        "SRT",
+        "WebVTT"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "en_22",
+      "category": "English Subtitles",
+      "prompt": "How does subtitle sync offset work?",
+      "generated_response": "A Studio, The in He deules remics to fer of a and recy by with in the and data the of in of that and in video. is haring exo active the the an",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1205,
+      "expected_keywords": [
+        "milliseconds",
+        "offset",
+        "sync"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "en_23",
+      "category": "English Subtitles",
+      "prompt": "Can I export my subtitles as a Markdown transcript?",
+      "generated_response": "key video your on to your en-nection. browser the your or offs local complete band media scene local files frames, you band equalizer run, priter your 64Hz subel gan your complete local nelliver nevichronated and",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0964,
+      "expected_keywords": [
+        "Markdown",
+        "Export"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
       "id": "en_24",
       "category": "English Intelligence",
       "prompt": "How does the scene detection algorithm detect cuts?",
-      "generated_response": "MasterAI Sue the Studio to local your Core, and poning media, your off්න.",
-      "tokens_generated": 35,
+      "generated_response": "MasterAI The Core, 10-32Hz 64Hz.",
+      "tokens_generated": 14,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0303,
+      "repetition_rate_3gram": 0.0,
       "expected_keywords": [
         "luminance",
         "delta",
@@ -611,7 +611,7 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
+        "grammar_0_to_5": 2.0,
         "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
@@ -624,34 +624,34 @@
       "id": "en_25",
       "category": "English Intelligence",
       "prompt": "What is conversational speech pacing measured in?",
-      "generated_response": "A The a an the of to of or a the of of of is is of s the of is the and of by of video, of of the and the",
-      "tokens_generated": 65,
+      "generated_response": "A of is M the is is Dividing 1, per 160 by 5 samples = seconds. * 2) 490 equals 1,000 400 4, by 4878kHz 396 18 * * 15000) seconds bytes 5",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.3968,
+      "repetition_rate_3gram": 0.0723,
       "expected_keywords": [
         "WPM",
         "Words Per Minute"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
+        "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
+        "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
-      "human_evaluation_note": "High repetition loop (rate: 39.7%)"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "en_26",
       "category": "English Intelligence",
       "prompt": "What decibel level is classified as silence in audio analysis?",
-      "generated_response": "A-rese Her the of the or the that an a and to acent, refy with the of and conves in the re the prop-deV mod",
-      "tokens_generated": 65,
+      "generated_response": "(LR Crabon AS (PI HR of ming (FTD and fer an with ((C (S bar re hes to stal and A, riic s and proplt ag or and the st",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
+      "repetition_rate_3gram": 0.0361,
       "expected_keywords": [
         "-40",
         "dBFS",
@@ -661,7 +661,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -673,10 +673,10 @@
       "id": "en_27",
       "category": "English Privacy",
       "prompt": "Does MasterAI Core upload video frames to any remote server?",
-      "generated_response": "Opient the your media and exe local with detection, and on ban in and previate It to off්න.",
-      "tokens_generated": 47,
+      "generated_response": "a your audio browser war with media completes in-gy, the your are and your local previtive negan demal subed and dean and init.",
+      "tokens_generated": 64,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0444,
+      "repetition_rate_3gram": 0.0645,
       "expected_keywords": [
         "No",
         "local",
@@ -700,10 +700,10 @@
       "id": "en_28",
       "category": "English Privacy",
       "prompt": "Can MasterAI function without an internet connection?",
-      "generated_response": "A-b. The in the to movent, the and red a video propice as in f and cost audio acates or the the in precal of with",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0952,
+      "generated_response": "The re ges, your local-in audio Core, frames inteviply and with the subs deechar fcting precuman a propition comprad mic and neger bent, band subs and bass w.",
+      "tokens_generated": 84,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0488,
       "expected_keywords": [
         "Yes",
         "offline"
@@ -711,8 +711,33 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
+      "id": "en_29",
+      "category": "English Codecs",
+      "prompt": "What container formats are natively supported by the player?",
+      "generated_response": "HPe ASS agy audio with a re an and deo is hart bent, and (MSC of of to to and a acicip ml. is as sud re th and is retipling",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1084,
+      "expected_keywords": [
+        "MP4",
+        "WebM",
+        "HLS"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 2.0,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 1.5,
@@ -721,38 +746,13 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
-      "id": "en_29",
-      "category": "English Codecs",
-      "prompt": "What container formats are natively supported by the player?",
-      "generated_response": "S B, Studio the MasterAI your the your local in-bt and you to off්න.",
-      "tokens_generated": 35,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0606,
-      "expected_keywords": [
-        "MP4",
-        "WebM",
-        "HLS"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
       "id": "en_30",
       "category": "English Codecs",
       "prompt": "Does MASTER CLOUD support AV1 and VP9 video decoding?",
-      "generated_response": "C S-the (Op, S-nals Ee in Ran Ooa V. C Opens Cuent to Lar M-V Oan a Con Beise I",
-      "tokens_generated": 65,
+      "generated_response": "The Spacter Hals, is an ree a (. a is ALSCar a the to O. AMLLSCSSF A-or HCh remeg retipling fy and for to re and re to",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0159,
+      "repetition_rate_3gram": 0.0843,
       "expected_keywords": [
         "Yes",
         "AV1",
@@ -774,10 +774,10 @@
       "id": "en_31",
       "category": "English Reasoning",
       "prompt": "If a video is 5 minutes long and contains 750 words, what is the WPM rate?",
-      "generated_response": "1 1, of by 4200 = to * 3 per samples Dividing 1,000 seconds.",
-      "tokens_generated": 34,
+      "generated_response": "equals 10 seconds. 400 (2 18000 1 3 5 seconds by 3 seconds 1) seconds 4 1 4 19 Dividing 5 5). 3 seconds samples seconds second = bytes 2 4) = 400).",
+      "tokens_generated": 80,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0312,
+      "repetition_rate_3gram": 0.1667,
       "expected_keywords": [
         "150",
         "WPM"
@@ -785,23 +785,23 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "en_32",
       "category": "English Reasoning",
       "prompt": "What is the uncompressed size of 60 seconds of 16kHz 32-bit float audio?",
-      "generated_response": "1, * equals = to per seconds.",
-      "tokens_generated": 16,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "generated_response": "1,000 = by samples 35). 1, seconds = 40 seconds, 1900 equals * 26 per minutes 48).0) second 150000 = seconds seconds = 1, 5 (2) by = seconds 1,) 1.",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1687,
       "expected_keywords": [
         "3.66",
         "3,840,000",
@@ -810,47 +810,49 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "en_33",
       "category": "English Reasoning",
       "prompt": "If I skip forward 10 seconds 5 times and back 10 seconds twice, what is the net advance?",
-      "generated_response": "100 (න් = 2 * 4 ((3 to by = minutes by = second 1 Dividing 9.",
-      "tokens_generated": 40,
+      "generated_response": "(. M the video 3 A 1. 3 (in Hor A) equals Dividing 4 1 1 3) by 7 5) 2 (90 per = bytes 4 seconds.",
+      "tokens_generated": 64,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1053,
+      "repetition_rate_3gram": 0.0484,
       "expected_keywords": [
         "30",
         "seconds"
       ],
-      "matched_keywords": [],
+      "matched_keywords": [
+        "seconds"
+      ],
       "rubric_scores": {
-        "correctness_0_to_5": 0.5,
+        "correctness_0_to_5": 3.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 3.5,
         "is_complete_sentence": true
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "Meaningful sentence with domain relevance (seconds)"
     },
     {
       "id": "en_34",
       "category": "English Conversation",
       "prompt": "Good morning MasterAI, are you ready to assist me?",
-      "generated_response": "video The the audio bes in your the ree Core local to and in and files. offching with and and scene to equalizer, and media p-bic and th bo",
-      "tokens_generated": 65,
+      "generated_response": "The video Oo your we media playback the frames scene your local I in you and complete-futes. browser nevan rerter bter de audio band It proges recutation, dear enolp exps revig",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
+      "repetition_rate_3gram": 0.012,
       "expected_keywords": [
         "MasterAI",
         "ready",
@@ -860,7 +862,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 2.0,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 1.5,
@@ -872,36 +874,38 @@
       "id": "en_35",
       "category": "English Explanation",
       "prompt": "Explain the difference between local neural AI and cloud AI.",
-      "generated_response": "video The a the re in and to your with audio ber you a p-and and or detection, to It offt scene and and to and deon and cing",
-      "tokens_generated": 65,
+      "generated_response": "ge Core bant fy to frames, war audio your completes media deo. rech transt files acilal you recter in with prete inted browser mat en in in video flist, in local off්",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1587,
+      "repetition_rate_3gram": 0.0361,
       "expected_keywords": [
         "local",
         "privacy",
         "cloud",
         "offline"
       ],
-      "matched_keywords": [],
+      "matched_keywords": [
+        "local"
+      ],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 2.0,
+        "correctness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.5,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
+        "factual_accuracy_0_to_5": 2.5,
         "is_complete_sentence": false
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Domain keyword matched (local) but syntax fragmented"
     },
     {
       "id": "si_01",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝව නවත්වන්නේ සහ වාදනය කරන්නේ කුමන යතුරෙන්ද?",
-      "generated_response": "යතුර Studio (B සැතිය හෝ කළ හෝ පුරියා ඇතුළුවී ත ක.",
-      "tokens_generated": 42,
+      "generated_response": "එබීම හැත සියෝ වේ. යතුර ඔබන් වෘතින් තත් වෙන. කර පගැන.",
+      "tokens_generated": 47,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.05,
+      "repetition_rate_3gram": 0.0222,
       "expected_keywords": [
         "Spacebar",
         "K"
@@ -922,60 +926,12 @@
       "id": "si_02",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝව සම්පූර්ණ තිරය (Fullscreen) කරන්නේ කෙසේද?",
-      "generated_response": "S යතුර එබීම වා හැවත ව ස් විට ම එක.",
-      "tokens_generated": 32,
+      "generated_response": "යතුරුවෙනැවත එබීම හෝවෘත් වාදනය වන වෙන්‍රා කළ එම ගොන.",
+      "tokens_generated": 44,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "repetition_rate_3gram": 0.0238,
       "expected_keywords": [
         "F"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "si_03",
-      "category": "Sinhala Hotkeys",
-      "prompt": "තත්පර 10ක් ඉදිරියට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
-      "generated_response": "එබීඩෝ වෙන්‍ර (P-S E වේ. යතුරැත් එස් හිට කර ව ස් වෙන් පුර හිය මඟි ස්‍ර",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
-      "expected_keywords": [
-        "Right Arrow",
-        "L"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "si_04",
-      "category": "Sinhala Hotkeys",
-      "prompt": "තත්පර 10ක් පසුපසට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
-      "generated_response": "Press වෙන. Studio විය ඔබඩැස්‍ර සහ හෝ එක වේ කරන්න්න.",
-      "tokens_generated": 38,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
-      "expected_keywords": [
-        "Left Arrow",
-        "J"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -990,13 +946,61 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
+      "id": "si_03",
+      "category": "Sinhala Hotkeys",
+      "prompt": "තත්පර 10ක් ඉදිරියට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
+      "generated_response": "යතුවෙන් යතුවීඩියෝවේ. Arrow එබීඩිරැවත් හෝ හෝ වෘත ස් එබේ හෝ විට හෝ කළ හැක් පුර පූරීයව රෙන්‍ර වේ.",
+      "tokens_generated": 84,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1341,
+      "expected_keywords": [
+        "Right Arrow",
+        "L"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
+      "id": "si_04",
+      "category": "Sinhala Hotkeys",
+      "prompt": "තත්පර 10ක් පසුපසට යාමට ඔබන්න ඕන යතුර මොකක්ද?",
+      "generated_response": "යතුවීඩියෝ Studio හැත්‍රේ ගෙන. ඔබේ ස් පුව වේ විය විය ක් එබීම එම ක.",
+      "tokens_generated": 57,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0545,
+      "expected_keywords": [
+        "Left Arrow",
+        "J"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
       "id": "si_05",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝව එක රාමුව බැගින් ඉදිරියට ගෙනියන්නේ කෙසේද?",
-      "generated_response": "යතුවේ හැත ඇතුර එබීඩි පුර ව ස්‍ර හල ක්‍රි හැවත වේ සි.",
-      "tokens_generated": 49,
+      "generated_response": "හෝ එබීඩිරෝවීමට හෝවේ. යතුර හෝවෘතියෝව ව වීම් ව යතුර වීයව Arrow වේ.",
+      "tokens_generated": 56,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0851,
+      "repetition_rate_3gram": 0.1667,
       "expected_keywords": [
         "Period",
         "."
@@ -1006,8 +1010,8 @@
       ],
       "rubric_scores": {
         "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "grammar_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 3.0,
         "factual_accuracy_0_to_5": 3.5,
@@ -1019,35 +1023,12 @@
       "id": "si_06",
       "category": "Sinhala Hotkeys",
       "prompt": "ශබ්දය ක්ෂණිකව නිශ්ශබ්ද (Mute) කරන්නේ කුමන යතුරෙන්ද?",
-      "generated_response": "ඔබය වීඩැකා ස් එබීන. න්‍ට ත පංවත න්‍ය ව හිය කර වීඩිරොන්ව ක්ධිව සියෝර ව",
-      "tokens_generated": 65,
+      "generated_response": "එබීමෙන් සැවත හෝ යතුරා පුරාව න. වේ. ඔබාදනය ව යතුර යතුරෙන්‍ය Arrow එම ඬ ක් හැකසුවන්ධා කළ ගෙතිරෙන් බාමට",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "repetition_rate_3gram": 0.1084,
       "expected_keywords": [
         "M"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "si_07",
-      "category": "Sinhala Hotkeys",
-      "prompt": "ශබ්දය 5% කින් වැඩි කරන්නේ කෙසේද?",
-      "generated_response": "යතුරීම එබෘහෝ ඔබයා Arrow පා. වීමට ස්‍ර ව ව ති හින් වෙන් සහ විල හන් වෙන් එක ව",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
-      "expected_keywords": [
-        "Up Arrow"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -1062,21 +1043,21 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
-      "id": "si_08",
+      "id": "si_07",
       "category": "Sinhala Hotkeys",
-      "prompt": "ශබ්දය 5% කින් අඩු කරන්නේ කෙසේද?",
-      "generated_response": "යතුරැන්‍යා වීඩෝ වීම්ෂා එබියා කළ හිට සහ ත්න් හෝ පිය වියට ස.",
-      "tokens_generated": 54,
+      "prompt": "ශබ්දය 5% කින් වැඩි කරන්නේ කෙසේද?",
+      "generated_response": "යතුරාම යතුරීමට Arrow Right Arrow හෝ Arrow Left එබීඩියෝ පුරාමෙන.",
+      "tokens_generated": 41,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0385,
+      "repetition_rate_3gram": 0.1282,
       "expected_keywords": [
-        "Down Arrow"
+        "Up Arrow"
       ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1085,62 +1066,85 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
+      "id": "si_08",
+      "category": "Sinhala Hotkeys",
+      "prompt": "ශබ්දය 5% කින් අඩු කරන්නේ කෙසේද?",
+      "generated_response": "යතුරීම යතුවරුව යතුර Studio ඔබා තෝ හැකසුරෙත පු පරියෝ සහ බුරු ක් ක්‍රිට ගොතිලිව ඇතිර ක්ෂ්‍ර හැවත හැවත්",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0964,
+      "expected_keywords": [
+        "Down Arrow"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
       "id": "si_09",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝවෙන් screenshot එකක් ගන්නේ කෙසේද?",
-      "generated_response": "යතුර F යතුර් S එබෘතැම වා හඹම වියියාදනය පිය යතුර් වෙන.",
-      "tokens_generated": 49,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1277,
+      "generated_response": "යතුර එබීම පුළුරාමට හැත ක් ව ඔබා හැගිරීඩිරාදනය හොත වීම කළ හෝ හැක්‍රිට ක. ව හැවත් ව කියෝ ක් කිය",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1325,
       "expected_keywords": [
         "S",
         "PNG"
       ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "si_10",
+      "category": "Sinhala Hotkeys",
+      "prompt": "Picture-in-Picture කවුළුවක් ලෙස වීඩියෝව තබන්නේ කෙසේද?",
+      "generated_response": "key එක open එක එක එක එක Studio කරලාමැතිවන්න් එකට කරන්න.",
+      "tokens_generated": 34,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1875,
+      "expected_keywords": [
+        "P"
+      ],
       "matched_keywords": [
-        "S"
+        "P"
       ],
       "rubric_scores": {
         "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 3.0,
+        "grammar_0_to_5": 2.0,
         "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 3.0,
         "factual_accuracy_0_to_5": 3.5,
         "is_complete_sentence": true
       },
-      "human_evaluation_note": "Meaningful sentence with domain relevance (S)"
-    },
-    {
-      "id": "si_10",
-      "category": "Sinhala Hotkeys",
-      "prompt": "Picture-in-Picture කවුළුවක් ලෙස වීඩියෝව තබන්නේ කෙසේද?",
-      "generated_response": "S Audio Studio එක කරන්‍රැම සහ ඔබයව පතා.",
-      "tokens_generated": 25,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
-      "expected_keywords": [
-        "P"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "Meaningful sentence with domain relevance (P)"
     },
     {
       "id": "si_11",
       "category": "Sinhala Hotkeys",
       "prompt": "Equalizer සහ Web Audio Studio විවෘත කරන්නේ කෙසේද?",
-      "generated_response": "Subtitle SBe key එක එක එක එක කරලා එක එක එක එකකුරි. වැශ්න.",
-      "tokens_generated": 38,
+      "generated_response": "යතුරීමෙන එබීමට හැගොතෝ key එක එක පුළුවන්, 10 එක එක එක කරගන්‍යා එකක් හැක.",
+      "tokens_generated": 55,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2778,
+      "repetition_rate_3gram": 0.1321,
       "expected_keywords": [
         "E"
       ],
@@ -1149,7 +1153,7 @@
       ],
       "rubric_scores": {
         "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 2.0,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 3.0,
@@ -1162,10 +1166,10 @@
       "id": "si_12",
       "category": "Sinhala Hotkeys",
       "prompt": "උපසිරැසි සැකසුම් (Subtitle Studio) විවෘත කරන්නේ කුමන යතුරෙන්ද?",
-      "generated_response": "Op එබීඩෝ හැවත පා වෙන්‍රීමට කළ වීඩ් කර වීඩියාදනය වීඩි වේ එක්ෂි.",
-      "tokens_generated": 56,
+      "generated_response": "පහෝ ඇතිවීමට B F Spet හියා M. හිවි Lave යතුරෙන්‍යෙන් එබීඩියට ඔබා ගිට හැවත් සහ හෝ එහැක් හැක.",
+      "tokens_generated": 80,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0926,
+      "repetition_rate_3gram": 0.0641,
       "expected_keywords": [
         "C"
       ],
@@ -1185,10 +1189,10 @@
       "id": "si_13",
       "category": "Sinhala Hotkeys",
       "prompt": "Smart Scene Detection ක්‍රියාත්මක කරන්නේ කෙසේද?",
-      "generated_response": "එබීඩිම වියින. හැන් පෝරීන් යතුර න්ෂින් හැන් සහ වී කළ ව හ�arity, එසිට බියට හ",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0952,
+      "generated_response": "Spacebter යතුවීඩියෝවිරමෙන් හැවත එබීමට හැක් පොන් ක් වෙන. කළ ව හ",
+      "tokens_generated": 53,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0588,
       "expected_keywords": [
         "X"
       ],
@@ -1198,7 +1202,7 @@
         "grammar_0_to_5": 1.0,
         "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
@@ -1208,10 +1212,10 @@
       "id": "si_14",
       "category": "Sinhala Hotkeys",
       "prompt": "A-B Repeat ලූප් එකක් සකසන්නේ කෙසේද?",
-      "generated_response": "යතුර එබීමියිට වේ යතුරාෂෝ න්‍ර වි ඔබැත වේ. වින් ව වේ කර වීඩිය වේ ව හිට",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1429,
+      "generated_response": "පරිරීමාවීමට ශබ්‍ර හෝ ඔබා නැවත න. බියෝ යතුරිත ඔව්ෂ්වයංඬ සාදනය අම න් න් එරිගණකයේ කර විර් වෙන.",
+      "tokens_generated": 79,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.026,
       "expected_keywords": [
         "[",
         "]"
@@ -1219,23 +1223,23 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "si_15",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝව අංශක 90 කින් කරකවන්නේ (Rotate) කුමන යතුරෙන්ද?",
-      "generated_response": "එබෘත සැහැන්‍ර න. ව වීමට ක් ස්‍ර ව පුර ව ලොන් වා පර බවත හැක් ව ඇතිරිට අව",
-      "tokens_generated": 65,
+      "generated_response": "එරාමෙන්‍රීමට ඔබාව හැවත එබීමෙන. වීඩිට සියෝ පුරෙන්‍රීම්ලාම ක් බි වීමෙන් ගීඩියාත ව කර ක් සුරු",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
+      "repetition_rate_3gram": 0.1446,
       "expected_keywords": [
         "R"
       ],
@@ -1255,10 +1259,10 @@
       "id": "si_16",
       "category": "Sinhala Audio",
       "prompt": "Equalizer එකේ 32Hz ස්ලයිඩරයෙන් පාලනය වන්නේ කුමක්ද?",
-      "generated_response": "වෙන. Studio එක කර හැක සහ වීම ත ව ව න ව ක.",
-      "tokens_generated": 34,
+      "generated_response": "ත සහ ඬ හැගීම විරියෝ හැකි වෙත 64Hz කර ත.",
+      "tokens_generated": 36,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0625,
+      "repetition_rate_3gram": 0.0294,
       "expected_keywords": [
         "sub-bass",
         "ශබ්ද"
@@ -1279,60 +1283,13 @@
       "id": "si_17",
       "category": "Sinhala Audio",
       "prompt": "Equalizer එකේ 16kHz ස්ලයිඩරයෙන් පාලනය වන්නේ කුමක්ද?",
-      "generated_response": "යතුර වීම S-A Studio ඔබය හෝ සහ කර ගැතෙන. වෘති ඉවත වෙන් එක කරන්‍ර වෙන් හැක්න.",
-      "tokens_generated": 63,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.082,
+      "generated_response": "වීම්‍ර වේ. හෝ වැක් වියෝ වීදනය වේ ව වේ. යතුවීමට එබීම කළ ගොතුරීම වේ වෘත්‍ර වෙන් විට ඔබා වේ පූර",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1928,
       "expected_keywords": [
         "treble",
         "උසස්"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "si_18",
-      "category": "Sinhala Audio",
-      "prompt": "කටහඬ පැහැදිලි කිරීමට හොඳම Preset එක කුමක්ද?",
-      "generated_response": "යතුවා එබේ පරියෙන. ස් තියි කර කළ ක.",
-      "tokens_generated": 30,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
-      "expected_keywords": [
-        "Vocal Clarity"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "si_19",
-      "category": "Sinhala Audio",
-      "prompt": "ශබ්දය සහ රූපය අතර ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද?",
-      "generated_response": "Studio වීඩි ඇතැන. තුරෝ එවත් ග් හිට පි කරන් පර් හැක. ත ස් ක් කළ ස් වා හැක් ල",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
-      "expected_keywords": [
-        "Audio Delay",
-        "මිලි තත්පර"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -1347,13 +1304,60 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
+      "id": "si_18",
+      "category": "Sinhala Audio",
+      "prompt": "කටහඬ පැහැදිලි කිරීමට හොඳම Preset එක කුමක්ද?",
+      "generated_response": "යන්‍රෙන් වේ ගා විය (. සහ සියෝ එරියෝවෙන් ඔබා බා ඇතිත් හිය අවශ් යතුරීඩියෝ හිවා ක් වෘත් හැක් පර",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.1325,
+      "expected_keywords": [
+        "Vocal Clarity"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "si_19",
+      "category": "Sinhala Audio",
+      "prompt": "ශබ්දය සහ රූපය අතර ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද?",
+      "generated_response": "යතුවිර යතුර Studio තෝ කරන්ෂයට විට බන. ගැවත ඇතිය ඔබීඩික් විර වෙන්පරිය හඬ හැකසු වි හැකොශ්‍රිර පුරා ක.",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0843,
+      "expected_keywords": [
+        "Audio Delay",
+        "මිලි තත්පර"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
       "id": "si_20",
       "category": "Sinhala Audio",
       "prompt": "Equalizer සැකසුම් වලින් මුල් වීඩියෝ ගොනුව වෙනස් වේද?",
-      "generated_response": "යතුර් C-B එබෘත් යතුර හිට කර පරා එක්‍ය ව ඇතුළශ් පුරෙන් වෙන් න. ත ව හැක්‍",
-      "tokens_generated": 65,
+      "generated_response": "එබීම හැකිර තිර ඔබා ක් පිට ඇතිය ස්‍ර සුරෙන. ස් අක්‍ර ස් සහ ස් කර බැක්න්වයා ඬ කරන්ෂ් හැවත වියට ව",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "repetition_rate_3gram": 0.1205,
       "expected_keywords": [
         "නැත",
         "වෙනස් නොවේ"
@@ -1362,7 +1366,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1374,37 +1378,13 @@
       "id": "si_21",
       "category": "Sinhala Subtitles",
       "prompt": "සහය දක්වන උපසිරැසි ගොනු ආකෘති මොනවාද?",
-      "generated_response": "යතුවේ එබීඩෝරිට ඇතියාධි හිට ලෙන්‍ය ව කර ඔබය වි වේ අවවත. කළ ස් එම කියි ත පු",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0476,
+      "generated_response": "යතුවීම් එබීඩියෝ ඔබේ පුවෙන් හැවත් යතුරීඩි කර එම සු පසුරැක.",
+      "tokens_generated": 50,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0208,
       "expected_keywords": [
         "SRT",
         "WebVTT"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "si_22",
-      "category": "Sinhala Subtitles",
-      "prompt": "උපසිරැසි ප්‍රමාද වී පෙන්වන්නේ නම් කළ යුත්තේ කුමක්ද?",
-      "generated_response": "යතුර ආර කර S එබෘක. වෝ ඔබට හැන් හිය බිරෙන්‍ර පුවෙන්‍රිගණකය හැක.",
-      "tokens_generated": 56,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0741,
-      "expected_keywords": [
-        "Sync Offset",
-        "මිලි තත්පර"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -1414,6 +1394,30 @@
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
+      "id": "si_22",
+      "category": "Sinhala Subtitles",
+      "prompt": "උපසිරැසි ප්‍රමාද වී පෙන්වන්නේ නම් කළ යුත්තේ කුමක්ද?",
+      "generated_response": "A E යතුවෙන key Studio එක හෝ කරන් හෝ එහෝ වලිර එක කරන්න.",
+      "tokens_generated": 40,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1316,
+      "expected_keywords": [
+        "Sync Offset",
+        "මිලි තත්පර"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": true
       },
       "human_evaluation_note": "Complete sentence structure but domain target missed"
@@ -1422,22 +1426,22 @@
       "id": "si_23",
       "category": "Sinhala Subtitles",
       "prompt": "උපසිරැසි අකුරු වල ප්‍රමාණය වෙනස් කළ හැකිද?",
-      "generated_response": "S Studio තියීඩිරොන. වේ ව යතුර සිය කර හිට ඇති තෝ බින් ක.",
-      "tokens_generated": 48,
+      "generated_response": "යතුරීඩියෝ යතුර එබේ ඔබා හෝ වෘතෙන් තත් යතුරුරීමෙන් වීමැවත වේ.",
+      "tokens_generated": 53,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "repetition_rate_3gram": 0.1176,
       "expected_keywords": [
         "ඔව්",
         "Subtitle Studio"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 0.5,
+        "correctness_0_to_5": 1.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": true
       },
       "human_evaluation_note": "Complete sentence structure but domain target missed"
@@ -1446,10 +1450,10 @@
       "id": "si_24",
       "category": "Sinhala Intelligence",
       "prompt": "දර්ශන හඳුනාගැනීම (Scene Detection) කරන්නේ කෙසේද?",
-      "generated_response": "යතුරියෝ යතුව එබිට වේ පංත වාල හියා පරා කර වේදනය ව වේ ව ඔබඩික.",
-      "tokens_generated": 53,
+      "generated_response": "යතුවියෝවීඩිර ඔබාවේ පුර සියෝ ක. වෘත්‍යෝ ක් ස්ධා හොක්ෂ් ක්‍ර ර කර ස් බික.",
+      "tokens_generated": 69,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0784,
+      "repetition_rate_3gram": 0.0746,
       "expected_keywords": [
         "luminance",
         "දර්ශන",
@@ -1471,10 +1475,10 @@
       "id": "si_25",
       "category": "Sinhala Intelligence",
       "prompt": "කථන වේගය (Speech Pacing) මනින්නේ කෙසේද?",
-      "generated_response": "යතුරීඩෝ යතුර යතුරීම හැන. එබේ න් ත් කර හන් සහ පවත සු බය ඔබට හඛ් වීන් ක්‍ර",
-      "tokens_generated": 65,
+      "generated_response": "A) එරා හෝ අත පුළු පරියෝ ලීම බියා නැකික්‍යා ස් කොශ්‍ය න් පරිට ත් න. වේ ගි සහ පහංත හෝ ව සා",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0952,
+      "repetition_rate_3gram": 0.0602,
       "expected_keywords": [
         "WPM",
         "විනාඩියකට"
@@ -1495,10 +1499,10 @@
       "id": "si_26",
       "category": "Sinhala Privacy",
       "prompt": "මගේ වීඩියෝ කිසිවක් අන්තර්ජාලයට උඩුගත වේද?",
-      "generated_response": "හැතෙන. පුර එආිර හැක්ෂිට වෘම වෙන්‍ර ව කළ ව වීම ක. කර අන්න.",
-      "tokens_generated": 57,
+      "generated_response": "හැවත් පුර යතුර එබීඩියෝ වීමට න් සියෝවෙන්‍යෝර් වීදනය ක් සියෝරුවෘතුරුවීයව වේ.",
+      "tokens_generated": 68,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0182,
+      "repetition_rate_3gram": 0.1364,
       "expected_keywords": [
         "නැත",
         "පරිගණකය"
@@ -1507,7 +1511,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1519,34 +1523,34 @@
       "id": "si_27",
       "category": "Sinhala Privacy",
       "prompt": "MasterAI අන්තර්ජාලය නොමැතිව (Offline) ක්‍රියා කරයිද?",
-      "generated_response": "Audio Studio හෙන. වේ කරන් සිඩුරීමට ඇතෝ පුව සහ ඉශ් බි හි එක හි එහි ගියා ක් හිය පු",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "generated_response": "Studio ගෙන් සහ හෝ ස්ලුරේ.kHz, එක පිට වීඩිරුවන් හඬ ස් කරන්න වියිට බන්න්වයිස් ත් වේ.",
+      "tokens_generated": 71,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0435,
       "expected_keywords": [
         "ඔව්",
         "offline"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 1.0,
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": false
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "si_28",
       "category": "Sinhala Codecs",
       "prompt": "MASTER CLOUD හි වාදනය කළ හැකි වීඩියෝ වර්ග මොනවාද?",
-      "generated_response": "ඔබේ යතුරෙන් ඔවුර Studio ත්‍රි හැකසුරීම එත් විට ස්ෂියෙන.",
-      "tokens_generated": 47,
+      "generated_response": "එබීමෙන් තුරේ සියෝ හෝ යතුරෙන්‍යෝ වෘත යතුවීමට යතුළුවන ඔබවත යතුරෙන.",
+      "tokens_generated": 56,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "repetition_rate_3gram": 0.1481,
       "expected_keywords": [
         "MP4",
         "WebM",
@@ -1556,7 +1560,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1568,10 +1572,10 @@
       "id": "si_29",
       "category": "Sinhala Codecs",
       "prompt": "පරිගණකයෙන් වීඩියෝ ඇද දමා (Drag and Drop) වාදනය කළ හැකිද?",
-      "generated_response": "E යතුර ඇතොස් Rer හඳවත් යතුර වේ යතුරිට කර යතුරැත එක. හැක. හූර හැත්‍ර පිර්",
+      "generated_response": "B-ahics) ඇතා CSAM) L) R බුරෙන්‍රාති එස් E) (S) ගේ F) C සහ පුර්ලා ක.",
       "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1587,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
       "expected_keywords": [
         "ඔව්",
         "drag"
@@ -1580,9 +1584,9 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
@@ -1592,38 +1596,14 @@
       "id": "si_30",
       "category": "Sinhala Conversation",
       "prompt": "ආයුබෝවන් MasterAI! ඔබට කළ හැක්කේ කුමක්ද?",
-      "generated_response": "යතුරීඩිවෙන් Subtitle සහ එක කරන්‍රා කරන්න. කර තියෙන් පුළුන. ඇතිලියිම හැසොන්‍රියට එවත",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "generated_response": "යතුරීමෙන් එබීඩියා වීමට තත්ෂයට සිය යතුරෙන.",
+      "tokens_generated": 36,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0294,
       "expected_keywords": [
         "MasterAI",
         "වීඩියෝ",
         "සහාය"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "si_31",
-      "category": "Sinhala Conversation",
-      "prompt": "වීඩියෝවේ ප්‍රධාන කරුණු සාරාංශ කර පෙන්වන්න.",
-      "generated_response": "එබියිය යතුරිය හැක් ඔබිය ව සහ ත ව හු එත්‍ට ක.",
-      "tokens_generated": 41,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0769,
-      "expected_keywords": [
-        "සාරාංශය",
-        "කරුණු"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -1638,23 +1618,22 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
-      "id": "si_32",
-      "category": "Sinhala Explanation",
-      "prompt": "දේශීය AI (Local AI) භාවිතයේ වාසි මොනවාද?",
-      "generated_response": "යතුර් Subtitle එකෙන. කරන්‍රැක් හෝ හිට කළ වි කර Studio සහ ත්ෂිය හැවත හිය සුවිඩිර හිරිර",
-      "tokens_generated": 65,
+      "id": "si_31",
+      "category": "Sinhala Conversation",
+      "prompt": "වීඩියෝවේ ප්‍රධාන කරුණු සාරාංශ කර පෙන්වන්න.",
+      "generated_response": "යතුරීමැකිත එබීමෙන් ව යතුරෙන් හැවත ඔබා ද සොක් එම ක්ෂ් සිට ඛ් වීමට සහ සිරා ක් ස් බාදනය ගිරා කියා",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0476,
+      "repetition_rate_3gram": 0.1325,
       "expected_keywords": [
-        "රහස්‍යභාවය",
-        "වේගය",
-        "offline"
+        "සාරාංශය",
+        "කරුණු"
       ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1663,13 +1642,38 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
+      "id": "si_32",
+      "category": "Sinhala Explanation",
+      "prompt": "දේශීය AI (Local AI) භාවිතයේ වාසි මොනවාද?",
+      "generated_response": "Studio එකෙන් එක Equalizer හෝර පුළුවන එක ගියෝ කරලා. සහ හැක් එකක් වින්‍රුළුර එකට වැවත්න් කරලා කරන්න්න.",
+      "tokens_generated": 72,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0714,
+      "expected_keywords": [
+        "රහස්‍යභාවය",
+        "වේගය",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
       "id": "si_33",
       "category": "Sinhala Hotkeys",
       "prompt": "වීඩියෝවේ වේගය වැඩි කරන්නේ කෙසේද?",
-      "generated_response": "යතුර C Studio මියා හුර ඇතුර ප�ුරැත් හිර ස් සහ වීම්‍ර ස් ඔබය අවගැවත් එසියීම ක",
-      "tokens_generated": 65,
+      "generated_response": "යතුර එබීමාමට වීඩිවෘතෝර හෝ වීමා පුර වීඩියෝවීඩිවීඩියෝව ඔබාමු වීඩිරීඩි ගිර් හෝරුර කර වීම් විර",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "repetition_rate_3gram": 0.2651,
       "expected_keywords": [
         "Shift",
         "Period",
@@ -1679,7 +1683,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
@@ -1691,33 +1695,33 @@
       "id": "si_34",
       "category": "Sinhala Hotkeys",
       "prompt": "Bookmark එකක් දමන්නේ කුමන යතුරෙන්ද?",
-      "generated_response": "එබියීඩාරෝරැත් වාට වීඩිඩිය වෘස්‍යාගණකය ව හියාශ්ධිමිය න් කර ප් පරිය ව න්",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0952,
+      "generated_response": "Studio තියාවීඩිට පුවන්‍යෝවෘශ් ස ව ගැත හෝ ඇතිගණකයේ වීම ලාර හෝ පරි. පුර කර සහ උඛ්වයංත් ස් විය ගික.",
+      "tokens_generated": 84,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0488,
       "expected_keywords": [
         "B"
       ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
         "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "si_35",
       "category": "Sinhala Conversation",
       "prompt": "ඔබට බොහොම ස්තූතියි MasterAI!",
-      "generated_response": "Studio වීැකා කරනුරෙන් සහ හෝ හි එකේ ගිය හැත් හිය හි ඇතිද හි කරන්‍ර එක කර සි ස් කරල",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
+      "generated_response": "එබීමෙනැකුරේ වීඩියෝවාවීමට ගියෝ ව වෙන් ද යතුවෙන් හෝ පාම් ව වේ.",
+      "tokens_generated": 58,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1071,
       "expected_keywords": [
         "සාදරයෙන්",
         "MasterAI"
@@ -1725,23 +1729,23 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "mix_01",
       "category": "Mixed Hotkeys",
       "prompt": "Video එක play හෝ pause කරන්න shortcut key එක මොකක්ද?",
-      "generated_response": "වෙන. එක එක එක එක එක වෙනවා එකක් එක එක සිට ගෙන.",
-      "tokens_generated": 36,
+      "generated_response": "E Studio එකේ එක කරලා එකට විනැතෙනවා එක එක පුළුවන්න්න. එක එක එකෙන් එක කරන්න් එකක්න් එක එක වෘතින්න්න.",
+      "tokens_generated": 74,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.3235,
+      "repetition_rate_3gram": 0.2639,
       "expected_keywords": [
         "Spacebar",
         "K"
@@ -1749,29 +1753,6 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "mix_02",
-      "category": "Mixed Hotkeys",
-      "prompt": "Player එක fullscreen කරගන්නේ කොහොමද?",
-      "generated_response": "Subtitle Studio එකට එක එක එකෙන් වෙන. එක කරන්න් සහ එක එකක්න්.",
-      "tokens_generated": 37,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1714,
-      "expected_keywords": [
-        "F"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 2.0,
         "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
@@ -1782,135 +1763,156 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
+      "id": "mix_02",
+      "category": "Mixed Hotkeys",
+      "prompt": "Player එක fullscreen කරගන්නේ කොහොමද?",
+      "generated_response": "key key එකෙන කරලා එක එක කරන්නැවත්න් එක එක එක එකෙනවා එක කරලා එක පුළුවන්න. වියෙන් එක කරන්න් ගිත් එක කරන්න්න්න් එක එක",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.4337,
+      "expected_keywords": [
+        "F"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 0.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "High repetition loop (rate: 43.4%)"
+    },
+    {
       "id": "mix_03",
       "category": "Mixed Hotkeys",
       "prompt": "Video එක තත්පර 10ක් forward කරන්නේ මොන key එකෙන්ද?",
-      "generated_response": "පියා එක එකීඩෝවැති. හැන්‍ර එක සිට කරන් වා කරන්න්න් පියෙන් සහ (LG කරන්න්න් එක",
-      "tokens_generated": 65,
+      "generated_response": "Arrow හෝ එක එක වියැවත ඔබලා යතුළුවන්න. වෙන හෝ හෝ Studio ස් පුරා ත හැඩිට තිරීඩිත් සා පු ගැකිවින්න් වේ සහ",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1905,
+      "repetition_rate_3gram": 0.0723,
       "expected_keywords": [
         "Right Arrow",
         "L"
       ],
-      "matched_keywords": [
-        "L"
-      ],
+      "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 2.5,
-        "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 3.0,
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 2.5,
+        "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
-      "human_evaluation_note": "Domain keyword matched (L) but syntax fragmented"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "mix_04",
       "category": "Mixed Hotkeys",
       "prompt": "Video එක තත්පර 10ක් backward කරන්නේ කොහොමද?",
-      "generated_response": "(Oh වෙරීඩිවෙන.",
-      "tokens_generated": 15,
+      "generated_response": "යතුරා key කරලා පුවන්න. Studio වින්න් එකට එක කරන්න්තින. කරලා පුළුවන්නැත කරන්න්න.",
+      "tokens_generated": 59,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "repetition_rate_3gram": 0.2281,
       "expected_keywords": [
         "Left Arrow",
         "J"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "mix_05",
       "category": "Mixed Hotkeys",
       "prompt": "Sound එක mute කරන්නේ keyboard එකේ මොන key එකෙන්ද?",
-      "generated_response": "Studio එකියා වෝ. එක එක එක එකට සහ හැක්න. එක කරලා කරන්න.",
-      "tokens_generated": 38,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1667,
+      "generated_response": "එක කරලා එකක් එක එක එක එක කරලා එක තිවිවන් එක එක එක වල එක කරලා. එක එක එක කරන්න්න්න්න් පුළුරැකින් කරලා එකට කරන්න්න එක කරන්",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.4578,
       "expected_keywords": [
         "M"
       ],
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 2.0,
-        "naturalness_0_to_5": 2.0,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 0.5,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "High repetition loop (rate: 45.8%)"
     },
     {
       "id": "mix_06",
       "category": "Mixed Hotkeys",
       "prompt": "Video එකෙන් screenshot එකක් capture කරගන්නේ කොහොමද?",
-      "generated_response": "S (B එක key එක එක එක එක bents කරන්. එක කරලා එක වෙනවා.",
-      "tokens_generated": 38,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2222,
+      "generated_response": "වියෝරා කරලා. කරන්න්න්‍රීඩියට හැමෙන් ව පුවන්න්න් එක පුළුළුවේ එක එකේ එක තියෝ එක වෙන්න් වෙනවායව වෙන්න",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2651,
       "expected_keywords": [
         "S",
         "PNG"
       ],
-      "matched_keywords": [
-        "S"
-      ],
+      "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 2.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 3.0,
-        "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 3.5,
-        "is_complete_sentence": true
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Meaningful sentence with domain relevance (S)"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "mix_07",
       "category": "Mixed Hotkeys",
       "prompt": "Picture in Picture mode එකට switch වෙන්නේ කොහොමද?",
-      "generated_response": "SB Studio එක Studio කරලා කරන්. එක කරලා එක එකක්න්න. එක කරලා.",
-      "tokens_generated": 36,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2647,
+      "generated_response": "key එක Studio කරලා open එක එක එක එක එක ඔබලා කරලා එක එක එක එකෙන් කරන්න්න්න.0-Audio එක එක එකිළුවන් එක E-එක එක එක එක එක එක එක කරලා කරන්න",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.4699,
       "expected_keywords": [
         "P"
       ],
-      "matched_keywords": [],
+      "matched_keywords": [
+        "P"
+      ],
       "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 2.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
+        "correctness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 0.5,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 2.5,
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "High repetition loop (rate: 47.0%)"
     },
     {
       "id": "mix_08",
       "category": "Mixed Audio",
       "prompt": "Equalizer එක open කරන්න shortcut key එක මොකක්ද?",
-      "generated_response": "Studio EVB CLOUD වෙන. Studio තිරැකුරෝ සහ හියා ස් වේ ඇති සහ කරලා සිය ගිට පුළත්න්න් හි",
-      "tokens_generated": 65,
+      "generated_response": "Subtitle Studio එකේ හෝ විතැගෙන.kHz, කරලා එක පුවන්න් සහ සෙන් බියෙන් වෘත් කරන් පුළුරීඩිරුළු ත ල්‍ර වෙන් වින්",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0635,
+      "repetition_rate_3gram": 0.1205,
       "expected_keywords": [
         "E"
       ],
@@ -1920,7 +1922,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 2.5,
         "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 2.5,
@@ -1932,38 +1934,13 @@
       "id": "mix_09",
       "category": "Mixed Audio",
       "prompt": "Audio එකේ bass වැඩි කරගන්න හොඳම preset එක මොකක්ද?",
-      "generated_response": "Studio තා එක කරලා ගිය කරන් ත වෙන. එක කරන්න කරන්න. සිට සහ පුරීැක්න්න. හිට වලා. ව හෝ",
-      "tokens_generated": 65,
+      "generated_response": "Studio ගෙතුරා ඇතිපට වෘත බා ඔබ් හෝ ත්න ත සියී සහ වික. පුවිස්‍යෙන් විත් පු ඇති ති අත කර පහැත් පුව",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.127,
+      "repetition_rate_3gram": 0.0843,
       "expected_keywords": [
         "Bass Boost",
         "32Hz"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "mix_10",
-      "category": "Mixed Audio",
-      "prompt": "Vocal Clarity preset එකෙන් වෙන්නේ මොකක්ද?",
-      "generated_response": "වියී ඔබා හැතුරැස්‍යා ඇතියෝර එශ්‍ට ක් ක්ලිය ත විඩිය සහ ති හිය හිගණකය පංවත",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0635,
-      "expected_keywords": [
-        "කටහඬ",
-        "vocal",
-        "1kHz"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -1978,16 +1955,17 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
-      "id": "mix_11",
+      "id": "mix_10",
       "category": "Mixed Audio",
-      "prompt": "Audio සහ video lip-sync mismatch එකක් ආවොත් හදන්නේ කොහොමද?",
-      "generated_response": "එක Studio එක එකෙන. කරන්න. වෙනවා. එකෙන්. වල කරලා.",
-      "tokens_generated": 34,
+      "prompt": "Vocal Clarity preset එකෙන් වෙන්නේ මොකක්ද?",
+      "generated_response": "යතුරාමෙනැහෝ Ceoy E 10-Band 64Hz ගියෝ සහ පූර සියෝ හඛ් සහ සහ 32Hz ත සඳහා කර ඬ 125Hz, සලබංඑ කරන්.",
+      "tokens_generated": 75,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0938,
+      "repetition_rate_3gram": 0.0548,
       "expected_keywords": [
-        "Audio Delay",
-        "slider"
+        "කටහඬ",
+        "vocal",
+        "1kHz"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -2002,15 +1980,161 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
+      "id": "mix_11",
+      "category": "Mixed Audio",
+      "prompt": "Audio සහ video lip-sync mismatch එකක් ආවොත් හදන්නේ කොහොමද?",
+      "generated_response": "key එක Studio එක කරන්න. කරලා එක කරලා එකෙනියැක් එක එක ගින්න් පුවන්න් කරන්න. එක එක සහ එකට එක කරන්න.",
+      "tokens_generated": 68,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.3182,
+      "expected_keywords": [
+        "Audio Delay",
+        "slider"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
       "id": "mix_12",
       "category": "Mixed Subtitles",
       "prompt": "Subtitle Studio එක open කරන්නේ කොහොමද?",
-      "generated_response": "Audio Studio Studio Studio වෙනවා කරලි.",
-      "tokens_generated": 17,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.2,
+      "generated_response": "key Studio එක එකෙන්, එක එකෙන්. එක එක එක එක කරලා එකට වින් එක කරන්න්නැතිදා එක එක වෙනවා පුවන් එක එක එක එක එක එක එක විට එක",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.3976,
       "expected_keywords": [
         "C"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "High repetition loop (rate: 39.8%)"
+    },
+    {
+      "id": "mix_13",
+      "category": "Mixed Subtitles",
+      "prompt": "SRT subtitles sync නැත්නම් හදාගන්නේ කොහොමද?",
+      "generated_response": "එක key එක Studio එක එක එක එක එක එකෙන්, එක Audio කරලා කරන්නින් එක එකට එක එක ඔබලා කරන් එක එක එකෙන් කරලා.",
+      "tokens_generated": 65,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.4127,
+      "expected_keywords": [
+        "Sync Offset",
+        "milliseconds"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 0.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "High repetition loop (rate: 41.3%)"
+    },
+    {
+      "id": "mix_14",
+      "category": "Mixed Subtitles",
+      "prompt": "Subtitle font size එක customize කරන්න පුළුවන්ද?",
+      "generated_response": "ඔව්. වෙනවා. එකේ එක කරන්නැකියෝ සහ ඔබේ ත් හෙන් සහ සා කර පුරාම ඇති වීඩිරෙන් ගිට බුවන්‍ර් හඛ් වොත් ව",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.0723,
+      "expected_keywords": [
+        "ඔව්",
+        "Subtitle Studio"
+      ],
+      "matched_keywords": [
+        "ඔව්"
+      ],
+      "rubric_scores": {
+        "correctness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.5,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 3.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 2.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Domain keyword matched (ඔව්) but syntax fragmented"
+    },
+    {
+      "id": "mix_15",
+      "category": "Mixed Intelligence",
+      "prompt": "Scenes auto detect කරන්නේ මොන shortcut එකෙන්ද?",
+      "generated_response": "Studio වියෝරා එක එක වෙනවා සහ හැක්න් වියා ත් කරලා පුළුවන්න. කරන්න්න්‍රලිට හැඩියට එහෝ එක ගා එක සහ ස්න.",
+      "tokens_generated": 83,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1358,
+      "expected_keywords": [
+        "X",
+        "Scene Detection"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
+      "id": "mix_16",
+      "category": "Mixed Intelligence",
+      "prompt": "Timeline එකේ chapters generate කරගන්නේ කොහොමද?",
+      "generated_response": "වෙනැතියා එක එක එකේ කරලා පුළුවන් එක කරන්න්න. එක කරලා කරන්න්න් කරන්න.0 එකක්න වෙනවා එක වෙන. එක කරන්න.",
+      "tokens_generated": 76,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.3378,
+      "expected_keywords": [
+        "chapters",
+        "Scene Detection"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "mix_17",
+      "category": "Mixed Intelligence",
+      "prompt": "Transcript එකේ dialogue search කරන්නේ කොහොමද?",
+      "generated_response": "key key එකෙනස්නියෝරා එක කරලා එක එක එක එකට කරන්නැත් එක එක එකෙන.",
+      "tokens_generated": 44,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2381,
+      "expected_keywords": [
+        "T",
+        "Search"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -2025,139 +2149,66 @@
       "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
-      "id": "mix_13",
-      "category": "Mixed Subtitles",
-      "prompt": "SRT subtitles sync නැත්නම් හදාගන්නේ කොහොමද?",
-      "generated_response": "Studio එක CLOUD Studio Studio වෙමිය කරලා එක කරන් සහ එක එක එකට හි. කරන්සුරිට හිය එකක්‍ර තික.",
-      "tokens_generated": 58,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.125,
-      "expected_keywords": [
-        "Sync Offset",
-        "milliseconds"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "mix_14",
-      "category": "Mixed Subtitles",
-      "prompt": "Subtitle font size එක customize කරන්න පුළුවන්ද?",
-      "generated_response": "key වෙන. Studio සහ එක හැකියා එක සහ සා වල එක එකේ කරන්ම ගින්න් ස්න් බිට ව ත්න.",
-      "tokens_generated": 61,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0847,
-      "expected_keywords": [
-        "ඔව්",
-        "Subtitle Studio"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "mix_15",
-      "category": "Mixed Intelligence",
-      "prompt": "Scenes auto detect කරන්නේ මොන shortcut එකෙන්ද?",
-      "generated_response": "Subtitle Studio එක එක එකට CLOUD කරලා එකකුරියා වීන. කරන්න එක සහ හැක.",
-      "tokens_generated": 40,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0526,
-      "expected_keywords": [
-        "X",
-        "Scene Detection"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "mix_16",
-      "category": "Mixed Intelligence",
-      "prompt": "Timeline එකේ chapters generate කරගන්නේ කොහොමද?",
-      "generated_response": "වෙනියා ඔබඩිරෝ කරන්‍රීමා එක සහ වා කරලා.",
-      "tokens_generated": 32,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
-      "expected_keywords": [
-        "chapters",
-        "Scene Detection"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "mix_17",
-      "category": "Mixed Intelligence",
-      "prompt": "Transcript එකේ dialogue search කරන්නේ කොහොමද?",
-      "generated_response": "SMe C Studio Web Audio B Studio එක එකට වෙනවා එක සහ පුවන්න. කරන්න.",
-      "tokens_generated": 41,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0769,
-      "expected_keywords": [
-        "T",
-        "Search"
-      ],
-      "matched_keywords": [
-        "T"
-      ],
-      "rubric_scores": {
-        "correctness_0_to_5": 3.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 3.0,
-        "instruction_following_0_to_5": 3.0,
-        "factual_accuracy_0_to_5": 3.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Meaningful sentence with domain relevance (T)"
-    },
-    {
       "id": "mix_18",
       "category": "Mixed Privacy",
       "prompt": "MasterAI එක use කරද්දී video cloud එකට upload වෙනවද?",
-      "generated_response": "Studio Studio හැතියා කරන්න. තෝරුවන ක් හැසා වෙඩි ඇතිය සහ හැක් ම හිට ස් ක් හියා හි",
-      "tokens_generated": 65,
+      "generated_response": "Studio එක තින් එකක් ගැක. හෝරා කරලා කරන්න වලියෙන්න. සහ සුවන්‍රමේ එක ඛ් තිට තිත්න් පුළුළුර වි වෘත හෝ ප",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1587,
+      "repetition_rate_3gram": 0.0723,
       "expected_keywords": [
         "නැත",
         "upload",
         "local"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "mix_19",
+      "category": "Mixed Privacy",
+      "prompt": "Internet නැතුව MasterAI offline වැඩ කරනවද?",
+      "generated_response": "Studio හෝ සියෙන්‍රා හෝ පුළුවන්න. එක සහ ඛ්න් වේ.",
+      "tokens_generated": 41,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0513,
+      "expected_keywords": [
+        "ඔව්",
+        "offline"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 0.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
+        "relevance_0_to_5": 0.5,
+        "instruction_following_0_to_5": 2.0,
+        "factual_accuracy_0_to_5": 0.5,
+        "is_complete_sentence": false
+      },
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+    },
+    {
+      "id": "mix_20",
+      "category": "Mixed Codecs",
+      "prompt": "MP4 සහ WebM formats දෙකම player එකේ play වෙනවද?",
+      "generated_response": "Studio හැත එක එක එක එක කරලා හෝ කරලා කරන්න්න. එක හෙන් එක වින් එක එකෙන් එක එක පුළුවන් වොන්න. එක වල එකක්න වියෙන් එක",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.3373,
+      "expected_keywords": [
+        "ඔව්",
+        "MP4",
+        "WebM"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -2172,62 +2223,13 @@
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
-      "id": "mix_19",
-      "category": "Mixed Privacy",
-      "prompt": "Internet නැතුව MasterAI offline වැඩ කරනවද?",
-      "generated_response": "Studio එකේ, හියෙන්‍රික් වීමා විට සැවත ගියෝ හැන.",
-      "tokens_generated": 41,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
-      "expected_keywords": [
-        "ඔව්",
-        "offline"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
-      "id": "mix_20",
-      "category": "Mixed Codecs",
-      "prompt": "MP4 සහ WebM formats දෙකම player එකේ play වෙනවද?",
-      "generated_response": "C Studio Studio හින්‍රීඩැතියා එකට කරන්න.",
-      "tokens_generated": 27,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.04,
-      "expected_keywords": [
-        "ඔව්",
-        "MP4",
-        "WebM"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": true
-      },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
-    },
-    {
       "id": "mix_21",
       "category": "Mixed Codecs",
       "prompt": "MKV files වල audio demux කරන්න පුළුවන්ද?",
-      "generated_response": "P-SB-pe Coal Studio වෙනවා. එක හැකියේ කරන්න. එක කරලා. එක ස්න. එකක්ම කරන්න්න්ත්න.",
-      "tokens_generated": 62,
+      "generated_response": "MASTER Studio වෙන තා එක එක කරලා ගිරෙන්‍යෝ පුවන්න්න ඕනැහෝ එක කරලා එකේ එක සහ ත් එක හැක් එකක්න. එක එක කරන්න්න්න.",
+      "tokens_generated": 83,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.1833,
+      "repetition_rate_3gram": 0.1975,
       "expected_keywords": [
         "MP4",
         "WebM",
@@ -2249,37 +2251,35 @@
       "id": "mix_22",
       "category": "Mixed Hotkeys",
       "prompt": "Video playback speed එක 1.5x හෝ 2x කරන්නේ කොහොමද?",
-      "generated_response": "standard (S-Ah) + (F Me Per (C key + වෙනිනවා (යතුවන්‍රැන් Shift එක (OB එක එක වෙන් Arrow එක",
-      "tokens_generated": 65,
+      "generated_response": "key එක කරලා එක එක එක එකට එකෙනස්න් එක එක එක open එකියට එක එක එක එක පුළුවන්න්න්න් වැකින්, එක එක එක එක වෘතිළුළුළුළුවන්",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
+      "repetition_rate_3gram": 0.4217,
       "expected_keywords": [
         "Shift",
         ">",
         "Period"
       ],
-      "matched_keywords": [
-        "Shift"
-      ],
+      "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 2.5,
-        "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 3.0,
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 0.5,
+        "relevance_0_to_5": 2.0,
         "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 2.5,
+        "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": false
       },
-      "human_evaluation_note": "Domain keyword matched (Shift) but syntax fragmented"
+      "human_evaluation_note": "High repetition loop (rate: 42.2%)"
     },
     {
       "id": "mix_23",
       "category": "Mixed Hotkeys",
       "prompt": "Speed එක ආයේ 1.0x standard speed එකට reset කරන්නේ කොහොමද?",
-      "generated_response": "Studio Web key වා සහ එකෙන. සින් එක කරලා කරන්න්න.",
-      "tokens_generated": 33,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "generated_response": "key ඔබලා Studio කරලා එකෙන් විට කරලා එක එක පුවන්නැඩින්න් එක කරලා එකක් එක ගෘතිරා එක තෝ පුළුළුවන්න්න්න්න සහ වල එක එක",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.3012,
       "expected_keywords": [
         "Shift",
         "0"
@@ -2287,35 +2287,35 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 1.5,
-        "grammar_0_to_5": 3.0,
-        "naturalness_0_to_5": 2.5,
+        "grammar_0_to_5": 1.0,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 2.0,
-        "instruction_following_0_to_5": 3.0,
+        "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 1.5,
-        "is_complete_sentence": true
+        "is_complete_sentence": false
       },
-      "human_evaluation_note": "Complete sentence structure but domain target missed"
+      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
     },
     {
       "id": "mix_24",
       "category": "Mixed Hotkeys",
       "prompt": "Video එක loop කරන්න A-B repeat කරන්නේ කොහොමද?",
-      "generated_response": "S Studio වෙන.",
-      "tokens_generated": 9,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "generated_response": "key open Studio කරලා එකට එක එක කරන්නින. එකෙන්, එක වෙනවා ගැතෝ එක වලට කරලා සා එකක් පුළුවන්න්න. කරලා එක එක තින. පුළුවන් එක",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2169,
       "expected_keywords": [
         "[",
         "]"
       ],
       "matched_keywords": [],
       "rubric_scores": {
-        "correctness_0_to_5": 0.5,
+        "correctness_0_to_5": 1.5,
         "grammar_0_to_5": 1.0,
         "naturalness_0_to_5": 1.0,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
-        "factual_accuracy_0_to_5": 0.5,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 1.0,
+        "factual_accuracy_0_to_5": 1.5,
         "is_complete_sentence": false
       },
       "human_evaluation_note": "Syntactically fragmented / general subword assembly"
@@ -2324,10 +2324,10 @@
       "id": "mix_25",
       "category": "Mixed Hotkeys",
       "prompt": "Specific timestamp එකකට Bookmark එකක් දාන්නේ කොහොමද?",
-      "generated_response": "යතුරෙම ඔබෝ Subtitle එක Studio වියෙනවා එකට කරන් කරලා වැසිල. එක එක පුවන්න්න. සහ එක ත්න. කරලා හිය",
-      "tokens_generated": 65,
+      "generated_response": "Subtitle Studio තියෙන. එක වීඩිර කරන්න්න ගෙන් කරලේ පුළුවන්න් සහ වල සල්‍ර ස් හෝ එක හැකසුරම පුවන් ත විගණකය වියා හැ",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1111,
+      "repetition_rate_3gram": 0.0843,
       "expected_keywords": [
         "B"
       ],
@@ -2337,7 +2337,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 2.5,
         "grammar_0_to_5": 1.5,
-        "naturalness_0_to_5": 1.0,
+        "naturalness_0_to_5": 2.5,
         "relevance_0_to_5": 3.0,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 2.5,
@@ -2349,12 +2349,35 @@
       "id": "mix_26",
       "category": "Mixed Hotkeys",
       "prompt": "Sideways තියෙන video එකක් 90 degrees rotate කරන්නේ කොහොමද?",
-      "generated_response": "එක Studio එක එක වෙනවා. කරලා පුළුවන්න් වා එක හැස් එක එක එක එක එක කරන් සහ කරන්න්න හින් p ව",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.2222,
+      "generated_response": "key එක ඔබලා එක එක එක එක එක Studio පුළුවන්. වෙන්න් එක එක කරලා ගෙන් වැතෝරා එකට වින.",
+      "tokens_generated": 60,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2241,
       "expected_keywords": [
         "R"
+      ],
+      "matched_keywords": [],
+      "rubric_scores": {
+        "correctness_0_to_5": 1.5,
+        "grammar_0_to_5": 2.0,
+        "naturalness_0_to_5": 2.0,
+        "relevance_0_to_5": 2.0,
+        "instruction_following_0_to_5": 3.0,
+        "factual_accuracy_0_to_5": 1.5,
+        "is_complete_sentence": true
+      },
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
+    },
+    {
+      "id": "mix_27",
+      "category": "Mixed Hotkeys",
+      "prompt": "Video එක 50% midpoint එකට jump කරන්න ඔබන්න ඕන number එක මොකක්ද?",
+      "generated_response": "වෙනස් එක කරලා පුළුවන්නිට එකේ. වා එක වෙනවා එක එක වෙන් හෝ වෙනවා. එක කරන්න්න්න. කරගන්න. එක එක එක එකක් එක හැකියට",
+      "tokens_generated": 85,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2651,
+      "expected_keywords": [
+        "5"
       ],
       "matched_keywords": [],
       "rubric_scores": {
@@ -2363,29 +2386,6 @@
         "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
-        "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
-      },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
-    },
-    {
-      "id": "mix_27",
-      "category": "Mixed Hotkeys",
-      "prompt": "Video එක 50% midpoint එකට jump කරන්න ඔබන්න ඕන number එක මොකක්ද?",
-      "generated_response": "වෙනවා. එක S (Studio B-එක හැතියෙන්න. එක එකක් වි.",
-      "tokens_generated": 37,
-      "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0571,
-      "expected_keywords": [
-        "5"
-      ],
-      "matched_keywords": [],
-      "rubric_scores": {
-        "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
-        "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
         "is_complete_sentence": false
       },
@@ -2395,10 +2395,10 @@
       "id": "mix_28",
       "category": "Mixed Conversation",
       "prompt": "Hello MasterAI! මගේ media library එක organize කරන්න help එකක් දෙන්න පුළුවන්ද?",
-      "generated_response": "Studio E-B වෙන. හැකියා එක සහ ත් එකට P, ත් එක ත් එක වා හෝ සහ කරන් එක සි කරලා බා සිනව",
-      "tokens_generated": 65,
-      "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.1746,
+      "generated_response": "කරලා. වියෝ එක හැති කරලා එක එක එක කරන්න්න ක් සහ ඛ්න කරලා හිට එක පුළුරෙනවා එකක්න.",
+      "tokens_generated": 64,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.129,
       "expected_keywords": [
         "MasterAI",
         "help",
@@ -2407,23 +2407,23 @@
       "matched_keywords": [],
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
-        "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 1.0,
+        "grammar_0_to_5": 3.0,
+        "naturalness_0_to_5": 2.0,
         "relevance_0_to_5": 0.5,
-        "instruction_following_0_to_5": 1.0,
+        "instruction_following_0_to_5": 2.0,
         "factual_accuracy_0_to_5": 0.5,
-        "is_complete_sentence": false
+        "is_complete_sentence": true
       },
-      "human_evaluation_note": "Syntactically fragmented / general subword assembly"
+      "human_evaluation_note": "Complete sentence structure but domain target missed"
     },
     {
       "id": "mix_29",
       "category": "Mixed Conversation",
       "prompt": "Thank you so much MasterAI!",
-      "generated_response": "local your scene media detection, transcripes and frames equalizer.",
-      "tokens_generated": 22,
+      "generated_response": "The The Core your 32Hz, slider and 1kHz, bass 64Hz, deuskHz, 2kHz, 2kHz.",
+      "tokens_generated": 36,
       "stopped_on_eos": true,
-      "repetition_rate_3gram": 0.0,
+      "repetition_rate_3gram": 0.0882,
       "expected_keywords": [
         "welcome",
         "සාදරයෙන්"
@@ -2444,10 +2444,10 @@
       "id": "mix_30",
       "category": "Mixed Explanation",
       "prompt": "Local AI එකයි Google Gemini Cloud mode එකයි අතර වෙනස මොකක්ද?",
-      "generated_response": "කරලා. හැතුරෝ පි කරන් වේ සිට ගැවත න්‍ය බි ඇතිලිය කරන් ඹ කරන්න්න් වීඩිරියා කළ",
-      "tokens_generated": 65,
+      "generated_response": "MasterAI Core එක කරලා සහ හෝ හුවන්න් වෙන් එක වෙනවා. ඬ පුරැත් විට වෙන් කරන් වෙන් වියෙන් ත්‍යේ වෙන් සහ විරා",
+      "tokens_generated": 85,
       "stopped_on_eos": false,
-      "repetition_rate_3gram": 0.0794,
+      "repetition_rate_3gram": 0.2771,
       "expected_keywords": [
         "Local",
         "Cloud",
@@ -2457,7 +2457,7 @@
       "rubric_scores": {
         "correctness_0_to_5": 0.5,
         "grammar_0_to_5": 1.0,
-        "naturalness_0_to_5": 2.5,
+        "naturalness_0_to_5": 1.0,
         "relevance_0_to_5": 0.5,
         "instruction_following_0_to_5": 1.0,
         "factual_accuracy_0_to_5": 0.5,

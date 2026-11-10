@@ -1,0 +1,304 @@
+[
+  {
+    "id": "add_en_01",
+    "category": "video_controls",
+    "prompt": "How do I pause a video without using the mouse in MASTER CLOUD?",
+    "expected_keywords": ["spacebar", "k", "keyboard", "pause", "play"]
+  },
+  {
+    "id": "add_en_02",
+    "category": "video_controls",
+    "prompt": "Can I jump forward by 10 seconds while playing a movie?",
+    "expected_keywords": ["right arrow", "l", "jump", "forward", "10 seconds"]
+  },
+  {
+    "id": "add_en_03",
+    "category": "video_controls",
+    "prompt": "What shortcut key jumps backward 10 seconds?",
+    "expected_keywords": ["left arrow", "j", "jump", "backward"]
+  },
+  {
+    "id": "add_en_04",
+    "category": "video_controls",
+    "prompt": "How can I inspect a video frame by frame?",
+    "expected_keywords": ["period", "comma", "frame", "pause"]
+  },
+  {
+    "id": "add_en_05",
+    "category": "video_controls",
+    "prompt": "What key exits fullscreen mode in MASTER CLOUD?",
+    "expected_keywords": ["f", "escape", "fullscreen"]
+  },
+  {
+    "id": "add_en_06",
+    "category": "video_controls",
+    "prompt": "How do I mute the sound quickly during a meeting?",
+    "expected_keywords": ["m", "mute", "unmute"]
+  },
+  {
+    "id": "add_en_07",
+    "category": "audio_studio",
+    "prompt": "How many frequency bands does the MASTER CLOUD Equalizer have?",
+    "expected_keywords": ["10-band", "frequencies", "bands", "equalizer"]
+  },
+  {
+    "id": "add_en_08",
+    "category": "audio_studio",
+    "prompt": "What key opens the Web Audio Studio drawer?",
+    "expected_keywords": ["e", "audio studio", "equalizer"]
+  },
+  {
+    "id": "add_en_09",
+    "category": "audio_studio",
+    "prompt": "What preset should I use if actor dialogue is hard to hear?",
+    "expected_keywords": ["vocal clarity", "clarity", "speech", "dialogue", "boost"]
+  },
+  {
+    "id": "add_en_10",
+    "category": "audio_studio",
+    "prompt": "What preset enhances sub-bass for movie explosions?",
+    "expected_keywords": ["bass boost", "low frequencies", "bass", "sub"]
+  },
+  {
+    "id": "add_en_11",
+    "category": "audio_studio",
+    "prompt": "How do I fix bluetooth headphone latency causing audio delay?",
+    "expected_keywords": ["audio delay", "sync", "audio studio", "slider"]
+  },
+  {
+    "id": "add_en_12",
+    "category": "audio_studio",
+    "prompt": "What is the maximum gain boost on the 10-Band Equalizer?",
+    "expected_keywords": ["+12db", "12 decibels", "gain", "boost"]
+  },
+  {
+    "id": "add_en_13",
+    "category": "privacy_security",
+    "prompt": "Where does MasterAI Core perform neural inference?",
+    "expected_keywords": ["local", "browser", "device", "offline", "zero telemetry"]
+  },
+  {
+    "id": "add_en_14",
+    "category": "privacy_security",
+    "prompt": "Does MasterAI send video clips or frames to remote servers?",
+    "expected_keywords": ["no", "never", "local", "zero telemetry", "private"]
+  },
+  {
+    "id": "add_en_15",
+    "category": "privacy_security",
+    "prompt": "How are external Google Gemini API keys protected in MASTER CLOUD?",
+    "expected_keywords": ["ephemeral", "memory", "private fields", "wiped", "tab"]
+  },
+  {
+    "id": "add_en_16",
+    "category": "instructions",
+    "prompt": "What are the exact steps to loop a specific section of a video?",
+    "expected_keywords": ["[", "]", "point a", "point b", "a-b repeat", "loop"]
+  },
+  {
+    "id": "add_en_17",
+    "category": "instructions",
+    "prompt": "How do I import external subtitles and synchronize them?",
+    "expected_keywords": ["drag", "drop", ".srt", ".vtt", "offset", "sync"]
+  },
+  {
+    "id": "add_en_18",
+    "category": "instructions",
+    "prompt": "Why does an MKV file need to be converted to MP4 or WebM?",
+    "expected_keywords": ["mkv", "matroska", "ac-3", "dts", "browser", "demux"]
+  },
+  {
+    "id": "add_en_19",
+    "category": "instructions",
+    "prompt": "How do I capture and save a screenshot of a video scene?",
+    "expected_keywords": ["s", "screenshot", "png", "frame", "download"]
+  },
+  {
+    "id": "add_en_20",
+    "category": "instructions",
+    "prompt": "What model architecture powers MasterAI Core?",
+    "expected_keywords": ["transformer", "5.06m", "byte-level bpe", "original"]
+  },
+
+  {
+    "id": "add_si_01",
+    "category": "video_controls_si",
+    "prompt": "යතුරුපුවරුවෙන් වීඩියෝවක් pause කරන්නේ කෙසේද?",
+    "expected_keywords": ["space bar", "k", "යතුර", "නවත්වන්න"]
+  },
+  {
+    "id": "add_si_02",
+    "category": "video_controls_si",
+    "prompt": "වීඩියෝව තත්පර 10 ක් ඉදිරියට ගෙන යාමට කුමන යතුර ඔබන්නද?",
+    "expected_keywords": ["right arrow", "l", "තත්පර 10", "ඉදිරියට"]
+  },
+  {
+    "id": "add_si_03",
+    "category": "video_controls_si",
+    "prompt": "වීඩියෝව තත්පර 10 ක් ආපස්සට ගෙන යාමට කුමන යතුර ඔබන්නද?",
+    "expected_keywords": ["left arrow", "j", "තත්පර 10", "ආපස්සට"]
+  },
+  {
+    "id": "add_si_04",
+    "category": "video_controls_si",
+    "prompt": "වීඩියෝ එක fullscreen දමන්නේ කෙසේද?",
+    "expected_keywords": ["f", "fullscreen", "පූර්ණ තිර"]
+  },
+  {
+    "id": "add_si_05",
+    "category": "video_controls_si",
+    "prompt": "ශබ්දය ඉක්මනින් නිහඬ කරන්නේ කෙසේද?",
+    "expected_keywords": ["m", "mute", "නිහඬ"]
+  },
+  {
+    "id": "add_si_06",
+    "category": "video_controls_si",
+    "prompt": "වීඩියෝවේ ඡායාරූපයක් (Screenshot) ලබා ගන්නේ කෙසේද?",
+    "expected_keywords": ["s", "screenshot", "ඡායාරූප"]
+  },
+  {
+    "id": "add_si_07",
+    "category": "audio_si",
+    "prompt": "10-Band Equalizer එක විවෘත කරන්නේ කෙසේද?",
+    "expected_keywords": ["e", "equalizer", "audio studio", "විවෘත"]
+  },
+  {
+    "id": "add_si_08",
+    "category": "audio_si",
+    "prompt": "චිත්‍රපටයක දෙබස් පැහැදිලි නැති විට භාවිතා කළ යුතු පෙරසිටුවම කුමක්ද?",
+    "expected_keywords": ["vocal clarity", "දෙබස්", "පැහැදිලි"]
+  },
+  {
+    "id": "add_si_09",
+    "category": "audio_si",
+    "prompt": "Bass ශබ්දය වැඩි කරන්නේ කුමන පෙරසිටුවමෙන්ද?",
+    "expected_keywords": ["bass boost", "අඩු සංඛ්‍යාත", "bass"]
+  },
+  {
+    "id": "add_si_10",
+    "category": "audio_si",
+    "prompt": "දෙබස් සහ වීඩියෝව නොගැලපෙන විට හදාගන්නේ කෙසේද?",
+    "expected_keywords": ["audio delay", "audio studio", "සමමුහුර්ත"]
+  },
+  {
+    "id": "add_si_11",
+    "category": "privacy_si",
+    "prompt": "MasterAI Core මගින් මගේ පුද්ගලික දත්ත පිටතට යවනවාද?",
+    "expected_keywords": ["නැත", "දේශීයව", "local", "100%"]
+  },
+  {
+    "id": "add_si_12",
+    "category": "privacy_si",
+    "prompt": "අන්තර්ජාලය නැතිව MasterAI වැඩ කරනවාද?",
+    "expected_keywords": ["ඔව්", "offline", "නොබැඳිව", "local"]
+  },
+  {
+    "id": "add_si_13",
+    "category": "instructions_si",
+    "prompt": "වීඩියෝ කොටසක් දිගටම repeat කරන්නේ කෙසේද?",
+    "expected_keywords": ["[", "]", "point a", "point b", "a-b"]
+  },
+  {
+    "id": "add_si_14",
+    "category": "instructions_si",
+    "prompt": "උපසිරැසි ගොනුවක් වීඩියෝවට ඇතුළත් කරන්නේ කෙසේද?",
+    "expected_keywords": ["drag", "drop", ".srt", ".vtt", "උපසිරැසි"]
+  },
+  {
+    "id": "add_si_15",
+    "category": "instructions_si",
+    "prompt": "MKV ගොනුවක් MP4 වලට මාරු කළ යුත්තේ ඇයි?",
+    "expected_keywords": ["mkv", "mp4", "webm", "ac-3", "dts", "browser"]
+  },
+
+  {
+    "id": "add_mix_01",
+    "category": "mixed_controls",
+    "prompt": "Video එකක් keyboard එකෙන් play හෝ pause කරන්නේ කොහොමද?",
+    "expected_keywords": ["space bar", "k", "play", "pause"]
+  },
+  {
+    "id": "add_mix_02",
+    "category": "mixed_controls",
+    "prompt": "Video එකක් 10 seconds forward කරන්න ඔබන්න ඕනේ මොකක්ද?",
+    "expected_keywords": ["right arrow", "l", "forward", "10"]
+  },
+  {
+    "id": "add_mix_03",
+    "category": "mixed_controls",
+    "prompt": "Video එකක් 10 seconds rewind කරන්න ඔබන්න ඕනේ මොකක්ද?",
+    "expected_keywords": ["left arrow", "j", "rewind", "10"]
+  },
+  {
+    "id": "add_mix_04",
+    "category": "mixed_controls",
+    "prompt": "Fullscreen යන්න shortcut key එක මොකක්ද?",
+    "expected_keywords": ["f", "fullscreen", "escape"]
+  },
+  {
+    "id": "add_mix_05",
+    "category": "mixed_controls",
+    "prompt": "Audio එක එකපාරට mute කරන්නේ කොහොමද?",
+    "expected_keywords": ["m", "mute", "sound"]
+  },
+  {
+    "id": "add_mix_06",
+    "category": "mixed_controls",
+    "prompt": "Video එකේ high resolution screenshot එකක් ගන්නේ කොහොමද?",
+    "expected_keywords": ["s", "screenshot", "png", "download"]
+  },
+  {
+    "id": "add_mix_07",
+    "category": "mixed_audio",
+    "prompt": "10-Band Equalizer එක open කරන්න ඔබන්න ඕනේ මොකක්ද?",
+    "expected_keywords": ["e", "equalizer", "audio studio"]
+  },
+  {
+    "id": "add_mix_08",
+    "category": "mixed_audio",
+    "prompt": "Dialogues ඇහෙන්නේ නැත්නම් දාන්න ඕනේ preset එක මොකක්ද?",
+    "expected_keywords": ["vocal clarity", "clarity", "dialogue", "boost"]
+  },
+  {
+    "id": "add_mix_09",
+    "category": "mixed_audio",
+    "prompt": "Heavy bass ඕනේ නම් select කරන්න ඕනේ preset එක මොකක්ද?",
+    "expected_keywords": ["bass boost", "bass", "low frequencies"]
+  },
+  {
+    "id": "add_mix_10",
+    "category": "mixed_audio",
+    "prompt": "Sound එකයි video එකයි mismatch නම් හදාගන්නේ කොහොමද?",
+    "expected_keywords": ["audio delay", "audio studio", "slider", "sync"]
+  },
+  {
+    "id": "add_mix_11",
+    "category": "mixed_privacy",
+    "prompt": "MasterAI Core එක offline run කරන්න පුළුවන්ද?",
+    "expected_keywords": ["ඔව්", "offline", "local", "internet"]
+  },
+  {
+    "id": "add_mix_12",
+    "category": "mixed_privacy",
+    "prompt": "MasterAI Core එකෙන් video clips server එකකට යනවාද?",
+    "expected_keywords": ["නැහැ", "local", "zero telemetry", "private"]
+  },
+  {
+    "id": "add_mix_13",
+    "category": "mixed_instructions",
+    "prompt": "A-B loop එකක් දාලා scene එකක් repeat කරන්නේ කොහොමද?",
+    "expected_keywords": ["[", "]", "point a", "point b", "repeat", "loop"]
+  },
+  {
+    "id": "add_mix_14",
+    "category": "mixed_instructions",
+    "prompt": "Subtitle file එකක් video player එකට දාන්නේ කොහොමද?",
+    "expected_keywords": ["drag", "drop", ".srt", ".vtt", "offset"]
+  },
+  {
+    "id": "add_mix_15",
+    "category": "mixed_instructions",
+    "prompt": "MKV video එකක් browser එකේ play වෙන්නේ නැත්තේ ඇයි?",
+    "expected_keywords": ["mkv", "ac-3", "dts", "mp4", "webm", "convert"]
+  }
+]

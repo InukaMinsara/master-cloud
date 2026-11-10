@@ -11,6 +11,7 @@
 import { SubtitleCue } from './subtitleParser';
 import { DetectedScene, MediaBookmark } from './mediaMetadataDb';
 import { localKnowledgeEngine } from './ai/localKnowledgeEngine';
+import { toolAssistedOrchestrator, ToolAssistedResponse } from './ai/toolAssistedLocalMode';
 
 export interface VideoAIContext {
   fileName: string;
@@ -192,6 +193,18 @@ export class MasterAiEngine {
 
     // Default: Master Local Neural AI
     return this.chatWithLocalNeuralAi(query, context);
+  }
+
+  /**
+   * Transparent Tool-Assisted Local Mode (v0.6):
+   * Coordinates verified document retrieval, transcript grounding, deterministic media math,
+   * and original neural formulation with clear provenance attribution.
+   */
+  public async processToolAssistedQuery(
+    userQuery: string,
+    context: VideoAIContext,
+  ): Promise<ToolAssistedResponse> {
+    return toolAssistedOrchestrator.processQuery(userQuery, context);
   }
 
   // -------------------------------------------------------------------------

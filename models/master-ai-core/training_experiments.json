@@ -20,5 +20,16 @@
     "final_test_loss": 3.6668,
     "final_test_perplexity": 39.13,
     "checkpoint": "checkpoint_v0.5_stageB.pt"
+  },
+  {
+    "stage": "v06",
+    "timestamp": "2026-11-10 19:10:29",
+    "total_tokens": 57839,
+    "samples": 442,
+    "epochs": 25,
+    "best_val_loss": 3.4972,
+    "final_test_loss": 3.5774,
+    "final_test_perplexity": 35.78,
+    "checkpoint": "checkpoint_v0.6.pt"
   }
 ]
