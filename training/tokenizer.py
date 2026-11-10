@@ -3,13 +3,16 @@ MASTER CLOUD — MASTER AI ORIGINAL
 Original Byte-Level Subword Tokenizer Implementation from Scratch.
 
 Zero external dependencies. No pre-trained downloads.
-Builds and trains a custom subword vocabulary from user/project training corpora.
+Implements a true Byte-Level BPE (Byte Pair Encoding) tokenizer:
+- 5 Special tokens (<pad>, <unk>, <bos>, <eos>, <sep>)
+- 256 Raw byte tokens (0x00 to 0xFF) ensuring 100% vocabulary coverage
+- Zero UNK tokens on any arbitrary UTF-8 input (English, Sinhala, Emoji, Math, Asian scripts)
+- Lossless roundtrip string reconstruction: decode(encode(text)) == text
 """
 
 import json
 import os
-import re
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Optional, Set
 
 
 class MasterAiTokenizer:
@@ -19,185 +22,251 @@ class MasterAiTokenizer:
     BOS_ID = 2
     EOS_ID = 3
     SEP_ID = 4
+    NUM_SPECIAL = 5
+    NUM_BASE_BYTES = 256
 
     def __init__(self, vocab_size: int = 1024):
         self.target_vocab_size = vocab_size
-        self.vocab: Dict[str, int] = {}
-        self.id_to_token: Dict[int, str] = {}
-        self.merges: List[Tuple[str, str]] = []
+        self.id_to_bytes: Dict[int, bytes] = {}
+        self.bytes_to_id: Dict[bytes, int] = {}
+        self.merges: List[Tuple[int, int, int]] = []  # (id1, id2, new_id)
+        self.merge_ranks: Dict[Tuple[int, int], int] = {}
         self._init_base_vocab()
 
     def _init_base_vocab(self):
-        """Initialize special tokens and base ASCII byte characters."""
-        self.vocab = {}
-        self.id_to_token = {}
+        """Initialize the 5 special tokens and all 256 individual byte tokens."""
+        self.id_to_bytes = {}
+        self.bytes_to_id = {}
+        self.merges = []
+        self.merge_ranks = {}
 
-        # 1. Special tokens
-        for idx, token in enumerate(self.SPECIAL_TOKENS):
-            self.vocab[token] = idx
-            self.id_to_token[idx] = token
+        # Special tokens (mapped to empty bytes for identification)
+        for idx in range(self.NUM_SPECIAL):
+            self.id_to_bytes[idx] = b""
 
-        # 2. Base printable ASCII characters + standard Sinhala unicode block sample
-        current_id = len(self.SPECIAL_TOKENS)
-        for i in range(32, 127):  # ASCII printable
-            ch = chr(i)
-            if ch not in self.vocab:
-                self.vocab[ch] = current_id
-                self.id_to_token[current_id] = ch
-                current_id += 1
-
-        # Common punctuation and whitespace markers
-        for ch in ["\n", "\t", " ", "’", "‘", "“", "”", "—", "…"]:
-            if ch not in self.vocab:
-                self.vocab[ch] = current_id
-                self.id_to_token[current_id] = ch
-                current_id += 1
-
-        # Sinhala Unicode Block (U+0D80 to U+0DFF) basic characters
-        for codepoint in range(0x0D85, 0x0DC6 + 1):
-            ch = chr(codepoint)
-            if ch not in self.vocab:
-                self.vocab[ch] = current_id
-                self.id_to_token[current_id] = ch
-                current_id += 1
+        # Base 256 bytes: Token IDs 5 through 260
+        for b in range(self.NUM_BASE_BYTES):
+            tid = self.NUM_SPECIAL + b
+            byte_val = bytes([b])
+            self.id_to_bytes[tid] = byte_val
+            self.bytes_to_id[byte_val] = tid
 
     @property
     def vocab_size(self) -> int:
-        return len(self.vocab)
+        return len(self.id_to_bytes)
 
     def train_from_corpus(self, texts: List[str], max_vocab: int = 1024):
-        """Train BPE subword merges from an original corpus."""
+        """
+        Train BPE merges directly from a corpus of texts.
+        Converts text to UTF-8 byte token IDs and iteratively merges frequent adjacent pairs.
+        """
         self.target_vocab_size = max_vocab
         self._init_base_vocab()
 
-        # Word frequency counting
-        word_freqs: Dict[Tuple[str, ...], int] = {}
+        # Convert each text to a list of base byte token IDs
+        sequences: List[List[int]] = []
         for text in texts:
-            words = text.split(" ")
-            for w in words:
-                if not w:
-                    continue
-                # Represent word as tuple of characters + end-of-word marker
-                chars = tuple(list(w))
-                word_freqs[chars] = word_freqs.get(chars, 0) + 1
+            raw_bytes = text.encode("utf-8")
+            if not raw_bytes:
+                continue
+            seq = [self.NUM_SPECIAL + b for b in raw_bytes]
+            sequences.append(seq)
 
-        # Iterative BPE merges
-        self.merges = []
-        while len(self.vocab) < self.target_vocab_size:
-            pairs: Dict[Tuple[str, str], int] = {}
-            for word, freq in word_freqs.items():
-                for i in range(len(word) - 1):
-                    pair = (word[i], word[i + 1])
-                    pairs[pair] = pairs.get(pair, 0) + freq
+        next_id = self.NUM_SPECIAL + self.NUM_BASE_BYTES  # 261
 
-            if not pairs:
+        while len(self.id_to_bytes) < self.target_vocab_size:
+            # Count pair frequencies across all sequences
+            pair_counts: Dict[Tuple[int, int], int] = {}
+            for seq in sequences:
+                for i in range(len(seq) - 1):
+                    pair = (seq[i], seq[i + 1])
+                    pair_counts[pair] = pair_counts.get(pair, 0) + 1
+
+            if not pair_counts:
                 break
 
-            best_pair = max(pairs, key=pairs.get)
-            if pairs[best_pair] < 2:  # Stop if no frequent pairs
+            best_pair, count = max(pair_counts.items(), key=lambda kv: kv[1])
+            if count < 2:
+                # Stop if no pair occurs at least twice
                 break
 
-            # Create new token
-            new_token = best_pair[0] + best_pair[1]
-            new_id = len(self.vocab)
-            self.vocab[new_token] = new_id
-            self.id_to_token[new_id] = new_token
-            self.merges.append(best_pair)
+            id1, id2 = best_pair
+            new_id = next_id
+            next_id += 1
 
-            # Update word frequencies with merged pair
-            new_word_freqs: Dict[Tuple[str, ...], int] = {}
-            for word, freq in word_freqs.items():
-                new_word = []
+            merged_bytes = self.id_to_bytes[id1] + self.id_to_bytes[id2]
+            self.id_to_bytes[new_id] = merged_bytes
+            self.bytes_to_id[merged_bytes] = new_id
+
+            rank = len(self.merges)
+            self.merges.append((id1, id2, new_id))
+            self.merge_ranks[best_pair] = rank
+
+            # Replace best_pair in all sequences
+            new_sequences: List[List[int]] = []
+            for seq in sequences:
+                new_seq: List[int] = []
                 i = 0
-                while i < len(word):
-                    if i < len(word) - 1 and (word[i], word[i + 1]) == best_pair:
-                        new_word.append(new_token)
+                while i < len(seq):
+                    if i < len(seq) - 1 and (seq[i], seq[i + 1]) == best_pair:
+                        new_seq.append(new_id)
                         i += 2
                     else:
-                        new_word.append(word[i])
+                        new_seq.append(seq[i])
                         i += 1
-                new_word_freqs[tuple(new_word)] = freq
-            word_freqs = new_word_freqs
+                new_sequences.append(new_seq)
+            sequences = new_sequences
 
     def encode(self, text: str, add_bos: bool = True, add_eos: bool = True) -> List[int]:
-        """Encode text to token IDs using trained subwords."""
+        """
+        Encode string into token IDs.
+        Guaranteed to have zero <unk> tokens for any valid UTF-8 string.
+        """
         if not text:
-            return []
+            tokens: List[int] = []
+            if add_bos:
+                tokens.append(self.BOS_ID)
+            if add_eos:
+                tokens.append(self.EOS_ID)
+            return tokens
 
-        tokens: List[int] = []
+        raw_bytes = text.encode("utf-8")
+        tokens = [self.NUM_SPECIAL + b for b in raw_bytes]
+
+        # Apply BPE merges iteratively by rank
+        while len(tokens) >= 2:
+            # Find eligible merge with lowest rank
+            best_rank = float("inf")
+            best_pair: Optional[Tuple[int, int]] = None
+            best_new_id: Optional[int] = None
+
+            for i in range(len(tokens) - 1):
+                pair = (tokens[i], tokens[i + 1])
+                if pair in self.merge_ranks:
+                    rank = self.merge_ranks[pair]
+                    if rank < best_rank:
+                        best_rank = rank
+                        best_pair = pair
+                        best_new_id = self.merges[rank][2]
+
+            if best_pair is None or best_new_id is None:
+                break
+
+            # Replace occurrences of best_pair
+            merged_tokens: List[int] = []
+            i = 0
+            while i < len(tokens):
+                if i < len(tokens) - 1 and (tokens[i], tokens[i + 1]) == best_pair:
+                    merged_tokens.append(best_new_id)
+                    i += 2
+                else:
+                    merged_tokens.append(tokens[i])
+                    i += 1
+            tokens = merged_tokens
+
+        res: List[int] = []
         if add_bos:
-            tokens.append(self.BOS_ID)
-
-        # Greedily match longest known subwords
-        i = 0
-        while i < len(text):
-            matched = False
-            # Lookahead up to 16 characters for longest token match
-            for length in range(min(16, len(text) - i), 0, -1):
-                sub = text[i : i + length]
-                if sub in self.vocab:
-                    tokens.append(self.vocab[sub])
-                    i += length
-                    matched = True
-                    break
-
-            if not matched:
-                tokens.append(self.UNK_ID)
-                i += 1
-
+            res.append(self.BOS_ID)
+        res.extend(tokens)
         if add_eos:
-            tokens.append(self.EOS_ID)
-
-        return tokens
+            res.append(self.EOS_ID)
+        return res
 
     def decode(self, token_ids: List[int], skip_special: bool = True) -> str:
-        """Decode token IDs back to text string."""
-        chars: List[str] = []
+        """
+        Decode token IDs back to a UTF-8 string.
+        Concatenates underlying byte buffers and decodes losslessly.
+        """
+        byte_chunks: List[bytes] = []
         special_ids = {self.PAD_ID, self.UNK_ID, self.BOS_ID, self.EOS_ID, self.SEP_ID}
 
         for tid in token_ids:
             if skip_special and tid in special_ids:
                 continue
-            token_str = self.id_to_token.get(tid, "")
-            chars.append(token_str)
+            if tid in self.id_to_bytes:
+                byte_chunks.append(self.id_to_bytes[tid])
 
-        return "".join(chars)
+        full_bytes = b"".join(byte_chunks)
+        return full_bytes.decode("utf-8", errors="replace")
+
+    def has_unk(self, token_ids: List[int]) -> bool:
+        """Checks if any UNK tokens exist in token sequence."""
+        return any(tid == self.UNK_ID for tid in token_ids)
 
     def save(self, directory: str):
-        """Save vocabulary and merges to JSON files."""
+        """Save vocabulary, merges, and metadata to disk."""
         os.makedirs(directory, exist_ok=True)
         vocab_path = os.path.join(directory, "vocab.json")
         merges_path = os.path.join(directory, "merges.json")
         meta_path = os.path.join(directory, "tokenizer_meta.json")
 
+        # Serialized vocab mapping: token_id -> hex representation and human-readable preview
+        vocab_dict = {}
+        for tid, b in self.id_to_bytes.items():
+            if tid < self.NUM_SPECIAL:
+                vocab_dict[str(tid)] = {
+                    "token": self.SPECIAL_TOKENS[tid],
+                    "hex": "",
+                    "is_special": True,
+                }
+            else:
+                try:
+                    text_repr = b.decode("utf-8")
+                except UnicodeDecodeError:
+                    text_repr = f"<bytes:{b.hex()}>"
+                vocab_dict[str(tid)] = {
+                    "token": text_repr,
+                    "hex": b.hex(),
+                    "is_special": False,
+                }
+
         with open(vocab_path, "w", encoding="utf-8") as f:
-            json.dump(self.vocab, f, ensure_ascii=False, indent=2)
+            json.dump(vocab_dict, f, ensure_ascii=False, indent=2)
 
         with open(merges_path, "w", encoding="utf-8") as f:
-            json.dump(self.merges, f, ensure_ascii=False, indent=2)
+            json.dump(self.merges, f, indent=2)
 
         with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "type": "MasterAiByteLevelBPE",
-                "vocab_size": len(self.vocab),
-                "pad_id": self.PAD_ID,
-                "unk_id": self.UNK_ID,
-                "bos_id": self.BOS_ID,
-                "eos_id": self.EOS_ID,
-                "sep_id": self.SEP_ID,
-                "author": "MASTER CLOUD AI Team",
-            }, f, indent=2)
+            json.dump(
+                {
+                    "type": "MasterAiTrueByteLevelBPE",
+                    "vocab_size": len(self.id_to_bytes),
+                    "base_bytes": self.NUM_BASE_BYTES,
+                    "num_merges": len(self.merges),
+                    "special_tokens": {
+                        "pad": self.PAD_ID,
+                        "unk": self.UNK_ID,
+                        "bos": self.BOS_ID,
+                        "eos": self.EOS_ID,
+                        "sep": self.SEP_ID,
+                    },
+                    "lossless_utf8": True,
+                    "author": "MASTER CLOUD AI Research Team",
+                },
+                f,
+                indent=2,
+            )
 
     def load(self, directory: str):
         """Load vocabulary and merges from disk."""
         vocab_path = os.path.join(directory, "vocab.json")
         merges_path = os.path.join(directory, "merges.json")
 
-        with open(vocab_path, "r", encoding="utf-8") as f:
-            self.vocab = json.load(f)
-
-        self.id_to_token = {int(v): k for k, v in self.vocab.items()}
+        self._init_base_vocab()
 
         if os.path.exists(merges_path):
             with open(merges_path, "r", encoding="utf-8") as f:
-                self.merges = [tuple(p) for p in json.load(f)]
+                raw_merges = json.load(f)
+                self.merges = [tuple(m) for m in raw_merges]
+                self.merge_ranks = {(m[0], m[1]): idx for idx, m in enumerate(self.merges)}
+
+        if os.path.exists(vocab_path):
+            with open(vocab_path, "r", encoding="utf-8") as f:
+                vocab_dict = json.load(f)
+                for tid_str, info in vocab_dict.items():
+                    tid = int(tid_str)
+                    hex_str = info.get("hex", "")
+                    if hex_str:
+                        b = bytes.fromhex(hex_str)
+                        self.id_to_bytes[tid] = b
+                        self.bytes_to_id[b] = tid

@@ -90,24 +90,23 @@ function formatTimestamp(seconds: number): string {
 
 export class MasterAiEngine {
   private static instance: MasterAiEngine;
+  // Zero persistent credentials policy: External cloud API keys are NEVER written to disk,
+  // localStorage, or sessionStorage. They reside strictly in volatile process memory for the active tab.
   private geminiApiKey: string | null = null;
   private mode: 'local' | 'cloud' = 'local';
   private selectedModel = 'gemini-2.5-flash';
 
   private constructor() {
     if (typeof window !== 'undefined') {
-      // Secure Migration: Clean up legacy plaintext key from localStorage if present
-      const legacyKey = localStorage.getItem('master_cloud_gemini_api_key');
-      if (legacyKey) {
-        sessionStorage.setItem('master_cloud_gemini_api_key_session', legacyKey);
+      try {
+        // Active Security Purge: Clean up any legacy keys from localStorage or sessionStorage
         localStorage.removeItem('master_cloud_gemini_api_key');
+        sessionStorage.removeItem('master_cloud_gemini_api_key_session');
+        const savedMode = localStorage.getItem('master_cloud_ai_mode') as 'local' | 'cloud' | null;
+        if (savedMode) this.mode = savedMode;
+      } catch {
+        // Ignore environments where storage access is restricted
       }
-
-      // Read from session-only memory (cleared when browser session ends)
-      const sessionKey = sessionStorage.getItem('master_cloud_gemini_api_key_session');
-      const savedMode = localStorage.getItem('master_cloud_ai_mode') as 'local' | 'cloud' | null;
-      if (sessionKey) this.geminiApiKey = sessionKey;
-      if (savedMode) this.mode = savedMode;
     }
   }
 
@@ -130,19 +129,20 @@ export class MasterAiEngine {
   }
 
   public getApiKey(): string | null {
+    // Pure ephemeral in-memory getter
     return this.geminiApiKey;
   }
 
   public setApiKey(key: string): void {
+    // Strict ephemeral in-memory storage (cleared upon tab closure or page reload)
     this.geminiApiKey = key.trim() || null;
     if (typeof window !== 'undefined') {
-      if (this.geminiApiKey) {
-        // Store ephemeral in sessionStorage only (never in persistent localStorage)
-        sessionStorage.setItem('master_cloud_gemini_api_key_session', this.geminiApiKey);
+      try {
+        // Enforce that nothing ever enters persistent or session storage
         localStorage.removeItem('master_cloud_gemini_api_key');
-      } else {
         sessionStorage.removeItem('master_cloud_gemini_api_key_session');
-        localStorage.removeItem('master_cloud_gemini_api_key');
+      } catch {
+        // Ignore
       }
     }
   }

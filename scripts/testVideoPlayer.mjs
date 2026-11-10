@@ -967,13 +967,18 @@ import path from 'path';
 const modelDir = path.resolve('models/master-ai-core');
 assert(fs.existsSync(modelDir), 'models/master-ai-core directory exists');
 
+// ----------------------------------------------------
+// 12. MasterAI Original Model & Neural Runtime Verification
+// ----------------------------------------------------
+assert(fs.existsSync(modelDir), 'Original MasterAI model directory exists');
+
 const vocabPath = path.join(modelDir, 'vocab.json');
 assert(fs.existsSync(vocabPath), 'vocab.json exists');
 const vocabData = JSON.parse(fs.readFileSync(vocabPath, 'utf8'));
-assert(vocabData['<pad>'] === 0, 'Special token <pad> is ID 0');
-assert(vocabData['<bos>'] === 2, 'Special token <bos> is ID 2');
-assert(vocabData['<eos>'] === 3, 'Special token <eos> is ID 3');
-assert(Object.keys(vocabData).length >= 500, `Trained vocabulary size >= 500 tokens (actual: ${Object.keys(vocabData).length})`);
+assert(vocabData['0']?.token === '<pad>', 'Special token <pad> is ID 0');
+assert(vocabData['2']?.token === '<bos>', 'Special token <bos> is ID 2');
+assert(vocabData['3']?.token === '<eos>', 'Special token <eos> is ID 3');
+assert(Object.keys(vocabData).length === 1024, `Trained byte-level vocabulary exact (actual: ${Object.keys(vocabData).length})`);
 
 const configPath = path.join(modelDir, 'config.json');
 assert(fs.existsSync(configPath), 'config.json exists');
@@ -984,14 +989,39 @@ assert(configData.n_heads === 4, 'Model n_heads matches 4');
 
 const onnxPath = path.join(modelDir, 'master_ai_core.onnx');
 assert(fs.existsSync(onnxPath), 'Exported ONNX model graph exists');
-assert(fs.statSync(onnxPath).size > 100000, 'ONNX graph is non-empty and valid');
+const onnxSize = fs.statSync(onnxPath).size;
+assert(onnxSize > 19000000, `ONNX model contains 100% embedded weights (${(onnxSize / (1024*1024)).toFixed(2)} MB, >19 MB)`);
+assert(!fs.existsSync(path.join(modelDir, 'master_ai_core.onnx.data')), 'No external detached .onnx.data file (self-contained model)');
 
 const reportPath = path.join(modelDir, 'training_report.json');
 assert(fs.existsSync(reportPath), 'Training metrics report exists');
 const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-assert(reportData.epochs === 25, 'Model trained for 25 epochs');
-assert(reportData.parameters === 4921856, 'Model parameter count exact (4.92M parameters)');
-assert(reportData.best_val_loss < 4.5, 'Validation loss improved below 4.5');
+assert(reportData.epochs === 30, 'Model trained for 30 epochs');
+assert(reportData.parameters === 5027840, 'Model parameter count exact (5.03M parameters)');
+assert(reportData.best_val_loss < 6.0, 'Validation loss improved below 6.0');
+
+// Parity Report Verification
+const parityPath = path.join(modelDir, 'onnx_parity_report.json');
+assert(fs.existsSync(parityPath), 'PyTorch vs ONNX equivalence report exists');
+const parityData = JSON.parse(fs.readFileSync(parityPath, 'utf8'));
+assert(parityData.status === 'PASSED', 'PyTorch vs ONNX numerical equivalence is PASSED');
+assert(parityData.results.every(r => r.passed && r.max_abs_diff < 1e-4), 'All sequence lengths (1, 4, 16, 64, 128) have max diff < 1e-4');
+
+// Corpus Manifest & Zero-Leakage Split
+const manifestPath = path.join(modelDir, 'corpus_manifest.json');
+assert(fs.existsSync(manifestPath), 'Corpus manifest exists');
+const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+assert(manifestData.split_ratios.train === 0.75, 'Train ratio is 75%');
+assert(manifestData.split_ratios.val === 0.15, 'Val ratio is 15%');
+assert(manifestData.split_ratios.test === 0.10, 'Test ratio is 10%');
+assert(manifestData.total_samples === 100, 'Total deduplicated corpus count is 100');
+
+// Sample Generations Verification
+const samplesPath = path.join(modelDir, 'sample_generations.json');
+assert(fs.existsSync(samplesPath), 'Autoregressive sample generations exist');
+const samplesData = JSON.parse(fs.readFileSync(samplesPath, 'utf8'));
+assert(samplesData.length >= 6, 'Contains 6+ sample prompt generations');
+assert(samplesData.some(s => s.prompt.includes('MasterAI යනු කුමක්ද?')), 'Includes bilingual Sinhala generation');
 
 // 2. BM25 Knowledge Retrieval Algorithm Test
 class MockBM25Engine {

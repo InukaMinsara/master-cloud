@@ -1068,10 +1068,10 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
               <div className="p-4 rounded-2xl bg-white/5 border border-purple-500/30 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-white">
                   <Key className="w-4 h-4 text-purple-400" />
-                  Google Gemini API Key (Session-Only Memory)
+                  Google Gemini API Key (Ephemeral In-Memory Only)
                 </div>
                 <p className="text-[11px] text-white/60">
-                  <strong className="text-amber-300">Security Warning:</strong> Enabling Cloud Mode transmits video metadata and retrieved dialogue passages over the public internet to Google servers. Your key is stored strictly in ephemeral session memory (<code className="text-cyan-300">sessionStorage</code>) and sent via HTTP headers (never in URL query strings).
+                  <strong className="text-amber-300">Security Notice:</strong> Enabling Cloud Mode transmits video metadata and retrieved dialogue passages over the public internet to Google servers. Your key is stored strictly in volatile in-memory state (never in localStorage or sessionStorage) and is immediately wiped when you close or reload this tab. Transmitted securely via <code className="text-cyan-300">x-goog-api-key</code> HTTP header (never in URL query parameters).
                 </p>
                 <input
                   type="password"

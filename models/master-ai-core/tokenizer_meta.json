@@ -1,10 +1,15 @@
 {
-  "type": "MasterAiByteLevelBPE",
-  "vocab_size": 610,
-  "pad_id": 0,
-  "unk_id": 1,
-  "bos_id": 2,
-  "eos_id": 3,
-  "sep_id": 4,
-  "author": "MASTER CLOUD AI Team"
+  "type": "MasterAiTrueByteLevelBPE",
+  "vocab_size": 1024,
+  "base_bytes": 256,
+  "num_merges": 763,
+  "special_tokens": {
+    "pad": 0,
+    "unk": 1,
+    "bos": 2,
+    "eos": 3,
+    "sep": 4
+  },
+  "lossless_utf8": true,
+  "author": "MASTER CLOUD AI Research Team"
 }

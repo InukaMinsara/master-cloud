@@ -1,0 +1,70 @@
+{
+  "status": "PASSED",
+  "model_file": "models/master-ai-core\\master_ai_core.onnx",
+  "model_size_mb": 19.81,
+  "parameters": 5027840,
+  "tolerance_threshold": 0.0001,
+  "results": [
+    {
+      "sequence_length": 1,
+      "shape": [
+        1,
+        1,
+        1024
+      ],
+      "max_abs_diff": 2.384185791015625e-06,
+      "mean_abs_diff": 3.61464316256388e-07,
+      "logits_std": 1.3874322175979614,
+      "passed": true
+    },
+    {
+      "sequence_length": 4,
+      "shape": [
+        1,
+        4,
+        1024
+      ],
+      "max_abs_diff": 1.9073486328125e-06,
+      "mean_abs_diff": 2.856695004993526e-07,
+      "logits_std": 1.2325042486190796,
+      "passed": true
+    },
+    {
+      "sequence_length": 16,
+      "shape": [
+        1,
+        16,
+        1024
+      ],
+      "max_abs_diff": 2.86102294921875e-06,
+      "mean_abs_diff": 3.488027573439467e-07,
+      "logits_std": 1.707160472869873,
+      "passed": true
+    },
+    {
+      "sequence_length": 64,
+      "shape": [
+        1,
+        64,
+        1024
+      ],
+      "max_abs_diff": 2.86102294921875e-06,
+      "mean_abs_diff": 3.4438807006154093e-07,
+      "logits_std": 1.5913243293762207,
+      "passed": true
+    },
+    {
+      "sequence_length": 128,
+      "shape": [
+        1,
+        128,
+        1024
+      ],
+      "max_abs_diff": 4.76837158203125e-06,
+      "mean_abs_diff": 3.242584796225856e-07,
+      "logits_std": 1.3585501909255981,
+      "passed": true
+    }
+  ],
+  "tokenizer_roundtrip_passed": true
+}
