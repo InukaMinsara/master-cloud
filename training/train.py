@@ -1,16 +1,17 @@
 """
 MASTER CLOUD — MASTER AI ORIGINAL
-Original Model Training Pipeline from Random Initialization.
+Original Model Training Pipeline (v0.3).
 
-Trains MasterAiCore on our proprietary corpus with:
-- True Byte-Level BPE Tokenizer (256 raw bytes + special tokens, zero UNK)
-- Strict 75/15/10 Train/Val/Test partitioning with zero data leakage
-- AdamW optimizer with weight decay regularization (0.05) and dropout (0.15)
-- Cosine learning rate scheduling with linear warmup
-- Gradient clipping (1.0)
-- Validation loss checkpoint tracking & early stopping
-- Held-out Test set perplexity evaluation
-- Full training manifest and report generation
+Features:
+- Word-boundary-aware Byte-Level BPE Tokenizer (1024 vocabulary, zero UNK)
+- Target-Only Loss Masking (supervised learning exclusively on Assistant response tokens)
+- Expanded Context Window: 256 tokens
+- Provenance & License Tracking in corpus manifest
+- Strict 75/15/10 Train/Val/Test partitioning (Zero Leakage)
+- Multi-core CPU acceleration (torch.set_num_threads)
+- Regularized AdamW (weight decay 0.05, dropout 0.15, gradient clipping 1.0)
+- Cosine annealing learning rate scheduling with warmup
+- Repetition-penalized, nucleus-sampled autoregressive evaluation
 """
 
 import json
@@ -27,58 +28,71 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from training.tokenizer import MasterAiTokenizer
 from training.model import MasterAiConfig, MasterAiCore
 from training.dataset import (
-    ORIGINAL_CORPUS,
+    ORIGINAL_DATASET_ENTRIES,
     clean_and_deduplicate,
     partition_dataset,
+    format_sample,
     MasterAiCorpusDataset,
 )
 
 
 def train_master_ai(
-    epochs: int = 30,
+    epochs: int = 35,
     batch_size: int = 4,
-    learning_rate: float = 5e-4,
+    learning_rate: float = 6e-4,
     d_model: int = 256,
     n_layers: int = 6,
     n_heads: int = 4,
-    max_seq_len: int = 128,
+    max_seq_len: int = 256,
     dropout: float = 0.15,
     weight_decay: float = 0.05,
     output_dir: str = "models/master-ai-core",
 ):
     print("=" * 65)
-    print(" MASTER CLOUD — MASTER AI ORIGINAL TRAINING PIPELINE v0.2")
+    print(" MASTER CLOUD — MASTER AI ORIGINAL TRAINING PIPELINE v0.3")
     print("=" * 65)
+
+    # Multi-core CPU optimization
+    num_cpus = os.cpu_count() or 4
+    threads_to_use = min(8, num_cpus)
+    torch.set_num_threads(threads_to_use)
+    print(f"[*] CPU Cores Available: {num_cpus} | PyTorch Compute Threads: {threads_to_use}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Training Device: {device}")
-    if device.type == "cuda":
-        print(f"[*] GPU Name: {torch.cuda.get_device_name(0)}")
-        print(f"[*] VRAM Available: {torch.cuda.get_device_properties(0).total_memory / (1024**3):.2f} GB")
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # 1. Corpus Deduplication and Strict 75/15/10 Partitioning
+    # 1. Corpus Deduplication, Provenance & Strict 75/15/10 Partitioning
     print("\n[1/6] Preparing dataset with SHA-256 deduplication and 75/15/10 partitioning...")
-    deduped_corpus, stats = clean_and_deduplicate(ORIGINAL_CORPUS)
-    train_texts, val_texts, test_texts = partition_dataset(deduped_corpus, train_ratio=0.75, val_ratio=0.15)
-    print(f"  ✓ Raw corpus size: {stats['total_raw']}")
-    print(f"  ✓ Deduplicated size: {stats['final_count']} (Duplicates removed: {stats['duplicates_removed']})")
-    print(f"  ✓ Train split: {len(train_texts)} | Val split: {len(val_texts)} | Test split: {len(test_texts)}")
+    deduped_corpus, stats = clean_and_deduplicate(ORIGINAL_DATASET_ENTRIES)
+    train_entries, val_entries, test_entries = partition_dataset(deduped_corpus, train_ratio=0.75, val_ratio=0.15)
+    print(f"  ✓ Raw corpus entries: {stats['total_raw']}")
+    print(f"  ✓ Deduplicated entries: {stats['final_count']} (Duplicates removed: {stats['duplicates_removed']})")
+    print(f"  ✓ Category distribution: {stats['categories']}")
+    print(f"  ✓ Train split: {len(train_entries)} | Val split: {len(val_entries)} | Test split: {len(test_entries)}")
 
-    # Save corpus manifest
+    # Save detailed corpus manifest with license and provenance
     manifest_path = os.path.join(output_dir, "corpus_manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(
             {
+                "version": "0.3.0",
                 "total_samples": len(deduped_corpus),
-                "train_samples": len(train_texts),
-                "val_samples": len(val_texts),
-                "test_samples": len(test_texts),
+                "train_samples": len(train_entries),
+                "val_samples": len(val_entries),
+                "test_samples": len(test_entries),
                 "split_ratios": {"train": 0.75, "val": 0.15, "test": 0.10},
-                "train_manifest": [t[:60] + "..." for t in train_texts],
-                "val_manifest": [t[:60] + "..." for t in val_texts],
-                "test_manifest": [t[:60] + "..." for t in test_texts],
+                "category_counts": stats["categories"],
+                "dataset_provenance": [
+                    {
+                        "category": item["category"],
+                        "prompt": item["prompt"],
+                        "source": item["source"],
+                        "license": item["license"],
+                    }
+                    for item in deduped_corpus
+                ],
             },
             f,
             indent=2,
@@ -86,26 +100,27 @@ def train_master_ai(
         )
     print(f"  ✓ Saved corpus manifest to {manifest_path}")
 
-    # 2. Train Byte-Level BPE Tokenizer
-    print("\n[2/6] Training Byte-Level BPE Tokenizer from scratch...")
+    # 2. Train Word-Boundary-Aware Byte-Level BPE Tokenizer
+    print("\n[2/6] Training word-boundary-aware Byte-Level BPE Tokenizer from scratch...")
+    train_raw_texts = [format_sample(x["prompt"], x["response"]) for x in train_entries]
     tokenizer = MasterAiTokenizer(vocab_size=1024)
-    tokenizer.train_from_corpus(train_texts, max_vocab=1024)
+    tokenizer.train_from_corpus(train_raw_texts, max_vocab=1024)
     tokenizer.save(output_dir)
-    print(f"  ✓ Tokenizer vocabulary trained: {tokenizer.vocab_size} tokens (256 base bytes + merges)")
+    print(f"  ✓ Tokenizer vocabulary trained: {tokenizer.vocab_size} tokens (256 base bytes + word-aware merges)")
 
-    # 3. Build PyTorch Datasets & DataLoaders
-    print("\n[3/6] Initializing Datasets and DataLoaders...")
-    train_dataset = MasterAiCorpusDataset(train_texts, tokenizer, max_seq_len=max_seq_len)
-    val_dataset = MasterAiCorpusDataset(val_texts, tokenizer, max_seq_len=max_seq_len)
-    test_dataset = MasterAiCorpusDataset(test_texts, tokenizer, max_seq_len=max_seq_len)
+    # 3. Build PyTorch Datasets with Target-Only Loss Masking
+    print("\n[3/6] Initializing Datasets with Target-Only Loss Masking (max_seq_len=256)...")
+    train_dataset = MasterAiCorpusDataset(train_entries, tokenizer, max_seq_len=max_seq_len, target_only_loss=True)
+    val_dataset = MasterAiCorpusDataset(val_entries, tokenizer, max_seq_len=max_seq_len, target_only_loss=True)
+    test_dataset = MasterAiCorpusDataset(test_entries, tokenizer, max_seq_len=max_seq_len, target_only_loss=True)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     print(f"  ✓ DataLoaders ready: Train batches={len(train_loader)}, Val batches={len(val_loader)}, Test batches={len(test_loader)}")
 
-    # 4. Initialize MasterAiCore Architecture
-    print("\n[4/6] Initializing MasterAiCore Transformer with random weights...")
+    # 4. Initialize MasterAiCore Architecture (256 Context Window)
+    print("\n[4/6] Initializing MasterAiCore Transformer with random weights (Context Window = 256)...")
     config = MasterAiConfig(
         vocab_size=tokenizer.vocab_size,
         d_model=d_model,
@@ -119,7 +134,7 @@ def train_master_ai(
 
     model = MasterAiCore(config).to(device)
     num_params = model.count_parameters()
-    print(f"  ✓ Architecture: d_model={d_model}, layers={n_layers}, heads={n_heads}, d_ff={d_model*4}")
+    print(f"  ✓ Architecture: d_model={d_model}, layers={n_layers}, heads={n_heads}, d_ff={d_model*4}, context={max_seq_len}")
     print(f"  ✓ Total Trainable Parameters: {num_params:,} ({num_params / 1e6:.2f}M)")
 
     # Save model config
@@ -131,7 +146,7 @@ def train_master_ai(
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
-    # 6. Training Loop with Early Stopping & Validation Checkpointing
+    # 6. Training Loop with Early Checkpointing
     print(f"\n[5/6] Training for {epochs} epochs (Regularization: dropout={dropout}, weight_decay={weight_decay})...")
     history = []
     best_val_loss = float("inf")
@@ -194,9 +209,8 @@ def train_master_ai(
     total_time = time.time() - start_time
     print(f"\n[*] Training Complete in {total_time:.2f}s! Best Val Loss: {best_val_loss:.4f}")
 
-    # 7. Evaluate on Held-Out Test Set
+    # 7. Evaluate on Held-Out Test Set (Zero Leakage)
     print("\n[6/6] Evaluating on held-out Test split (Zero-leakage test set)...")
-    # Load best checkpoint
     best_cp = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(best_cp["model_state_dict"])
     model.eval()
@@ -216,7 +230,7 @@ def train_master_ai(
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump({
             "model_name": "MasterAiCore",
-            "version": "0.2.0-original",
+            "version": "0.3.0-original",
             "parameters": num_params,
             "architecture": {
                 "d_model": d_model,
@@ -236,26 +250,42 @@ def train_master_ai(
             "history": history,
         }, f, indent=2)
 
-    # 8. Autoregressive Sample Generation on Unseen Prompts
-    print("\n[*] Testing autoregressive generation on unseen test prompts...")
+    # 8. Autoregressive Sample Generation on Unseen Prompts (With Repetition Penalty & Top-P)
+    print("\n[*] Testing autoregressive generation with repetition penalty & top-p...")
     sample_generations = []
     test_prompts = [
-        "User: How do I pause or play a video? Assistant:",
-        "User: How do I open the 10-Band Equalizer? Assistant:",
-        "User: Explain speech pacing. Assistant:",
-        "User: MasterAI යනු කුමක්ද? Assistant:",
-        "User: වීඩියෝව නවත්වන්නේ කෙසේද? Assistant:",
-        "User: How do I fix audio delay? Assistant:",
+        "User: How do I pause or play a video?\nAssistant:",
+        "User: How do I open the 10-Band Equalizer?\nAssistant:",
+        "User: Explain speech pacing.\nAssistant:",
+        "User: MasterAI යනු කුමක්ද?\nAssistant:",
+        "User: වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?\nAssistant:",
+        "User: MASTER CLOUD එකේ video play කරන්නේ කොහොමද?\nAssistant:",
+        "User: What is A-B Repeat and how do I use it?\nAssistant:",
+        "User: How do I fix audio sync delay or lip-sync mismatch?\nAssistant:",
     ]
 
     for p in test_prompts:
         prompt_tokens = tokenizer.encode(p, add_bos=True, add_eos=False)
         inp = torch.tensor([prompt_tokens], dtype=torch.long, device=device)
-        out_tokens = model.generate(inp, max_new_tokens=40, temperature=0.6, eos_id=tokenizer.EOS_ID)
-        generated_text = tokenizer.decode(out_tokens[0].tolist(), skip_special=True)
-        sample_generations.append({"prompt": p, "output": generated_text.strip()})
-        print(f"\n  [PROMPT]: {p}")
-        print(f"  [GENERATED]: {generated_text.strip()}")
+        out_tokens = model.generate(
+            inp,
+            max_new_tokens=60,
+            temperature=0.5,
+            top_k=20,
+            top_p=0.85,
+            repetition_penalty=1.25,
+            eos_id=tokenizer.EOS_ID,
+        )
+        # Extract only the newly generated tokens (slice off the prompt tokens)
+        new_token_ids = out_tokens[0][len(prompt_tokens):].tolist()
+        generated_answer = tokenizer.decode(new_token_ids, skip_special=True)
+        sample_generations.append({
+            "prompt": p,
+            "raw_output": tokenizer.decode(out_tokens[0].tolist(), skip_special=True),
+            "generated_answer": generated_answer.strip(),
+        })
+        print(f"\n  [PROMPT]: {p.replace(chr(10), ' ')}")
+        print(f"  [ASSISTANT RESPONSE]: {generated_answer.strip()}")
 
     samples_path = os.path.join(output_dir, "sample_generations.json")
     with open(samples_path, "w", encoding="utf-8") as f:

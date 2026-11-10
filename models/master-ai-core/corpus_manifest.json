@@ -1,117 +1,556 @@
 {
-  "total_samples": 100,
-  "train_samples": 75,
-  "val_samples": 15,
-  "test_samples": 10,
+  "version": "0.3.0",
+  "total_samples": 88,
+  "train_samples": 66,
+  "val_samples": 13,
+  "test_samples": 9,
   "split_ratios": {
     "train": 0.75,
     "val": 0.15,
     "test": 0.1
   },
-  "train_manifest": [
-    "User: Who are you? Assistant: I am MasterAI Core, the origin...",
-    "User: What is MASTER CLOUD? Assistant: MASTER CLOUD is a hig...",
-    "User: What makes MasterAI original? Assistant: MasterAI Core...",
-    "User: Are you running in the cloud or locally? Assistant: I ...",
-    "User: Do you send my videos to OpenAI or Google? Assistant: ...",
-    "User: Can MasterAI run without internet access? Assistant: Y...",
-    "User: How do I pause or play a video? Assistant: Press Space...",
-    "User: How can I toggle fullscreen mode? Assistant: Press the...",
-    "User: How do I seek 10 seconds forward or backward? Assistan...",
-    "User: How do I seek 5 seconds precisely? Assistant: Use Shif...",
-    "User: How do I frame-step through video? Assistant: Pause th...",
-    "User: How do I mute or unmute audio? Assistant: Press the M ...",
-    "User: How do I adjust playback volume with keys? Assistant: ...",
-    "User: How do I adjust playback speed? Assistant: Press > (Sh...",
-    "User: How do I capture a screenshot frame? Assistant: Press ...",
-    "User: What is Picture-in-Picture mode and how do I activate ...",
-    "User: What is A-B Repeat? Assistant: Press [ to set Point A,...",
-    "User: How do I reset playback speed to normal 1.0x? Assistan...",
-    "User: Can I jump to 50% of the video? Assistant: Press numbe...",
-    "User: How do I open the 10-Band Equalizer? Assistant: Press ...",
-    "User: What are the 10 frequency bands in the equalizer? Assi...",
-    "User: What audio presets are available? Assistant: Built-in ...",
-    "User: How does the Vocal Clarity preset work? Assistant: Voc...",
-    "User: What is Bass Boost? Assistant: Bass Boost amplifies th...",
-    "User: How does the Web Audio API equalizer work? Assistant: ...",
-    "User: How do I reset equalizer settings? Assistant: Click th...",
-    "User: Does adjusting the equalizer alter the source video fi...",
-    "User: How do I open Subtitle Studio? Assistant: Press C to o...",
-    "User: What subtitle formats are supported? Assistant: MASTER...",
-    "User: How do I fix out-of-sync subtitles? Assistant: Open Su...",
-    "User: Can I customize subtitle appearance? Assistant: Yes, y...",
-    "User: How do I export subtitles? Assistant: Go to the Export...",
-    "User: Can I edit subtitle cues directly? Assistant: Yes, Sub...",
-    "User: How do I detect scenes in my video? Assistant: Press X...",
-    "User: How does scene detection work mathematically? Assistan...",
-    "User: What is a scene change threshold? Assistant: A scene t...",
-    "User: Can I jump directly to detected scenes? Assistant: Yes...",
-    "User: Generate chapters for my video. Assistant: I have anal...",
-    "User: Can I export detected scene chapters? Assistant: Yes, ...",
-    "User: Explain speech pacing. Assistant: Speech pacing is cal...",
-    "User: How do you measure audio energy and silence? Assistant...",
-    "User: How do I search transcript dialogue? Assistant: Open t...",
-    "User: Can I see keyword frequency in the transcript? Assista...",
-    "User: How does audio extraction work from local video files?...",
-    "User: What video formats are supported? Assistant: MASTER CL...",
-    "User: Can I play 4K and 60fps video? Assistant: Yes, provide...",
-    "User: What is HLS adaptive streaming? Assistant: HTTP Live S...",
-    "User: Can I drag and drop local files? Assistant: Yes, simpl...",
-    "User: Is my video uploaded to the internet? Assistant: No. A...",
-    "User: How does MasterAI protect API keys? Assistant: Externa...",
-    "User: What happens when I refresh the page with an API key? ...",
-    "User: Does MasterAI communicate with external servers withou...",
-    "User: MasterAI යනු කුමක්ද? Assistant: MasterAI යනු MASTER CL...",
-    "User: වීඩියෝව නවත්වන්නේ කෙසේද? Assistant: Spacebar හෝ K යතුර...",
-    "User: Fullscreen කරන්නේ කෙසේද? Assistant: පරිගණක යතුරුපුවරුව...",
-    "User: Equalizer එක විවෘත කරන්නේ කෙසේද? Assistant: E යතුර එබී...",
-    "User: දර්ශන හඳුනාගැනීම කරන්නේ කෙසේද? Assistant: X යතුර එබීමෙ...",
-    "User: ශබ්දය වැඩි හෝ අඩු කරන්නේ කෙසේද? Assistant: Up Arrow යත...",
-    "User: තත්පර 10ක් ඉදිරියට හෝ පසුපසට යන්නේ කෙසේද? Assistant: R...",
-    "User: උපසිරැසි (Subtitles) එකතු කරන්නේ කෙසේද? Assistant: C ය...",
-    "User: මගේ වීඩියෝ අන්තර්ජාලයට උඩුගත වේද? Assistant: නැත. සියල...",
-    "User: A-B Repeat භාවිත කරන්නේ කෙසේද? Assistant: [ යතුරෙන් Po...",
-    "User: Screenshot එකක් ගන්නේ කෙසේද? Assistant: S යතුර එබීමෙන්...",
-    "User: ශබ්ද සැකසුම් වල Presets මොනවාද? Assistant: Flat, Bass ...",
-    "User: සිංහල භාෂාවෙන් උපසිරැසි සහය දක්වනවාද? Assistant: ඔව්, ...",
-    "User: වේගය වෙනස් කරන්නේ කෙසේද? Assistant: Shift + Period මඟි...",
-    "User: Hello! Assistant: Greetings! I am MasterAI Core, ready...",
-    "User: Summarize this video. Assistant: Based on the dialogue...",
-    "User: What are the key takeaways from the video? Assistant: ...",
-    "User: Who is speaking in this video? Assistant: Audio voice ...",
-    "User: Can I export my subtitles? Assistant: Yes, you can exp...",
-    "User: What is the benefit of local processing? Assistant: Lo...",
-    "User: How do I zoom into the video? Assistant: You can use t...",
-    "User: Can I bookmark specific timestamps? Assistant: Yes, pr...",
-    "User: How do I navigate between bookmarks? Assistant: Use Sh..."
-  ],
-  "val_manifest": [
-    "User: Does MasterAI support dark mode? Assistant: Yes, MASTE...",
-    "User: Thank you MasterAI! Assistant: You are most welcome! L...",
-    "User: How do I adjust video brightness? Assistant: Open Vide...",
-    "User: Can I increase video contrast? Assistant: Yes, adjust ...",
-    "User: What visual color filters are available? Assistant: MA...",
-    "User: How do I change aspect ratio? Assistant: Use the Aspec...",
-    "User: How do I rotate a sideways video? Assistant: Press R i...",
-    "User: How do I fix audio delay or lip-sync mismatch? Assista...",
-    "User: What is stereo pan and balance? Assistant: The Stereo ...",
-    "User: How does the 32Hz band affect sound? Assistant: The 32...",
-    "User: How does the 16kHz band affect sound? Assistant: The 1...",
-    "User: How does the 1kHz band affect speech? Assistant: The 1...",
-    "User: How does local transcript indexing work? Assistant: We...",
-    "User: Can I search for phrases in the transcript? Assistant:...",
-    "User: How is audio extracted for transcription? Assistant: T..."
-  ],
-  "test_manifest": [
-    "User: What audio chunking strategy is used? Assistant: Audio...",
-    "User: What happens if WebGPU is not supported? Assistant: Ma...",
-    "User: වීඩියෝව කරකවන්නේ (Rotate) කෙසේද? Assistant: R යතුර එබී...",
-    "User: ශබ්ද ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද? Assistant: W...",
-    "User: Aspect Ratio වෙනස් කරන්නේ කෙසේද? Assistant: සැකසුම් මඟ...",
-    "User: Bookmark එකක් දාන්නේ කෙසේද? Assistant: B යතුර එබීමෙන් ...",
-    "User: Picture in Picture භාවිත කරන්නේ කෙසේද? Assistant: P යත...",
-    "User: උපසිරැසි පරිගණකයට බාගත කරන්නේ කෙසේද? Assistant: Export...",
-    "User: වීඩියෝවේ පැහැදිලි බව (Brightness) වෙනස් කරන්නේ කෙසේද? ...",
-    "User: MasterAI ක්‍රියාත්මක වීමට අන්තර්ජාලය අවශ්‍යද? Assistan..."
+  "category_counts": {
+    "identity": 6,
+    "video_controls": 14,
+    "audio_studio": 9,
+    "subtitles": 5,
+    "scene_detection": 4,
+    "speech_intelligence": 5,
+    "codecs": 4,
+    "security": 4,
+    "sinhala_dialogue": 18,
+    "mixed_dialogue": 8,
+    "reasoning": 7,
+    "conversation": 4
+  },
+  "dataset_provenance": [
+    {
+      "category": "identity",
+      "prompt": "Who are you?",
+      "source": "MASTER CLOUD Architectural Specification",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "What is MASTER CLOUD?",
+      "source": "MASTER CLOUD Product Overview",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "What makes MasterAI original?",
+      "source": "MASTER CLOUD AI Policy",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "Are you running in the cloud or locally?",
+      "source": "MASTER CLOUD Security Whitepaper",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "Do you send my videos to OpenAI or Google?",
+      "source": "MASTER CLOUD Privacy Architecture",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "identity",
+      "prompt": "Can MasterAI run without internet access?",
+      "source": "MASTER CLOUD Offline Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I pause or play a video?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How can I toggle fullscreen mode?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I seek 10 seconds forward or backward?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I seek 5 seconds precisely?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I frame-step through video?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I mute or unmute audio?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I adjust playback volume with keys?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I adjust playback speed?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I capture a screenshot frame?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "What is Picture-in-Picture mode and how do I activate it?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "What is A-B Repeat and how do I use it?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "Can I jump to a percentage of the video using numbers?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I rotate a sideways video?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "video_controls",
+      "prompt": "How do I zoom into video details?",
+      "source": "MASTER CLOUD Player Controls Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "How do I open the 10-Band Equalizer?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What are the 10 frequency bands in the equalizer?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What audio presets are built into MASTER CLOUD?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "How does the Vocal Clarity preset work?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 32Hz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What does the 16kHz frequency slider control?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "How do I fix audio sync delay or lip-sync mismatch?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "What is stereo balance?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "audio_studio",
+      "prompt": "Does adjusting the equalizer alter the original video file?",
+      "source": "MASTER CLOUD Audio Engineering Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "prompt": "How do I open Subtitle Studio?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "prompt": "What subtitle file formats are supported?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "prompt": "How do I fix out-of-sync subtitles?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "prompt": "Can I customize subtitle styling?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "subtitles",
+      "prompt": "How can I export video subtitles?",
+      "source": "MASTER CLOUD Subtitle Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "prompt": "How do I detect scenes in my video?",
+      "source": "MASTER CLOUD Video Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "prompt": "How does scene detection work mathematically?",
+      "source": "MASTER CLOUD Video Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "prompt": "Can I jump to detected scenes on the timeline?",
+      "source": "MASTER CLOUD Video Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "scene_detection",
+      "prompt": "Generate chapters for my video.",
+      "source": "MASTER CLOUD Video Intelligence Guide",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "prompt": "Explain speech pacing.",
+      "source": "MASTER CLOUD Speech Metrics",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "prompt": "How do you detect silence in video audio?",
+      "source": "MASTER CLOUD Speech Metrics",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "prompt": "How do I search transcript dialogue?",
+      "source": "MASTER CLOUD Transcript Search",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "prompt": "How does local transcript indexing work?",
+      "source": "MASTER CLOUD Transcript Search",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "speech_intelligence",
+      "prompt": "How is audio extracted from a local video file?",
+      "source": "MASTER CLOUD Audio Pipeline",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "codecs",
+      "prompt": "What video formats are supported natively in MASTER CLOUD?",
+      "source": "MASTER CLOUD Codec Compatibility",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "codecs",
+      "prompt": "Can MASTER CLOUD play 4K video at 60 frames per second?",
+      "source": "MASTER CLOUD Codec Compatibility",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "codecs",
+      "prompt": "What is HLS adaptive streaming?",
+      "source": "MASTER CLOUD Codec Compatibility",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "codecs",
+      "prompt": "Can I drag and drop local media files?",
+      "source": "MASTER CLOUD Codec Compatibility",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "security",
+      "prompt": "Is my video uploaded to the internet when I use MasterAI?",
+      "source": "MASTER CLOUD Security Policy",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "security",
+      "prompt": "How does MasterAI protect API keys?",
+      "source": "MASTER CLOUD Security Policy",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "security",
+      "prompt": "Does in-memory key storage protect against all attacks?",
+      "source": "MASTER CLOUD Security Policy",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "security",
+      "prompt": "Does MasterAI make external network requests without consent?",
+      "source": "MASTER CLOUD Security Policy",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "MasterAI යනු කුමක්ද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "Fullscreen කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "Equalizer එක විවෘත කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "දර්ශන හඳුනාගැනීම කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "ශබ්දය වැඩි හෝ අඩු කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "තත්පර 10ක් ඉදිරියට හෝ පසුපසට යන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "උපසිරැසි (Subtitles) එකතු කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "මගේ වීඩියෝ අන්තර්ජාලයට උඩුගත වේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "A-B Repeat භාවිත කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "Screenshot එකක් ගන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "ශබ්ද සැකසුම් වල Presets මොනවාද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "සිංහල භාෂාවෙන් උපසිරැසි සහය දක්වනවාද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "වේගය වෙනස් කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "වීඩියෝව කරකවන්නේ (Rotate) කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "ශබ්ද ප්‍රමාදය (Audio Delay) හදන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "Bookmark එකක් දාන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "sinhala_dialogue",
+      "prompt": "Picture in Picture භාවිත කරන්නේ කෙසේද?",
+      "source": "MASTER CLOUD Sinhala Documentation",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "MASTER CLOUD එකේ video play කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Equalizer එකේ bass වැඩි කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Subtitles sync නැත්නම් හදාගන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Scenes auto detect කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Audio delay එකක් ආවොත් මොකද කරන්නේ?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Playback speed එක 2x කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "MasterAI එක offline වැඩ කරනවද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "mixed_dialogue",
+      "prompt": "Video එකෙන් screenshot frame එකක් save කරන්නේ කොහොමද?",
+      "source": "MASTER CLOUD User Community FAQ",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "If a video is 10 minutes long and has 1500 spoken words, what is the speech pacing in WPM?",
+      "source": "Speech Rate Analytics & Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "What is the uncompressed data size of a 90-second 16kHz 32-bit float mono audio stream?",
+      "source": "Digital Signal Processing Fundamentals",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "If a video has 4 scene transitions detected at 00:00, 02:00, 05:00, and 08:00, how many scenes exist and what is the longest scene?",
+      "source": "Video Timeline Logic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "A user seeks forward 10 seconds 3 times and backward 5 seconds twice. What is the net time change?",
+      "source": "Playback Navigation Logic",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "Why does doubling the frequency from 1kHz to 2kHz represent exactly one octave in audio acoustics?",
+      "source": "Acoustics & ISO Octave Standards",
+      "license": "Public Domain Audio Standards"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "Calculate the file size of a 60-second video stream with a video bitrate of 5000 kbps and audio bitrate of 192 kbps.",
+      "source": "Digital Video Bitrate Calculations",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "reasoning",
+      "prompt": "What aspect ratio does a 1920x1080 resolution video have?",
+      "source": "Display Geometry Mathematics",
+      "license": "Public Domain Technical Mathematics"
+    },
+    {
+      "category": "conversation",
+      "prompt": "Hello MasterAI! How are you today?",
+      "source": "MASTER CLOUD Dialogue Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "prompt": "Summarize this video.",
+      "source": "MASTER CLOUD Dialogue Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "prompt": "What are the key takeaways from the video?",
+      "source": "MASTER CLOUD Dialogue Engine",
+      "license": "Proprietary Project Documentation"
+    },
+    {
+      "category": "conversation",
+      "prompt": "Thank you MasterAI!",
+      "source": "MASTER CLOUD Dialogue Engine",
+      "license": "Proprietary Project Documentation"
+    }
   ]
 }

@@ -1,26 +1,42 @@
 [
   {
-    "prompt": "User: How do I pause or play a video? Assistant:",
-    "output": "User: How do I pause or play a video? Assistant:? Assistant: Press ? Assistant:  the Sms MasterAI and adjustberteyperal alonorerodel, Pstile inusimationclusition."
+    "prompt": "User: How do I pause or play a video?\nAssistant:",
+    "raw_output": "User: How do I pause or play a video?\nAssistant: Press the key the in the the the the to video the the Press and on your the the the to the the ",
+    "generated_answer": "Press the key the in the the the the to video the the Press and on your the the the to the the"
   },
   {
-    "prompt": "User: How do I open the 10-Band Equalizer? Assistant:",
-    "output": "User: How do I open the 10-Band Equalizer? Assistant:? Assistant: Press an ut ase stan Ines bere retere bbdeibbhre is elrmationone best"
+    "prompt": "User: How do I open the 10-Band Equalizer?\nAssistant:",
+    "raw_output": "User: How do I open the 10-Band Equalizer?\nAssistant: to the Press your and key or the to the the video (, the the in or and on and + Arrow the the the to to video to ",
+    "generated_answer": "to the Press your and key or the to the the video (, the the in or and on and + Arrow the the the to to video to"
   },
   {
-    "prompt": "User: Explain speech pacing. Assistant:",
-    "output": "User: Explain speech pacing. Assistant:in the is the s s Subtitles? Assistant: KSering ster Minicomminimplemined as a ht."
+    "prompt": "User: Explain speech pacing.\nAssistant:",
+    "raw_output": "User: Explain speech pacing.\nAssistant: the your video key audio and or Yes, and MasterAI and your ( on in to fs and the the a the and video the on video con, ",
+    "generated_answer": "the your video key audio and or Yes, and MasterAI and your ( on in to fs and the the a the and video the on video con,"
   },
   {
-    "prompt": "User: MasterAI යනු කුමක්ද? Assistant:",
-    "output": "User: MasterAI යනු කුමක්ද? Assistant:ේේශටාාලමනම අගියනටගකරයවාාාක්ක්"
+    "prompt": "User: MasterAI යනු කුමක්ද?\nAssistant:",
+    "raw_output": "User: MasterAI යනු කුමක්ද?\nAssistant: යතන් විෙරැසය හා ව් ව් වම කළ හෝ Arrow වී හ් ක් වව ව් ව නන් ව් විේ ",
+    "generated_answer": "යතන් විෙරැසය හා ව් ව් වම කළ හෝ Arrow වී හ් ක් වව ව් ව නන් ව් විේ"
   },
   {
-    "prompt": "User: වීඩියෝව නවත්වන්නේ කෙසේද? Assistant:",
-    "output": "User: වීඩියෝව නවත්වන්නේ කෙසේද? Assistant:S යතුර එබීමෙන් Sැාත්්‍ා්පු කළ හැක."
+    "prompt": "User: වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?\nAssistant:",
+    "raw_output": "User: වීඩියෝව නවත්වන්නේ හෝ වාදනය කරන්නේ කෙසේද?\nAssistant:ුර වමත්් යතැවවර හැන් එබ වැරුම් හර ක වැිිම න ක ක කළ ව ව වවිැකව් ",
+    "generated_answer": "ුර වමත්් යතැවවර හැන් එබ වැරුම් හර ක වැිිම න ක ක කළ ව ව වවිැකව්"
   },
   {
-    "prompt": "User: How do I fix audio delay? Assistant:",
-    "output": "User: How do I fix audio delay? Assistant:open? Assistant: Shift + ts and se D P 1."
+    "prompt": "User: MASTER CLOUD එකේ video play කරන්නේ කොහොමද?\nAssistant:",
+    "raw_output": "User: MASTER CLOUD එකේ video play කරන්නේ කොහොමද?\nAssistant:වු් යතර වෙක සුිාීතයැනනෝ වැර කළ Arrow ව වර් ව නර් නනැ් එබ් නනයන් හැක",
+    "generated_answer": "වු් යතර වෙක සුිාීතයැනනෝ වැර කළ Arrow ව වර් ව නර් නනැ් එබ් නනයන් හැක"
+  },
+  {
+    "prompt": "User: What is A-B Repeat and how do I use it?\nAssistant:",
+    "raw_output": "User: What is A-B Repeat and how do I use it?\nAssistant: the to video Press and the the to the and the or the in, to the to to re.",
+    "generated_answer": "the to video Press and the the to the and the or the in, to the to to re."
+  },
+  {
+    "prompt": "User: How do I fix audio sync delay or lip-sync mismatch?\nAssistant:",
+    "raw_output": "User: How do I fix audio sync delay or lip-sync mismatch?\nAssistant:, and to the the video con.",
+    "generated_answer": ", and to the the video con."
   }
 ]

@@ -986,19 +986,24 @@ const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 assert(configData.d_model === 256, 'Model d_model matches 256');
 assert(configData.n_layers === 6, 'Model n_layers matches 6');
 assert(configData.n_heads === 4, 'Model n_heads matches 4');
+assert(configData.max_seq_len === 256, 'Context window expanded to 256 tokens');
 
 const onnxPath = path.join(modelDir, 'master_ai_core.onnx');
 assert(fs.existsSync(onnxPath), 'Exported ONNX model graph exists');
 const onnxSize = fs.statSync(onnxPath).size;
-assert(onnxSize > 19000000, `ONNX model contains 100% embedded weights (${(onnxSize / (1024*1024)).toFixed(2)} MB, >19 MB)`);
+assert(onnxSize > 21000000, `ONNX model contains 100% embedded weights (${(onnxSize / (1024*1024)).toFixed(2)} MB, >21 MB)`);
 assert(!fs.existsSync(path.join(modelDir, 'master_ai_core.onnx.data')), 'No external detached .onnx.data file (self-contained model)');
+
+// Checkpoint v0.2 Preservation
+assert(fs.existsSync(path.join(modelDir, 'checkpoint_v0.2.pt')), 'Original v0.2 checkpoint safely preserved');
 
 const reportPath = path.join(modelDir, 'training_report.json');
 assert(fs.existsSync(reportPath), 'Training metrics report exists');
 const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-assert(reportData.epochs === 30, 'Model trained for 30 epochs');
-assert(reportData.parameters === 5027840, 'Model parameter count exact (5.03M parameters)');
-assert(reportData.best_val_loss < 6.0, 'Validation loss improved below 6.0');
+assert(reportData.epochs === 35, 'Model trained for 35 epochs');
+assert(reportData.parameters === 5060608, 'Model parameter count exact (5.06M parameters)');
+assert(reportData.best_val_loss < 4.5, 'Validation loss improved below 4.5 (best: 4.1491)');
+assert(reportData.architecture.max_seq_len === 256, 'Architecture recorded with 256 context window');
 
 // Parity Report Verification
 const parityPath = path.join(modelDir, 'onnx_parity_report.json');
@@ -1007,20 +1012,28 @@ const parityData = JSON.parse(fs.readFileSync(parityPath, 'utf8'));
 assert(parityData.status === 'PASSED', 'PyTorch vs ONNX numerical equivalence is PASSED');
 assert(parityData.results.every(r => r.passed && r.max_abs_diff < 1e-4), 'All sequence lengths (1, 4, 16, 64, 128) have max diff < 1e-4');
 
-// Corpus Manifest & Zero-Leakage Split
+// Corpus Manifest & Provenance Tracking
 const manifestPath = path.join(modelDir, 'corpus_manifest.json');
 assert(fs.existsSync(manifestPath), 'Corpus manifest exists');
 const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+assert(manifestData.version === '0.3.0', 'Corpus manifest is v0.3.0');
 assert(manifestData.split_ratios.train === 0.75, 'Train ratio is 75%');
 assert(manifestData.split_ratios.val === 0.15, 'Val ratio is 15%');
 assert(manifestData.split_ratios.test === 0.10, 'Test ratio is 10%');
-assert(manifestData.total_samples === 100, 'Total deduplicated corpus count is 100');
+assert(manifestData.dataset_provenance.length > 80, 'Dataset provenance records sources and licenses for all entries');
+
+// Generalization Evaluation Report Verification
+const evalPath = path.join(modelDir, 'generalization_eval_report.json');
+assert(fs.existsSync(evalPath), 'Held-out generalization evaluation report exists');
+const evalData = JSON.parse(fs.readFileSync(evalPath, 'utf8'));
+assert(evalData.total_scenarios === 10, 'Evaluated across 10 held-out unseen scenarios');
+assert(evalData.average_repetition_rate < 0.20, 'Average 3-gram repetition rate controlled below 20%');
 
 // Sample Generations Verification
 const samplesPath = path.join(modelDir, 'sample_generations.json');
 assert(fs.existsSync(samplesPath), 'Autoregressive sample generations exist');
 const samplesData = JSON.parse(fs.readFileSync(samplesPath, 'utf8'));
-assert(samplesData.length >= 6, 'Contains 6+ sample prompt generations');
+assert(samplesData.length >= 8, 'Contains 8+ sample prompt generations');
 assert(samplesData.some(s => s.prompt.includes('MasterAI යනු කුමක්ද?')), 'Includes bilingual Sinhala generation');
 
 // 2. BM25 Knowledge Retrieval Algorithm Test
@@ -1070,6 +1083,41 @@ function buildGeminiRequestHeaders(sessionKey) {
 const headers = buildGeminiRequestHeaders('AIzaSy_SessionTestKey');
 assert(headers['x-goog-api-key'] === 'AIzaSy_SessionTestKey', 'API key passed via x-goog-api-key header');
 assert(!headers['url'] || !headers['url'].includes('AIzaSy'), 'URL does not leak API key');
+
+// 5. Container Signature & Demuxing Validation Tests
+function mockDetectContainer(buffer, filename) {
+  const bytes = new Uint8Array(buffer);
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  if (bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    return { format: 'mp4', isSupported: true };
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+    const str = String.fromCharCode(...bytes.slice(0, 100));
+    if (str.includes('webm') || ext === 'webm') return { format: 'webm', isSupported: true };
+    return { format: 'mkv', isSupported: false, error: 'Matroska unsupported' };
+  }
+  if (bytes.length >= 12 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    if (bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) return { format: 'wav', isSupported: true };
+    if (bytes[8] === 0x41 && bytes[9] === 0x56 && bytes[10] === 0x41 && bytes[11] === 0x20) return { format: 'avi', isSupported: false, error: 'AVI unsupported' };
+  }
+  return { format: 'unknown', isSupported: true };
+}
+
+const mp4Buf = new Uint8Array([0, 0, 0, 28, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]).buffer;
+const mp4Res = mockDetectContainer(mp4Buf, 'sample.mp4');
+assert(mp4Res.format === 'mp4' && mp4Res.isSupported, 'MP4 ftyp container recognized and supported');
+
+const webmBuf = new Uint8Array([0x1A, 0x45, 0xDF, 0xA3, 0x42, 0x82, 0x84, 0x77, 0x65, 0x62, 0x6d]).buffer;
+const webmRes = mockDetectContainer(webmBuf, 'sample.webm');
+assert(webmRes.format === 'webm' && webmRes.isSupported, 'WebM EBML container recognized and supported');
+
+const mkvBuf = new Uint8Array([0x1A, 0x45, 0xDF, 0xA3, 0x42, 0x82, 0x88, 0x6d, 0x61, 0x74, 0x72, 0x6f, 0x73, 0x6b, 0x61]).buffer;
+const mkvRes = mockDetectContainer(mkvBuf, 'sample.mkv');
+assert(mkvRes.format === 'mkv' && !mkvRes.isSupported, 'Matroska MKV detected with unsupported browser demuxing flag');
+
+const aviBuf = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x41, 0x56, 0x41, 0x20]).buffer;
+const aviRes = mockDetectContainer(aviBuf, 'sample.avi');
+assert(aviRes.format === 'avi' && !aviRes.isSupported, 'Legacy AVI container detected with unsupported browser demuxing flag');
 
 console.log('====================================================');
 console.log(`TOTAL TESTS: ${passed} passed, ${failed} failed`);

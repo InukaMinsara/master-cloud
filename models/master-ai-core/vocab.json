@@ -1305,263 +1305,263 @@
     "is_special": false
   },
   "261": {
-    "token": "<bytes:e0b7>",
-    "hex": "e0b7",
-    "is_special": false
-  },
-  "262": {
     "token": "<bytes:e0b6>",
     "hex": "e0b6",
     "is_special": false
   },
-  "263": {
-    "token": "e ",
-    "hex": "6520",
+  "262": {
+    "token": "<bytes:e0b7>",
+    "hex": "e0b7",
     "is_special": false
   },
-  "264": {
+  "263": {
     "token": "an",
     "hex": "616e",
     "is_special": false
   },
-  "265": {
+  "264": {
     "token": "er",
     "hex": "6572",
     "is_special": false
   },
-  "266": {
-    "token": ": ",
-    "hex": "3a20",
-    "is_special": false
-  },
-  "267": {
+  "265": {
     "token": "st",
     "hex": "7374",
     "is_special": false
   },
-  "268": {
-    "token": " t",
-    "hex": "2074",
-    "is_special": false
-  },
-  "269": {
-    "token": "o ",
-    "hex": "6f20",
-    "is_special": false
-  },
-  "270": {
-    "token": "s ",
-    "hex": "7320",
-    "is_special": false
-  },
-  "271": {
-    "token": "<bytes:20e0b6>",
-    "hex": "20e0b6",
-    "is_special": false
-  },
-  "272": {
+  "266": {
     "token": "in",
     "hex": "696e",
     "is_special": false
   },
-  "273": {
-    "token": ", ",
-    "hex": "2c20",
-    "is_special": false
-  },
-  "274": {
-    "token": " A",
-    "hex": "2041",
-    "is_special": false
-  },
-  "275": {
-    "token": "si",
-    "hex": "7369",
-    "is_special": false
-  },
-  "276": {
-    "token": "d ",
-    "hex": "6420",
-    "is_special": false
-  },
-  "277": {
-    "token": "or",
-    "hex": "6f72",
-    "is_special": false
-  },
-  "278": {
+  "267": {
     "token": "re",
     "hex": "7265",
     "is_special": false
   },
-  "279": {
-    "token": "t ",
-    "hex": "7420",
+  "268": {
+    "token": "ss",
+    "hex": "7373",
     "is_special": false
   },
-  "280": {
-    "token": "ser",
-    "hex": "736572",
-    "is_special": false
-  },
-  "281": {
-    "token": "ssi",
-    "hex": "737369",
-    "is_special": false
-  },
-  "282": {
+  "269": {
     "token": "්",
     "hex": "e0b78a",
     "is_special": false
   },
-  "283": {
-    "token": "stan",
-    "hex": "7374616e",
+  "270": {
+    "token": "ක",
+    "hex": "e0b69a",
     "is_special": false
   },
-  "284": {
-    "token": "en",
-    "hex": "656e",
+  "271": {
+    "token": "th",
+    "hex": "7468",
     "is_special": false
   },
-  "285": {
-    "token": "stant",
-    "hex": "7374616e74",
-    "is_special": false
-  },
-  "286": {
-    "token": "User",
-    "hex": "55736572",
-    "is_special": false
-  },
-  "287": {
-    "token": "User: ",
-    "hex": "557365723a20",
-    "is_special": false
-  },
-  "288": {
-    "token": " Assi",
-    "hex": "2041737369",
-    "is_special": false
-  },
-  "289": {
-    "token": " Assistant",
-    "hex": "20417373697374616e74",
-    "is_special": false
-  },
-  "290": {
-    "token": " Assistant: ",
-    "hex": "20417373697374616e743a20",
-    "is_special": false
-  },
-  "291": {
-    "token": "on",
-    "hex": "6f6e",
-    "is_special": false
-  },
-  "292": {
-    "token": "? Assistant: ",
-    "hex": "3f20417373697374616e743a20",
-    "is_special": false
-  },
-  "293": {
-    "token": "al",
-    "hex": "616c",
-    "is_special": false
-  },
-  "294": {
-    "token": "<bytes:20e0b7>",
-    "hex": "20e0b7",
-    "is_special": false
-  },
-  "295": {
-    "token": "de",
-    "hex": "6465",
-    "is_special": false
-  },
-  "296": {
-    "token": "ti",
-    "hex": "7469",
-    "is_special": false
-  },
-  "297": {
-    "token": "ar",
-    "hex": "6172",
-    "is_special": false
-  },
-  "298": {
-    "token": "he ",
-    "hex": "686520",
-    "is_special": false
-  },
-  "299": {
+  "272": {
     "token": "න",
     "hex": "e0b6b1",
     "is_special": false
   },
-  "300": {
-    "token": "di",
-    "hex": "6469",
+  "273": {
+    "token": "on",
+    "hex": "6f6e",
     "is_special": false
   },
-  "301": {
-    "token": "y ",
-    "hex": "7920",
+  "274": {
+    "token": "en",
+    "hex": "656e",
     "is_special": false
   },
-  "302": {
-    "token": "I ",
-    "hex": "4920",
+  "275": {
+    "token": "de",
+    "hex": "6465",
     "is_special": false
   },
-  "303": {
-    "token": "ow",
-    "hex": "6f77",
+  "276": {
+    "token": "ව",
+    "hex": "e0b780",
     "is_special": false
   },
-  "304": {
-    "token": " the ",
-    "hex": "2074686520",
+  "277": {
+    "token": "ser",
+    "hex": "736572",
     "is_special": false
   },
-  "305": {
-    "token": "and ",
-    "hex": "616e6420",
+  "278": {
+    "token": "ist",
+    "hex": "697374",
     "is_special": false
   },
-  "306": {
-    "token": "ි",
-    "hex": "e0b792",
+  "279": {
+    "token": "or",
+    "hex": "6f72",
     "is_special": false
   },
-  "307": {
-    "token": "ර",
-    "hex": "e0b6bb",
+  "280": {
+    "token": "ant",
+    "hex": "616e74",
     "is_special": false
   },
-  "308": {
-    "token": "ou",
-    "hex": "6f75",
-    "is_special": false
-  },
-  "309": {
-    "token": "vi",
-    "hex": "7669",
-    "is_special": false
-  },
-  "310": {
-    "token": " to ",
-    "hex": "20746f20",
-    "is_special": false
-  },
-  "311": {
+  "281": {
     "token": "at",
     "hex": "6174",
     "is_special": false
   },
-  "312": {
+  "282": {
+    "token": "to",
+    "hex": "746f",
+    "is_special": false
+  },
+  "283": {
+    "token": "User",
+    "hex": "55736572",
+    "is_special": false
+  },
+  "284": {
+    "token": "Ass",
+    "hex": "417373",
+    "is_special": false
+  },
+  "285": {
+    "token": "Assist",
+    "hex": "417373697374",
+    "is_special": false
+  },
+  "286": {
+    "token": "Assistant",
+    "hex": "417373697374616e74",
+    "is_special": false
+  },
+  "287": {
+    "token": "ය",
+    "hex": "e0b6ba",
+    "is_special": false
+  },
+  "288": {
+    "token": "the",
+    "hex": "746865",
+    "is_special": false
+  },
+  "289": {
+    "token": "al",
+    "hex": "616c",
+    "is_special": false
+  },
+  "290": {
+    "token": "ර",
+    "hex": "e0b6bb",
+    "is_special": false
+  },
+  "291": {
+    "token": "ි",
+    "hex": "e0b792",
+    "is_special": false
+  },
+  "292": {
     "token": "ත",
     "hex": "e0b6ad",
+    "is_special": false
+  },
+  "293": {
+    "token": "ow",
+    "hex": "6f77",
+    "is_special": false
+  },
+  "294": {
+    "token": "le",
+    "hex": "6c65",
+    "is_special": false
+  },
+  "295": {
+    "token": "and",
+    "hex": "616e64",
+    "is_special": false
+  },
+  "296": {
+    "token": "ස",
+    "hex": "e0b783",
+    "is_special": false
+  },
+  "297": {
+    "token": "ou",
+    "hex": "6f75",
+    "is_special": false
+  },
+  "298": {
+    "token": "di",
+    "hex": "6469",
+    "is_special": false
+  },
+  "299": {
+    "token": "se",
+    "hex": "7365",
+    "is_special": false
+  },
+  "300": {
+    "token": "ti",
+    "hex": "7469",
+    "is_special": false
+  },
+  "301": {
+    "token": "ු",
+    "hex": "e0b794",
+    "is_special": false
+  },
+  "302": {
+    "token": "ද",
+    "hex": "e0b6af",
+    "is_special": false
+  },
+  "303": {
+    "token": "ේ",
+    "hex": "e0b79a",
+    "is_special": false
+  },
+  "304": {
+    "token": "te",
+    "hex": "7465",
+    "is_special": false
+  },
+  "305": {
+    "token": "me",
+    "hex": "6d65",
+    "is_special": false
+  },
+  "306": {
+    "token": "ac",
+    "hex": "6163",
+    "is_special": false
+  },
+  "307": {
+    "token": "vi",
+    "hex": "7669",
+    "is_special": false
+  },
+  "308": {
+    "token": "ar",
+    "hex": "6172",
+    "is_special": false
+  },
+  "309": {
+    "token": "ැ",
+    "hex": "e0b790",
+    "is_special": false
+  },
+  "310": {
+    "token": "ම",
+    "hex": "e0b6b8",
+    "is_special": false
+  },
+  "311": {
+    "token": "හ",
+    "hex": "e0b784",
+    "is_special": false
+  },
+  "312": {
+    "token": "ing",
+    "hex": "696e67",
     "is_special": false
   },
   "313": {
@@ -1570,3553 +1570,3553 @@
     "is_special": false
   },
   "314": {
-    "token": "ු",
-    "hex": "e0b794",
-    "is_special": false
-  },
-  "315": {
-    "token": "ක",
-    "hex": "e0b69a",
-    "is_special": false
-  },
-  "316": {
-    "token": "ac",
-    "hex": "6163",
-    "is_special": false
-  },
-  "317": {
-    "token": "ය",
-    "hex": "e0b6ba",
-    "is_special": false
-  },
-  "318": {
-    "token": "ec",
-    "hex": "6563",
-    "is_special": false
-  },
-  "319": {
-    "token": "ේ",
-    "hex": "e0b79a",
-    "is_special": false
-  },
-  "320": {
-    "token": "ව",
-    "hex": "e0b780",
-    "is_special": false
-  },
-  "321": {
-    "token": " s",
-    "hex": "2073",
-    "is_special": false
-  },
-  "322": {
-    "token": " ක",
-    "hex": "20e0b69a",
-    "is_special": false
-  },
-  "323": {
-    "token": "udi",
-    "hex": "756469",
-    "is_special": false
-  },
-  "324": {
-    "token": "ing",
-    "hex": "696e67",
-    "is_special": false
-  },
-  "325": {
     "token": "vide",
     "hex": "76696465",
     "is_special": false
   },
-  "326": {
-    "token": "ow ",
-    "hex": "6f7720",
-    "is_special": false
-  },
-  "327": {
-    "token": "ද",
-    "hex": "e0b6af",
-    "is_special": false
-  },
-  "328": {
-    "token": "ස",
-    "hex": "e0b783",
-    "is_special": false
-  },
-  "329": {
-    "token": "ැ",
-    "hex": "e0b790",
-    "is_special": false
-  },
-  "330": {
-    "token": "me",
-    "hex": "6d65",
-    "is_special": false
-  },
-  "331": {
-    "token": "res",
-    "hex": "726573",
-    "is_special": false
-  },
-  "332": {
-    "token": "න්",
-    "hex": "e0b6b1e0b78a",
-    "is_special": false
-  },
-  "333": {
-    "token": "or ",
-    "hex": "6f7220",
-    "is_special": false
-  },
-  "334": {
-    "token": "pl",
-    "hex": "706c",
-    "is_special": false
-  },
-  "335": {
-    "token": "it",
-    "hex": "6974",
-    "is_special": false
-  },
-  "336": {
-    "token": "al ",
-    "hex": "616c20",
-    "is_special": false
-  },
-  "337": {
-    "token": "ෙ",
-    "hex": "e0b799",
-    "is_special": false
-  },
-  "338": {
-    "token": "el",
-    "hex": "656c",
-    "is_special": false
-  },
-  "339": {
-    "token": "oc",
-    "hex": "6f63",
-    "is_special": false
-  },
-  "340": {
-    "token": "udio ",
-    "hex": "7564696f20",
-    "is_special": false
-  },
-  "341": {
-    "token": "es ",
-    "hex": "657320",
-    "is_special": false
-  },
-  "342": {
-    "token": "tl",
-    "hex": "746c",
-    "is_special": false
-  },
-  "343": {
-    "token": "User: H",
-    "hex": "557365723a2048",
-    "is_special": false
-  },
-  "344": {
-    "token": "ow d",
-    "hex": "6f772064",
-    "is_special": false
-  },
-  "345": {
-    "token": " ව",
-    "hex": "20e0b780",
-    "is_special": false
-  },
-  "346": {
-    "token": "om",
-    "hex": "6f6d",
-    "is_special": false
-  },
-  "347": {
+  "315": {
     "token": "ic",
     "hex": "6963",
     "is_special": false
   },
-  "348": {
-    "token": "ම",
-    "hex": "e0b6b8",
+  "316": {
+    "token": "ly",
+    "hex": "6c79",
     "is_special": false
   },
-  "349": {
-    "token": "ha",
-    "hex": "6861",
-    "is_special": false
-  },
-  "350": {
-    "token": "ra",
-    "hex": "7261",
-    "is_special": false
-  },
-  "351": {
-    "token": "User: How d",
-    "hex": "557365723a20486f772064",
-    "is_special": false
-  },
-  "352": {
-    "token": "tion",
-    "hex": "74696f6e",
-    "is_special": false
-  },
-  "353": {
-    "token": "an ",
-    "hex": "616e20",
-    "is_special": false
-  },
-  "354": {
-    "token": "er ",
-    "hex": "657220",
-    "is_special": false
-  },
-  "355": {
-    "token": "ා",
-    "hex": "e0b78f",
-    "is_special": false
-  },
-  "356": {
-    "token": " හ",
-    "hex": "20e0b784",
-    "is_special": false
-  },
-  "357": {
-    "token": "il",
-    "hex": "696c",
-    "is_special": false
-  },
-  "358": {
-    "token": "h ",
-    "hex": "6820",
-    "is_special": false
-  },
-  "359": {
-    "token": "sc",
-    "hex": "7363",
-    "is_special": false
-  },
-  "360": {
-    "token": "ex",
-    "hex": "6578",
-    "is_special": false
-  },
-  "361": {
-    "token": ", and ",
-    "hex": "2c20616e6420",
-    "is_special": false
-  },
-  "362": {
-    "token": "e t",
-    "hex": "652074",
-    "is_special": false
-  },
-  "363": {
-    "token": "ke",
-    "hex": "6b65",
-    "is_special": false
-  },
-  "364": {
-    "token": "you",
-    "hex": "796f75",
-    "is_special": false
-  },
-  "365": {
-    "token": "a ",
-    "hex": "6120",
-    "is_special": false
-  },
-  "366": {
-    "token": "int",
-    "hex": "696e74",
-    "is_special": false
-  },
-  "367": {
-    "token": "User: How do ",
-    "hex": "557365723a20486f7720646f20",
-    "is_special": false
-  },
-  "368": {
-    "token": "et",
-    "hex": "6574",
-    "is_special": false
-  },
-  "369": {
-    "token": "ast",
-    "hex": "617374",
-    "is_special": false
-  },
-  "370": {
-    "token": "qu",
-    "hex": "7175",
-    "is_special": false
-  },
-  "371": {
-    "token": "ed ",
-    "hex": "656420",
-    "is_special": false
-  },
-  "372": {
-    "token": "oo",
-    "hex": "6f6f",
-    "is_special": false
-  },
-  "373": {
-    "token": "User: How do I ",
-    "hex": "557365723a20486f7720646f204920",
-    "is_special": false
-  },
-  "374": {
-    "token": "pla",
-    "hex": "706c61",
-    "is_special": false
-  },
-  "375": {
-    "token": "ur",
-    "hex": "7572",
-    "is_special": false
-  },
-  "376": {
-    "token": " ස",
-    "hex": "20e0b783",
-    "is_special": false
-  },
-  "377": {
-    "token": "ී",
-    "hex": "e0b793",
-    "is_special": false
-  },
-  "378": {
-    "token": ". ",
-    "hex": "2e20",
-    "is_special": false
-  },
-  "379": {
-    "token": "is ",
-    "hex": "697320",
-    "is_special": false
-  },
-  "380": {
-    "token": "um",
-    "hex": "756d",
-    "is_special": false
-  },
-  "381": {
-    "token": "ub",
-    "hex": "7562",
-    "is_special": false
-  },
-  "382": {
-    "token": " ය",
-    "hex": "20e0b6ba",
-    "is_special": false
-  },
-  "383": {
-    "token": "User: W",
-    "hex": "557365723a2057",
-    "is_special": false
-  },
-  "384": {
-    "token": "video ",
-    "hex": "766964656f20",
-    "is_special": false
-  },
-  "385": {
-    "token": "ad",
-    "hex": "6164",
-    "is_special": false
-  },
-  "386": {
-    "token": "as",
-    "hex": "6173",
-    "is_special": false
-  },
-  "387": {
-    "token": "Hz",
-    "hex": "487a",
-    "is_special": false
-  },
-  "388": {
-    "token": "ැක",
-    "hex": "e0b790e0b69a",
-    "is_special": false
-  },
-  "389": {
-    "token": "am",
-    "hex": "616d",
-    "is_special": false
-  },
-  "390": {
-    "token": "Mast",
-    "hex": "4d617374",
-    "is_special": false
-  },
-  "391": {
-    "token": "Master",
-    "hex": "4d6173746572",
-    "is_special": false
-  },
-  "392": {
-    "token": "MasterA",
-    "hex": "4d617374657241",
-    "is_special": false
-  },
-  "393": {
-    "token": "hat ",
-    "hex": "68617420",
-    "is_special": false
-  },
-  "394": {
-    "token": "hi",
-    "hex": "6869",
-    "is_special": false
-  },
-  "395": {
-    "token": "ack",
-    "hex": "61636b",
-    "is_special": false
-  },
-  "396": {
-    "token": "Pres",
-    "hex": "50726573",
-    "is_special": false
-  },
-  "397": {
-    "token": "p ",
-    "hex": "7020",
-    "is_special": false
-  },
-  "398": {
-    "token": "10",
-    "hex": "3130",
-    "is_special": false
-  },
-  "399": {
-    "token": "User: What ",
-    "hex": "557365723a205768617420",
-    "is_special": false
-  },
-  "400": {
-    "token": "ing ",
-    "hex": "696e6720",
-    "is_special": false
-  },
-  "401": {
-    "token": "iz",
-    "hex": "697a",
-    "is_special": false
-  },
-  "402": {
-    "token": "od",
-    "hex": "6f64",
-    "is_special": false
-  },
-  "403": {
-    "token": " to",
-    "hex": "20746f",
-    "is_special": false
-  },
-  "404": {
-    "token": "es, ",
-    "hex": "65732c20",
-    "is_special": false
-  },
-  "405": {
-    "token": "play",
-    "hex": "706c6179",
-    "is_special": false
-  },
-  "406": {
-    "token": "pe",
-    "hex": "7065",
-    "is_special": false
-  },
-  "407": {
-    "token": "ubti",
-    "hex": "75627469",
-    "is_special": false
-  },
-  "408": {
-    "token": "ubtitl",
-    "hex": "75627469746c",
-    "is_special": false
-  },
-  "409": {
-    "token": "ද? Assistant: ",
-    "hex": "e0b6af3f20417373697374616e743a20",
-    "is_special": false
-  },
-  "410": {
-    "token": "ෙන්",
-    "hex": "e0b799e0b6b1e0b78a",
-    "is_special": false
-  },
-  "411": {
-    "token": "ඩ",
-    "hex": "e0b6a9",
-    "is_special": false
-  },
-  "412": {
-    "token": "ෝ",
-    "hex": "e0b79d",
-    "is_special": false
-  },
-  "413": {
-    "token": "තු",
-    "hex": "e0b6ade0b794",
-    "is_special": false
-  },
-  "414": {
-    "token": "MasterAI ",
-    "hex": "4d6173746572414920",
-    "is_special": false
-  },
-  "415": {
-    "token": "wit",
-    "hex": "776974",
-    "is_special": false
-  },
-  "416": {
-    "token": "for",
-    "hex": "666f72",
-    "is_special": false
-  },
-  "417": {
-    "token": "cl",
-    "hex": "636c",
-    "is_special": false
-  },
-  "418": {
-    "token": "audio ",
-    "hex": "617564696f20",
-    "is_special": false
-  },
-  "419": {
-    "token": "r ",
-    "hex": "7220",
-    "is_special": false
-  },
-  "420": {
-    "token": "ust",
-    "hex": "757374",
-    "is_special": false
-  },
-  "421": {
+  "317": {
     "token": "video",
     "hex": "766964656f",
     "is_special": false
   },
-  "422": {
-    "token": "? Assistant: Pres",
-    "hex": "3f20417373697374616e743a2050726573",
+  "318": {
+    "token": "ෙ",
+    "hex": "e0b799",
     "is_special": false
   },
-  "423": {
-    "token": "eb",
-    "hex": "6562",
-    "is_special": false
-  },
-  "424": {
-    "token": "key",
-    "hex": "6b6579",
-    "is_special": false
-  },
-  "425": {
-    "token": "ිය",
-    "hex": "e0b792e0b6ba",
-    "is_special": false
-  },
-  "426": {
-    "token": "බ",
-    "hex": "e0b6b6",
-    "is_special": false
-  },
-  "427": {
-    "token": " යතු",
-    "hex": "20e0b6bae0b6ade0b794",
-    "is_special": false
-  },
-  "428": {
-    "token": " යතුර",
-    "hex": "20e0b6bae0b6ade0b794e0b6bb",
-    "is_special": false
-  },
-  "429": {
-    "token": "em",
-    "hex": "656d",
-    "is_special": false
-  },
-  "430": {
-    "token": "ate ",
-    "hex": "61746520",
-    "is_special": false
-  },
-  "431": {
-    "token": "pr",
-    "hex": "7072",
-    "is_special": false
-  },
-  "432": {
-    "token": "of",
-    "hex": "6f66",
-    "is_special": false
-  },
-  "433": {
-    "token": "un",
-    "hex": "756e",
-    "is_special": false
-  },
-  "434": {
-    "token": "fra",
-    "hex": "667261",
-    "is_special": false
-  },
-  "435": {
-    "token": "con",
-    "hex": "636f6e",
-    "is_special": false
-  },
-  "436": {
-    "token": "se",
-    "hex": "7365",
-    "is_special": false
-  },
-  "437": {
-    "token": "k ",
-    "hex": "6b20",
-    "is_special": false
-  },
-  "438": {
-    "token": "pt",
-    "hex": "7074",
-    "is_special": false
-  },
-  "439": {
-    "token": "St",
-    "hex": "5374",
-    "is_special": false
-  },
-  "440": {
-    "token": "por",
-    "hex": "706f72",
-    "is_special": false
-  },
-  "441": {
-    "token": "mar",
-    "hex": "6d6172",
-    "is_special": false
-  },
-  "442": {
-    "token": "ක්",
-    "hex": "e0b69ae0b78a",
-    "is_special": false
-  },
-  "443": {
-    "token": "ග",
-    "hex": "e0b69c",
-    "is_special": false
-  },
-  "444": {
-    "token": " හැක",
-    "hex": "20e0b784e0b790e0b69a",
-    "is_special": false
-  },
-  "445": {
-    "token": "li",
-    "hex": "6c69",
-    "is_special": false
-  },
-  "446": {
-    "token": "enc",
-    "hex": "656e63",
-    "is_special": false
-  },
-  "447": {
-    "token": " C",
-    "hex": "2043",
-    "is_special": false
-  },
-  "448": {
-    "token": "loc",
-    "hex": "6c6f63",
-    "is_special": false
-  },
-  "449": {
-    "token": "ran",
-    "hex": "72616e",
-    "is_special": false
-  },
-  "450": {
-    "token": "pen",
-    "hex": "70656e",
-    "is_special": false
-  },
-  "451": {
-    "token": "row",
-    "hex": "726f77",
-    "is_special": false
-  },
-  "452": {
-    "token": "ve ",
-    "hex": "766520",
-    "is_special": false
-  },
-  "453": {
-    "token": "User: C",
-    "hex": "557365723a2043",
-    "is_special": false
-  },
-  "454": {
-    "token": "User: Can ",
-    "hex": "557365723a2043616e20",
-    "is_special": false
-  },
-  "455": {
-    "token": "? Assistant: Y",
-    "hex": "3f20417373697374616e743a2059",
-    "is_special": false
-  },
-  "456": {
-    "token": "ed",
-    "hex": "6564",
-    "is_special": false
-  },
-  "457": {
-    "token": "ard ",
-    "hex": "61726420",
-    "is_special": false
-  },
-  "458": {
-    "token": "back",
-    "hex": "6261636b",
-    "is_special": false
-  },
-  "459": {
-    "token": "Web",
-    "hex": "576562",
-    "is_special": false
-  },
-  "460": {
-    "token": "in ",
-    "hex": "696e20",
-    "is_special": false
-  },
-  "461": {
-    "token": " එ",
-    "hex": "20e0b691",
-    "is_special": false
-  },
-  "462": {
-    "token": "ෙස",
-    "hex": "e0b799e0b783",
-    "is_special": false
-  },
-  "463": {
-    "token": "ේද? Assistant: ",
-    "hex": "e0b79ae0b6af3f20417373697374616e743a20",
-    "is_special": false
-  },
-  "464": {
-    "token": "ප",
-    "hex": "e0b6b4",
-    "is_special": false
-  },
-  "465": {
-    "token": "ut",
-    "hex": "7574",
-    "is_special": false
-  },
-  "466": {
-    "token": "ect",
-    "hex": "656374",
-    "is_special": false
-  },
-  "467": {
-    "token": "your ",
-    "hex": "796f757220",
-    "is_special": false
-  },
-  "468": {
-    "token": "and",
-    "hex": "616e64",
-    "is_special": false
-  },
-  "469": {
-    "token": "? Assistant: Yes, ",
-    "hex": "3f20417373697374616e743a205965732c20",
-    "is_special": false
-  },
-  "470": {
-    "token": "ul",
-    "hex": "756c",
-    "is_special": false
-  },
-  "471": {
-    "token": "? Assistant: Press ",
-    "hex": "3f20417373697374616e743a20507265737320",
-    "is_special": false
-  },
-  "472": {
-    "token": " Ar",
-    "hex": "204172",
-    "is_special": false
-  },
-  "473": {
-    "token": "User: Can I ",
-    "hex": "557365723a2043616e204920",
-    "is_special": false
-  },
-  "474": {
-    "token": " S",
-    "hex": "2053",
-    "is_special": false
-  },
-  "475": {
-    "token": " කර",
-    "hex": "20e0b69ae0b6bb",
-    "is_special": false
-  },
-  "476": {
-    "token": "ත්",
-    "hex": "e0b6ade0b78a",
-    "is_special": false
-  },
-  "477": {
-    "token": "න්න",
-    "hex": "e0b6b1e0b78ae0b6b1",
-    "is_special": false
-  },
-  "478": {
-    "token": "න්නේ",
-    "hex": "e0b6b1e0b78ae0b6b1e0b79a",
-    "is_special": false
-  },
-  "479": {
-    "token": "න්නේ ක",
-    "hex": "e0b6b1e0b78ae0b6b1e0b79a20e0b69a",
-    "is_special": false
-  },
-  "480": {
-    "token": "න්නේ කෙස",
-    "hex": "e0b6b1e0b78ae0b6b1e0b79a20e0b69ae0b799e0b783",
-    "is_special": false
-  },
-  "481": {
-    "token": "න්නේ කෙසේද? Assistant: ",
-    "hex": "e0b6b1e0b78ae0b6b1e0b79a20e0b69ae0b799e0b783e0b79ae0b6af3f20417373697374616e743a20",
-    "is_special": false
-  },
-  "482": {
-    "token": "ළ",
-    "hex": "e0b785",
-    "is_special": false
-  },
-  "483": {
-    "token": "are ",
-    "hex": "61726520",
-    "is_special": false
-  },
-  "484": {
-    "token": "ly ",
-    "hex": "6c7920",
-    "is_special": false
-  },
-  "485": {
-    "token": "ce ",
-    "hex": "636520",
-    "is_special": false
-  },
-  "486": {
-    "token": "ag",
-    "hex": "6167",
-    "is_special": false
-  },
-  "487": {
-    "token": "qual",
-    "hex": "7175616c",
-    "is_special": false
-  },
-  "488": {
-    "token": "qualiz",
-    "hex": "7175616c697a",
-    "is_special": false
-  },
-  "489": {
-    "token": "us",
-    "hex": "7573",
-    "is_special": false
-  },
-  "490": {
-    "token": "s.",
-    "hex": "732e",
-    "is_special": false
-  },
-  "491": {
-    "token": "scen",
-    "hex": "7363656e",
-    "is_special": false
-  },
-  "492": {
-    "token": "ol",
-    "hex": "6f6c",
-    "is_special": false
-  },
-  "493": {
-    "token": "hif",
-    "hex": "686966",
-    "is_special": false
-  },
-  "494": {
-    "token": "hift ",
-    "hex": "6869667420",
-    "is_special": false
-  },
-  "495": {
-    "token": "hift +",
-    "hex": "68696674202b",
-    "is_special": false
-  },
-  "496": {
-    "token": " (",
-    "hex": "2028",
-    "is_special": false
-  },
-  "497": {
-    "token": "up",
-    "hex": "7570",
-    "is_special": false
-  },
-  "498": {
-    "token": "Hz, ",
-    "hex": "487a2c20",
-    "is_special": false
-  },
-  "499": {
-    "token": "wor",
-    "hex": "776f72",
-    "is_special": false
-  },
-  "500": {
-    "token": "හ",
-    "hex": "e0b784",
-    "is_special": false
-  },
-  "501": {
-    "token": " හැක.",
-    "hex": "20e0b784e0b790e0b69a2e",
-    "is_special": false
-  },
-  "502": {
-    "token": " b",
-    "hex": "2062",
-    "is_special": false
-  },
-  "503": {
-    "token": "ely ",
-    "hex": "656c7920",
-    "is_special": false
-  },
-  "504": {
-    "token": "e.",
-    "hex": "652e",
-    "is_special": false
-  },
-  "505": {
-    "token": "ch",
-    "hex": "6368",
-    "is_special": false
-  },
-  "506": {
-    "token": "lin",
-    "hex": "6c696e",
-    "is_special": false
-  },
-  "507": {
-    "token": "ern",
-    "hex": "65726e",
-    "is_special": false
-  },
-  "508": {
-    "token": "s the ",
-    "hex": "732074686520",
-    "is_special": false
-  },
-  "509": {
-    "token": " sec",
-    "hex": "20736563",
-    "is_special": false
-  },
-  "510": {
-    "token": "ond",
-    "hex": "6f6e64",
-    "is_special": false
-  },
-  "511": {
-    "token": "e the ",
-    "hex": "652074686520",
-    "is_special": false
-  },
-  "512": {
-    "token": "Shift +",
-    "hex": "5368696674202b",
-    "is_special": false
-  },
-  "513": {
-    "token": " Arrow",
-    "hex": "204172726f77",
-    "is_special": false
-  },
-  "514": {
-    "token": "pres",
-    "hex": "70726573",
-    "is_special": false
-  },
-  "515": {
-    "token": "tion ",
-    "hex": "74696f6e20",
-    "is_special": false
-  },
-  "516": {
-    "token": "as ",
-    "hex": "617320",
-    "is_special": false
-  },
-  "517": {
-    "token": "cen",
-    "hex": "63656e",
-    "is_special": false
-  },
-  "518": {
-    "token": "ab",
-    "hex": "6162",
-    "is_special": false
-  },
-  "519": {
-    "token": "ubtitle ",
-    "hex": "75627469746c6520",
-    "is_special": false
-  },
-  "520": {
-    "token": "ext",
-    "hex": "657874",
-    "is_special": false
-  },
-  "521": {
-    "token": "TT",
-    "hex": "5454",
-    "is_special": false
-  },
-  "522": {
-    "token": "ීම",
-    "hex": "e0b793e0b6b8",
-    "is_special": false
-  },
-  "523": {
-    "token": " කළ",
-    "hex": "20e0b69ae0b785",
-    "is_special": false
-  },
-  "524": {
-    "token": "ig",
-    "hex": "6967",
-    "is_special": false
-  },
-  "525": {
-    "token": "medi",
-    "hex": "6d656469",
-    "is_special": false
-  },
-  "526": {
-    "token": "MA",
-    "hex": "4d41",
-    "is_special": false
-  },
-  "527": {
-    "token": "MAS",
-    "hex": "4d4153",
-    "is_special": false
-  },
-  "528": {
-    "token": "MAST",
-    "hex": "4d415354",
-    "is_special": false
-  },
-  "529": {
-    "token": "MASTE",
-    "hex": "4d41535445",
-    "is_special": false
-  },
-  "530": {
-    "token": "MASTER",
-    "hex": "4d4153544552",
-    "is_special": false
-  },
-  "531": {
-    "token": "MASTER C",
-    "hex": "4d41535445522043",
-    "is_special": false
-  },
-  "532": {
-    "token": "MASTER CL",
-    "hex": "4d415354455220434c",
-    "is_special": false
-  },
-  "533": {
-    "token": "MASTER CLO",
-    "hex": "4d415354455220434c4f",
-    "is_special": false
-  },
-  "534": {
-    "token": "MASTER CLOU",
-    "hex": "4d415354455220434c4f55",
-    "is_special": false
-  },
-  "535": {
-    "token": "MASTER CLOUD",
-    "hex": "4d415354455220434c4f5544",
-    "is_special": false
-  },
-  "536": {
-    "token": "with ",
-    "hex": "7769746820",
-    "is_special": false
-  },
-  "537": {
-    "token": "form",
-    "hex": "666f726d",
-    "is_special": false
-  },
-  "538": {
-    "token": "equaliz",
-    "hex": "657175616c697a",
-    "is_special": false
-  },
-  "539": {
-    "token": "own",
-    "hex": "6f776e",
-    "is_special": false
-  },
-  "540": {
-    "token": "le",
-    "hex": "6c65",
-    "is_special": false
-  },
-  "541": {
-    "token": "tly",
-    "hex": "746c79",
-    "is_special": false
-  },
-  "542": {
-    "token": "oes ",
-    "hex": "6f657320",
-    "is_special": false
-  },
-  "543": {
-    "token": "in the ",
-    "hex": "696e2074686520",
-    "is_special": false
-  },
-  "544": {
-    "token": "det",
-    "hex": "646574",
-    "is_special": false
-  },
-  "545": {
-    "token": "ess",
-    "hex": "657373",
-    "is_special": false
-  },
-  "546": {
-    "token": "udio",
-    "hex": "7564696f",
-    "is_special": false
-  },
-  "547": {
-    "token": "et ",
-    "hex": "657420",
-    "is_special": false
-  },
-  "548": {
-    "token": "lo",
-    "hex": "6c6f",
-    "is_special": false
-  },
-  "549": {
-    "token": "reen",
-    "hex": "7265656e",
-    "is_special": false
-  },
-  "550": {
-    "token": " second",
-    "hex": "207365636f6e64",
-    "is_special": false
-  },
-  "551": {
-    "token": "ward ",
-    "hex": "7761726420",
-    "is_special": false
-  },
-  "552": {
-    "token": "rec",
-    "hex": "726563",
-    "is_special": false
-  },
-  "553": {
-    "token": "frame",
-    "hex": "6672616d65",
-    "is_special": false
-  },
-  "554": {
-    "token": "adj",
-    "hex": "61646a",
-    "is_special": false
-  },
-  "555": {
-    "token": "adjust",
-    "hex": "61646a757374",
-    "is_special": false
-  },
-  "556": {
-    "token": "jum",
-    "hex": "6a756d",
-    "is_special": false
-  },
-  "557": {
-    "token": "Studio ",
-    "hex": "53747564696f20",
-    "is_special": false
-  },
-  "558": {
-    "token": "Cl",
-    "hex": "436c",
-    "is_special": false
-  },
-  "559": {
-    "token": " and ",
-    "hex": "20616e6420",
-    "is_special": false
-  },
-  "560": {
-    "token": "fil",
-    "hex": "66696c",
-    "is_special": false
-  },
-  "561": {
-    "token": "VTT",
-    "hex": "565454",
-    "is_special": false
-  },
-  "562": {
-    "token": "og",
-    "hex": "6f67",
-    "is_special": false
-  },
-  "563": {
-    "token": "port",
-    "hex": "706f7274",
-    "is_special": false
-  },
-  "564": {
-    "token": " c",
-    "hex": "2063",
-    "is_special": false
-  },
-  "565": {
-    "token": "ver",
-    "hex": "766572",
-    "is_special": false
-  },
-  "566": {
-    "token": "ශ",
-    "hex": "e0b781",
-    "is_special": false
-  },
-  "567": {
-    "token": " න",
-    "hex": "20e0b6b1",
-    "is_special": false
-  },
-  "568": {
-    "token": "ණ",
-    "hex": "e0b6ab",
-    "is_special": false
-  },
-  "569": {
-    "token": "<bytes:e0b6ba20e0b6>",
-    "hex": "e0b6ba20e0b6",
-    "is_special": false
-  },
-  "570": {
-    "token": " ප",
-    "hex": "20e0b6b4",
-    "is_special": false
-  },
-  "571": {
-    "token": "ීඩ",
-    "hex": "e0b793e0b6a9",
-    "is_special": false
-  },
-  "572": {
-    "token": "ීඩිය",
-    "hex": "e0b793e0b6a9e0b792e0b6ba",
-    "is_special": false
-  },
-  "573": {
-    "token": "ීඩියෝ",
-    "hex": "e0b793e0b6a9e0b792e0b6bae0b79d",
-    "is_special": false
-  },
-  "574": {
-    "token": " හෝ",
-    "hex": "20e0b784e0b79d",
-    "is_special": false
-  },
-  "575": {
-    "token": " කරන්නේ කෙසේද? Assistant: ",
-    "hex": "20e0b69ae0b6bbe0b6b1e0b78ae0b6b1e0b79a20e0b69ae0b799e0b783e0b79ae0b6af3f20417373697374616e743a20",
-    "is_special": false
-  },
-  "576": {
-    "token": "සි",
-    "hex": "e0b783e0b792",
-    "is_special": false
-  },
-  "577": {
-    "token": "Cor",
-    "hex": "436f72",
-    "is_special": false
-  },
-  "578": {
-    "token": "0%",
-    "hex": "3025",
-    "is_special": false
-  },
-  "579": {
-    "token": "local",
-    "hex": "6c6f63616c",
-    "is_special": false
-  },
-  "580": {
-    "token": "ot",
-    "hex": "6f74",
-    "is_special": false
-  },
-  "581": {
-    "token": " tran",
-    "hex": "207472616e",
-    "is_special": false
-  },
-  "582": {
-    "token": "User: What is ",
-    "hex": "557365723a205768617420697320",
-    "is_special": false
-  },
-  "583": {
-    "token": "off",
-    "hex": "6f6666",
-    "is_special": false
-  },
-  "584": {
-    "token": "e, ",
-    "hex": "652c20",
-    "is_special": false
-  },
-  "585": {
-    "token": "fr",
-    "hex": "6672",
-    "is_special": false
-  },
-  "586": {
-    "token": "from",
-    "hex": "66726f6d",
-    "is_special": false
-  },
-  "587": {
-    "token": "we",
-    "hex": "7765",
-    "is_special": false
-  },
-  "588": {
-    "token": "l ",
-    "hex": "6c20",
-    "is_special": false
-  },
-  "589": {
-    "token": "scr",
-    "hex": "736372",
-    "is_special": false
-  },
-  "590": {
-    "token": "scri",
-    "hex": "73637269",
-    "is_special": false
-  },
-  "591": {
-    "token": "str",
-    "hex": "737472",
-    "is_special": false
-  },
-  "592": {
-    "token": "ver ",
-    "hex": "76657220",
-    "is_special": false
-  },
-  "593": {
-    "token": "y, ",
-    "hex": "792c20",
-    "is_special": false
-  },
-  "594": {
-    "token": "fi",
-    "hex": "6669",
-    "is_special": false
-  },
-  "595": {
-    "token": "with",
-    "hex": "77697468",
-    "is_special": false
-  },
-  "596": {
-    "token": "requ",
-    "hex": "72657175",
-    "is_special": false
-  },
-  "597": {
-    "token": "pac",
-    "hex": "706163",
-    "is_special": false
-  },
-  "598": {
-    "token": "le ",
-    "hex": "6c6520",
-    "is_special": false
-  },
-  "599": {
-    "token": "see",
-    "hex": "736565",
-    "is_special": false
-  },
-  "600": {
-    "token": "Shift + ",
-    "hex": "5368696674202b20",
-    "is_special": false
-  },
-  "601": {
-    "token": ", or ",
-    "hex": "2c206f7220",
-    "is_special": false
-  },
-  "602": {
-    "token": "playback",
-    "hex": "706c61796261636b",
-    "is_special": false
-  },
-  "603": {
-    "token": " spe",
-    "hex": "20737065",
-    "is_special": false
-  },
-  "604": {
-    "token": "ure ",
-    "hex": "75726520",
-    "is_special": false
-  },
-  "605": {
-    "token": "s B",
-    "hex": "732042",
-    "is_special": false
-  },
-  "606": {
-    "token": "SO",
-    "hex": "534f",
-    "is_special": false
-  },
-  "607": {
-    "token": "ta",
-    "hex": "7461",
-    "is_special": false
-  },
-  "608": {
-    "token": "tive ",
-    "hex": "7469766520",
-    "is_special": false
-  },
-  "609": {
-    "token": " ti",
-    "hex": "207469",
-    "is_special": false
-  },
-  "610": {
-    "token": " time",
-    "hex": "2074696d65",
-    "is_special": false
-  },
-  "611": {
-    "token": "hapt",
-    "hex": "68617074",
-    "is_special": false
-  },
-  "612": {
-    "token": "mark",
-    "hex": "6d61726b",
-    "is_special": false
-  },
-  "613": {
-    "token": " වීඩියෝ",
-    "hex": "20e0b780e0b793e0b6a9e0b792e0b6bae0b79d",
-    "is_special": false
-  },
-  "614": {
-    "token": " යතුරෙන්",
-    "hex": "20e0b6bae0b6ade0b794e0b6bbe0b799e0b6b1e0b78a",
-    "is_special": false
-  },
-  "615": {
-    "token": "ට",
-    "hex": "e0b6a7",
-    "is_special": false
-  },
-  "616": {
-    "token": "ල",
-    "hex": "e0b6bd",
-    "is_special": false
-  },
-  "617": {
-    "token": "MasterAI Cor",
-    "hex": "4d6173746572414920436f72",
-    "is_special": false
-  },
-  "618": {
-    "token": "per",
-    "hex": "706572",
-    "is_special": false
-  },
-  "619": {
-    "token": "zer",
-    "hex": "7a6572",
-    "is_special": false
-  },
-  "620": {
-    "token": "ance ",
-    "hex": "616e636520",
-    "is_special": false
-  },
-  "621": {
-    "token": "dec",
-    "hex": "646563",
-    "is_special": false
-  },
-  "622": {
-    "token": "cust",
-    "hex": "63757374",
-    "is_special": false
-  },
-  "623": {
-    "token": "custom",
-    "hex": "637573746f6d",
-    "is_special": false
-  },
-  "624": {
-    "token": "el ",
-    "hex": "656c20",
-    "is_special": false
-  },
-  "625": {
-    "token": "re-",
-    "hex": "72652d",
-    "is_special": false
-  },
-  "626": {
-    "token": "del",
-    "hex": "64656c",
-    "is_special": false
-  },
-  "627": {
-    "token": "anal",
-    "hex": "616e616c",
-    "is_special": false
-  },
-  "628": {
-    "token": "analy",
-    "hex": "616e616c79",
-    "is_special": false
-  },
-  "629": {
-    "token": "on ",
-    "hex": "6f6e20",
-    "is_special": false
-  },
-  "630": {
-    "token": "local ",
-    "hex": "6c6f63616c20",
-    "is_special": false
-  },
-  "631": {
-    "token": "my ",
-    "hex": "6d7920",
-    "is_special": false
-  },
-  "632": {
-    "token": "fram",
-    "hex": "6672616d",
-    "is_special": false
-  },
-  "633": {
-    "token": "s, and ",
-    "hex": "732c20616e6420",
-    "is_special": false
-  },
-  "634": {
-    "token": " m",
-    "hex": "206d",
-    "is_special": false
-  },
-  "635": {
-    "token": "out ",
-    "hex": "6f757420",
-    "is_special": false
-  },
-  "636": {
-    "token": "screen",
-    "hex": "73637265656e",
-    "is_special": false
-  },
-  "637": {
-    "token": "key ",
-    "hex": "6b657920",
-    "is_special": false
-  },
-  "638": {
-    "token": "ard",
-    "hex": "617264",
-    "is_special": false
-  },
-  "639": {
-    "token": "ode ",
-    "hex": "6f646520",
-    "is_special": false
-  },
-  "640": {
-    "token": "y.",
-    "hex": "792e",
-    "is_special": false
-  },
-  "641": {
-    "token": "seek ",
-    "hex": "7365656b20",
-    "is_special": false
-  },
-  "642": {
-    "token": "ste",
-    "hex": "737465",
-    "is_special": false
-  },
-  "643": {
-    "token": " th",
-    "hex": "207468",
-    "is_special": false
-  },
-  "644": {
-    "token": "omm",
-    "hex": "6f6d6d",
-    "is_special": false
-  },
-  "645": {
-    "token": "ute ",
-    "hex": "75746520",
-    "is_special": false
-  },
-  "646": {
-    "token": "cur",
-    "hex": "637572",
-    "is_special": false
-  },
-  "647": {
-    "token": "ren",
-    "hex": "72656e",
-    "is_special": false
-  },
-  "648": {
-    "token": "im",
-    "hex": "696d",
-    "is_special": false
-  },
-  "649": {
-    "token": "wh",
-    "hex": "7768",
-    "is_special": false
-  },
-  "650": {
-    "token": "ing.",
-    "hex": "696e672e",
-    "is_special": false
-  },
-  "651": {
-    "token": "direc",
-    "hex": "6469726563",
-    "is_special": false
-  },
-  "652": {
-    "token": "directly",
-    "hex": "6469726563746c79",
-    "is_special": false
-  },
-  "653": {
-    "token": "open",
-    "hex": "6f70656e",
-    "is_special": false
-  },
-  "654": {
-    "token": "Web A",
-    "hex": "5765622041",
-    "is_special": false
-  },
-  "655": {
-    "token": "Web Audio ",
-    "hex": "57656220417564696f20",
-    "is_special": false
-  },
-  "656": {
-    "token": "00",
-    "hex": "3030",
-    "is_special": false
-  },
-  "657": {
-    "token": "kHz",
-    "hex": "6b487a",
-    "is_special": false
-  },
-  "658": {
-    "token": "Bas",
-    "hex": "426173",
-    "is_special": false
-  },
-  "659": {
-    "token": "oost",
-    "hex": "6f6f7374",
-    "is_special": false
-  },
-  "660": {
-    "token": "ocal ",
-    "hex": "6f63616c20",
-    "is_special": false
-  },
-  "661": {
-    "token": "cal",
-    "hex": "63616c",
-    "is_special": false
-  },
-  "662": {
-    "token": "uc",
-    "hex": "7563",
-    "is_special": false
-  },
-  "663": {
-    "token": "for ",
-    "hex": "666f7220",
-    "is_special": false
-  },
-  "664": {
-    "token": "ap",
-    "hex": "6170",
-    "is_special": false
-  },
-  "665": {
-    "token": " to the ",
-    "hex": "20746f2074686520",
-    "is_special": false
-  },
-  "666": {
-    "token": "RT",
-    "hex": "5254",
-    "is_special": false
-  },
-  "667": {
-    "token": "yn",
-    "hex": "796e",
-    "is_special": false
-  },
-  "668": {
-    "token": ", Web",
-    "hex": "2c20576562",
-    "is_special": false
-  },
-  "669": {
-    "token": "ff",
-    "hex": "6666",
-    "is_special": false
-  },
-  "670": {
-    "token": ") ",
-    "hex": "2920",
-    "is_special": false
-  },
-  "671": {
-    "token": "dial",
-    "hex": "6469616c",
-    "is_special": false
-  },
-  "672": {
-    "token": "dialog",
-    "hex": "6469616c6f67",
-    "is_special": false
-  },
-  "673": {
-    "token": "dialogu",
-    "hex": "6469616c6f6775",
-    "is_special": false
-  },
-  "674": {
-    "token": "port ",
-    "hex": "706f727420",
-    "is_special": false
-  },
-  "675": {
-    "token": "ුම",
-    "hex": "e0b794e0b6b8",
-    "is_special": false
-  },
-  "676": {
-    "token": "ර්",
-    "hex": "e0b6bbe0b78a",
-    "is_special": false
-  },
-  "677": {
-    "token": " ම",
-    "hex": "20e0b6b8",
-    "is_special": false
-  },
-  "678": {
-    "token": " වේ",
-    "hex": "20e0b780e0b79a",
-    "is_special": false
-  },
-  "679": {
-    "token": " යතුර එ",
-    "hex": "20e0b6bae0b6ade0b794e0b6bb20e0b691",
-    "is_special": false
-  },
-  "680": {
-    "token": " යතුර එබ",
-    "hex": "20e0b6bae0b6ade0b794e0b6bb20e0b691e0b6b6",
-    "is_special": false
-  },
-  "681": {
-    "token": " යතුර එබීම",
-    "hex": "20e0b6bae0b6ade0b794e0b6bb20e0b691e0b6b6e0b793e0b6b8",
-    "is_special": false
-  },
-  "682": {
-    "token": " යතුර එබීමෙන්",
-    "hex": "20e0b6bae0b6ade0b794e0b6bb20e0b691e0b6b6e0b793e0b6b8e0b799e0b6b1e0b78a",
-    "is_special": false
-  },
-  "683": {
-    "token": " නැ",
-    "hex": "20e0b6b1e0b790",
-    "is_special": false
-  },
-  "684": {
-    "token": " නැව",
-    "hex": "20e0b6b1e0b790e0b780",
-    "is_special": false
-  },
-  "685": {
-    "token": "බ්",
-    "hex": "e0b6b6e0b78a",
-    "is_special": false
-  },
-  "686": {
-    "token": "බ්ද",
-    "hex": "e0b6b6e0b78ae0b6af",
-    "is_special": false
-  },
-  "687": {
-    "token": " අ",
-    "hex": "20e0b685",
-    "is_special": false
-  },
-  "688": {
-    "token": "ින්",
-    "hex": "e0b792e0b6b1e0b78a",
-    "is_special": false
-  },
-  "689": {
-    "token": " සහ",
-    "hex": "20e0b783e0b784",
-    "is_special": false
-  },
-  "690": {
-    "token": "ook",
-    "hex": "6f6f6b",
-    "is_special": false
-  },
-  "691": {
-    "token": "na",
-    "hex": "6e61",
-    "is_special": false
-  },
-  "692": {
-    "token": "tiv",
-    "hex": "746976",
-    "is_special": false
-  },
-  "693": {
-    "token": "into ",
-    "hex": "696e746f20",
-    "is_special": false
-  },
-  "694": {
-    "token": "0% ",
-    "hex": "302520",
-    "is_special": false
-  },
-  "695": {
-    "token": "zero ",
-    "hex": "7a65726f20",
-    "is_special": false
-  },
-  "696": {
-    "token": "hig",
-    "hex": "686967",
-    "is_special": false
-  },
-  "697": {
-    "token": "clou",
-    "hex": "636c6f75",
-    "is_special": false
-  },
-  "698": {
-    "token": "orag",
-    "hex": "6f726167",
-    "is_special": false
-  },
-  "699": {
-    "token": "a s",
-    "hex": "612073",
-    "is_special": false
-  },
-  "700": {
-    "token": "ent ",
-    "hex": "656e7420",
-    "is_special": false
-  },
-  "701": {
-    "token": "10-",
-    "hex": "31302d",
-    "is_special": false
-  },
-  "702": {
-    "token": "equalizer",
-    "hex": "657175616c697a6572",
-    "is_special": false
-  },
-  "703": {
-    "token": "arch",
-    "hex": "61726368",
-    "is_special": false
-  },
-  "704": {
-    "token": "igh",
-    "hex": "696768",
-    "is_special": false
-  },
-  "705": {
-    "token": "ight",
-    "hex": "69676874",
-    "is_special": false
-  },
-  "706": {
-    "token": "run",
-    "hex": "72756e",
-    "is_special": false
-  },
-  "707": {
-    "token": "e your ",
-    "hex": "6520796f757220",
-    "is_special": false
-  },
-  "708": {
-    "token": ". A",
-    "hex": "2e2041",
-    "is_special": false
-  },
-  "709": {
-    "token": "scene ",
-    "hex": "7363656e6520",
-    "is_special": false
-  },
-  "710": {
-    "token": " transcri",
-    "hex": "207472616e73637269",
-    "is_special": false
-  },
-  "711": {
-    "token": "proc",
-    "hex": "70726f63",
-    "is_special": false
-  },
-  "712": {
-    "token": "process",
-    "hex": "70726f63657373",
-    "is_special": false
-  },
-  "713": {
-    "token": "stric",
-    "hex": "7374726963",
-    "is_special": false
-  },
-  "714": {
-    "token": "tly ",
-    "hex": "746c7920",
-    "is_special": false
-  },
-  "715": {
-    "token": "Open",
-    "hex": "4f70656e",
-    "is_special": false
-  },
-  "716": {
+  "319": {
     "token": "ce",
     "hex": "6365",
     "is_special": false
   },
-  "717": {
+  "320": {
+    "token": "udi",
+    "hex": "756469",
+    "is_special": false
+  },
+  "321": {
+    "token": "udio",
+    "hex": "7564696f",
+    "is_special": false
+  },
+  "322": {
+    "token": "ා",
+    "hex": "e0b78f",
+    "is_special": false
+  },
+  "323": {
+    "token": "lo",
+    "hex": "6c6f",
+    "is_special": false
+  },
+  "324": {
+    "token": "sc",
+    "hex": "7363",
+    "is_special": false
+  },
+  "325": {
+    "token": "do",
+    "hex": "646f",
+    "is_special": false
+  },
+  "326": {
+    "token": "ke",
+    "hex": "6b65",
+    "is_special": false
+  },
+  "327": {
+    "token": "How",
+    "hex": "486f77",
+    "is_special": false
+  },
+  "328": {
+    "token": "key",
+    "hex": "6b6579",
+    "is_special": false
+  },
+  "329": {
     "token": "tr",
     "hex": "7472",
     "is_special": false
   },
-  "718": {
-    "token": "without ",
-    "hex": "776974686f757420",
+  "330": {
+    "token": "con",
+    "hex": "636f6e",
     "is_special": false
   },
-  "719": {
-    "token": "intern",
-    "hex": "696e7465726e",
+  "331": {
+    "token": "ී",
+    "hex": "e0b793",
     "is_special": false
   },
-  "720": {
-    "token": "aus",
-    "hex": "617573",
+  "332": {
+    "token": "ress",
+    "hex": "72657373",
     "is_special": false
   },
-  "721": {
-    "token": " or ",
-    "hex": "206f7220",
+  "333": {
+    "token": "su",
+    "hex": "7375",
     "is_special": false
   },
-  "722": {
-    "token": "ull",
-    "hex": "756c6c",
+  "334": {
+    "token": "qu",
+    "hex": "7175",
     "is_special": false
   },
-  "723": {
-    "token": "ullscreen",
-    "hex": "756c6c73637265656e",
+  "335": {
+    "token": "la",
+    "hex": "6c61",
     "is_special": false
   },
-  "724": {
-    "token": "bo",
-    "hex": "626f",
+  "336": {
+    "token": "ad",
+    "hex": "6164",
     "is_special": false
   },
-  "725": {
-    "token": "ent",
-    "hex": "656e74",
+  "337": {
+    "token": "you",
+    "hex": "796f75",
     "is_special": false
   },
-  "726": {
-    "token": "forward ",
-    "hex": "666f727761726420",
+  "338": {
+    "token": "om",
+    "hex": "6f6d",
     "is_special": false
   },
-  "727": {
-    "token": " key",
-    "hex": "206b6579",
+  "339": {
+    "token": "ch",
+    "hex": "6368",
     "is_special": false
   },
-  "728": {
-    "token": " key to ",
-    "hex": "206b657920746f20",
+  "340": {
+    "token": "Hz",
+    "hex": "487a",
     "is_special": false
   },
-  "729": {
-    "token": " Arrow to ",
-    "hex": "204172726f7720746f20",
+  "341": {
+    "token": "ප",
+    "hex": "e0b6b4",
     "is_special": false
   },
-  "730": {
-    "token": "step ",
-    "hex": "7374657020",
+  "342": {
+    "token": "ter",
+    "hex": "746572",
     "is_special": false
   },
-  "731": {
-    "token": "Per",
-    "hex": "506572",
+  "343": {
+    "token": "ෝ",
+    "hex": "e0b79d",
     "is_special": false
   },
-  "732": {
-    "token": ") to ",
-    "hex": "2920746f20",
+  "344": {
+    "token": "AI",
+    "hex": "4149",
     "is_special": false
   },
-  "733": {
-    "token": "5%",
-    "hex": "3525",
+  "345": {
+    "token": "ig",
+    "hex": "6967",
     "is_special": false
   },
-  "734": {
-    "token": ".0",
-    "hex": "2e30",
+  "346": {
+    "token": "ll",
+    "hex": "6c6c",
     "is_special": false
   },
-  "735": {
-    "token": "25",
-    "hex": "3235",
+  "347": {
+    "token": "cal",
+    "hex": "63616c",
     "is_special": false
   },
-  "736": {
-    "token": "curren",
-    "hex": "63757272656e",
+  "348": {
+    "token": "ra",
+    "hex": "7261",
     "is_special": false
   },
-  "737": {
-    "token": "Pic",
-    "hex": "506963",
+  "349": {
+    "token": "බ",
+    "hex": "e0b6b6",
     "is_special": false
   },
-  "738": {
-    "token": "Pict",
-    "hex": "50696374",
+  "350": {
+    "token": "ග",
+    "hex": "e0b69c",
     "is_special": false
   },
-  "739": {
-    "token": "A-",
-    "hex": "412d",
+  "351": {
+    "token": "ast",
+    "hex": "617374",
     "is_special": false
   },
-  "740": {
-    "token": "Po",
-    "hex": "506f",
+  "352": {
+    "token": "ve",
+    "hex": "7665",
     "is_special": false
   },
-  "741": {
-    "token": "jump",
-    "hex": "6a756d70",
+  "353": {
+    "token": "ate",
+    "hex": "617465",
     "is_special": false
   },
-  "742": {
-    "token": "ers",
-    "hex": "657273",
+  "354": {
+    "token": "ack",
+    "hex": "61636b",
     "is_special": false
   },
-  "743": {
-    "token": "16",
-    "hex": "3136",
+  "355": {
+    "token": "Press",
+    "hex": "5072657373",
     "is_special": false
   },
-  "744": {
-    "token": "Bass B",
-    "hex": "426173732042",
+  "356": {
+    "token": "pe",
+    "hex": "7065",
     "is_special": false
   },
-  "745": {
-    "token": "Bass Boost",
-    "hex": "4261737320426f6f7374",
+  "357": {
+    "token": "ju",
+    "hex": "6a75",
     "is_special": false
   },
-  "746": {
-    "token": "Vocal ",
-    "hex": "566f63616c20",
+  "358": {
+    "token": "ඩ",
+    "hex": "e0b6a9",
     "is_special": false
   },
-  "747": {
-    "token": "Vocal Cl",
-    "hex": "566f63616c20436c",
+  "359": {
+    "token": "10",
+    "hex": "3130",
     "is_special": false
   },
-  "748": {
-    "token": "Vocal Clar",
-    "hex": "566f63616c20436c6172",
+  "360": {
+    "token": "fi",
+    "hex": "6669",
     "is_special": false
   },
-  "749": {
-    "token": "Vocal Clarit",
-    "hex": "566f63616c20436c61726974",
+  "361": {
+    "token": "am",
+    "hex": "616d",
     "is_special": false
   },
-  "750": {
-    "token": ", C",
-    "hex": "2c2043",
+  "362": {
+    "token": "ine",
+    "hex": "696e65",
     "is_special": false
   },
-  "751": {
-    "token": "work",
-    "hex": "776f726b",
+  "363": {
+    "token": "is",
+    "hex": "6973",
     "is_special": false
   },
-  "752": {
-    "token": "ech ",
-    "hex": "65636820",
-    "is_special": false
-  },
-  "753": {
-    "token": "deli",
-    "hex": "64656c69",
-    "is_special": false
-  },
-  "754": {
-    "token": "es.",
-    "hex": "65732e",
-    "is_special": false
-  },
-  "755": {
-    "token": "PI ",
-    "hex": "504920",
-    "is_special": false
-  },
-  "756": {
-    "token": "? Assistant: W",
-    "hex": "3f20417373697374616e743a2057",
-    "is_special": false
-  },
-  "757": {
-    "token": "? Assistant: We ",
-    "hex": "3f20417373697374616e743a20576520",
-    "is_special": false
-  },
-  "758": {
-    "token": "bet",
-    "hex": "626574",
-    "is_special": false
-  },
-  "759": {
-    "token": "betwe",
-    "hex": "6265747765",
-    "is_special": false
-  },
-  "760": {
-    "token": "between",
-    "hex": "6265747765656e",
-    "is_special": false
-  },
-  "761": {
-    "token": "tion.",
-    "hex": "74696f6e2e",
-    "is_special": false
-  },
-  "762": {
-    "token": "ick",
-    "hex": "69636b",
-    "is_special": false
-  },
-  "763": {
-    "token": "video fil",
-    "hex": "766964656f2066696c",
-    "is_special": false
-  },
-  "764": {
-    "token": "ream",
-    "hex": "7265616d",
-    "is_special": false
-  },
-  "765": {
-    "token": " Subtitle ",
-    "hex": "205375627469746c6520",
-    "is_special": false
-  },
-  "766": {
-    "token": "ernal ",
-    "hex": "65726e616c20",
-    "is_special": false
-  },
-  "767": {
-    "token": "ync",
-    "hex": "796e63",
-    "is_special": false
-  },
-  "768": {
-    "token": "format",
-    "hex": "666f726d6174",
-    "is_special": false
-  },
-  "769": {
-    "token": "upport",
-    "hex": "7570706f7274",
-    "is_special": false
-  },
-  "770": {
-    "token": ", WebVTT",
-    "hex": "2c20576562565454",
-    "is_special": false
-  },
-  "771": {
-    "token": "ubtitles",
-    "hex": "75627469746c6573",
-    "is_special": false
-  },
-  "772": {
-    "token": "- ",
-    "hex": "2d20",
-    "is_special": false
-  },
-  "773": {
-    "token": "ext ",
-    "hex": "65787420",
-    "is_special": false
-  },
-  "774": {
-    "token": "e th",
-    "hex": "65207468",
-    "is_special": false
-  },
-  "775": {
-    "token": "export ",
-    "hex": "6578706f727420",
-    "is_special": false
-  },
-  "776": {
-    "token": "Ex",
-    "hex": "4578",
-    "is_special": false
-  },
-  "777": {
-    "token": " tab",
-    "hex": "20746162",
-    "is_special": false
-  },
-  "778": {
-    "token": ", M",
-    "hex": "2c204d",
-    "is_special": false
-  },
-  "779": {
-    "token": "cu",
-    "hex": "6375",
-    "is_special": false
-  },
-  "780": {
-    "token": "stam",
-    "hex": "7374616d",
-    "is_special": false
-  },
-  "781": {
-    "token": "ener",
-    "hex": "656e6572",
-    "is_special": false
-  },
-  "782": {
-    "token": "chapt",
-    "hex": "6368617074",
-    "is_special": false
-  },
-  "783": {
-    "token": "ers ",
-    "hex": "65727320",
-    "is_special": false
-  },
-  "784": {
-    "token": "com",
-    "hex": "636f6d",
-    "is_special": false
-  },
-  "785": {
-    "token": "any ",
-    "hex": "616e7920",
-    "is_special": false
-  },
-  "786": {
-    "token": " W",
-    "hex": "2057",
-    "is_special": false
-  },
-  "787": {
-    "token": "PM",
-    "hex": "504d",
-    "is_special": false
-  },
-  "788": {
-    "token": "ධ",
-    "hex": "e0b6b0",
-    "is_special": false
-  },
-  "789": {
-    "token": " හෝ ",
-    "hex": "20e0b784e0b79d20",
-    "is_special": false
-  },
-  "790": {
-    "token": " නැවත",
-    "hex": "20e0b6b1e0b790e0b780e0b6ad",
-    "is_special": false
-  },
-  "791": {
-    "token": "නය",
-    "hex": "e0b6b1e0b6ba",
-    "is_special": false
-  },
-  "792": {
-    "token": " කළ හැක.",
-    "hex": "20e0b69ae0b78520e0b784e0b790e0b69a2e",
-    "is_special": false
-  },
-  "793": {
-    "token": "ුව",
-    "hex": "e0b794e0b780",
-    "is_special": false
-  },
-  "794": {
-    "token": " වැ",
-    "hex": "20e0b780e0b790",
-    "is_special": false
-  },
-  "795": {
-    "token": "ඩු",
-    "hex": "e0b6a9e0b794",
-    "is_special": false
-  },
-  "796": {
-    "token": " උ",
-    "hex": "20e0b68b",
-    "is_special": false
-  },
-  "797": {
-    "token": "book",
-    "hex": "626f6f6b",
-    "is_special": false
-  },
-  "798": {
-    "token": "media ",
-    "hex": "6d6564696120",
-    "is_special": false
-  },
-  "799": {
-    "token": "intel",
-    "hex": "696e74656c",
-    "is_special": false
-  },
-  "800": {
-    "token": "intelli",
-    "hex": "696e74656c6c69",
-    "is_special": false
-  },
-  "801": {
-    "token": "intellig",
-    "hex": "696e74656c6c6967",
-    "is_special": false
-  },
-  "802": {
-    "token": "uil",
-    "hex": "75696c",
-    "is_special": false
-  },
-  "803": {
-    "token": "dat",
-    "hex": "646174",
-    "is_special": false
-  },
-  "804": {
-    "token": "ssion",
-    "hex": "7373696f6e",
-    "is_special": false
-  },
-  "805": {
-    "token": "? Assistant: MASTER CLOUD",
-    "hex": "3f20417373697374616e743a204d415354455220434c4f5544",
-    "is_special": false
-  },
-  "806": {
-    "token": "high",
-    "hex": "68696768",
-    "is_special": false
-  },
-  "807": {
-    "token": "high-",
-    "hex": "686967682d",
-    "is_special": false
-  },
-  "808": {
-    "token": "cloud ",
-    "hex": "636c6f756420",
-    "is_special": false
-  },
-  "809": {
-    "token": "e and ",
-    "hex": "6520616e6420",
-    "is_special": false
-  },
-  "810": {
-    "token": "B ",
-    "hex": "4220",
-    "is_special": false
-  },
-  "811": {
-    "token": "ak",
-    "hex": "616b",
-    "is_special": false
-  },
-  "812": {
-    "token": "MasterAI Core ",
-    "hex": "4d6173746572414920436f726520",
-    "is_special": false
-  },
-  "813": {
-    "token": "rat",
-    "hex": "726174",
-    "is_special": false
-  },
-  "814": {
-    "token": "ot ",
-    "hex": "6f7420",
-    "is_special": false
-  },
-  "815": {
-    "token": "ty ",
-    "hex": "747920",
-    "is_special": false
-  },
-  "816": {
-    "token": "enti",
-    "hex": "656e7469",
-    "is_special": false
-  },
-  "817": {
-    "token": "brow",
-    "hex": "62726f77",
-    "is_special": false
-  },
-  "818": {
-    "token": "browser",
-    "hex": "62726f77736572",
-    "is_special": false
-  },
-  "819": {
-    "token": ". Al",
-    "hex": "2e20416c",
-    "is_special": false
-  },
-  "820": {
-    "token": ". All ",
-    "hex": "2e20416c6c20",
-    "is_special": false
-  },
-  "821": {
-    "token": "erenc",
-    "hex": "6572656e63",
-    "is_special": false
-  },
-  "822": {
-    "token": "detec",
-    "hex": "6465746563",
-    "is_special": false
-  },
-  "823": {
-    "token": "s, ",
-    "hex": "732c20",
-    "is_special": false
-  },
-  "824": {
-    "token": "strictly ",
-    "hex": "7374726963746c7920",
-    "is_special": false
-  },
-  "825": {
-    "token": "on your ",
-    "hex": "6f6e20796f757220",
-    "is_special": false
-  },
-  "826": {
-    "token": "ach",
-    "hex": "616368",
-    "is_special": false
-  },
-  "827": {
-    "token": "User: D",
-    "hex": "557365723a2044",
-    "is_special": false
-  },
-  "828": {
-    "token": "end ",
-    "hex": "656e6420",
-    "is_special": false
-  },
-  "829": {
-    "token": "my video",
-    "hex": "6d7920766964656f",
-    "is_special": false
-  },
-  "830": {
-    "token": "? Assistant: A",
-    "hex": "3f20417373697374616e743a2041",
-    "is_special": false
-  },
-  "831": {
+  "364": {
     "token": "audio",
     "hex": "617564696f",
     "is_special": false
   },
-  "832": {
-    "token": "pri",
-    "hex": "707269",
+  "365": {
+    "token": "tec",
+    "hex": "746563",
     "is_special": false
   },
-  "833": {
-    "token": "devi",
-    "hex": "64657669",
+  "366": {
+    "token": "row",
+    "hex": "726f77",
     "is_special": false
   },
-  "834": {
-    "token": "offlin",
-    "hex": "6f66666c696e",
+  "367": {
+    "token": "lay",
+    "hex": "6c6179",
     "is_special": false
   },
-  "835": {
-    "token": "internet ",
-    "hex": "696e7465726e657420",
+  "368": {
+    "token": "ex",
+    "hex": "6578",
     "is_special": false
   },
-  "836": {
-    "token": "acc",
-    "hex": "616363",
+  "369": {
+    "token": "it",
+    "hex": "6974",
     "is_special": false
   },
-  "837": {
-    "token": "mem",
-    "hex": "6d656d",
+  "370": {
+    "token": "කර",
+    "hex": "e0b69ae0b6bb",
     "is_special": false
   },
-  "838": {
-    "token": "memor",
-    "hex": "6d656d6f72",
+  "371": {
+    "token": "යත",
+    "hex": "e0b6bae0b6ad",
     "is_special": false
   },
-  "839": {
-    "token": "memory ",
-    "hex": "6d656d6f727920",
+  "372": {
+    "token": "Wh",
+    "hex": "5768",
     "is_special": false
   },
-  "840": {
-    "token": "tions ",
-    "hex": "74696f6e7320",
+  "373": {
+    "token": "are",
+    "hex": "617265",
     "is_special": false
   },
-  "841": {
-    "token": "e with ",
-    "hex": "65207769746820",
+  "374": {
+    "token": "Mast",
+    "hex": "4d617374",
     "is_special": false
   },
-  "842": {
-    "token": "conn",
-    "hex": "636f6e6e",
+  "375": {
+    "token": "Master",
+    "hex": "4d6173746572",
     "is_special": false
   },
-  "843": {
-    "token": "tivi",
-    "hex": "74697669",
+  "376": {
+    "token": "MasterAI",
+    "hex": "4d61737465724149",
     "is_special": false
   },
-  "844": {
-    "token": "red",
-    "hex": "726564",
+  "377": {
+    "token": "your",
+    "hex": "796f7572",
     "is_special": false
   },
-  "845": {
-    "token": "paus",
-    "hex": "70617573",
+  "378": {
+    "token": "iz",
+    "hex": "697a",
     "is_special": false
   },
-  "846": {
-    "token": "play ",
-    "hex": "706c617920",
+  "379": {
+    "token": "cu",
+    "hex": "6375",
     "is_special": false
   },
-  "847": {
-    "token": " tog",
-    "hex": "20746f67",
+  "380": {
+    "token": "ts",
+    "hex": "7473",
     "is_special": false
   },
-  "848": {
-    "token": " togg",
-    "hex": "20746f6767",
+  "381": {
+    "token": "tion",
+    "hex": "74696f6e",
     "is_special": false
   },
-  "849": {
-    "token": " toggle ",
-    "hex": "20746f67676c6520",
+  "382": {
+    "token": "ol",
+    "hex": "6f6c",
     "is_special": false
   },
-  "850": {
-    "token": "? Assistant: Press the ",
-    "hex": "3f20417373697374616e743a2050726573732074686520",
+  "383": {
+    "token": "tit",
+    "hex": "746974",
     "is_special": false
   },
-  "851": {
-    "token": "it ",
-    "hex": "697420",
+  "384": {
+    "token": "ati",
+    "hex": "617469",
     "is_special": false
   },
-  "852": {
-    "token": "10 second",
-    "hex": "3130207365636f6e64",
+  "385": {
+    "token": "What",
+    "hex": "57686174",
     "is_special": false
   },
-  "853": {
-    "token": "? Assistant: U",
-    "hex": "3f20417373697374616e743a2055",
+  "386": {
+    "token": "pen",
+    "hex": "70656e",
     "is_special": false
   },
-  "854": {
-    "token": "? Assistant: Us",
-    "hex": "3f20417373697374616e743a205573",
-    "is_special": false
-  },
-  "855": {
-    "token": "Right",
-    "hex": "5269676874",
-    "is_special": false
-  },
-  "856": {
-    "token": "Le",
-    "hex": "4c65",
-    "is_special": false
-  },
-  "857": {
-    "token": "Lef",
-    "hex": "4c6566",
-    "is_special": false
-  },
-  "858": {
-    "token": "Left",
-    "hex": "4c656674",
-    "is_special": false
-  },
-  "859": {
-    "token": "backward ",
-    "hex": "6261636b7761726420",
-    "is_special": false
-  },
-  "860": {
-    "token": "5 second",
-    "hex": "35207365636f6e64",
-    "is_special": false
-  },
-  "861": {
-    "token": "rou",
-    "hex": "726f75",
-    "is_special": false
-  },
-  "862": {
-    "token": "Peri",
-    "hex": "50657269",
-    "is_special": false
-  },
-  "863": {
-    "token": "mute ",
-    "hex": "6d75746520",
-    "is_special": false
-  },
-  "864": {
-    "token": "player ",
-    "hex": "706c6179657220",
-    "is_special": false
-  },
-  "865": {
-    "token": " playback",
-    "hex": "20706c61796261636b",
-    "is_special": false
-  },
-  "866": {
-    "token": "vol",
-    "hex": "766f6c",
-    "is_special": false
-  },
-  "867": {
-    "token": "volum",
-    "hex": "766f6c756d",
-    "is_special": false
-  },
-  "868": {
-    "token": " speed",
-    "hex": "207370656564",
-    "is_special": false
-  },
-  "869": {
-    "token": "spe",
-    "hex": "737065",
-    "is_special": false
-  },
-  "870": {
-    "token": ".0x",
-    "hex": "2e3078",
-    "is_special": false
-  },
-  "871": {
-    "token": "sl",
-    "hex": "736c",
-    "is_special": false
-  },
-  "872": {
-    "token": "sh",
-    "hex": "7368",
-    "is_special": false
-  },
-  "873": {
-    "token": "current ",
-    "hex": "63757272656e7420",
-    "is_special": false
-  },
-  "874": {
-    "token": "frame ",
-    "hex": "6672616d6520",
-    "is_special": false
-  },
-  "875": {
-    "token": "in-",
-    "hex": "696e2d",
-    "is_special": false
-  },
-  "876": {
-    "token": "set ",
-    "hex": "73657420",
-    "is_special": false
-  },
-  "877": {
-    "token": "immedi",
-    "hex": "696d6d656469",
-    "is_special": false
-  },
-  "878": {
-    "token": "immediat",
-    "hex": "696d6d6564696174",
-    "is_special": false
-  },
-  "879": {
-    "token": "immediately ",
-    "hex": "696d6d6564696174656c7920",
-    "is_special": false
-  },
-  "880": {
-    "token": "stand",
-    "hex": "7374616e64",
-    "is_special": false
-  },
-  "881": {
-    "token": "standard ",
-    "hex": "7374616e6461726420",
-    "is_special": false
-  },
-  "882": {
-    "token": " the video",
-    "hex": "2074686520766964656f",
-    "is_special": false
-  },
-  "883": {
-    "token": "umb",
-    "hex": "756d62",
-    "is_special": false
-  },
-  "884": {
-    "token": "jump ",
-    "hex": "6a756d7020",
-    "is_special": false
-  },
-  "885": {
-    "token": "jump directly",
-    "hex": "6a756d70206469726563746c79",
-    "is_special": false
-  },
-  "886": {
-    "token": "Web Audio Studio ",
-    "hex": "57656220417564696f2053747564696f20",
-    "is_special": false
-  },
-  "887": {
-    "token": "ISO",
-    "hex": "49534f",
-    "is_special": false
-  },
-  "888": {
-    "token": ", t",
-    "hex": "2c2074",
-    "is_special": false
-  },
-  "889": {
-    "token": "frequ",
-    "hex": "6672657175",
-    "is_special": false
-  },
-  "890": {
-    "token": "frequenc",
-    "hex": "6672657175656e63",
-    "is_special": false
-  },
-  "891": {
-    "token": "band",
-    "hex": "62616e64",
-    "is_special": false
-  },
-  "892": {
-    "token": "The ",
-    "hex": "54686520",
-    "is_special": false
-  },
-  "893": {
-    "token": "32",
-    "hex": "3332",
-    "is_special": false
-  },
-  "894": {
-    "token": "64",
-    "hex": "3634",
-    "is_special": false
-  },
-  "895": {
-    "token": "kHz, ",
-    "hex": "6b487a2c20",
-    "is_special": false
-  },
-  "896": {
-    "token": "preset",
-    "hex": "707265736574",
-    "is_special": false
-  },
-  "897": {
-    "token": "s are ",
-    "hex": "732061726520",
-    "is_special": false
-  },
-  "898": {
-    "token": "Fl",
-    "hex": "466c",
-    "is_special": false
-  },
-  "899": {
-    "token": "ectr",
-    "hex": "65637472",
-    "is_special": false
-  },
-  "900": {
-    "token": "ectron",
-    "hex": "656374726f6e",
-    "is_special": false
-  },
-  "901": {
-    "token": "ectronic",
-    "hex": "656374726f6e6963",
-    "is_special": false
-  },
-  "902": {
-    "token": "ech",
-    "hex": "656368",
-    "is_special": false
-  },
-  "903": {
-    "token": "es the ",
-    "hex": "65732074686520",
-    "is_special": false
-  },
-  "904": {
-    "token": "low",
-    "hex": "6c6f77",
-    "is_special": false
-  },
-  "905": {
-    "token": " speech ",
-    "hex": "2073706565636820",
-    "is_special": false
-  },
-  "906": {
-    "token": " ta",
-    "hex": "207461",
-    "is_special": false
-  },
-  "907": {
-    "token": "dB",
-    "hex": "6442",
-    "is_special": false
-  },
-  "908": {
-    "token": " scen",
-    "hex": "207363656e",
-    "is_special": false
-  },
-  "909": {
-    "token": "rap",
-    "hex": "726170",
-    "is_special": false
-  },
-  "910": {
-    "token": "? Assistant: N",
-    "hex": "3f20417373697374616e743a204e",
-    "is_special": false
-  },
-  "911": {
-    "token": "ed in ",
-    "hex": "656420696e20",
-    "is_special": false
-  },
-  "912": {
-    "token": "stream",
-    "hex": "73747265616d",
-    "is_special": false
-  },
-  "913": {
-    "token": " Subtitle Studio ",
-    "hex": "205375627469746c652053747564696f20",
-    "is_special": false
-  },
-  "914": {
-    "token": "load",
-    "hex": "6c6f6164",
-    "is_special": false
-  },
-  "915": {
-    "token": "external ",
-    "hex": "65787465726e616c20",
-    "is_special": false
-  },
-  "916": {
-    "token": "SRT",
-    "hex": "535254",
-    "is_special": false
-  },
-  "917": {
-    "token": "customiz",
-    "hex": "637573746f6d697a",
-    "is_special": false
-  },
-  "918": {
-    "token": "subtitle ",
-    "hex": "7375627469746c6520",
-    "is_special": false
-  },
-  "919": {
-    "token": "support",
-    "hex": "737570706f7274",
-    "is_special": false
-  },
-  "920": {
-    "token": "der ",
-    "hex": "64657220",
-    "is_special": false
-  },
-  "921": {
-    "token": "you c",
-    "hex": "796f752063",
-    "is_special": false
-  },
-  "922": {
-    "token": "from ",
-    "hex": "66726f6d20",
-    "is_special": false
-  },
-  "923": {
-    "token": "down",
-    "hex": "646f776e",
-    "is_special": false
-  },
-  "924": {
-    "token": "V, ",
-    "hex": "562c20",
-    "is_special": false
-  },
-  "925": {
-    "token": ", or J",
-    "hex": "2c206f72204a",
-    "is_special": false
-  },
-  "926": {
-    "token": ", or JSO",
-    "hex": "2c206f72204a534f",
-    "is_special": false
-  },
-  "927": {
-    "token": ", or JSON",
-    "hex": "2c206f72204a534f4e",
-    "is_special": false
-  },
-  "928": {
-    "token": ", or JSON ",
-    "hex": "2c206f72204a534f4e20",
-    "is_special": false
-  },
-  "929": {
-    "token": "pro",
-    "hex": "70726f",
-    "is_special": false
-  },
-  "930": {
-    "token": "provide",
-    "hex": "70726f76696465",
-    "is_special": false
-  },
-  "931": {
-    "token": " timestam",
-    "hex": "2074696d657374616d",
-    "is_special": false
-  },
-  "932": {
-    "token": "Scen",
-    "hex": "5363656e",
-    "is_special": false
-  },
-  "933": {
-    "token": "analyz",
-    "hex": "616e616c797a",
-    "is_special": false
-  },
-  "934": {
-    "token": " timelin",
-    "hex": "2074696d656c696e",
-    "is_special": false
-  },
-  "935": {
-    "token": "User: How does ",
-    "hex": "557365723a20486f7720646f657320",
-    "is_special": false
-  },
-  "936": {
-    "token": "work ",
-    "hex": "776f726b20",
-    "is_special": false
-  },
-  "937": {
-    "token": "hem",
-    "hex": "68656d",
-    "is_special": false
-  },
-  "938": {
-    "token": " con",
-    "hex": "20636f6e",
-    "is_special": false
-  },
-  "939": {
-    "token": "resh",
-    "hex": "72657368",
-    "is_special": false
-  },
-  "940": {
-    "token": "is the ",
-    "hex": "69732074686520",
-    "is_special": false
-  },
-  "941": {
-    "token": "detect",
-    "hex": "646574656374",
-    "is_special": false
-  },
-  "942": {
-    "token": "detected ",
-    "hex": "646574656374656420",
-    "is_special": false
-  },
-  "943": {
-    "token": "- [",
-    "hex": "2d205b",
-    "is_special": false
-  },
-  "944": {
-    "token": "ts ",
-    "hex": "747320",
-    "is_special": false
-  },
-  "945": {
-    "token": " WPM",
-    "hex": "2057504d",
-    "is_special": false
-  },
-  "946": {
-    "token": "indi",
-    "hex": "696e6469",
-    "is_special": false
-  },
-  "947": {
-    "token": "indic",
-    "hex": "696e646963",
-    "is_special": false
-  },
-  "948": {
-    "token": "indicat",
-    "hex": "696e6469636174",
-    "is_special": false
-  },
-  "949": {
-    "token": "indicates ",
-    "hex": "696e6469636174657320",
-    "is_special": false
-  },
-  "950": {
-    "token": "extr",
-    "hex": "65787472",
-    "is_special": false
-  },
-  "951": {
-    "token": "extrac",
-    "hex": "657874726163",
-    "is_special": false
-  },
-  "952": {
-    "token": "via ",
-    "hex": "76696120",
-    "is_special": false
-  },
-  "953": {
-    "token": "compl",
-    "hex": "636f6d706c",
-    "is_special": false
-  },
-  "954": {
-    "token": "complet",
-    "hex": "636f6d706c6574",
-    "is_special": false
-  },
-  "955": {
-    "token": "HL",
-    "hex": "484c",
-    "is_special": false
-  },
-  "956": {
-    "token": "HLS",
-    "hex": "484c53",
-    "is_special": false
-  },
-  "957": {
-    "token": "wa",
-    "hex": "7761",
-    "is_special": false
-  },
-  "958": {
-    "token": "wi",
-    "hex": "7769",
-    "is_special": false
-  },
-  "959": {
-    "token": "th ",
-    "hex": "746820",
-    "is_special": false
-  },
-  "960": {
+  "387": {
     "token": "ro",
     "hex": "726f",
     "is_special": false
   },
-  "961": {
-    "token": " API ",
-    "hex": "2041504920",
+  "388": {
+    "token": "play",
+    "hex": "706c6179",
     "is_special": false
   },
-  "962": {
-    "token": " API key",
-    "hex": "20415049206b6579",
+  "389": {
+    "token": "ard",
+    "hex": "617264",
     "is_special": false
   },
-  "963": {
-    "token": "නු",
-    "hex": "e0b6b1e0b794",
+  "390": {
+    "token": "as",
+    "hex": "6173",
     "is_special": false
   },
-  "964": {
-    "token": "ඳ",
-    "hex": "e0b6b3",
+  "391": {
+    "token": "ft",
+    "hex": "6674",
     "is_special": false
   },
-  "965": {
-    "token": " වි",
-    "hex": "20e0b780e0b792",
+  "392": {
+    "token": "btit",
+    "hex": "62746974",
     "is_special": false
   },
-  "966": {
-    "token": "ෂ",
-    "hex": "e0b782",
+  "393": {
+    "token": "btitle",
+    "hex": "627469746c65",
     "is_special": false
   },
-  "967": {
-    "token": "වා",
-    "hex": "e0b780e0b78f",
+  "394": {
+    "token": "එ",
+    "hex": "e0b691",
     "is_special": false
   },
-  "968": {
-    "token": "<bytes:e280>",
-    "hex": "e280",
+  "395": {
+    "token": "local",
+    "hex": "6c6f63616c",
     "is_special": false
   },
-  "969": {
-    "token": "‍",
-    "hex": "e2808d",
+  "396": {
+    "token": "wi",
+    "hex": "7769",
     "is_special": false
   },
-  "970": {
-    "token": "<bytes:94e0b6b6>",
-    "hex": "94e0b6b6",
+  "397": {
+    "token": "cl",
+    "hex": "636c",
     "is_special": false
   },
-  "971": {
-    "token": "ගේ",
-    "hex": "e0b69ce0b79a",
+  "398": {
+    "token": "for",
+    "hex": "666f72",
     "is_special": false
   },
-  "972": {
-    "token": "රි",
-    "hex": "e0b6bbe0b792",
+  "399": {
+    "token": "ag",
+    "hex": "6167",
     "is_special": false
   },
-  "973": {
-    "token": "රිග",
-    "hex": "e0b6bbe0b792e0b69c",
+  "400": {
+    "token": "ne",
+    "hex": "6e65",
     "is_special": false
   },
-  "974": {
-    "token": "රිගණ",
-    "hex": "e0b6bbe0b792e0b69ce0b6ab",
+  "401": {
+    "token": "fra",
+    "hex": "667261",
     "is_special": false
   },
-  "975": {
-    "token": "රිගණක",
-    "hex": "e0b6bbe0b792e0b69ce0b6abe0b69a",
+  "402": {
+    "token": "frame",
+    "hex": "6672616d65",
     "is_special": false
   },
-  "976": {
-    "token": "රිය",
-    "hex": "e0b6bbe0b792e0b6ba",
+  "403": {
+    "token": "of",
+    "hex": "6f66",
     "is_special": false
   },
-  "977": {
-    "token": " වේ.",
-    "hex": "20e0b780e0b79a2e",
+  "404": {
+    "token": "Ar",
+    "hex": "4172",
     "is_special": false
   },
-  "978": {
-    "token": "ත්ව",
-    "hex": "e0b6ade0b78ae0b780",
+  "405": {
+    "token": "ap",
+    "hex": "6170",
     "is_special": false
   },
-  "979": {
-    "token": " වීඩියෝව",
-    "hex": "20e0b780e0b793e0b6a9e0b792e0b6bae0b79de0b780",
+  "406": {
+    "token": "St",
+    "hex": "5374",
     "is_special": false
   },
-  "980": {
-    "token": " වා",
-    "hex": "20e0b780e0b78f",
+  "407": {
+    "token": "un",
+    "hex": "756e",
     "is_special": false
   },
-  "981": {
-    "token": " වාද",
-    "hex": "20e0b780e0b78fe0b6af",
+  "408": {
+    "token": "ri",
+    "hex": "7269",
     "is_special": false
   },
-  "982": {
-    "token": " වාදනය",
-    "hex": "20e0b780e0b78fe0b6afe0b6b1e0b6ba",
+  "409": {
+    "token": "ance",
+    "hex": "616e6365",
     "is_special": false
   },
-  "983": {
-    "token": "ුප",
-    "hex": "e0b794e0b6b4",
+  "410": {
+    "token": "ver",
+    "hex": "766572",
     "is_special": false
   },
-  "984": {
-    "token": " එක",
-    "hex": "20e0b691e0b69a",
+  "411": {
+    "token": "ds",
+    "hex": "6473",
     "is_special": false
   },
-  "985": {
-    "token": "<bytes:e0b780e0b7>",
-    "hex": "e0b780e0b7",
+  "412": {
+    "token": "mo",
+    "hex": "6d6f",
     "is_special": false
   },
-  "986": {
-    "token": "වෘ",
-    "hex": "e0b780e0b798",
+  "413": {
+    "token": "ed",
+    "hex": "6564",
     "is_special": false
   },
-  "987": {
-    "token": "වෘත",
-    "hex": "e0b780e0b798e0b6ad",
+  "414": {
+    "token": "back",
+    "hex": "6261636b",
     "is_special": false
   },
-  "988": {
-    "token": "වි",
-    "hex": "e0b780e0b792",
+  "415": {
+    "token": "Arrow",
+    "hex": "4172726f77",
     "is_special": false
   },
-  "989": {
-    "token": "ස්",
-    "hex": "e0b783e0b78a",
+  "416": {
+    "token": "We",
+    "hex": "5765",
     "is_special": false
   },
-  "990": {
-    "token": " සි",
-    "hex": "20e0b783e0b792",
+  "417": {
+    "token": "00",
+    "hex": "3030",
     "is_special": false
   },
-  "991": {
-    "token": " ද",
-    "hex": "20e0b6af",
+  "418": {
+    "token": "kHz",
+    "hex": "6b487a",
     "is_special": false
   },
-  "992": {
-    "token": "ං",
-    "hex": "e0b682",
+  "419": {
+    "token": "mat",
+    "hex": "6d6174",
     "is_special": false
   },
-  "993": {
-    "token": "ශබ්ද",
-    "hex": "e0b781e0b6b6e0b78ae0b6af",
+  "420": {
+    "token": "ශ",
+    "hex": "e0b781",
     "is_special": false
   },
-  "994": {
-    "token": " වැඩ",
-    "hex": "20e0b780e0b790e0b6a9",
+  "421": {
+    "token": "ළ",
+    "hex": "e0b785",
     "is_special": false
   },
-  "995": {
-    "token": " වැඩි",
-    "hex": "20e0b780e0b790e0b6a9e0b792",
+  "422": {
+    "token": "MA",
+    "hex": "4d41",
     "is_special": false
   },
-  "996": {
-    "token": " කළ හැක",
-    "hex": "20e0b69ae0b78520e0b784e0b790e0b69a",
+  "423": {
+    "token": "MAS",
+    "hex": "4d4153",
     "is_special": false
   },
-  "997": {
-    "token": " යතුරෙන් ",
-    "hex": "20e0b6bae0b6ade0b794e0b6bbe0b799e0b6b1e0b78a20",
+  "424": {
+    "token": "MAST",
+    "hex": "4d415354",
     "is_special": false
   },
-  "998": {
-    "token": "<bytes:e0b69ae0b78a20e0b6>",
-    "hex": "e0b69ae0b78a20e0b6",
+  "425": {
+    "token": "MASTE",
+    "hex": "4d41535445",
     "is_special": false
   },
-  "999": {
-    "token": "පසි",
-    "hex": "e0b6b4e0b783e0b792",
+  "426": {
+    "token": "MASTER",
+    "hex": "4d4153544552",
     "is_special": false
   },
-  "1000": {
-    "token": "පසිර",
-    "hex": "e0b6b4e0b783e0b792e0b6bb",
+  "427": {
+    "token": "CL",
+    "hex": "434c",
     "is_special": false
   },
-  "1001": {
-    "token": "පසිරැ",
-    "hex": "e0b6b4e0b783e0b792e0b6bbe0b790",
+  "428": {
+    "token": "CLO",
+    "hex": "434c4f",
     "is_special": false
   },
-  "1002": {
-    "token": "පසිරැසි",
-    "hex": "e0b6b4e0b783e0b792e0b6bbe0b790e0b783e0b792",
+  "429": {
+    "token": "CLOU",
+    "hex": "434c4f55",
     "is_special": false
   },
-  "1003": {
-    "token": "ො",
-    "hex": "e0b79c",
+  "430": {
+    "token": "CLOUD",
+    "hex": "434c4f5544",
     "is_special": false
   },
-  "1004": {
-    "token": " සැක",
-    "hex": "20e0b783e0b790e0b69a",
+  "431": {
+    "token": "with",
+    "hex": "77697468",
     "is_special": false
   },
-  "1005": {
-    "token": " සැකස",
-    "hex": "20e0b783e0b790e0b69ae0b783",
+  "432": {
+    "token": "igh",
+    "hex": "696768",
     "is_special": false
   },
-  "1006": {
-    "token": " සැකසුම",
-    "hex": "20e0b783e0b790e0b69ae0b783e0b794e0b6b8",
+  "433": {
+    "token": "age",
+    "hex": "616765",
     "is_special": false
   },
-  "1007": {
-    "token": " සැකසුම්",
-    "hex": "20e0b783e0b790e0b69ae0b783e0b794e0b6b8e0b78a",
+  "434": {
+    "token": "ent",
+    "hex": "656e74",
     "is_special": false
   },
-  "1008": {
-    "token": "<bytes:20e0b6b8e0b6>",
-    "hex": "20e0b6b8e0b6",
+  "435": {
+    "token": "ma",
+    "hex": "6d61",
     "is_special": false
   },
-  "1009": {
-    "token": " මඟ",
-    "hex": "20e0b6b8e0b69f",
+  "436": {
+    "token": "der",
+    "hex": "646572",
     "is_special": false
   },
-  "1010": {
-    "token": " මඟින්",
-    "hex": "20e0b6b8e0b69fe0b792e0b6b1e0b78a",
+  "437": {
+    "token": "tu",
+    "hex": "7475",
     "is_special": false
   },
-  "1011": {
-    "token": " ර",
-    "hex": "20e0b6bb",
+  "438": {
+    "token": "ture",
+    "hex": "74757265",
     "is_special": false
   },
-  "1012": {
-    "token": "bookmark",
-    "hex": "626f6f6b6d61726b",
+  "439": {
+    "token": "pre",
+    "hex": "707265",
     "is_special": false
   },
-  "1013": {
-    "token": "User: Wh",
-    "hex": "557365723a205768",
+  "440": {
+    "token": "si",
+    "hex": "7369",
     "is_special": false
   },
-  "1014": {
-    "token": "User: Who ",
-    "hex": "557365723a2057686f20",
+  "441": {
+    "token": "scen",
+    "hex": "7363656e",
     "is_special": false
   },
-  "1015": {
-    "token": "? Assistant: I ",
-    "hex": "3f20417373697374616e743a204920",
+  "442": {
+    "token": "file",
+    "hex": "66696c65",
     "is_special": false
   },
-  "1016": {
-    "token": "am ",
-    "hex": "616d20",
+  "443": {
+    "token": "out",
+    "hex": "6f7574",
     "is_special": false
   },
-  "1017": {
-    "token": "am MasterAI Cor",
-    "hex": "616d204d6173746572414920436f72",
+  "444": {
+    "token": "hi",
+    "hex": "6869",
     "is_special": false
   },
-  "1018": {
-    "token": ", the ",
-    "hex": "2c2074686520",
+  "445": {
+    "token": "adju",
+    "hex": "61646a75",
     "is_special": false
   },
-  "1019": {
+  "446": {
+    "token": "adjust",
+    "hex": "61646a757374",
+    "is_special": false
+  },
+  "447": {
+    "token": "li",
+    "hex": "6c69",
+    "is_special": false
+  },
+  "448": {
+    "token": "yn",
+    "hex": "796e",
+    "is_special": false
+  },
+  "449": {
+    "token": "කරන",
+    "hex": "e0b69ae0b6bbe0b6b1",
+    "is_special": false
+  },
+  "450": {
+    "token": "වත",
+    "hex": "e0b780e0b6ad",
+    "is_special": false
+  },
+  "451": {
+    "token": "කළ",
+    "hex": "e0b69ae0b785",
+    "is_special": false
+  },
+  "452": {
+    "token": "ore",
+    "hex": "6f7265",
+    "is_special": false
+  },
+  "453": {
+    "token": "ence",
+    "hex": "656e6365",
+    "is_special": false
+  },
+  "454": {
+    "token": "time",
+    "hex": "74696d65",
+    "is_special": false
+  },
+  "455": {
+    "token": "requ",
+    "hex": "72657175",
+    "is_special": false
+  },
+  "456": {
+    "token": "can",
+    "hex": "63616e",
+    "is_special": false
+  },
+  "457": {
+    "token": "reen",
+    "hex": "7265656e",
+    "is_special": false
+  },
+  "458": {
+    "token": "secon",
+    "hex": "7365636f6e",
+    "is_special": false
+  },
+  "459": {
+    "token": "ation",
+    "hex": "6174696f6e",
+    "is_special": false
+  },
+  "460": {
+    "token": "he",
+    "hex": "6865",
+    "is_special": false
+  },
+  "461": {
+    "token": "Studio",
+    "hex": "53747564696f",
+    "is_special": false
+  },
+  "462": {
+    "token": "Su",
+    "hex": "5375",
+    "is_special": false
+  },
+  "463": {
+    "token": "ණ",
+    "hex": "e0b6ab",
+    "is_special": false
+  },
+  "464": {
+    "token": "ල",
+    "hex": "e0b6bd",
+    "is_special": false
+  },
+  "465": {
+    "token": "ට",
+    "hex": "e0b6a7",
+    "is_special": false
+  },
+  "466": {
+    "token": "qual",
+    "hex": "7175616c",
+    "is_special": false
+  },
+  "467": {
+    "token": "qualiz",
+    "hex": "7175616c697a",
+    "is_special": false
+  },
+  "468": {
+    "token": "use",
+    "hex": "757365",
+    "is_special": false
+  },
+  "469": {
+    "token": "detec",
+    "hex": "6465746563",
+    "is_special": false
+  },
+  "470": {
+    "token": "tly",
+    "hex": "746c79",
+    "is_special": false
+  },
+  "471": {
+    "token": "line",
+    "hex": "6c696e65",
+    "is_special": false
+  },
+  "472": {
+    "token": "pac",
+    "hex": "706163",
+    "is_special": false
+  },
+  "473": {
+    "token": "bo",
+    "hex": "626f",
+    "is_special": false
+  },
+  "474": {
+    "token": "ick",
+    "hex": "69636b",
+    "is_special": false
+  },
+  "475": {
+    "token": "ull",
+    "hex": "756c6c",
+    "is_special": false
+  },
+  "476": {
+    "token": "screen",
+    "hex": "73637265656e",
+    "is_special": false
+  },
+  "477": {
+    "token": "seconds",
+    "hex": "7365636f6e6473",
+    "is_special": false
+  },
+  "478": {
+    "token": "jum",
+    "hex": "6a756d",
+    "is_special": false
+  },
+  "479": {
+    "token": "jump",
+    "hex": "6a756d70",
+    "is_special": false
+  },
+  "480": {
+    "token": "Shi",
+    "hex": "536869",
+    "is_special": false
+  },
+  "481": {
+    "token": "Shift",
+    "hex": "5368696674",
+    "is_special": false
+  },
+  "482": {
+    "token": "ep",
+    "hex": "6570",
+    "is_special": false
+  },
+  "483": {
+    "token": "od",
+    "hex": "6f64",
+    "is_special": false
+  },
+  "484": {
+    "token": "set",
+    "hex": "736574",
+    "is_special": false
+  },
+  "485": {
+    "token": "sh",
+    "hex": "7368",
+    "is_special": false
+  },
+  "486": {
+    "token": "amp",
+    "hex": "616d70",
+    "is_special": false
+  },
+  "487": {
+    "token": "ta",
+    "hex": "7461",
+    "is_special": false
+  },
+  "488": {
+    "token": "open",
+    "hex": "6f70656e",
+    "is_special": false
+  },
+  "489": {
+    "token": "Web",
+    "hex": "576562",
+    "is_special": false
+  },
+  "490": {
+    "token": "does",
+    "hex": "646f6573",
+    "is_special": false
+  },
+  "491": {
+    "token": "be",
+    "hex": "6265",
+    "is_special": false
+  },
+  "492": {
+    "token": "subtitle",
+    "hex": "7375627469746c65",
+    "is_special": false
+  },
+  "493": {
+    "token": "por",
+    "hex": "706f72",
+    "is_special": false
+  },
+  "494": {
+    "token": "ted",
+    "hex": "746564",
+    "is_special": false
+  },
+  "495": {
+    "token": "අ",
+    "hex": "e0b685",
+    "is_special": false
+  },
+  "496": {
+    "token": "පස",
+    "hex": "e0b6b4e0b783",
+    "is_special": false
+  },
+  "497": {
     "token": "orig",
     "hex": "6f726967",
     "is_special": false
   },
-  "1020": {
+  "498": {
     "token": "origin",
     "hex": "6f726967696e",
     "is_special": false
   },
+  "499": {
+    "token": "medi",
+    "hex": "6d656469",
+    "is_special": false
+  },
+  "500": {
+    "token": "orage",
+    "hex": "6f72616765",
+    "is_special": false
+  },
+  "501": {
+    "token": "qualizer",
+    "hex": "7175616c697a6572",
+    "is_special": false
+  },
+  "502": {
+    "token": "we",
+    "hex": "7765",
+    "is_special": false
+  },
+  "503": {
+    "token": "scene",
+    "hex": "7363656e65",
+    "is_special": false
+  },
+  "504": {
+    "token": "tran",
+    "hex": "7472616e",
+    "is_special": false
+  },
+  "505": {
+    "token": "scri",
+    "hex": "73637269",
+    "is_special": false
+  },
+  "506": {
+    "token": "scrip",
+    "hex": "7363726970",
+    "is_special": false
+  },
+  "507": {
+    "token": "pro",
+    "hex": "70726f",
+    "is_special": false
+  },
+  "508": {
+    "token": "str",
+    "hex": "737472",
+    "is_special": false
+  },
+  "509": {
+    "token": "off",
+    "hex": "6f6666",
+    "is_special": false
+  },
+  "510": {
+    "token": "Can",
+    "hex": "43616e",
+    "is_special": false
+  },
+  "511": {
+    "token": "Yes",
+    "hex": "596573",
+    "is_special": false
+  },
+  "512": {
+    "token": "any",
+    "hex": "616e79",
+    "is_special": false
+  },
+  "513": {
+    "token": "ward",
+    "hex": "77617264",
+    "is_special": false
+  },
+  "514": {
+    "token": "ight",
+    "hex": "69676874",
+    "is_special": false
+  },
+  "515": {
+    "token": "rou",
+    "hex": "726f75",
+    "is_special": false
+  },
+  "516": {
+    "token": "own",
+    "hex": "6f776e",
+    "is_special": false
+  },
+  "517": {
+    "token": "Pic",
+    "hex": "506963",
+    "is_special": false
+  },
+  "518": {
+    "token": "Picture",
+    "hex": "50696374757265",
+    "is_special": false
+  },
+  "519": {
+    "token": "us",
+    "hex": "7573",
+    "is_special": false
+  },
+  "520": {
+    "token": "mb",
+    "hex": "6d62",
+    "is_special": false
+  },
+  "521": {
+    "token": "oc",
+    "hex": "6f63",
+    "is_special": false
+  },
+  "522": {
+    "token": "16",
+    "hex": "3136",
+    "is_special": false
+  },
+  "523": {
+    "token": "ical",
+    "hex": "6963616c",
+    "is_special": false
+  },
+  "524": {
+    "token": "wor",
+    "hex": "776f72",
+    "is_special": false
+  },
+  "525": {
+    "token": "sli",
+    "hex": "736c69",
+    "is_special": false
+  },
+  "526": {
+    "token": "slider",
+    "hex": "736c69646572",
+    "is_special": false
+  },
+  "527": {
+    "token": "syn",
+    "hex": "73796e",
+    "is_special": false
+  },
+  "528": {
+    "token": "ms",
+    "hex": "6d73",
+    "is_special": false
+  },
+  "529": {
+    "token": "එබ",
+    "hex": "e0b691e0b6b6",
+    "is_special": false
+  },
+  "530": {
+    "token": "Core",
+    "hex": "436f7265",
+    "is_special": false
+  },
+  "531": {
+    "token": "bu",
+    "hex": "6275",
+    "is_special": false
+  },
+  "532": {
+    "token": "il",
+    "hex": "696c",
+    "is_special": false
+  },
+  "533": {
+    "token": "into",
+    "hex": "696e746f",
+    "is_special": false
+  },
+  "534": {
+    "token": "run",
+    "hex": "72756e",
+    "is_special": false
+  },
+  "535": {
+    "token": "clou",
+    "hex": "636c6f75",
+    "is_special": false
+  },
+  "536": {
+    "token": "cloud",
+    "hex": "636c6f7564",
+    "is_special": false
+  },
+  "537": {
+    "token": "vate",
+    "hex": "76617465",
+    "is_special": false
+  },
+  "538": {
+    "token": "per",
+    "hex": "706572",
+    "is_special": false
+  },
+  "539": {
+    "token": "by",
+    "hex": "6279",
+    "is_special": false
+  },
+  "540": {
+    "token": "mode",
+    "hex": "6d6f6465",
+    "is_special": false
+  },
+  "541": {
+    "token": "fer",
+    "hex": "666572",
+    "is_special": false
+  },
+  "542": {
+    "token": "transcrip",
+    "hex": "7472616e7363726970",
+    "is_special": false
+  },
+  "543": {
+    "token": "oo",
+    "hex": "6f6f",
+    "is_special": false
+  },
+  "544": {
+    "token": "gle",
+    "hex": "676c65",
+    "is_special": false
+  },
+  "545": {
+    "token": "acks",
+    "hex": "61636b73",
+    "is_special": false
+  },
+  "546": {
+    "token": "net",
+    "hex": "6e6574",
+    "is_special": false
+  },
+  "547": {
+    "token": "mem",
+    "hex": "6d656d",
+    "is_special": false
+  },
+  "548": {
+    "token": "memor",
+    "hex": "6d656d6f72",
+    "is_special": false
+  },
+  "549": {
+    "token": "memory",
+    "hex": "6d656d6f7279",
+    "is_special": false
+  },
+  "550": {
+    "token": "playback",
+    "hex": "706c61796261636b",
+    "is_special": false
+  },
+  "551": {
+    "token": "ere",
+    "hex": "657265",
+    "is_special": false
+  },
+  "552": {
+    "token": "full",
+    "hex": "66756c6c",
+    "is_special": false
+  },
+  "553": {
+    "token": "press",
+    "hex": "7072657373",
+    "is_special": false
+  },
+  "554": {
+    "token": "ute",
+    "hex": "757465",
+    "is_special": false
+  },
+  "555": {
+    "token": "olu",
+    "hex": "6f6c75",
+    "is_special": false
+  },
+  "556": {
+    "token": "keys",
+    "hex": "6b657973",
+    "is_special": false
+  },
+  "557": {
+    "token": "spe",
+    "hex": "737065",
+    "is_special": false
+  },
+  "558": {
+    "token": "up",
+    "hex": "7570",
+    "is_special": false
+  },
+  "559": {
+    "token": "low",
+    "hex": "6c6f77",
+    "is_special": false
+  },
+  "560": {
+    "token": "25",
+    "hex": "3235",
+    "is_special": false
+  },
+  "561": {
+    "token": "oin",
+    "hex": "6f696e",
+    "is_special": false
+  },
+  "562": {
+    "token": "oint",
+    "hex": "6f696e74",
+    "is_special": false
+  },
+  "563": {
+    "token": "using",
+    "hex": "7573696e67",
+    "is_special": false
+  },
+  "564": {
+    "token": "Sc",
+    "hex": "5363",
+    "is_special": false
+  },
+  "565": {
+    "token": "Audio",
+    "hex": "417564696f",
+    "is_special": false
+  },
+  "566": {
+    "token": "The",
+    "hex": "546865",
+    "is_special": false
+  },
+  "567": {
+    "token": "500",
+    "hex": "353030",
+    "is_special": false
+  },
+  "568": {
+    "token": "Cl",
+    "hex": "436c",
+    "is_special": false
+  },
+  "569": {
+    "token": "ity",
+    "hex": "697479",
+    "is_special": false
+  },
+  "570": {
+    "token": "ech",
+    "hex": "656368",
+    "is_special": false
+  },
+  "571": {
+    "token": "work",
+    "hex": "776f726b",
+    "is_special": false
+  },
+  "572": {
+    "token": "De",
+    "hex": "4465",
+    "is_special": false
+  },
+  "573": {
+    "token": "fr",
+    "hex": "6672",
+    "is_special": false
+  },
+  "574": {
+    "token": "from",
+    "hex": "66726f6d",
+    "is_special": false
+  },
+  "575": {
+    "token": "Subtitle",
+    "hex": "5375627469746c65",
+    "is_special": false
+  },
+  "576": {
+    "token": "sup",
+    "hex": "737570",
+    "is_special": false
+  },
+  "577": {
+    "token": "suppor",
+    "hex": "737570706f72",
+    "is_special": false
+  },
+  "578": {
+    "token": "TT",
+    "hex": "5454",
+    "is_special": false
+  },
+  "579": {
+    "token": "mar",
+    "hex": "6d6172",
+    "is_special": false
+  },
+  "580": {
+    "token": "ඔ",
+    "hex": "e0b694",
+    "is_special": false
+  },
+  "581": {
+    "token": "පර",
+    "hex": "e0b6b4e0b6bb",
+    "is_special": false
+  },
+  "582": {
+    "token": "නය",
+    "hex": "e0b6b1e0b6ba",
+    "is_special": false
+  },
+  "583": {
+    "token": "ශබ",
+    "hex": "e0b781e0b6b6",
+    "is_special": false
+  },
+  "584": {
+    "token": "උ",
+    "hex": "e0b68b",
+    "is_special": false
+  },
+  "585": {
+    "token": "සහ",
+    "hex": "e0b783e0b784",
+    "is_special": false
+  },
+  "586": {
+    "token": "original",
+    "hex": "6f726967696e616c",
+    "is_special": false
+  },
+  "587": {
+    "token": "ous",
+    "hex": "6f7573",
+    "is_special": false
+  },
+  "588": {
+    "token": "media",
+    "hex": "6d65646961",
+    "is_special": false
+  },
+  "589": {
+    "token": "ative",
+    "hex": "6174697665",
+    "is_special": false
+  },
+  "590": {
+    "token": "storage",
+    "hex": "73746f72616765",
+    "is_special": false
+  },
+  "591": {
+    "token": "band",
+    "hex": "62616e64",
+    "is_special": false
+  },
+  "592": {
+    "token": "equalizer",
+    "hex": "657175616c697a6572",
+    "is_special": false
+  },
+  "593": {
+    "token": "dec",
+    "hex": "646563",
+    "is_special": false
+  },
+  "594": {
+    "token": "brow",
+    "hex": "62726f77",
+    "is_special": false
+  },
+  "595": {
+    "token": "browser",
+    "hex": "62726f77736572",
+    "is_special": false
+  },
+  "596": {
+    "token": "All",
+    "hex": "416c6c",
+    "is_special": false
+  },
+  "597": {
+    "token": "transcript",
+    "hex": "7472616e736372697074",
+    "is_special": false
+  },
+  "598": {
+    "token": "Do",
+    "hex": "446f",
+    "is_special": false
+  },
+  "599": {
+    "token": "my",
+    "hex": "6d79",
+    "is_special": false
+  },
+  "600": {
+    "token": "No",
+    "hex": "4e6f",
+    "is_special": false
+  },
+  "601": {
+    "token": "frames",
+    "hex": "6672616d6573",
+    "is_special": false
+  },
+  "602": {
+    "token": "without",
+    "hex": "776974686f7574",
+    "is_special": false
+  },
+  "603": {
+    "token": "ded",
+    "hex": "646564",
+    "is_special": false
+  },
+  "604": {
+    "token": "tions",
+    "hex": "74696f6e73",
+    "is_special": false
+  },
+  "605": {
+    "token": "tog",
+    "hex": "746f67",
+    "is_special": false
+  },
+  "606": {
+    "token": "toggle",
+    "hex": "746f67676c65",
+    "is_special": false
+  },
+  "607": {
+    "token": "click",
+    "hex": "636c69636b",
+    "is_special": false
+  },
+  "608": {
+    "token": "see",
+    "hex": "736565",
+    "is_special": false
+  },
+  "609": {
+    "token": "seek",
+    "hex": "7365656b",
+    "is_special": false
+  },
+  "610": {
+    "token": "Right",
+    "hex": "5269676874",
+    "is_special": false
+  },
+  "611": {
+    "token": "Le",
+    "hex": "4c65",
+    "is_special": false
+  },
+  "612": {
+    "token": "Left",
+    "hex": "4c656674",
+    "is_special": false
+  },
+  "613": {
+    "token": "ci",
+    "hex": "6369",
+    "is_special": false
+  },
+  "614": {
+    "token": "step",
+    "hex": "73746570",
+    "is_special": false
+  },
+  "615": {
+    "token": "throu",
+    "hex": "7468726f75",
+    "is_special": false
+  },
+  "616": {
+    "token": "throug",
+    "hex": "7468726f7567",
+    "is_special": false
+  },
+  "617": {
+    "token": "through",
+    "hex": "7468726f756768",
+    "is_special": false
+  },
+  "618": {
+    "token": "Per",
+    "hex": "506572",
+    "is_special": false
+  },
+  "619": {
+    "token": "inst",
+    "hex": "696e7374",
+    "is_special": false
+  },
+  "620": {
+    "token": "down",
+    "hex": "646f776e",
+    "is_special": false
+  },
+  "621": {
+    "token": "ot",
+    "hex": "6f74",
+    "is_special": false
+  },
+  "622": {
+    "token": "cur",
+    "hex": "637572",
+    "is_special": false
+  },
+  "623": {
+    "token": "Point",
+    "hex": "506f696e74",
+    "is_special": false
+  },
+  "624": {
+    "token": "90",
+    "hex": "3930",
+    "is_special": false
+  },
+  "625": {
+    "token": "el",
+    "hex": "656c",
+    "is_special": false
+  },
+  "626": {
+    "token": "frequ",
+    "hex": "6672657175",
+    "is_special": false
+  },
+  "627": {
+    "token": "frequen",
+    "hex": "6672657175656e",
+    "is_special": false
+  },
+  "628": {
+    "token": "cy",
+    "hex": "6379",
+    "is_special": false
+  },
+  "629": {
+    "token": "32",
+    "hex": "3332",
+    "is_special": false
+  },
+  "630": {
+    "token": "ass",
+    "hex": "617373",
+    "is_special": false
+  },
+  "631": {
+    "token": "Vo",
+    "hex": "566f",
+    "is_special": false
+  },
+  "632": {
+    "token": "Vocal",
+    "hex": "566f63616c",
+    "is_special": false
+  },
+  "633": {
+    "token": "Clar",
+    "hex": "436c6172",
+    "is_special": false
+  },
+  "634": {
+    "token": "Clarity",
+    "hex": "436c6172697479",
+    "is_special": false
+  },
+  "635": {
+    "token": "onic",
+    "hex": "6f6e6963",
+    "is_special": false
+  },
+  "636": {
+    "token": "bet",
+    "hex": "626574",
+    "is_special": false
+  },
+  "637": {
+    "token": "betwe",
+    "hex": "6265747765",
+    "is_special": false
+  },
+  "638": {
+    "token": "between",
+    "hex": "6265747765656e",
+    "is_special": false
+  },
+  "639": {
+    "token": "contr",
+    "hex": "636f6e7472",
+    "is_special": false
+  },
+  "640": {
+    "token": "control",
+    "hex": "636f6e74726f6c",
+    "is_special": false
+  },
+  "641": {
+    "token": "match",
+    "hex": "6d61746368",
+    "is_special": false
+  },
+  "642": {
+    "token": "In",
+    "hex": "496e",
+    "is_special": false
+  },
+  "643": {
+    "token": "ize",
+    "hex": "697a65",
+    "is_special": false
+  },
+  "644": {
+    "token": "load",
+    "hex": "6c6f6164",
+    "is_special": false
+  },
+  "645": {
+    "token": "tern",
+    "hex": "7465726e",
+    "is_special": false
+  },
+  "646": {
+    "token": "ternal",
+    "hex": "7465726e616c",
+    "is_special": false
+  },
+  "647": {
+    "token": "tex",
+    "hex": "746578",
+    "is_special": false
+  },
+  "648": {
+    "token": "text",
+    "hex": "74657874",
+    "is_special": false
+  },
+  "649": {
+    "token": "VTT",
+    "hex": "565454",
+    "is_special": false
+  },
+  "650": {
+    "token": "ener",
+    "hex": "656e6572",
+    "is_special": false
+  },
+  "651": {
+    "token": "WP",
+    "hex": "5750",
+    "is_special": false
+  },
+  "652": {
+    "token": "WPM",
+    "hex": "57504d",
+    "is_special": false
+  },
+  "653": {
+    "token": "ෂ",
+    "hex": "e0b782",
+    "is_special": false
+  },
+  "654": {
+    "token": "ධ",
+    "hex": "e0b6b0",
+    "is_special": false
+  },
+  "655": {
+    "token": "<bytes:e280>",
+    "hex": "e280",
+    "is_special": false
+  },
+  "656": {
+    "token": "‍",
+    "hex": "e2808d",
+    "is_special": false
+  },
+  "657": {
+    "token": "ඔබ",
+    "hex": "e0b694e0b6b6",
+    "is_special": false
+  },
+  "658": {
+    "token": "ණක",
+    "hex": "e0b6abe0b69a",
+    "is_special": false
+  },
+  "659": {
+    "token": "දනය",
+    "hex": "e0b6afe0b6b1e0b6ba",
+    "is_special": false
+  },
+  "660": {
+    "token": "තත",
+    "hex": "e0b6ade0b6ad",
+    "is_special": false
+  },
+  "661": {
+    "token": "වය",
+    "hex": "e0b780e0b6ba",
+    "is_special": false
+  },
+  "662": {
+    "token": "එක",
+    "hex": "e0b691e0b69a",
+    "is_special": false
+  },
+  "663": {
+    "token": "ං",
+    "hex": "e0b682",
+    "is_special": false
+  },
+  "664": {
+    "token": "ගත",
+    "hex": "e0b69ce0b6ad",
+    "is_special": false
+  },
+  "665": {
+    "token": "කස",
+    "hex": "e0b69ae0b783",
+    "is_special": false
+  },
+  "666": {
+    "token": "ut",
+    "hex": "7574",
+    "is_special": false
+  },
+  "667": {
+    "token": "ilt",
+    "hex": "696c74",
+    "is_special": false
+  },
+  "668": {
+    "token": "native",
+    "hex": "6e6174697665",
+    "is_special": false
+  },
+  "669": {
+    "token": "natively",
+    "hex": "6e61746976656c79",
+    "is_special": false
+  },
+  "670": {
+    "token": "locally",
+    "hex": "6c6f63616c6c79",
+    "is_special": false
+  },
+  "671": {
+    "token": "ach",
+    "hex": "616368",
+    "is_special": false
+  },
+  "672": {
+    "token": "zer",
+    "hex": "7a6572",
+    "is_special": false
+  },
+  "673": {
+    "token": "zero",
+    "hex": "7a65726f",
+    "is_special": false
+  },
+  "674": {
+    "token": "pri",
+    "hex": "707269",
+    "is_special": false
+  },
+  "675": {
+    "token": "private",
+    "hex": "70726976617465",
+    "is_special": false
+  },
+  "676": {
+    "token": "form",
+    "hex": "666f726d",
+    "is_special": false
+  },
+  "677": {
+    "token": "lat",
+    "hex": "6c6174",
+    "is_special": false
+  },
+  "678": {
+    "token": "uses",
+    "hex": "75736573",
+    "is_special": false
+  },
+  "679": {
+    "token": "ran",
+    "hex": "72616e",
+    "is_special": false
+  },
+  "680": {
+    "token": "arch",
+    "hex": "61726368",
+    "is_special": false
+  },
+  "681": {
+    "token": "cust",
+    "hex": "63757374",
+    "is_special": false
+  },
+  "682": {
+    "token": "custom",
+    "hex": "637573746f6d",
+    "is_special": false
+  },
+  "683": {
+    "token": "inde",
+    "hex": "696e6465",
+    "is_special": false
+  },
+  "684": {
+    "token": "never",
+    "hex": "6e65766572",
+    "is_special": false
+  },
+  "685": {
+    "token": "ls",
+    "hex": "6c73",
+    "is_special": false
+  },
+  "686": {
+    "token": "com",
+    "hex": "636f6d",
+    "is_special": false
+  },
+  "687": {
+    "token": "comp",
+    "hex": "636f6d70",
+    "is_special": false
+  },
+  "688": {
+    "token": "side",
+    "hex": "73696465",
+    "is_special": false
+  },
+  "689": {
+    "token": "ference",
+    "hex": "666572656e6365",
+    "is_special": false
+  },
+  "690": {
+    "token": "detection",
+    "hex": "646574656374696f6e",
+    "is_special": false
+  },
+  "691": {
+    "token": "anal",
+    "hex": "616e616c",
+    "is_special": false
+  },
+  "692": {
+    "token": "analy",
+    "hex": "616e616c79",
+    "is_special": false
+  },
+  "693": {
+    "token": "cess",
+    "hex": "63657373",
+    "is_special": false
+  },
+  "694": {
+    "token": "stric",
+    "hex": "7374726963",
+    "is_special": false
+  },
+  "695": {
+    "token": "strictly",
+    "hex": "7374726963746c79",
+    "is_special": false
+  },
+  "696": {
+    "token": "end",
+    "hex": "656e64",
+    "is_special": false
+  },
+  "697": {
+    "token": "Open",
+    "hex": "4f70656e",
+    "is_special": false
+  },
+  "698": {
+    "token": "You",
+    "hex": "596f75",
+    "is_special": false
+  },
+  "699": {
+    "token": "files",
+    "hex": "66696c6573",
+    "is_special": false
+  },
+  "700": {
+    "token": "inter",
+    "hex": "696e746572",
+    "is_special": false
+  },
+  "701": {
+    "token": "internet",
+    "hex": "696e7465726e6574",
+    "is_special": false
+  },
+  "702": {
+    "token": "ul",
+    "hex": "756c",
+    "is_special": false
+  },
+  "703": {
+    "token": "pace",
+    "hex": "70616365",
+    "is_special": false
+  },
+  "704": {
+    "token": "bar",
+    "hex": "626172",
+    "is_special": false
+  },
+  "705": {
+    "token": "keybo",
+    "hex": "6b6579626f",
+    "is_special": false
+  },
+  "706": {
+    "token": "keyboard",
+    "hex": "6b6579626f617264",
+    "is_special": false
+  },
+  "707": {
+    "token": "wh",
+    "hex": "7768",
+    "is_special": false
+  },
+  "708": {
+    "token": "dire",
+    "hex": "64697265",
+    "is_special": false
+  },
+  "709": {
+    "token": "direc",
+    "hex": "6469726563",
+    "is_special": false
+  },
+  "710": {
+    "token": "directly",
+    "hex": "6469726563746c79",
+    "is_special": false
+  },
+  "711": {
+    "token": "canv",
+    "hex": "63616e76",
+    "is_special": false
+  },
+  "712": {
+    "token": "canvas",
+    "hex": "63616e766173",
+    "is_special": false
+  },
+  "713": {
+    "token": "fullscreen",
+    "hex": "66756c6c73637265656e",
+    "is_special": false
+  },
+  "714": {
+    "token": "enter",
+    "hex": "656e746572",
+    "is_special": false
+  },
+  "715": {
+    "token": "forward",
+    "hex": "666f7277617264",
+    "is_special": false
+  },
+  "716": {
+    "token": "backward",
+    "hex": "6261636b77617264",
+    "is_special": false
+  },
+  "717": {
+    "token": "Peri",
+    "hex": "50657269",
+    "is_special": false
+  },
+  "718": {
+    "token": "Period",
+    "hex": "506572696f64",
+    "is_special": false
+  },
+  "719": {
+    "token": "one",
+    "hex": "6f6e65",
+    "is_special": false
+  },
+  "720": {
+    "token": "Com",
+    "hex": "436f6d",
+    "is_special": false
+  },
+  "721": {
+    "token": "Comma",
+    "hex": "436f6d6d61",
+    "is_special": false
+  },
+  "722": {
+    "token": "mute",
+    "hex": "6d757465",
+    "is_special": false
+  },
+  "723": {
+    "token": "volu",
+    "hex": "766f6c75",
+    "is_special": false
+  },
+  "724": {
+    "token": "volume",
+    "hex": "766f6c756d65",
+    "is_special": false
+  },
+  "725": {
+    "token": "ase",
+    "hex": "617365",
+    "is_special": false
+  },
+  "726": {
+    "token": "cap",
+    "hex": "636170",
+    "is_special": false
+  },
+  "727": {
+    "token": "res",
+    "hex": "726573",
+    "is_special": false
+  },
+  "728": {
+    "token": "im",
+    "hex": "696d",
+    "is_special": false
+  },
+  "729": {
+    "token": "des",
+    "hex": "646573",
+    "is_special": false
+  },
+  "730": {
+    "token": "top",
+    "hex": "746f70",
+    "is_special": false
+  },
+  "731": {
+    "token": "Re",
+    "hex": "5265",
+    "is_special": false
+  },
+  "732": {
+    "token": "Repe",
+    "hex": "52657065",
+    "is_special": false
+  },
+  "733": {
+    "token": "Repeat",
+    "hex": "526570656174",
+    "is_special": false
+  },
+  "734": {
+    "token": "gm",
+    "hex": "676d",
+    "is_special": false
+  },
+  "735": {
+    "token": "umb",
+    "hex": "756d62",
+    "is_special": false
+  },
+  "736": {
+    "token": "ers",
+    "hex": "657273",
+    "is_special": false
+  },
+  "737": {
+    "token": "ample",
+    "hex": "616d706c65",
+    "is_special": false
+  },
+  "738": {
+    "token": "mi",
+    "hex": "6d69",
+    "is_special": false
+  },
+  "739": {
+    "token": "clo",
+    "hex": "636c6f",
+    "is_special": false
+  },
+  "740": {
+    "token": "zo",
+    "hex": "7a6f",
+    "is_special": false
+  },
+  "741": {
+    "token": "zoom",
+    "hex": "7a6f6f6d",
+    "is_special": false
+  },
+  "742": {
+    "token": "ble",
+    "hex": "626c65",
+    "is_special": false
+  },
+  "743": {
+    "token": "SO",
+    "hex": "534f",
+    "is_special": false
+  },
+  "744": {
+    "token": "bands",
+    "hex": "62616e6473",
+    "is_special": false
+  },
+  "745": {
+    "token": "bal",
+    "hex": "62616c",
+    "is_special": false
+  },
+  "746": {
+    "token": "balance",
+    "hex": "62616c616e6365",
+    "is_special": false
+  },
+  "747": {
+    "token": "frequency",
+    "hex": "6672657175656e6379",
+    "is_special": false
+  },
+  "748": {
+    "token": "32Hz",
+    "hex": "3332487a",
+    "is_special": false
+  },
+  "749": {
+    "token": "16kHz",
+    "hex": "31366b487a",
+    "is_special": false
+  },
+  "750": {
+    "token": "sets",
+    "hex": "73657473",
+    "is_special": false
+  },
+  "751": {
+    "token": "lec",
+    "hex": "6c6563",
+    "is_special": false
+  },
+  "752": {
+    "token": "lectr",
+    "hex": "6c65637472",
+    "is_special": false
+  },
+  "753": {
+    "token": "lectronic",
+    "hex": "6c656374726f6e6963",
+    "is_special": false
+  },
+  "754": {
+    "token": "nd",
+    "hex": "6e64",
+    "is_special": false
+  },
+  "755": {
+    "token": "est",
+    "hex": "657374",
+    "is_special": false
+  },
+  "756": {
+    "token": "sync",
+    "hex": "73796e63",
+    "is_special": false
+  },
+  "757": {
+    "token": "500ms",
+    "hex": "3530306d73",
+    "is_special": false
+  },
+  "758": {
+    "token": "ents",
+    "hex": "656e7473",
+    "is_special": false
+  },
+  "759": {
+    "token": "Does",
+    "hex": "446f6573",
+    "is_special": false
+  },
+  "760": {
+    "token": "external",
+    "hex": "65787465726e616c",
+    "is_special": false
+  },
+  "761": {
+    "token": "subtitles",
+    "hex": "7375627469746c6573",
+    "is_special": false
+  },
+  "762": {
+    "token": "format",
+    "hex": "666f726d6174",
+    "is_special": false
+  },
+  "763": {
+    "token": "WebVTT",
+    "hex": "576562565454",
+    "is_special": false
+  },
+  "764": {
+    "token": "og",
+    "hex": "6f67",
+    "is_special": false
+  },
+  "765": {
+    "token": "Ex",
+    "hex": "4578",
+    "is_special": false
+  },
+  "766": {
+    "token": "tab",
+    "hex": "746162",
+    "is_special": false
+  },
+  "767": {
+    "token": "SR",
+    "hex": "5352",
+    "is_special": false
+  },
+  "768": {
+    "token": "SRT",
+    "hex": "535254",
+    "is_special": false
+  },
+  "769": {
+    "token": "scenes",
+    "hex": "7363656e6573",
+    "is_special": false
+  },
+  "770": {
+    "token": "Scen",
+    "hex": "5363656e",
+    "is_special": false
+  },
+  "771": {
+    "token": "Detec",
+    "hex": "4465746563",
+    "is_special": false
+  },
+  "772": {
+    "token": "tive",
+    "hex": "74697665",
+    "is_special": false
+  },
+  "773": {
+    "token": "ically",
+    "hex": "6963616c6c79",
+    "is_special": false
+  },
+  "774": {
+    "token": "chap",
+    "hex": "63686170",
+    "is_special": false
+  },
+  "775": {
+    "token": "chapter",
+    "hex": "63686170746572",
+    "is_special": false
+  },
+  "776": {
+    "token": "timest",
+    "hex": "74696d657374",
+    "is_special": false
+  },
+  "777": {
+    "token": "timestamp",
+    "hex": "74696d657374616d70",
+    "is_special": false
+  },
+  "778": {
+    "token": "HL",
+    "hex": "484c",
+    "is_special": false
+  },
+  "779": {
+    "token": "HLS",
+    "hex": "484c53",
+    "is_special": false
+  },
+  "780": {
+    "token": "ream",
+    "hex": "7265616d",
+    "is_special": false
+  },
+  "781": {
+    "token": "reaming",
+    "hex": "7265616d696e67",
+    "is_special": false
+  },
+  "782": {
+    "token": "protec",
+    "hex": "70726f746563",
+    "is_special": false
+  },
+  "783": {
+    "token": "protect",
+    "hex": "70726f74656374",
+    "is_special": false
+  },
+  "784": {
+    "token": "sent",
+    "hex": "73656e74",
+    "is_special": false
+  },
+  "785": {
+    "token": "යන",
+    "hex": "e0b6bae0b6b1",
+    "is_special": false
+  },
+  "786": {
+    "token": "ඳ",
+    "hex": "e0b6b3",
+    "is_special": false
+  },
+  "787": {
+    "token": "ගණක",
+    "hex": "e0b69ce0b6abe0b69a",
+    "is_special": false
+  },
+  "788": {
+    "token": "වන",
+    "hex": "e0b780e0b6b1",
+    "is_special": false
+  },
+  "789": {
+    "token": "ෘ",
+    "hex": "e0b798",
+    "is_special": false
+  },
+  "790": {
+    "token": "අඩ",
+    "hex": "e0b685e0b6a9",
+    "is_special": false
+  },
+  "791": {
+    "token": "තර",
+    "hex": "e0b6ade0b6bb",
+    "is_special": false
+  },
+  "792": {
+    "token": "ඉ",
+    "hex": "e0b689",
+    "is_special": false
+  },
+  "793": {
+    "token": "යට",
+    "hex": "e0b6bae0b6a7",
+    "is_special": false
+  },
+  "794": {
+    "token": "උපස",
+    "hex": "e0b68be0b6b4e0b783",
+    "is_special": false
+  },
+  "795": {
+    "token": "ො",
+    "hex": "e0b79c",
+    "is_special": false
+  },
+  "796": {
+    "token": "<bytes:e0b6b8e0b6>",
+    "hex": "e0b6b8e0b6",
+    "is_special": false
+  },
+  "797": {
+    "token": "මඟ",
+    "hex": "e0b6b8e0b69f",
+    "is_special": false
+  },
+  "798": {
+    "token": "දක",
+    "hex": "e0b6afe0b69a",
+    "is_special": false
+  },
+  "799": {
+    "token": "ගය",
+    "hex": "e0b69ce0b6ba",
+    "is_special": false
+  },
+  "800": {
+    "token": "inte",
+    "hex": "696e7465",
+    "is_special": false
+  },
+  "801": {
+    "token": "intell",
+    "hex": "696e74656c6c",
+    "is_special": false
+  },
+  "802": {
+    "token": "intellig",
+    "hex": "696e74656c6c6967",
+    "is_special": false
+  },
+  "803": {
+    "token": "intelligence",
+    "hex": "696e74656c6c6967656e6365",
+    "is_special": false
+  },
+  "804": {
+    "token": "built",
+    "hex": "6275696c74",
+    "is_special": false
+  },
+  "805": {
+    "token": "100",
+    "hex": "313030",
+    "is_special": false
+  },
+  "806": {
+    "token": "mach",
+    "hex": "6d616368",
+    "is_special": false
+  },
+  "807": {
+    "token": "machine",
+    "hex": "6d616368696e65",
+    "is_special": false
+  },
+  "808": {
+    "token": "tele",
+    "hex": "74656c65",
+    "is_special": false
+  },
+  "809": {
+    "token": "teleme",
+    "hex": "74656c656d65",
+    "is_special": false
+  },
+  "810": {
+    "token": "telemetr",
+    "hex": "74656c656d657472",
+    "is_special": false
+  },
+  "811": {
+    "token": "telemetry",
+    "hex": "74656c656d65747279",
+    "is_special": false
+  },
+  "812": {
+    "token": "high",
+    "hex": "68696768",
+    "is_special": false
+  },
+  "813": {
+    "token": "ur",
+    "hex": "7572",
+    "is_special": false
+  },
+  "814": {
+    "token": "Tran",
+    "hex": "5472616e",
+    "is_special": false
+  },
+  "815": {
+    "token": "leve",
+    "hex": "6c657665",
+    "is_special": false
+  },
+  "816": {
+    "token": "ken",
+    "hex": "6b656e",
+    "is_special": false
+  },
+  "817": {
+    "token": "tra",
+    "hex": "747261",
+    "is_special": false
+  },
+  "818": {
+    "token": "traine",
+    "hex": "747261696e65",
+    "is_special": false
+  },
+  "819": {
+    "token": "trained",
+    "hex": "747261696e6564",
+    "is_special": false
+  },
+  "820": {
+    "token": "ps",
+    "hex": "7073",
+    "is_special": false
+  },
+  "821": {
+    "token": "ir",
+    "hex": "6972",
+    "is_special": false
+  },
+  "822": {
+    "token": "par",
+    "hex": "706172",
+    "is_special": false
+  },
+  "823": {
+    "token": "ty",
+    "hex": "7479",
+    "is_special": false
+  },
+  "824": {
+    "token": "inside",
+    "hex": "696e73696465",
+    "is_special": false
+  },
+  "825": {
+    "token": "inference",
+    "hex": "696e666572656e6365",
+    "is_special": false
+  },
+  "826": {
+    "token": "process",
+    "hex": "70726f63657373",
+    "is_special": false
+  },
+  "827": {
+    "token": "processing",
+    "hex": "70726f63657373696e67",
+    "is_special": false
+  },
+  "828": {
+    "token": "tracks",
+    "hex": "747261636b73",
+    "is_special": false
+  },
+  "829": {
+    "token": "ave",
+    "hex": "617665",
+    "is_special": false
+  },
+  "830": {
+    "token": "devi",
+    "hex": "64657669",
+    "is_special": false
+  },
+  "831": {
+    "token": "device",
+    "hex": "646576696365",
+    "is_special": false
+  },
+  "832": {
+    "token": "offline",
+    "hex": "6f66666c696e65",
+    "is_special": false
+  },
+  "833": {
+    "token": "fir",
+    "hex": "666972",
+    "is_special": false
+  },
+  "834": {
+    "token": "loa",
+    "hex": "6c6f61",
+    "is_special": false
+  },
+  "835": {
+    "token": "loaded",
+    "hex": "6c6f61646564",
+    "is_special": false
+  },
+  "836": {
+    "token": "requi",
+    "hex": "7265717569",
+    "is_special": false
+  },
+  "837": {
+    "token": "require",
+    "hex": "72657175697265",
+    "is_special": false
+  },
+  "838": {
+    "token": "pa",
+    "hex": "7061",
+    "is_special": false
+  },
+  "839": {
+    "token": "Space",
+    "hex": "5370616365",
+    "is_special": false
+  },
+  "840": {
+    "token": "Spacebar",
+    "hex": "5370616365626172",
+    "is_special": false
+  },
+  "841": {
+    "token": "als",
+    "hex": "616c73",
+    "is_special": false
+  },
+  "842": {
+    "token": "where",
+    "hex": "7768657265",
+    "is_special": false
+  },
+  "843": {
+    "token": "exit",
+    "hex": "65786974",
+    "is_special": false
+  },
+  "844": {
+    "token": "less",
+    "hex": "6c657373",
+    "is_special": false
+  },
+  "845": {
+    "token": "Esc",
+    "hex": "457363",
+    "is_special": false
+  },
+  "846": {
+    "token": "Esca",
+    "hex": "45736361",
+    "is_special": false
+  },
+  "847": {
+    "token": "Escape",
+    "hex": "457363617065",
+    "is_special": false
+  },
+  "848": {
+    "token": "preci",
+    "hex": "7072656369",
+    "is_special": false
+  },
+  "849": {
+    "token": "precise",
+    "hex": "70726563697365",
+    "is_special": false
+  },
+  "850": {
+    "token": "precisely",
+    "hex": "707265636973656c79",
+    "is_special": false
+  },
+  "851": {
+    "token": "old",
+    "hex": "6f6c64",
+    "is_special": false
+  },
+  "852": {
+    "token": "vance",
+    "hex": "76616e6365",
+    "is_special": false
+  },
+  "853": {
+    "token": "exac",
+    "hex": "65786163",
+    "is_special": false
+  },
+  "854": {
+    "token": "instant",
+    "hex": "696e7374616e74",
+    "is_special": false
+  },
+  "855": {
+    "token": "Up",
+    "hex": "5570",
+    "is_special": false
+  },
+  "856": {
+    "token": "rease",
+    "hex": "7265617365",
+    "is_special": false
+  },
+  "857": {
+    "token": "Down",
+    "hex": "446f776e",
+    "is_special": false
+  },
+  "858": {
+    "token": "speed",
+    "hex": "7370656564",
+    "is_special": false
+  },
+  "859": {
+    "token": "0x",
+    "hex": "3078",
+    "is_special": false
+  },
+  "860": {
+    "token": "slow",
+    "hex": "736c6f77",
+    "is_special": false
+  },
+  "861": {
+    "token": "capture",
+    "hex": "63617074757265",
+    "is_special": false
+  },
+  "862": {
+    "token": "shot",
+    "hex": "73686f74",
+    "is_special": false
+  },
+  "863": {
+    "token": "curre",
+    "hex": "6375727265",
+    "is_special": false
+  },
+  "864": {
+    "token": "curren",
+    "hex": "63757272656e",
+    "is_special": false
+  },
+  "865": {
+    "token": "current",
+    "hex": "63757272656e74",
+    "is_special": false
+  },
+  "866": {
+    "token": "resolu",
+    "hex": "7265736f6c75",
+    "is_special": false
+  },
+  "867": {
+    "token": "resolution",
+    "hex": "7265736f6c7574696f6e",
+    "is_special": false
+  },
+  "868": {
+    "token": "PN",
+    "hex": "504e",
+    "is_special": false
+  },
+  "869": {
+    "token": "PNG",
+    "hex": "504e47",
+    "is_special": false
+  },
+  "870": {
+    "token": "how",
+    "hex": "686f77",
+    "is_special": false
+  },
+  "871": {
+    "token": "acti",
+    "hex": "61637469",
+    "is_special": false
+  },
+  "872": {
+    "token": "activate",
+    "hex": "6163746976617465",
+    "is_special": false
+  },
+  "873": {
+    "token": "loat",
+    "hex": "6c6f6174",
+    "is_special": false
+  },
+  "874": {
+    "token": "dic",
+    "hex": "646963",
+    "is_special": false
+  },
+  "875": {
+    "token": "desk",
+    "hex": "6465736b",
+    "is_special": false
+  },
+  "876": {
+    "token": "desktop",
+    "hex": "6465736b746f70",
+    "is_special": false
+  },
+  "877": {
+    "token": "whi",
+    "hex": "776869",
+    "is_special": false
+  },
+  "878": {
+    "token": "while",
+    "hex": "7768696c65",
+    "is_special": false
+  },
+  "879": {
+    "token": "ously",
+    "hex": "6f75736c79",
+    "is_special": false
+  },
+  "880": {
+    "token": "loo",
+    "hex": "6c6f6f",
+    "is_special": false
+  },
+  "881": {
+    "token": "segm",
+    "hex": "7365676d",
+    "is_special": false
+  },
+  "882": {
+    "token": "Backs",
+    "hex": "4261636b73",
+    "is_special": false
+  },
+  "883": {
+    "token": "Backsla",
+    "hex": "4261636b736c61",
+    "is_special": false
+  },
+  "884": {
+    "token": "Backslash",
+    "hex": "4261636b736c617368",
+    "is_special": false
+  },
+  "885": {
+    "token": "jumps",
+    "hex": "6a756d7073",
+    "is_special": false
+  },
+  "886": {
+    "token": "rot",
+    "hex": "726f74",
+    "is_special": false
+  },
+  "887": {
+    "token": "rotate",
+    "hex": "726f74617465",
+    "is_special": false
+  },
+  "888": {
+    "token": "ay",
+    "hex": "6179",
+    "is_special": false
+  },
+  "889": {
+    "token": "player",
+    "hex": "706c61796572",
+    "is_special": false
+  },
+  "890": {
+    "token": "deg",
+    "hex": "646567",
+    "is_special": false
+  },
+  "891": {
+    "token": "degre",
+    "hex": "6465677265",
+    "is_special": false
+  },
+  "892": {
+    "token": "degrees",
+    "hex": "64656772656573",
+    "is_special": false
+  },
+  "893": {
+    "token": "70",
+    "hex": "3730",
+    "is_special": false
+  },
+  "894": {
+    "token": "smo",
+    "hex": "736d6f",
+    "is_special": false
+  },
+  "895": {
+    "token": "smoo",
+    "hex": "736d6f6f",
+    "is_special": false
+  },
+  "896": {
+    "token": "smooth",
+    "hex": "736d6f6f7468",
+    "is_special": false
+  },
+  "897": {
+    "token": "Band",
+    "hex": "42616e64",
+    "is_special": false
+  },
+  "898": {
+    "token": "Equalizer",
+    "hex": "457175616c697a6572",
+    "is_special": false
+  },
+  "899": {
+    "token": "ISO",
+    "hex": "49534f",
+    "is_special": false
+  },
+  "900": {
+    "token": "octa",
+    "hex": "6f637461",
+    "is_special": false
+  },
+  "901": {
+    "token": "octave",
+    "hex": "6f6374617665",
+    "is_special": false
+  },
+  "902": {
+    "token": "stere",
+    "hex": "7374657265",
+    "is_special": false
+  },
+  "903": {
+    "token": "stereo",
+    "hex": "73746572656f",
+    "is_special": false
+  },
+  "904": {
+    "token": "stand",
+    "hex": "7374616e64",
+    "is_special": false
+  },
+  "905": {
+    "token": "standard",
+    "hex": "7374616e64617264",
+    "is_special": false
+  },
+  "906": {
+    "token": "64",
+    "hex": "3634",
+    "is_special": false
+  },
+  "907": {
+    "token": "125",
+    "hex": "313235",
+    "is_special": false
+  },
+  "908": {
+    "token": "125Hz",
+    "hex": "313235487a",
+    "is_special": false
+  },
+  "909": {
+    "token": "1kHz",
+    "hex": "316b487a",
+    "is_special": false
+  },
+  "910": {
+    "token": "presets",
+    "hex": "70726573657473",
+    "is_special": false
+  },
+  "911": {
+    "token": "Flat",
+    "hex": "466c6174",
+    "is_special": false
+  },
+  "912": {
+    "token": "Bass",
+    "hex": "42617373",
+    "is_special": false
+  },
+  "913": {
+    "token": "Boo",
+    "hex": "426f6f",
+    "is_special": false
+  },
+  "914": {
+    "token": "Boost",
+    "hex": "426f6f7374",
+    "is_special": false
+  },
+  "915": {
+    "token": "Roc",
+    "hex": "526f63",
+    "is_special": false
+  },
+  "916": {
+    "token": "Rock",
+    "hex": "526f636b",
+    "is_special": false
+  },
+  "917": {
+    "token": "Electronic",
+    "hex": "456c656374726f6e6963",
+    "is_special": false
+  },
+  "918": {
+    "token": "Cine",
+    "hex": "43696e65",
+    "is_special": false
+  },
+  "919": {
+    "token": "Cinema",
+    "hex": "43696e656d61",
+    "is_special": false
+  },
+  "920": {
+    "token": "round",
+    "hex": "726f756e64",
+    "is_special": false
+  },
+  "921": {
+    "token": "Pod",
+    "hex": "506f64",
+    "is_special": false
+  },
+  "922": {
+    "token": "Podc",
+    "hex": "506f6463",
+    "is_special": false
+  },
+  "923": {
+    "token": "Podcast",
+    "hex": "506f6463617374",
+    "is_special": false
+  },
+  "924": {
+    "token": "Spe",
+    "hex": "537065",
+    "is_special": false
+  },
+  "925": {
+    "token": "Speech",
+    "hex": "537065656368",
+    "is_special": false
+  },
+  "926": {
+    "token": "lass",
+    "hex": "6c617373",
+    "is_special": false
+  },
+  "927": {
+    "token": "att",
+    "hex": "617474",
+    "is_special": false
+  },
+  "928": {
+    "token": "ates",
+    "hex": "61746573",
+    "is_special": false
+  },
+  "929": {
+    "token": "sub",
+    "hex": "737562",
+    "is_special": false
+  },
+  "930": {
+    "token": "bass",
+    "hex": "62617373",
+    "is_special": false
+  },
+  "931": {
+    "token": "rumb",
+    "hex": "72756d62",
+    "is_special": false
+  },
+  "932": {
+    "token": "rumble",
+    "hex": "72756d626c65",
+    "is_special": false
+  },
+  "933": {
+    "token": "below",
+    "hex": "62656c6f77",
+    "is_special": false
+  },
+  "934": {
+    "token": "speech",
+    "hex": "737065656368",
+    "is_special": false
+  },
+  "935": {
+    "token": "dB",
+    "hex": "6442",
+    "is_special": false
+  },
+  "936": {
+    "token": "har",
+    "hex": "686172",
+    "is_special": false
+  },
+  "937": {
+    "token": "controls",
+    "hex": "636f6e74726f6c73",
+    "is_special": false
+  },
+  "938": {
+    "token": "ding",
+    "hex": "64696e67",
+    "is_special": false
+  },
+  "939": {
+    "token": "exp",
+    "hex": "657870",
+    "is_special": false
+  },
+  "940": {
+    "token": "lli",
+    "hex": "6c6c69",
+    "is_special": false
+  },
+  "941": {
+    "token": "fix",
+    "hex": "666978",
+    "is_special": false
+  },
+  "942": {
+    "token": "lip",
+    "hex": "6c6970",
+    "is_special": false
+  },
+  "943": {
+    "token": "synch",
+    "hex": "73796e6368",
+    "is_special": false
+  },
+  "944": {
+    "token": "synchr",
+    "hex": "73796e636872",
+    "is_special": false
+  },
+  "945": {
+    "token": "synchron",
+    "hex": "73796e6368726f6e",
+    "is_special": false
+  },
+  "946": {
+    "token": "sou",
+    "hex": "736f75",
+    "is_special": false
+  },
+  "947": {
+    "token": "adjusts",
+    "hex": "61646a75737473",
+    "is_special": false
+  },
+  "948": {
+    "token": "outp",
+    "hex": "6f757470",
+    "is_special": false
+  },
+  "949": {
+    "token": "output",
+    "hex": "6f7574707574",
+    "is_special": false
+  },
+  "950": {
+    "token": "occur",
+    "hex": "6f63637572",
+    "is_special": false
+  },
+  "951": {
+    "token": "pi",
+    "hex": "7069",
+    "is_special": false
+  },
+  "952": {
+    "token": "iqu",
+    "hex": "697175",
+    "is_special": false
+  },
+  "953": {
+    "token": "dif",
+    "hex": "646966",
+    "is_special": false
+  },
+  "954": {
+    "token": "offset",
+    "hex": "6f6666736574",
+    "is_special": false
+  },
+  "955": {
+    "token": "appe",
+    "hex": "61707065",
+    "is_special": false
+  },
+  "956": {
+    "token": "appear",
+    "hex": "617070656172",
+    "is_special": false
+  },
+  "957": {
+    "token": "formats",
+    "hex": "666f726d617473",
+    "is_special": false
+  },
+  "958": {
+    "token": "supported",
+    "hex": "737570706f72746564",
+    "is_special": false
+  },
+  "959": {
+    "token": "supports",
+    "hex": "737570706f727473",
+    "is_special": false
+  },
+  "960": {
+    "token": "emb",
+    "hex": "656d62",
+    "is_special": false
+  },
+  "961": {
+    "token": "embed",
+    "hex": "656d626564",
+    "is_special": false
+  },
+  "962": {
+    "token": "embedded",
+    "hex": "656d626564646564",
+    "is_special": false
+  },
+  "963": {
+    "token": "CE",
+    "hex": "4345",
+    "is_special": false
+  },
+  "964": {
+    "token": "CEA",
+    "hex": "434541",
+    "is_special": false
+  },
+  "965": {
+    "token": "60",
+    "hex": "3630",
+    "is_special": false
+  },
+  "966": {
+    "token": "Syn",
+    "hex": "53796e",
+    "is_special": false
+  },
+  "967": {
+    "token": "Sync",
+    "hex": "53796e63",
+    "is_special": false
+  },
+  "968": {
+    "token": "Of",
+    "hex": "4f66",
+    "is_special": false
+  },
+  "969": {
+    "token": "Off",
+    "hex": "4f6666",
+    "is_special": false
+  },
+  "970": {
+    "token": "dial",
+    "hex": "6469616c",
+    "is_special": false
+  },
+  "971": {
+    "token": "dialog",
+    "hex": "6469616c6f67",
+    "is_special": false
+  },
+  "972": {
+    "token": "dialogu",
+    "hex": "6469616c6f6775",
+    "is_special": false
+  },
+  "973": {
+    "token": "dialogue",
+    "hex": "6469616c6f677565",
+    "is_special": false
+  },
+  "974": {
+    "token": "matches",
+    "hex": "6d617463686573",
+    "is_special": false
+  },
+  "975": {
+    "token": "dis",
+    "hex": "646973",
+    "is_special": false
+  },
+  "976": {
+    "token": "customize",
+    "hex": "637573746f6d697a65",
+    "is_special": false
+  },
+  "977": {
+    "token": "fon",
+    "hex": "666f6e",
+    "is_special": false
+  },
+  "978": {
+    "token": "font",
+    "hex": "666f6e74",
+    "is_special": false
+  },
+  "979": {
+    "token": "12",
+    "hex": "3132",
+    "is_special": false
+  },
+  "980": {
+    "token": "px",
+    "hex": "7078",
+    "is_special": false
+  },
+  "981": {
+    "token": "port",
+    "hex": "706f7274",
+    "is_special": false
+  },
+  "982": {
+    "token": "detect",
+    "hex": "646574656374",
+    "is_special": false
+  },
+  "983": {
+    "token": "Smar",
+    "hex": "536d6172",
+    "is_special": false
+  },
+  "984": {
+    "token": "Smart",
+    "hex": "536d617274",
+    "is_special": false
+  },
+  "985": {
+    "token": "Scene",
+    "hex": "5363656e65",
+    "is_special": false
+  },
+  "986": {
+    "token": "Detection",
+    "hex": "446574656374696f6e",
+    "is_special": false
+  },
+  "987": {
+    "token": "analyz",
+    "hex": "616e616c797a",
+    "is_special": false
+  },
+  "988": {
+    "token": "secu",
+    "hex": "73656375",
+    "is_special": false
+  },
+  "989": {
+    "token": "lu",
+    "hex": "6c75",
+    "is_special": false
+  },
+  "990": {
+    "token": "lum",
+    "hex": "6c756d",
+    "is_special": false
+  },
+  "991": {
+    "token": "lumin",
+    "hex": "6c756d696e",
+    "is_special": false
+  },
+  "992": {
+    "token": "luminance",
+    "hex": "6c756d696e616e6365",
+    "is_special": false
+  },
+  "993": {
+    "token": "lt",
+    "hex": "6c74",
+    "is_special": false
+  },
+  "994": {
+    "token": "matically",
+    "hex": "6d61746963616c6c79",
+    "is_special": false
+  },
+  "995": {
+    "token": "enerate",
+    "hex": "656e6572617465",
+    "is_special": false
+  },
+  "996": {
+    "token": "mark",
+    "hex": "6d61726b",
+    "is_special": false
+  },
+  "997": {
+    "token": "markers",
+    "hex": "6d61726b657273",
+    "is_special": false
+  },
+  "998": {
+    "token": "ray",
+    "hex": "726179",
+    "is_special": false
+  },
+  "999": {
+    "token": "ide",
+    "hex": "696465",
+    "is_special": false
+  },
+  "1000": {
+    "token": "sitions",
+    "hex": "736974696f6e73",
+    "is_special": false
+  },
+  "1001": {
+    "token": "30",
+    "hex": "3330",
+    "is_special": false
+  },
+  "1002": {
+    "token": "detected",
+    "hex": "6465746563746564",
+    "is_special": false
+  },
+  "1003": {
+    "token": "timeline",
+    "hex": "74696d656c696e65",
+    "is_special": false
+  },
+  "1004": {
+    "token": "that",
+    "hex": "74686174",
+    "is_special": false
+  },
+  "1005": {
+    "token": "chapters",
+    "hex": "6368617074657273",
+    "is_special": false
+  },
+  "1006": {
+    "token": "uc",
+    "hex": "7563",
+    "is_special": false
+  },
+  "1007": {
+    "token": "mon",
+    "hex": "6d6f6e",
+    "is_special": false
+  },
+  "1008": {
+    "token": "pacing",
+    "hex": "706163696e67",
+    "is_special": false
+  },
+  "1009": {
+    "token": "sure",
+    "hex": "73757265",
+    "is_special": false
+  },
+  "1010": {
+    "token": "sil",
+    "hex": "73696c",
+    "is_special": false
+  },
+  "1011": {
+    "token": "silence",
+    "hex": "73696c656e6365",
+    "is_special": false
+  },
+  "1012": {
+    "token": "buf",
+    "hex": "627566",
+    "is_special": false
+  },
+  "1013": {
+    "token": "buffer",
+    "hex": "627566666572",
+    "is_special": false
+  },
+  "1014": {
+    "token": "energ",
+    "hex": "656e657267",
+    "is_special": false
+  },
+  "1015": {
+    "token": "energy",
+    "hex": "656e65726779",
+    "is_special": false
+  },
+  "1016": {
+    "token": "Se",
+    "hex": "5365",
+    "is_special": false
+  },
+  "1017": {
+    "token": "immedi",
+    "hex": "696d6d656469",
+    "is_special": false
+  },
+  "1018": {
+    "token": "immediate",
+    "hex": "696d6d656469617465",
+    "is_special": false
+  },
+  "1019": {
+    "token": "immediately",
+    "hex": "696d6d6564696174656c79",
+    "is_special": false
+  },
+  "1020": {
+    "token": "index",
+    "hex": "696e646578",
+    "is_special": false
+  },
   "1021": {
-    "token": "aut",
-    "hex": "617574",
+    "token": "all",
+    "hex": "616c6c",
     "is_special": false
   },
   "1022": {
-    "token": "ous ",
-    "hex": "6f757320",
+    "token": "quer",
+    "hex": "71756572",
     "is_special": false
   },
   "1023": {
-    "token": "intelligenc",
-    "hex": "696e74656c6c6967656e63",
+    "token": "VP",
+    "hex": "5650",
     "is_special": false
   }
 }

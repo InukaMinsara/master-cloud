@@ -173,12 +173,18 @@ class MasterAiCore(nn.Module):
     def generate(
         self,
         input_ids: torch.Tensor,
-        max_new_tokens: int = 50,
-        temperature: float = 0.7,
-        top_k: int = 40,
+        max_new_tokens: int = 80,
+        temperature: float = 0.6,
+        top_k: int = 20,
+        top_p: float = 0.85,
+        repetition_penalty: float = 1.25,
         eos_id: Optional[int] = None,
+        stream_callback = None,
     ) -> torch.Tensor:
-        """Autoregressive text generation."""
+        """
+        Autoregressive text generation with repetition penalty, top-p nucleus sampling,
+        and strict EOS stopping.
+        """
         self.eval()
         for _ in range(max_new_tokens):
             # Crop to context window if needed
@@ -189,18 +195,47 @@ class MasterAiCore(nn.Module):
             )
 
             logits, _ = self(idx_cond)
-            # Focus on last token prediction
-            logits = logits[:, -1, :] / max(1e-5, temperature)
+            # Focus on next-token prediction
+            next_logits = logits[:, -1, :].clone()
 
-            # Optional Top-K sampling
+            # Apply repetition penalty to tokens already generated
+            if repetition_penalty != 1.0:
+                for b in range(input_ids.shape[0]):
+                    generated_tokens = set(input_ids[b].tolist())
+                    for token_id in generated_tokens:
+                        if next_logits[b, token_id] > 0:
+                            next_logits[b, token_id] /= repetition_penalty
+                        else:
+                            next_logits[b, token_id] *= repetition_penalty
+
+            # Temperature scaling
+            scaled_logits = next_logits / max(1e-5, temperature)
+
+            # Top-K filtering
             if top_k > 0:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = float("-inf")
+                v, _ = torch.topk(scaled_logits, min(top_k, scaled_logits.size(-1)))
+                scaled_logits[scaled_logits < v[:, [-1]]] = float("-inf")
 
-            probs = F.softmax(logits, dim=-1)
+            # Top-P (nucleus) filtering
+            if 0.0 < top_p < 1.0:
+                sorted_logits, sorted_indices = torch.sort(scaled_logits, descending=True, dim=-1)
+                cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                # Remove tokens with cumulative probability above the threshold
+                sorted_indices_to_remove = cumulative_probs > top_p
+                # Shift the indices to the right to keep also the first token above the threshold
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                sorted_indices_to_remove[..., 0] = 0
+                for b in range(scaled_logits.shape[0]):
+                    indices_to_remove = sorted_indices[b, sorted_indices_to_remove[b]]
+                    scaled_logits[b, indices_to_remove] = float("-inf")
+
+            probs = F.softmax(scaled_logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
 
             input_ids = torch.cat((input_ids, idx_next), dim=1)
+
+            if stream_callback is not None:
+                stream_callback(idx_next[0, 0].item())
 
             if eos_id is not None and (idx_next == eos_id).all():
                 break

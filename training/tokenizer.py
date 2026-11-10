@@ -1,17 +1,19 @@
 """
 MASTER CLOUD — MASTER AI ORIGINAL
-Original Byte-Level Subword Tokenizer Implementation from Scratch.
+Original Byte-Level Subword Tokenizer Implementation from Scratch (v0.3).
 
 Zero external dependencies. No pre-trained downloads.
 Implements a true Byte-Level BPE (Byte Pair Encoding) tokenizer:
 - 5 Special tokens (<pad>, <unk>, <bos>, <eos>, <sep>)
 - 256 Raw byte tokens (0x00 to 0xFF) ensuring 100% vocabulary coverage
-- Zero UNK tokens on any arbitrary UTF-8 input (English, Sinhala, Emoji, Math, Asian scripts)
+- Word-boundary-aware pre-segmentation for cleaner subword learning
+- Zero UNK tokens on any arbitrary UTF-8 input (English, Sinhala, Emoji, Math)
 - Lossless roundtrip string reconstruction: decode(encode(text)) == text
 """
 
 import json
 import os
+import re
 from typing import Dict, List, Tuple, Optional, Set
 
 
@@ -57,30 +59,34 @@ class MasterAiTokenizer:
 
     def train_from_corpus(self, texts: List[str], max_vocab: int = 1024):
         """
-        Train BPE merges directly from a corpus of texts.
-        Converts text to UTF-8 byte token IDs and iteratively merges frequent adjacent pairs.
+        Train BPE merges directly from a corpus of texts with word-boundary awareness.
+        Prevents merge anomalies across word and punctuation boundaries while preserving
+        100% byte-level coverage and zero-UNK capability.
         """
         self.target_vocab_size = max_vocab
         self._init_base_vocab()
 
-        # Convert each text to a list of base byte token IDs
-        sequences: List[List[int]] = []
+        # Word frequency counting using regex pre-segmentation
+        word_freqs: Dict[Tuple[int, ...], int] = {}
         for text in texts:
-            raw_bytes = text.encode("utf-8")
-            if not raw_bytes:
-                continue
-            seq = [self.NUM_SPECIAL + b for b in raw_bytes]
-            sequences.append(seq)
+            # Segment into words, punctuation, whitespace
+            segments = re.findall(r'\w+|[^\w\s]|\s+', text, re.UNICODE)
+            for seg in segments:
+                raw_bytes = seg.encode("utf-8")
+                if not raw_bytes:
+                    continue
+                byte_tuple = tuple(self.NUM_SPECIAL + b for b in raw_bytes)
+                word_freqs[byte_tuple] = word_freqs.get(byte_tuple, 0) + 1
 
         next_id = self.NUM_SPECIAL + self.NUM_BASE_BYTES  # 261
 
         while len(self.id_to_bytes) < self.target_vocab_size:
-            # Count pair frequencies across all sequences
+            # Count pair frequencies across all unique word tuples
             pair_counts: Dict[Tuple[int, int], int] = {}
-            for seq in sequences:
-                for i in range(len(seq) - 1):
-                    pair = (seq[i], seq[i + 1])
-                    pair_counts[pair] = pair_counts.get(pair, 0) + 1
+            for word_tuple, freq in word_freqs.items():
+                for i in range(len(word_tuple) - 1):
+                    pair = (word_tuple[i], word_tuple[i + 1])
+                    pair_counts[pair] = pair_counts.get(pair, 0) + freq
 
             if not pair_counts:
                 break
@@ -102,20 +108,20 @@ class MasterAiTokenizer:
             self.merges.append((id1, id2, new_id))
             self.merge_ranks[best_pair] = rank
 
-            # Replace best_pair in all sequences
-            new_sequences: List[List[int]] = []
-            for seq in sequences:
-                new_seq: List[int] = []
+            # Replace best_pair in all word tuples
+            new_word_freqs: Dict[Tuple[int, ...], int] = {}
+            for word_tuple, freq in word_freqs.items():
+                new_tuple: List[int] = []
                 i = 0
-                while i < len(seq):
-                    if i < len(seq) - 1 and (seq[i], seq[i + 1]) == best_pair:
-                        new_seq.append(new_id)
+                while i < len(word_tuple):
+                    if i < len(word_tuple) - 1 and (word_tuple[i], word_tuple[i + 1]) == best_pair:
+                        new_tuple.append(new_id)
                         i += 2
                     else:
-                        new_seq.append(seq[i])
+                        new_tuple.append(word_tuple[i])
                         i += 1
-                new_sequences.append(new_seq)
-            sequences = new_sequences
+                new_word_freqs[tuple(new_tuple)] = freq
+            word_freqs = new_word_freqs
 
     def encode(self, text: str, add_bos: bool = True, add_eos: bool = True) -> List[int]:
         """
@@ -135,7 +141,6 @@ class MasterAiTokenizer:
 
         # Apply BPE merges iteratively by rank
         while len(tokens) >= 2:
-            # Find eligible merge with lowest rank
             best_rank = float("inf")
             best_pair: Optional[Tuple[int, int]] = None
             best_new_id: Optional[int] = None
@@ -200,7 +205,6 @@ class MasterAiTokenizer:
         merges_path = os.path.join(directory, "merges.json")
         meta_path = os.path.join(directory, "tokenizer_meta.json")
 
-        # Serialized vocab mapping: token_id -> hex representation and human-readable preview
         vocab_dict = {}
         for tid, b in self.id_to_bytes.items():
             if tid < self.NUM_SPECIAL:
@@ -230,6 +234,7 @@ class MasterAiTokenizer:
             json.dump(
                 {
                     "type": "MasterAiTrueByteLevelBPE",
+                    "version": "0.3.0",
                     "vocab_size": len(self.id_to_bytes),
                     "base_bytes": self.NUM_BASE_BYTES,
                     "num_merges": len(self.merges),

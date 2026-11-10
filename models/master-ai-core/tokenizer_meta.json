@@ -1,5 +1,6 @@
 {
   "type": "MasterAiTrueByteLevelBPE",
+  "version": "0.3.0",
   "vocab_size": 1024,
   "base_bytes": 256,
   "num_merges": 763,

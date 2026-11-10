@@ -1,0 +1,131 @@
+{
+  "evaluation_name": "MasterAiCore Held-Out Generalization Evaluation",
+  "version": "0.3.0",
+  "total_scenarios": 10,
+  "average_repetition_rate": 0.1142,
+  "results": [
+    {
+      "id": "eval_01_en_qa",
+      "category": "English Q&A",
+      "prompt": "User: What does the audio equalizer do in MASTER CLOUD?\nAssistant:",
+      "generated_response": "and MasterAI video fan, (. on The and reing (, and and to cons de) slider and a, the your the (, to (, and and and to or to",
+      "tokens_generated": 70,
+      "stopped_on_eos": false,
+      "repetition_rate_3gram": 0.2647,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_02_en_hotkey",
+      "category": "English Hotkey",
+      "prompt": "User: Can you tell me which button toggles fullscreen mode?\nAssistant:",
+      "generated_response": "-in the or Press Yes, Press (.",
+      "tokens_generated": 17,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0667,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_03_en_reasoning",
+      "category": "Mathematical Reasoning",
+      "prompt": "User: A video is 20 minutes long and has 2000 words. What is its speech rate?\nAssistant:",
+      "generated_response": ", the f, a-ing or audio and in and to ( con) and the video and and or and and the the and to to (",
+      "tokens_generated": 56,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.3148,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_04_si_qa",
+      "category": "Sinhala Q&A",
+      "prompt": "User: MASTER CLOUD එකෙන් වීඩියෝවක් play කරන්නේ කොහොමද?\nAssistant:",
+      "generated_response": "වුතැක වමර යතනා යතැර හුැව් ක න් වැැම සිිැනිමම්ව්.",
+      "tokens_generated": 48,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_05_si_tech",
+      "category": "Sinhala Technical",
+      "prompt": "User: ශබ්ද ප්‍රමාදය හදාගන්නේ කෙසේද?\nAssistant:",
+      "generated_response": "ුි් වැඩනීෝ යතුත් න නර විිම සකැවැර.",
+      "tokens_generated": 34,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_06_mixed_subs",
+      "category": "Mixed Dialogue Subtitles",
+      "prompt": "User: මට video එකේ subtitles customize කරගන්න ඕන, ඒකට shortcut key එක මොකක්ද?\nAssistant:",
+      "generated_response": "යතිීර Studio වැසුක.",
+      "tokens_generated": 15,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_07_mixed_pip",
+      "category": "Mixed Dialogue PiP",
+      "prompt": "User: Background එකේ video එක float කරලා බලන්න පුළුවන්ද?\nAssistant:",
+      "generated_response": "යතිය යත් හර.",
+      "tokens_generated": 12,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.0,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_08_multi_sentence",
+      "category": "Multi-sentence Explanation",
+      "prompt": "User: Explain the difference between 32Hz bass and 16kHz treble.\nAssistant:",
+      "generated_response": "(, and to video and your on de) or to to and and the (.",
+      "tokens_generated": 34,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1562,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_09_reasoning_time",
+      "category": "Navigation Reasoning",
+      "prompt": "User: If I seek forward 10 seconds 4 times, how much time has advanced?\nAssistant:",
+      "generated_response": "the the to Press Yes.",
+      "tokens_generated": 12,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.1,
+      "matched_topics": [],
+      "has_relevance": false,
+      "is_coherent": true
+    },
+    {
+      "id": "eval_10_conversation",
+      "category": "Conversation Follow-up",
+      "prompt": "User: I need help organizing my media library.\nAssistant:",
+      "generated_response": "the your in Yes, Press MasterAI the to your the audio and the and video to to to and a, to re.",
+      "tokens_generated": 48,
+      "stopped_on_eos": true,
+      "repetition_rate_3gram": 0.2391,
+      "matched_topics": [
+        "MasterAI",
+        "video"
+      ],
+      "has_relevance": true,
+      "is_coherent": true
+    }
+  ]
+}

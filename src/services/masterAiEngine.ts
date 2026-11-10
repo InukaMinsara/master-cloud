@@ -90,9 +90,21 @@ function formatTimestamp(seconds: number): string {
 
 export class MasterAiEngine {
   private static instance: MasterAiEngine;
-  // Zero persistent credentials policy: External cloud API keys are NEVER written to disk,
-  // localStorage, or sessionStorage. They reside strictly in volatile process memory for the active tab.
-  private geminiApiKey: string | null = null;
+  
+  /**
+   * Ephemeral In-Memory Protection:
+   * Uses an ECMAScript private field (#geminiApiKey) enforced at the JavaScript engine runtime level.
+   * - Never written to localStorage, sessionStorage, IndexedDB, cookies, or persisted on disk.
+   * - Wiped immediately upon browser tab closure or page reload.
+   * - Transmitted strictly via 'x-goog-api-key' HTTP header (never in URL query parameters).
+   * 
+   * Security Boundary Note:
+   * While in-memory isolation protects against forensic disk extraction and cross-session persistence,
+   * any hostile script executing inside the same origin (XSS vulnerability) could potentially access
+   * volatile memory. For zero-trust enterprise deployments, server-side gateway proxying (aiGateway.ts)
+   * must be utilized.
+   */
+  #geminiApiKey: string | null = null;
   private mode: 'local' | 'cloud' = 'local';
   private selectedModel = 'gemini-2.5-flash';
 
@@ -130,12 +142,12 @@ export class MasterAiEngine {
 
   public getApiKey(): string | null {
     // Pure ephemeral in-memory getter
-    return this.geminiApiKey;
+    return this.#geminiApiKey;
   }
 
   public setApiKey(key: string): void {
     // Strict ephemeral in-memory storage (cleared upon tab closure or page reload)
-    this.geminiApiKey = key.trim() || null;
+    this.#geminiApiKey = key.trim() || null;
     if (typeof window !== 'undefined') {
       try {
         // Enforce that nothing ever enters persistent or session storage
@@ -170,7 +182,7 @@ export class MasterAiEngine {
     }
 
     // If Cloud mode is active and API key exists, call Gemini API
-    if (this.mode === 'cloud' && this.geminiApiKey) {
+    if (this.mode === 'cloud' && this.#geminiApiKey) {
       try {
         return await this.chatWithGemini(query, context, history);
       } catch (err) {
@@ -401,7 +413,7 @@ CRITICAL FORMATTING RULES:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': this.geminiApiKey || '',
+        'x-goog-api-key': this.#geminiApiKey || '',
       },
       body: JSON.stringify({ contents }),
     });
