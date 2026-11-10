@@ -1,0 +1,10 @@
+{
+  "type": "MasterAiByteLevelBPE",
+  "vocab_size": 610,
+  "pad_id": 0,
+  "unk_id": 1,
+  "bos_id": 2,
+  "eos_id": 3,
+  "sep_id": 4,
+  "author": "MASTER CLOUD AI Team"
+}

@@ -1029,14 +1029,14 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Shield className="w-4 h-4 text-cyan-400" />
-                    Master Local Neural AI
+                    MASTER AI CORE (Original Neural)
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">
-                    Default
+                    Default / Local
                   </span>
                 </div>
                 <p className="text-[11px] text-white/70 leading-relaxed">
-                  100% private and offline. Runs client-side NLP intent classification, scene synthesis, and dialogue search with zero latency. No API keys required.
+                  100% private, offline neural intelligence. Powered by our own trained Transformer model (4.92M parameters), custom subword tokenizer, BM25 knowledge indexing, and deterministic fallback. Zero third-party API dependencies.
                 </p>
               </div>
 
@@ -1051,27 +1051,27 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-purple-400" />
-                    Cloud Gemini Supercharge
+                    MASTER AI CLOUD (Optional Gemini)
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">
-                    Enhanced
+                    External API
                   </span>
                 </div>
                 <p className="text-[11px] text-white/70 leading-relaxed">
-                  Connects to Google Gemini API (gemini-2.5-flash) for deep generative conversational reasoning, complex creative Q&A, and multimodal analysis.
+                  Optional external integration. Sends retrieved transcript snippets directly to Google Gemini API via secure headers. Requires an external API key.
                 </p>
               </div>
             </div>
 
             {/* Gemini API Key Section (if Cloud mode selected) */}
             {aiMode === 'cloud' && (
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div className="p-4 rounded-2xl bg-white/5 border border-purple-500/30 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-white">
                   <Key className="w-4 h-4 text-purple-400" />
-                  Google Gemini API Key
+                  Google Gemini API Key (Session-Only Memory)
                 </div>
                 <p className="text-[11px] text-white/60">
-                  Your API key is stored securely in your browser&apos;s local storage and used directly for Google Gemini API calls. It is never transmitted to any third-party server.
+                  <strong className="text-amber-300">Security Warning:</strong> Enabling Cloud Mode transmits video metadata and retrieved dialogue passages over the public internet to Google servers. Your key is stored strictly in ephemeral session memory (<code className="text-cyan-300">sessionStorage</code>) and sent via HTTP headers (never in URL query strings).
                 </p>
                 <input
                   type="password"

@@ -10,6 +10,7 @@
 
 import { SubtitleCue } from './subtitleParser';
 import { DetectedScene, MediaBookmark } from './mediaMetadataDb';
+import { localKnowledgeEngine } from './ai/localKnowledgeEngine';
 
 export interface VideoAIContext {
   fileName: string;
@@ -95,9 +96,17 @@ export class MasterAiEngine {
 
   private constructor() {
     if (typeof window !== 'undefined') {
-      const savedKey = localStorage.getItem('master_cloud_gemini_api_key');
+      // Secure Migration: Clean up legacy plaintext key from localStorage if present
+      const legacyKey = localStorage.getItem('master_cloud_gemini_api_key');
+      if (legacyKey) {
+        sessionStorage.setItem('master_cloud_gemini_api_key_session', legacyKey);
+        localStorage.removeItem('master_cloud_gemini_api_key');
+      }
+
+      // Read from session-only memory (cleared when browser session ends)
+      const sessionKey = sessionStorage.getItem('master_cloud_gemini_api_key_session');
       const savedMode = localStorage.getItem('master_cloud_ai_mode') as 'local' | 'cloud' | null;
-      if (savedKey) this.geminiApiKey = savedKey;
+      if (sessionKey) this.geminiApiKey = sessionKey;
       if (savedMode) this.mode = savedMode;
     }
   }
@@ -128,8 +137,11 @@ export class MasterAiEngine {
     this.geminiApiKey = key.trim() || null;
     if (typeof window !== 'undefined') {
       if (this.geminiApiKey) {
-        localStorage.setItem('master_cloud_gemini_api_key', this.geminiApiKey);
+        // Store ephemeral in sessionStorage only (never in persistent localStorage)
+        sessionStorage.setItem('master_cloud_gemini_api_key_session', this.geminiApiKey);
+        localStorage.removeItem('master_cloud_gemini_api_key');
       } else {
+        sessionStorage.removeItem('master_cloud_gemini_api_key_session');
         localStorage.removeItem('master_cloud_gemini_api_key');
       }
     }
@@ -330,16 +342,30 @@ export class MasterAiEngine {
     context: VideoAIContext,
     history: ChatMessage[],
   ): Promise<ChatMessage> {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.selectedModel}:generateContent?key=${this.geminiApiKey}`;
+    // Secure Endpoint: Pass API key strictly via x-goog-api-key header (never in URL query string)
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.selectedModel}:generateContent`;
 
-    // Prepare transcript sample (up to 40 cues to keep token payload optimal)
-    const transcriptSnippet = context.cues
-      .slice(0, 45)
-      .map((c) => `[${formatTimestamp(c.start)}] ${c.text}`)
-      .join('\n');
+    // Dynamic Context Retrieval via Local Knowledge Engine (BM25 across entire transcript)
+    localKnowledgeEngine.indexTranscript(context.fileName, context.cues);
+    const retrievedPassages = localKnowledgeEngine.query(userQuery, 8);
+
+    let transcriptSnippet = '';
+    if (retrievedPassages.length > 0) {
+      transcriptSnippet = retrievedPassages
+        .map((p) => `${p.formattedTimestamp} ${p.snippet}`)
+        .join('\n');
+    } else {
+      // Fallback to evenly sampled cues across entire duration rather than blind front-truncation
+      const step = Math.max(1, Math.floor(context.cues.length / 40));
+      transcriptSnippet = context.cues
+        .filter((_, idx) => idx % step === 0)
+        .slice(0, 45)
+        .map((c) => `[${formatTimestamp(c.start)}] ${c.text}`)
+        .join('\n');
+    }
 
     const scenesSnippet = context.scenes
-      .slice(0, 20)
+      .slice(0, 30)
       .map((s) => `[${formatTimestamp(s.start)} - ${formatTimestamp(s.end)}] ${s.label || 'Scene'}`)
       .join('\n');
 
@@ -373,7 +399,10 @@ CRITICAL FORMATTING RULES:
 
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.geminiApiKey || '',
+      },
       body: JSON.stringify({ contents }),
     });
 

@@ -145,6 +145,16 @@ ios/App/*.xcodeproj/project.xcworkspace/xcuserdata/
 ios/App/App/public/
 android/app/src/main/assets/public/
 
+# Python & Machine Learning Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pt
+*.pth
+*.bin
+models/master-ai-core/*.pt
+models/master-ai-core/*.data
+
 
 
 
