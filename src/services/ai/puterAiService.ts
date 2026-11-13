@@ -12,7 +12,8 @@
  * 7. Transparent Free vs Credit Cost Guard (never fakes generation with testMode)
  */
 
-import { puter as puterModule } from '@heyputer/puter.js';
+// In browser, Puter.js is loaded via official https://js.puter.com/v2/ script tag to avoid duplicate customElements definitions
+let nodePuterModule: any = null;
 
 export interface PuterUser {
   uuid?: string;
@@ -155,13 +156,25 @@ class PuterAiPlatformService {
   private isInitializing = false;
 
   /**
-   * Safely returns the live Puter SDK instance (browser window or npm import).
+   * Safely returns the live Puter SDK instance (browser window.puter or dynamic Node module).
    */
   public getPuter(): any {
     if (typeof window !== 'undefined' && (window as any).puter) {
       return (window as any).puter;
     }
-    return puterModule;
+    if (nodePuterModule) return nodePuterModule;
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      try {
+        const req = typeof require !== 'undefined' ? require : null;
+        if (req) {
+          nodePuterModule = req('@heyputer/puter.js')?.puter;
+          return nodePuterModule;
+        }
+      } catch {
+        // Fallback for isolated unit tests
+      }
+    }
+    return null;
   }
 
   // ─── 1. AUTHENTICATION & USER MANAGEMENT ───
