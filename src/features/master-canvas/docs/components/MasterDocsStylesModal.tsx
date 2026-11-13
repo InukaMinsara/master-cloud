@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Check, Sparkles, Type, Sliders, Palette, ChevronRight } from 'lucide-react';
 import { DocStyleItem } from '../types';
-import { DocThemesService } from '../services/DocThemesService';
+import { DocThemesService, WORD_FONT_FAMILIES } from '../services/DocThemesService';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -125,11 +125,11 @@ export function MasterDocsStylesModal({
                   onChange={(e) => handleUpdateActiveStyle({ fontFamily: e.target.value })}
                   className="w-full text-xs rounded-xl bg-background border border-border px-3 py-2 focus:ring-1 focus:ring-primary focus:outline-none"
                 >
-                  <option value="Inter, sans-serif">Inter (Modern Clean)</option>
-                  <option value="Calibri, Arial, sans-serif">Calibri (Executive)</option>
-                  <option value="Georgia, Times New Roman, serif">Georgia (Editorial Serif)</option>
-                  <option value="'Times New Roman', serif">Times New Roman (Academic)</option>
-                  <option value="'JetBrains Mono', monospace">JetBrains Mono (Code/Tech)</option>
+                  {WORD_FONT_FAMILIES.map((f) => (
+                    <option key={f.label} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
                   <option value="'Playfair Display', serif">Playfair Display (Elegant)</option>
                 </select>
               </div>

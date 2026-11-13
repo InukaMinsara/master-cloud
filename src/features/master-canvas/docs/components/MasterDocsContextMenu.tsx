@@ -2,18 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import {
   Copy,
   Scissors,
-  Clipboard,
   Bold,
   Italic,
   Underline,
   MessageSquare,
-  Link,
   Plus,
   Trash2,
-  Table,
-  Image,
-  Layers,
   Sparkles,
+  Table,
+  PaintBucket,
 } from 'lucide-react';
 
 interface MasterDocsContextMenuProps {
@@ -24,9 +21,16 @@ interface MasterDocsContextMenuProps {
   targetType: 'text' | 'table' | 'image' | 'general';
   onExecCommand: (command: string, value?: string) => void;
   onAddComment: () => void;
-  onInsertRow?: () => void;
-  onInsertColumn?: () => void;
+  onOpenCopilot?: () => void;
+  onInsertRowAbove?: () => void;
+  onInsertRowBelow?: () => void;
+  onInsertColumnLeft?: () => void;
+  onInsertColumnRight?: () => void;
   onDeleteRow?: () => void;
+  onDeleteColumn?: () => void;
+  onDeleteTable?: () => void;
+  onToggleTableHeader?: () => void;
+  onShadeCell?: (color: string) => void;
 }
 
 export function MasterDocsContextMenu({
@@ -37,9 +41,16 @@ export function MasterDocsContextMenu({
   targetType,
   onExecCommand,
   onAddComment,
-  onInsertRow,
-  onInsertColumn,
+  onOpenCopilot,
+  onInsertRowAbove,
+  onInsertRowBelow,
+  onInsertColumnLeft,
+  onInsertColumnRight,
   onDeleteRow,
+  onDeleteColumn,
+  onDeleteTable,
+  onToggleTableHeader,
+  onShadeCell,
 }: MasterDocsContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -55,15 +66,14 @@ export function MasterDocsContextMenu({
 
   if (!isOpen) return null;
 
-  // Keep within window boundaries
-  const adjustedX = Math.min(x, window.innerWidth - 220);
-  const adjustedY = Math.min(y, window.innerHeight - 300);
+  const adjustedX = Math.min(x, window.innerWidth - 240);
+  const adjustedY = Math.min(y, window.innerHeight - 360);
 
   return (
     <div
       ref={menuRef}
       style={{ top: `${adjustedY}px`, left: `${adjustedX}px` }}
-      className="fixed z-50 w-52 rounded-xl bg-card border border-border shadow-2xl p-1 text-xs text-foreground animate-in fade-in zoom-in-95 duration-150 select-none"
+      className="fixed z-50 w-56 rounded-xl bg-card border border-border shadow-2xl p-1 text-xs text-foreground animate-in fade-in zoom-in-95 duration-150 select-none"
     >
       {/* Text Actions */}
       <button
@@ -94,7 +104,7 @@ export function MasterDocsContextMenu({
 
       <div className="my-1 border-t border-border/60" />
 
-      {/* Formatting tools */}
+      {/* Formatting Mini Strip */}
       <div className="flex items-center justify-around p-1 bg-muted/40 rounded-lg mb-1">
         <button
           onClick={() => {
@@ -138,14 +148,38 @@ export function MasterDocsContextMenu({
         <MessageSquare className="h-3.5 w-3.5" /> Add Comment
       </button>
 
-      {/* Table tools */}
+      {onOpenCopilot && (
+        <button
+          onClick={() => {
+            onOpenCopilot();
+            onClose();
+          }}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#185abd]/10 text-left font-semibold text-[#185abd]"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Rewrite with Copilot
+        </button>
+      )}
+
+      {/* Real Word Table Controls */}
       {targetType === 'table' && (
         <>
           <div className="my-1 border-t border-border/60" />
-          <div className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-0.5">Table Controls</div>
+          <div className="text-[10px] uppercase font-bold text-muted-foreground px-2 py-0.5 flex items-center gap-1">
+            <Table className="h-3 w-3" /> Table Tools
+          </div>
+
           <button
             onClick={() => {
-              if (onInsertRow) onInsertRow();
+              onInsertRowAbove?.();
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent text-left"
+          >
+            <Plus className="h-3.5 w-3.5 text-emerald-500" /> Insert Row Above
+          </button>
+          <button
+            onClick={() => {
+              onInsertRowBelow?.();
               onClose();
             }}
             className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent text-left"
@@ -154,21 +188,81 @@ export function MasterDocsContextMenu({
           </button>
           <button
             onClick={() => {
-              if (onInsertColumn) onInsertColumn();
+              onInsertColumnLeft?.();
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent text-left"
+          >
+            <Plus className="h-3.5 w-3.5 text-blue-500" /> Insert Column Left
+          </button>
+          <button
+            onClick={() => {
+              onInsertColumnRight?.();
               onClose();
             }}
             className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent text-left"
           >
             <Plus className="h-3.5 w-3.5 text-blue-500" /> Insert Column Right
           </button>
+
           <button
             onClick={() => {
-              if (onDeleteRow) onDeleteRow();
+              onToggleTableHeader?.();
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent text-left"
+          >
+            <PaintBucket className="h-3.5 w-3.5 text-[#185abd]" /> Toggle Header Row Shading
+          </button>
+
+          {onShadeCell && (
+            <div className="flex items-center justify-between px-2.5 py-1.5">
+              <span className="text-[11px] text-muted-foreground">Cell Fill:</span>
+              <div className="flex items-center gap-1">
+                {['transparent', '#eff6ff', '#ecfdf5', '#fef9c3', '#fee2e2'].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      onShadeCell(c);
+                      onClose();
+                    }}
+                    style={{ backgroundColor: c === 'transparent' ? '#ffffff' : c }}
+                    className="w-4 h-4 rounded-sm border border-border hover:scale-110 transition-transform"
+                    title={c === 'transparent' ? 'No Fill' : c}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="my-1 border-t border-border/60" />
+
+          <button
+            onClick={() => {
+              onDeleteRow?.();
               onClose();
             }}
             className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive text-left"
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete Row
+          </button>
+          <button
+            onClick={() => {
+              onDeleteColumn?.();
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive text-left"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Column
+          </button>
+          <button
+            onClick={() => {
+              onDeleteTable?.();
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive text-left font-semibold"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Table
           </button>
         </>
       )}

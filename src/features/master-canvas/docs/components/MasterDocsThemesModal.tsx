@@ -15,18 +15,24 @@ interface MasterDocsThemesModalProps {
 export function MasterDocsThemesModal({
   isOpen,
   onClose,
-  activeThemeId = 'modern-slate',
+  activeThemeId = 'office-m365',
   onSelectTheme,
 }: MasterDocsThemesModalProps) {
   const themes = DocThemesService.getBuiltinThemes();
+  const fontPairs = DocThemesService.getWordThemeFontPairs();
   const [selectedId, setSelectedId] = useState(activeThemeId);
+  const [selectedFontPairId, setSelectedFontPairId] = useState<string>('');
 
   if (!isOpen) return null;
 
   const handleApply = (theme: DocTheme) => {
     setSelectedId(theme.id);
-    onSelectTheme(theme);
-    toast.success(`Theme "${theme.name}" applied`);
+    const chosenPair = fontPairs.find((p) => p.id === selectedFontPairId);
+    const resolvedTheme: DocTheme = chosenPair
+      ? { ...theme, headingFont: chosenPair.headingFont, bodyFont: chosenPair.bodyFont }
+      : theme;
+    onSelectTheme(resolvedTheme);
+    toast.success(`Theme "${resolvedTheme.name}" applied`);
     onClose();
   };
 
@@ -52,6 +58,25 @@ export function MasterDocsThemesModal({
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Theme Font Pair Override Bar */}
+        <div className="px-6 py-2.5 border-b border-border/60 bg-background/60 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-semibold text-foreground">
+            Word Theme Font Pairing <span className="text-muted-foreground font-normal">(optional override)</span>
+          </div>
+          <select
+            value={selectedFontPairId}
+            onChange={(e) => setSelectedFontPairId(e.target.value)}
+            className="h-8 px-3 rounded-xl bg-background border border-border text-xs focus:ring-1 focus:ring-[#185abd] focus:outline-none min-w-[260px]"
+          >
+            <option value="">Use Theme&apos;s Built-in Font Pair</option>
+            {fontPairs.map((fp) => (
+              <option key={fp.id} value={fp.id}>
+                {fp.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Theme Grid */}

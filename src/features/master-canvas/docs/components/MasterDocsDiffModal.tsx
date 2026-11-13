@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { X, GitCompare, Check, RotateCcw, ArrowRight, Sparkles, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, GitCompare, RotateCcw, FileText, Camera } from 'lucide-react';
 import { DocDiffService, DiffResult } from '../services/DocDiffService';
+import { DocSnapshot } from '../types';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface MasterDocsDiffModalProps {
@@ -10,6 +10,8 @@ interface MasterDocsDiffModalProps {
   onClose: () => void;
   currentContentHtml: string;
   previousVersionHtml?: string;
+  snapshots?: DocSnapshot[];
+  onCreateSnapshot?: () => void;
   onRestorePrevious?: (content: string) => void;
 }
 
@@ -18,12 +20,34 @@ export function MasterDocsDiffModal({
   onClose,
   currentContentHtml,
   previousVersionHtml = '',
+  snapshots = [],
+  onCreateSnapshot,
   onRestorePrevious,
 }: MasterDocsDiffModalProps) {
-  const [compareContent, setCompareContent] = useState(previousVersionHtml);
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>(snapshots[0]?.id || 'baseline');
+  const [compareContent, setCompareContent] = useState(snapshots[0]?.content || previousVersionHtml);
   const [diffMode, setDiffMode] = useState<'unified' | 'split'>('unified');
 
+  useEffect(() => {
+    if (isOpen) {
+      if (snapshots.length > 0) {
+        setSelectedSnapshotId(snapshots[0].id);
+        setCompareContent(snapshots[0].content);
+      } else {
+        setSelectedSnapshotId('baseline');
+        setCompareContent(previousVersionHtml);
+      }
+    }
+  }, [isOpen, snapshots, previousVersionHtml]);
+
   if (!isOpen) return null;
+
+  const handleSelectSnapshot = (id: string) => {
+    setSelectedSnapshotId(id);
+    const snap = snapshots.find((s) => s.id === id);
+    if (snap) setCompareContent(snap.content);
+    else setCompareContent(previousVersionHtml);
+  };
 
   const diffResult: DiffResult = DocDiffService.computeDiff(
     compareContent || '<p>Original document baseline</p>',
@@ -73,7 +97,31 @@ export function MasterDocsDiffModal({
             <span className="text-muted-foreground">{diffResult.unchangedWords} unchanged words</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={selectedSnapshotId}
+              onChange={(e) => handleSelectSnapshot(e.target.value)}
+              className="h-7 px-2 rounded-lg bg-background border border-border text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {snapshots.map((snap) => (
+                <option key={snap.id} value={snap.id}>
+                  {snap.name} ({new Date(snap.timestamp).toLocaleTimeString()})
+                </option>
+              ))}
+              <option value="baseline">Session Initial Baseline</option>
+            </select>
+
+            {onCreateSnapshot && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onCreateSnapshot}
+                className="h-7 text-[11px] rounded-lg gap-1"
+              >
+                <Camera className="h-3 w-3" /> Save Snapshot
+              </Button>
+            )}
+
             <div className="flex rounded-lg border border-border p-0.5 bg-muted/30">
               <button
                 onClick={() => setDiffMode('unified')}
