@@ -30,11 +30,11 @@ import {
   Wand2,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
-import { modelRegistry } from '@/services/ai/modelRegistry';
-import { localBrainManager } from '@/services/ai/localBrain';
+import { api } from '@/services/api';
 import {
   puterAiService,
   VERIFIED_FREE_CHAT_MODELS,
+  PUTER_STANDARD_MODELS,
   PUTER_IMAGE_MODELS,
   PUTER_VIDEO_MODELS,
   PUTER_VOICES,
@@ -47,13 +47,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import {
-  LocalBrainManagerPanel,
   CloudAndRegistryPanel,
   LongTermMemoryPanel,
-  EvaluationLabPanel,
 } from '@/components/video-player/panels/MasterAiV2Panels';
 
-type PageTab = 'chat' | 'image' | 'video' | 'voice' | 'gateway' | 'local' | 'memory' | 'eval';
+type PageTab = 'chat' | 'image' | 'video' | 'voice' | 'gateway' | 'memory';
 
 export function AIPage() {
   const { user } = useAuthStore();
@@ -70,10 +68,8 @@ export function AIPage() {
   const [attachedFile, setAttachedFile] = useState<FileItem | null>(null);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string>('auto');
-  const [modelsList, setModelsList] = useState(() => modelRegistry.listModels());
+  const [selectedModelId, setSelectedModelId] = useState<string>(VERIFIED_FREE_CHAT_MODELS[0].id);
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
-  const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -112,13 +108,6 @@ export function AIPage() {
   const [sttTranscript, setSttTranscript] = useState('');
 
   useEffect(() => {
-    void localBrainManager.discoverLocalRuntimes().then((res) => {
-      setOllamaOnline(res.ollama.online);
-    });
-    return modelRegistry.subscribe(() => setModelsList(modelRegistry.listModels()));
-  }, []);
-
-  useEffect(() => {
     fetchItems();
   }, [fetchItems]);
 
@@ -145,9 +134,9 @@ export function AIPage() {
           id: 'msg-' + Date.now(),
           role: 'assistant',
           content:
-            'Hello! I am **Master AI Core v2.2** powered by the unified Puter.js and Three-Brain Hybrid Architecture.\n\n- **Brain A**: Central Controller (Intent Routing & Task Planning)\n- **Brain B**: Local Open-Weight Intelligence (Ollama `qwen2.5:3b-instruct-q4_K_M` running on your local GPU)\n- **Brain C**: Unified Puter.js Gateway (100% Free Verified Open-Weight Cloud Models: Gemma 4, Nemotron 3.5, Cohere Code, Qwen 3.8)\n\nYou can ask questions in **English**, **සිංහල (Sinhala)**, or mixed language!',
+            '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI capabilities (Chat, Image Studio, Video Studio, Voice & Audio) run directly via Puter.js with verified 100% free models and zero developer cost ($0).\n\n- **100% Free Chat Models**: Google Gemma 4 31B, NVIDIA Nemotron 3.5, Cohere Code, Qwen 3.8\n- **Zero API Keys**: No personal API keys or setups needed\n- **Bilingual**: Ask questions in **English** or **සිංහල (Sinhala)** anytime!',
           timestamp: new Date().toISOString(),
-          tokensUsed: 64,
+          tokensUsed: 32,
         },
       ],
     };
@@ -254,68 +243,47 @@ export function AIPage() {
     abortControllerRef.current = abortCtrl;
 
     try {
-      // Check if user specifically selected a Puter free cloud model
-      const isPuterExplicit =
-        selectedModelId.startsWith('openrouter:') ||
-        selectedModelId.startsWith('infron:') ||
-        selectedModelId.startsWith('puter:');
-
-      if (isPuterExplicit) {
-        // Stream directly through Puter.js with automatic free model fallback
-        const historyForPuter = cleanedPriorMessages
-          .filter((m) => m.id !== 'msg-welcome' && m.content.trim().length > 0)
-          .map((m) => ({
-            role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
-            content: m.content.trim(),
-          }));
-
-        let accumulated = '';
-        const puterStream = puterAiService.streamChat(textToSend.trim(), {
-          model: selectedModelId,
-          messages: historyForPuter,
-          signal: abortCtrl.signal,
-        });
-
-        for await (const chunk of puterStream) {
-          if (abortCtrl.signal.aborted) break;
-          accumulated = chunk;
-          setSessions((prev) =>
-            prev.map((s) => {
-              if (s.id === activeSession.id) {
-                const msgs = s.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: accumulated } : m,
-                );
-                return { ...s, messages: msgs };
-              }
-              return s;
-            }),
-          );
+      let promptToSend = textToSend.trim();
+      if (sentFile) {
+        try {
+          const fileExcerpt = await api.getFileContentText(sentFile.id);
+          if (fileExcerpt) {
+            promptToSend = `[Attached File: ${sentFile.name}]\n${fileExcerpt.slice(0, 6000)}\n\n[User Prompt]:\n${promptToSend}`;
+          }
+        } catch {
+          // Continue with prompt alone if excerpt read fails
         }
-      } else {
-        // Standard Brain A + Brain B Controller Stream
-        const stream = AIService.streamResponse(
-          textToSend,
-          updatedMessages,
-          sentFile,
-          activeSession.persona,
-          user?.id,
-          { manualModelId: selectedModelId },
+      }
+
+      // Stream directly through Puter.js with automatic verified free model fallback
+      const historyForPuter = cleanedPriorMessages
+        .filter((m) => m.id !== 'msg-welcome' && m.content && m.content.trim().length > 0)
+        .map((m) => ({
+          role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+          content: m.content.trim(),
+        }));
+
+      let accumulated = '';
+      const puterStream = puterAiService.streamChat(promptToSend, {
+        model: selectedModelId,
+        messages: historyForPuter,
+        signal: abortCtrl.signal,
+      });
+
+      for await (const chunk of puterStream) {
+        if (abortCtrl.signal.aborted) break;
+        accumulated = chunk;
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId ? { ...m, content: accumulated } : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
         );
-
-        for await (const chunk of stream) {
-          if (abortCtrl.signal.aborted) break;
-          setSessions((prev) =>
-            prev.map((s) => {
-              if (s.id === activeSession.id) {
-                const msgs = s.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: chunk } : m,
-                );
-                return { ...s, messages: msgs };
-              }
-              return s;
-            }),
-          );
-        }
       }
     } catch (err: any) {
       if (!abortCtrl.signal.aborted) {
@@ -450,7 +418,7 @@ export function AIPage() {
   };
 
   const promptSuggestions = [
-    { label: 'සිංහල හැඳින්වීම (Sinhala)', text: 'Master AI Core v2.2 Three-Brain architecture එක ගැන කෙටියෙන් සිංහලෙන් පහදන්න.' },
+    { label: 'සිංහල හැඳින්වීම (Sinhala)', text: 'Master AI Puter.js Studio එක ගැන කෙටියෙන් සිංහලෙන් පහදන්න.' },
     { label: 'Code Assistant', text: 'Write a modern TypeScript debounce utility function with unit tests.' },
     { label: 'Math & Logic', text: 'Solve this step by step: Calculate the monthly loan payment for $25,000 at 6.5% interest over 5 years.' },
     { label: 'Cloud Storage Summary', text: 'Summarize my Master Cloud zero-trust encryption architecture and 10 TB storage quota.' },
@@ -480,7 +448,7 @@ export function AIPage() {
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Unified Platform: AI Chat · Image Studio · Video Studio · Voice · Local Brain · Zero-Key
+              Unified Platform: AI Chat · Image Studio · Video Studio · Voice · Zero-Key Free Gateway
             </p>
           </div>
         </div>
@@ -549,24 +517,6 @@ export function AIPage() {
           </button>
 
           <button
-            onClick={() => setActiveStudioTab('local')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'local'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Cpu className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Brain B</span>
-            <span>Local</span>
-            <span
-              className={`h-2 w-2 rounded-full shrink-0 ${
-                ollamaOnline ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
-            />
-          </button>
-
-          <button
             onClick={() => setActiveStudioTab('memory')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeStudioTab === 'memory'
@@ -576,18 +526,6 @@ export function AIPage() {
           >
             <Database className="h-3.5 w-3.5" />
             <span>Memory</span>
-          </button>
-
-          <button
-            onClick={() => setActiveStudioTab('eval')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'eval'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Activity className="h-3.5 w-3.5" />
-            <span>Eval</span>
           </button>
         </div>
       </header>
@@ -652,7 +590,7 @@ export function AIPage() {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    AI Model Selector
+                    Puter.js Model Selector
                   </label>
                   <span className="text-[9px] text-emerald-400 font-bold">100% Free Tier</span>
                 </div>
@@ -661,22 +599,19 @@ export function AIPage() {
                   onChange={(e) => setSelectedModelId(e.target.value)}
                   className="w-full bg-background text-[11px] font-semibold rounded-lg px-2 py-1.5 border border-border/60 focus:outline-none focus:border-primary cursor-pointer truncate"
                 >
-                  <option value="auto">Auto Router (Brain A Orchestrator)</option>
-                  <optgroup label="Puter.js Verified 100% Free Cloud Models">
+                  <optgroup label="Verified 100% Free Models ($0)">
                     {VERIFIED_FREE_CHAT_MODELS.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name} [Free]
+                        {m.name}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Local Open-Weight Brain B">
-                    {modelsList
-                      .filter((m) => m.brain === 'local')
-                      .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} ({m.availability === 'ready' ? 'Ready' : m.availability})
-                        </option>
-                      ))}
+                  <optgroup label="Puter.js Standard Cloud Models">
+                    {PUTER_STANDARD_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
                   </optgroup>
                 </select>
               </div>
@@ -715,10 +650,10 @@ export function AIPage() {
             <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono gap-2">
               <span className="flex items-center gap-1.5 text-cyan-400 font-semibold truncate">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
-                Puter.js Gateway: Ready
+                Puter.js Gateway: Connected
               </span>
               <span className="text-[10px] text-emerald-400 font-mono">
-                {ollamaOnline ? 'GPU Active' : 'Cloud Standby'}
+                100% Free Models
               </span>
             </div>
           </div>
@@ -875,7 +810,7 @@ export function AIPage() {
                       }
                     }}
                     rows={1}
-                    placeholder="Ask Master AI (Puter.js Free Models, Local Ollama GPU)... [Enter to send]"
+                    placeholder="Ask Master AI (Puter.js 100% Free Models)... [Enter to send]"
                     className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
                   />
 
@@ -900,8 +835,8 @@ export function AIPage() {
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2">
-                  <span>Brain A Orchestrator &amp; Puter.js Central Gateway</span>
-                  <span className="text-emerald-400 font-medium">100% Free Verified Open-Weights</span>
+                  <span>Puter.js Direct Unified Cloud Gateway</span>
+                  <span className="text-emerald-400 font-medium">100% Free Tier Verified</span>
                 </div>
               </div>
             </div>
@@ -1516,29 +1451,11 @@ export function AIPage() {
         </div>
       )}
 
-      {/* ─── TAB 6: LOCAL BRAIN MANAGER ─── */}
-      {activeStudioTab === 'local' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-6xl mx-auto">
-            <LocalBrainManagerPanel />
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 7: LONG-TERM MEMORY BANK ─── */}
+      {/* ─── TAB 6: LONG-TERM MEMORY BANK ─── */}
       {activeStudioTab === 'memory' && (
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
           <div className="max-w-6xl mx-auto">
             <LongTermMemoryPanel />
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 8: 11-CATEGORY EVALUATION LAB ─── */}
-      {activeStudioTab === 'eval' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-6xl mx-auto">
-            <EvaluationLabPanel />
           </div>
         </div>
       )}

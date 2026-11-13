@@ -46,6 +46,10 @@ import {
   AiModelDescriptor,
   modelRegistry,
 } from '../../../services/ai/modelRegistry';
+import {
+  VERIFIED_FREE_CHAT_MODELS,
+  PUTER_STANDARD_MODELS,
+} from '../../../services/ai/puterAiService';
 
 export interface MasterAiChatStudioProps {
   messages: ChatMessage[];
@@ -90,9 +94,9 @@ const SOURCE_BADGE_STYLES: Record<ChatSourceBadge, { label: string; cls: string 
   deterministic_calc: { label: 'Deterministic Calc', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
   doc_retrieval: { label: 'Local Docs RAG', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   transcript_grounding: { label: 'Transcript BM25', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  gemini_cloud: { label: 'Brain C · Puter.js Cloud', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-  local_open_weight: { label: 'Brain B · Local Open-Weight', cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
-  cloud_brain: { label: 'Brain C · Cloud Brain', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  gemini_cloud: { label: 'Puter.js Cloud', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  local_open_weight: { label: 'Puter.js Open-Weight', cls: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+  cloud_brain: { label: 'Puter.js Free Model', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
   long_term_memory: { label: 'Remembered Memory', cls: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' },
   parallel_verified: { label: 'Parallel Verified', cls: 'bg-lime-500/20 text-lime-300 border-lime-500/30' },
   system_notice: { label: 'System Diagnostic', cls: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
@@ -391,20 +395,28 @@ export function MasterAiChatStudio(props: MasterAiChatStudioProps) {
               </button>
             )}
 
-            {/* v2.0 Model Router Selector */}
+            {/* Puter.js Model Selector */}
             {onChangeManualModelId && (
               <select
                 value={manualModelId}
                 onChange={(e) => onChangeManualModelId(e.target.value)}
-                title="Brain A Intelligent Router or manual model override"
+                title="Puter.js Verified Free Models"
                 className="px-2 py-1 rounded-lg bg-black/50 border border-white/15 text-[10px] text-white/90 outline-none max-w-[175px]"
               >
-                <option value="auto">Auto Router (Brain A)</option>
-                {modelOptions.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    [{m.brain.toUpperCase()}] {m.name} ({m.availability === 'ready' ? 'Ready' : m.availability})
-                  </option>
-                ))}
+                <optgroup label="Verified Free Models ($0)">
+                  {VERIFIED_FREE_CHAT_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Puter.js Standard Models">
+                  {PUTER_STANDARD_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             )}
 

@@ -58,13 +58,9 @@ import {
 } from '@/services/ai/neuralRuntime';
 import { humanFeedbackStore } from '@/services/ai/feedbackStore';
 import { AiModelDescriptor, modelRegistry } from '@/services/ai/modelRegistry';
+import { VERIFIED_FREE_CHAT_MODELS } from '@/services/ai/puterAiService';
 import { MasterAiChatStudio } from './MasterAiChatStudio';
-import {
-  CloudAndRegistryPanel,
-  EvaluationLabPanel,
-  LocalBrainManagerPanel,
-  LongTermMemoryPanel,
-} from './MasterAiV2Panels';
+import { LongTermMemoryPanel } from './MasterAiV2Panels';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -93,13 +89,13 @@ function buildWelcomeMessage(
 }
 
 export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVideoElement> }) {
-  // Navigation Tabs (v1 + v2 Three-Brain Modules)
+  // Navigation Tabs
   const [activeTab, setActiveTab] = useState<
-    'chat' | 'summary' | 'chapters' | 'search' | 'local_brain' | 'cloud_registry' | 'memory' | 'eval' | 'capabilities' | 'export' | 'settings'
+    'chat' | 'summary' | 'chapters' | 'search' | 'memory' | 'capabilities' | 'export' | 'settings'
   >('chat');
   const [capabilities, setCapabilities] = useState<BrowserCapabilities | null>(null);
   const [registeredModels, setRegisteredModels] = useState<AiModelDescriptor[]>(() => modelRegistry.listModels());
-  const [manualModelId, setManualModelId] = useState<string>('auto');
+  const [manualModelId, setManualModelId] = useState<string>(VERIFIED_FREE_CHAT_MODELS[0].id);
   const [enableParallel, setEnableParallel] = useState<boolean>(false);
 
   // Store Selectors
@@ -577,28 +573,6 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
             Dialogue Search
           </button>
           <button
-            onClick={() => setActiveTab('local_brain')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'local_brain'
-                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                : 'text-white/70 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            Local Brain
-          </button>
-          <button
-            onClick={() => setActiveTab('cloud_registry')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'cloud_registry'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                : 'text-white/70 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5" />
-            Cloud &amp; Registry
-          </button>
-          <button
             onClick={() => setActiveTab('memory')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'memory'
@@ -608,17 +582,6 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
           >
             <Database className="w-3.5 h-3.5" />
             Memory
-          </button>
-          <button
-            onClick={() => setActiveTab('eval')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'eval'
-                ? 'bg-lime-500/20 text-lime-300 border border-lime-500/30'
-                : 'text-white/70 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            Eval Lab
           </button>
           <button
             onClick={() => setActiveTab('capabilities')}
@@ -697,10 +660,7 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
           />
         )}
 
-        {activeTab === 'local_brain' && <LocalBrainManagerPanel />}
-        {activeTab === 'cloud_registry' && <CloudAndRegistryPanel />}
         {activeTab === 'memory' && <LongTermMemoryPanel />}
-        {activeTab === 'eval' && <EvaluationLabPanel />}
 
         {/* ================================================================= */}
         {/* TAB 2: EXECUTIVE SUMMARY & KEY TAKEAWAYS                          */}

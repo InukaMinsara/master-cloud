@@ -6,7 +6,7 @@
 import { FileItem } from '@/types/file';
 import { api } from './api';
 import { AIGateway, QWEN_OMNI_VIDEO_MODEL, VideoStoryboardResult } from './aiGateway';
-import { originalBrainController } from './ai/originalBrainController';
+import { puterAiService, VERIFIED_FREE_CHAT_MODELS } from './ai/puterAiService';
 
 export interface AIMessage {
   id: string;
@@ -59,7 +59,7 @@ export class AIService {
     return [
       {
         id: 'session-default',
-        title: 'MASTER AI v2.0 Copilot',
+        title: 'Master AI Puter.js Studio',
         persona: 'general',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -68,11 +68,11 @@ export class AIService {
             id: 'msg-welcome',
             role: 'assistant',
             content:
-              'Hello! I am **MASTER AI CORE v2.0** (Three-Brain Hybrid Architecture: Original Brain Orchestrator + Local Open-Weight Engine + Optional Authorized Cloud).\n\nAttach a Drive file or ask questions in **Sinhala or English**.',
+              '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI features (AI Chat, Image Studio, Video Studio, Voice & Speech) run on verified free models with zero developer cost ($0) and zero API keys.\n\nAttach a Drive file or ask questions in **English** or **සිංහල (Sinhala)**!',
             timestamp: new Date().toISOString(),
-            tokensUsed: 44,
-            modelTag: 'master-ai-v2-orchestrator',
-            brainUsed: 'original',
+            tokensUsed: 32,
+            modelTag: 'puter-verified-free',
+            brainUsed: 'cloud',
           },
         ],
       },
@@ -95,76 +95,49 @@ export class AIService {
     _userId?: string,
     options?: { manualModelId?: string; offlineOnly?: boolean },
   ): AsyncGenerator<string, void, unknown> {
-    let externalFileContext: { name: string; contentExcerpt: string } | null = null;
+    let externalFileContext = '';
     if (attachedFile) {
-      const fileText = await api.getFileContentText(attachedFile.id);
-      externalFileContext = {
-        name: attachedFile.name,
-        contentExcerpt: fileText ? fileText.slice(0, 4000) : '',
-      };
-    }
-
-    const storedHistory = history.map((m, idx) => ({
-      id: m.id || `m_${idx}`,
-      sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
-      text: m.content,
-      timestamp: Date.parse(m.timestamp) || Date.now(),
-    }));
-
-    const buffered: string[] = [];
-    let wakeup: (() => void) | null = null;
-    let finished = false;
-    let errCaptured: unknown = null;
-
-    const personaHint =
-      persona === 'coder'
-        ? '[Persona: Code Architect]\n'
-        : persona === 'analyst'
-          ? '[Persona: Evidence Analyst]\n'
-          : persona === 'writer'
-            ? '[Persona: Technical Writer]\n'
-            : '';
-
-    const run = originalBrainController
-      .processQuery({
-        query: `${personaHint}${prompt}`.trim(),
-        history: storedHistory,
-        externalFileContext,
-        manualModelId: options?.manualModelId,
-        offlineOnly: options?.offlineOnly,
-        onProgress: (partial) => {
-          buffered.push(partial);
-          wakeup?.();
-          wakeup = null;
-        },
-      })
-      .then((res) => {
-        buffered.push(res.text);
-        finished = true;
-        wakeup?.();
-        wakeup = null;
-      })
-      .catch((err) => {
-        errCaptured = err;
-        finished = true;
-        wakeup?.();
-        wakeup = null;
-      });
-
-    while (!finished || buffered.length > 0) {
-      if (buffered.length > 0) {
-        const latest = buffered[buffered.length - 1];
-        buffered.length = 0;
-        yield latest;
-      } else if (!finished) {
-        await new Promise<void>((resolve) => {
-          wakeup = resolve;
-        });
+      try {
+        const fileText = await api.getFileContentText(attachedFile.id);
+        if (fileText) {
+          externalFileContext = `[Attached File: ${attachedFile.name}]\n${fileText.slice(0, 4000)}\n\n`;
+        }
+      } catch {
+        // proceed without file text
       }
     }
 
-    await run;
-    if (errCaptured) throw errCaptured;
+    const personaHint =
+      persona === 'coder'
+        ? '[Role: Expert Code Architect]\n'
+        : persona === 'analyst'
+          ? '[Role: Evidence & Data Analyst]\n'
+          : persona === 'writer'
+            ? '[Role: Technical & Creative Writer]\n'
+            : '';
+
+    const fullPrompt = `${personaHint}${externalFileContext}${prompt}`.trim();
+
+    const historyForPuter = history
+      .filter((m) => m.content && m.content.trim().length > 0 && m.id !== 'msg-welcome')
+      .map((m) => ({
+        role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+        content: m.content.trim(),
+      }));
+
+    const modelToUse =
+      options?.manualModelId && options.manualModelId !== 'auto'
+        ? options.manualModelId
+        : VERIFIED_FREE_CHAT_MODELS[0].id;
+
+    const stream = puterAiService.streamChat(fullPrompt, {
+      model: modelToUse,
+      messages: historyForPuter,
+    });
+
+    for await (const chunk of stream) {
+      yield chunk;
+    }
   }
 
   static async getGatewayDiagnostics(): Promise<AIGatewayStats[]> {
