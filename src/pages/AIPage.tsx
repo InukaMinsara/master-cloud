@@ -208,7 +208,12 @@ export function AIPage() {
         : undefined,
     };
 
-    const updatedMessages = [...activeSession.messages, userMsg];
+    // Purge any ghost/empty messages from prior failed turns
+    const cleanedPriorMessages = activeSession.messages.filter(
+      (m) => m.role === 'user' || (m.role === 'assistant' && typeof m.content === 'string' && m.content.trim().length > 0)
+    );
+
+    const updatedMessages = [...cleanedPriorMessages, userMsg];
     const updatedSessions = sessions.map((s) => {
       if (s.id === activeSession.id) {
         return {
@@ -257,15 +262,17 @@ export function AIPage() {
 
       if (isPuterExplicit) {
         // Stream directly through Puter.js with automatic free model fallback
-        const puterMessages = updatedMessages.map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        }));
+        const historyForPuter = cleanedPriorMessages
+          .filter((m) => m.id !== 'msg-welcome' && m.content.trim().length > 0)
+          .map((m) => ({
+            role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+            content: m.content.trim(),
+          }));
 
         let accumulated = '';
-        const puterStream = puterAiService.streamChat(textToSend, {
+        const puterStream = puterAiService.streamChat(textToSend.trim(), {
           model: selectedModelId,
-          messages: puterMessages.slice(0, -1),
+          messages: historyForPuter,
           signal: abortCtrl.signal,
         });
 
@@ -313,6 +320,18 @@ export function AIPage() {
     } catch (err: any) {
       if (!abortCtrl.signal.aborted) {
         toast.error(`Generation error: ${err?.message || 'AI service interrupted'}`);
+        // Remove empty assistant message if it failed before generating any content
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.filter(
+                (m) => m.id !== assistantMsgId || m.content.trim().length > 0,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
       }
     } finally {
       setIsStreaming(false);
@@ -733,7 +752,9 @@ export function AIPage() {
 
             {/* Message Thread */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-              {activeSession.messages.map((msg) => (
+              {activeSession.messages
+                .filter((msg) => msg.role === 'user' || Boolean(msg.content && msg.content.trim().length > 0) || isStreaming)
+                .map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex gap-3 max-w-3xl ${

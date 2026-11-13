@@ -231,6 +231,44 @@ class PuterAiPlatformService {
 
   // ─── 2. DYNAMIC MODEL RETRIEVAL & FREE SELECTION ───
 
+  /**
+   * Sanitizes conversation history and prompt into a strictly valid payload
+   * conforming to Puter / OpenRouter API constraints (non-empty content, valid roles, no orphan assistant openers).
+   */
+  private sanitizeChatPayload(
+    prompt: string,
+    history?: Array<{ role?: string; content?: string }>,
+  ): string | Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
+    const cleanPrompt = (prompt || '').trim();
+    const sanitized: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
+
+    if (Array.isArray(history)) {
+      for (const m of history) {
+        if (!m || typeof m.content !== 'string') continue;
+        const text = m.content.trim();
+        if (!text) continue; // Skip empty content entirely
+
+        const role = (m.role === 'assistant' || m.role === 'system') ? m.role : 'user';
+
+        // An assistant greeting cannot open the chat history array in OpenAI/OpenRouter APIs
+        if (role === 'assistant' && sanitized.length === 0) continue;
+
+        sanitized.push({ role, content: text });
+      }
+    }
+
+    if (cleanPrompt) {
+      sanitized.push({ role: 'user', content: cleanPrompt });
+    }
+
+    // If there is only 1 message (or no history), return a simple string prompt for maximum compatibility
+    if (sanitized.length <= 1) {
+      return sanitized[0]?.content || cleanPrompt || 'Hello';
+    }
+
+    return sanitized;
+  }
+
   public async listAvailableModels(forceRefresh: boolean = false): Promise<PuterModelEntry[]> {
     if (this.cachedModels && !forceRefresh) {
       return this.cachedModels;
@@ -314,10 +352,8 @@ class PuterAiPlatformService {
     let lastError: any = null;
     let fallbackTriggered = false;
 
-    // Build chat payload
-    const messagesPayload = options.messages && options.messages.length > 0
-      ? [...options.messages, { role: 'user' as const, content: prompt }]
-      : prompt;
+    // Build strictly-validated chat payload
+    const messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
 
     for (let i = 0; i < fallbackList.length; i++) {
       const candidateModel = fallbackList[i];
@@ -329,6 +365,10 @@ class PuterAiPlatformService {
           temperature: options.temperature,
           max_tokens: options.max_tokens,
         });
+
+        if (res && res.error) {
+          throw new Error(res.error.message || res.error);
+        }
 
         const text = typeof res === 'string'
           ? res
@@ -372,9 +412,7 @@ class PuterAiPlatformService {
     ];
 
     const startTime = performance.now();
-    const messagesPayload = options.messages && options.messages.length > 0
-      ? [...options.messages, { role: 'user' as const, content: prompt }]
-      : prompt;
+    const messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
 
     let fullAccumulated = '';
     let successModel = requestedModel;
@@ -394,11 +432,15 @@ class PuterAiPlatformService {
           max_tokens: options.max_tokens,
         });
 
+        if (stream && stream.error) {
+          throw new Error(stream.error.message || stream.error);
+        }
+
         // Puter returns an AsyncIterable
         if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
           for await (const chunk of stream) {
             if (options.signal?.aborted) break;
-            const piece = chunk?.text ?? (typeof chunk === 'string' ? chunk : '');
+            const piece = chunk?.text ?? chunk?.message?.content ?? (typeof chunk === 'string' ? chunk : '');
             if (piece) {
               fullAccumulated += piece;
               options.onChunk?.(piece);
@@ -407,7 +449,7 @@ class PuterAiPlatformService {
           }
         } else {
           // Non-streaming fallback response
-          const staticText = typeof stream === 'string' ? stream : (stream?.message?.content || '');
+          const staticText = typeof stream === 'string' ? stream : (stream?.message?.content || stream?.text || '');
           fullAccumulated = staticText;
           yield fullAccumulated;
         }

@@ -523,10 +523,13 @@ class PuterCloudAdapter implements AiModelAdapter {
   ): Promise<UnifiedChatResponse> {
     const started = Date.now();
     const prompt = request.messages[request.messages.length - 1]?.content || '';
-    const history = request.messages.slice(0, -1).map((m) => ({
-      role: (m.role === 'tool' ? 'assistant' : m.role) as 'user' | 'assistant' | 'system',
-      content: m.content,
-    }));
+    const history = request.messages
+      .slice(0, -1)
+      .filter((m) => m && typeof m.content === 'string' && m.content.trim().length > 0)
+      .map((m) => ({
+        role: (m.role === 'tool' ? 'assistant' : m.role) as 'user' | 'assistant' | 'system',
+        content: m.content.trim(),
+      }));
 
     let fullText = '';
     let tokenCount = 0;
