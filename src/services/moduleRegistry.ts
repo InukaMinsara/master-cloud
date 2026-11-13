@@ -1,5 +1,6 @@
 import { LucideIcon, FileText, FileSpreadsheet, Presentation, CheckSquare, Palette, BookOpen, Image as ImageIcon, Video, Bot, Sparkles, FileCode } from 'lucide-react';
-import { CanvasAppType } from '@/types/canvas';
+
+export type CanvasAppType = 'docs' | 'sheets' | 'slides' | 'forms' | 'draw' | 'notes' | 'pics' | 'vids' | 'word' | 'excel' | 'powerpoint' | 'onenote';
 
 export interface MasterModuleDefinition {
   id: CanvasAppType;

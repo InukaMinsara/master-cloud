@@ -62,6 +62,9 @@ export interface CanvasDocData {
     pageBgColor?: string;
     columns?: 1 | 2 | 3;
     differentFirstPage?: boolean;
+    watermarkText?: string;
+    lineSpacing?: number;
+    viewMode?: 'print' | 'web';
   };
   comments?: DocComment[];
   trackChangesEnabled?: boolean;

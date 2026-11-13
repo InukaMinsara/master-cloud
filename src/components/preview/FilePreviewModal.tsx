@@ -594,20 +594,6 @@ export function FilePreviewModal() {
             </DropdownMenu>
           )}
 
-
-          {isDoc && (
-            <Button
-              size="sm"
-              onClick={() => {
-                closePreview();
-                navigate(`/canvas/docs/${activeFile.id}`);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-0 h-9 text-xs rounded-xl shadow-lg shadow-blue-500/20"
-            >
-              <FileText className="h-3.5 w-3.5 mr-1.5" /> Open in Docs
-            </Button>
-          )}
-
           <Button
             variant="outline"
             size="sm"

@@ -1,6 +1,9 @@
 import { api } from './api';
 import { localDb, binaryStorage } from './localDb';
 import { FileItem } from '@/types/file';
+import { DocDocxService } from '@/features/master-canvas/docs/services/DocDocxService';
+import { DocSearchService } from '@/features/master-canvas/docs/services/DocSearchService';
+import { SlideTemplates } from '@/features/master-canvas/slides/services/SlideTemplates';
 import {
   CanvasAppType,
   CanvasDocData,
@@ -425,7 +428,7 @@ export class CanvasService {
     const defaultTitle = title || `Untitled ${type.charAt(0).toUpperCase() + type.slice(1)}`;
     if (type === 'docs' || type === 'word') return this.getDefaultDocData(defaultTitle);
     if (type === 'sheets' || type === 'excel') return this.getDefaultSheetData(defaultTitle);
-    if (type === 'slides') return this.getDefaultSlideData(defaultTitle);
+    if (type === 'slides') return SlideTemplates.getBlankDeck(defaultTitle);
     if (type === 'forms') return this.getDefaultFormData(defaultTitle);
     if (type === 'draw') return this.getDefaultDrawData(defaultTitle);
     if (type === 'notes' || type === 'onenote') return this.getDefaultNotesData(defaultTitle);
@@ -437,14 +440,18 @@ export class CanvasService {
     type: CanvasAppType,
     title = 'Untitled Document',
     parentFolderId: string | null = null,
-    customContent?: string
+    customContent?: any
   ): Promise<{ file: FileItem; initialData: any }> {
     const config = CANVAS_APP_CONFIG[type] || CANVAS_APP_CONFIG.docs;
     const filename = `${title.trim() || 'Untitled Document'}.${config.ext}`;
 
-    const initialData = this.getDefaultData(type, title);
-    if (customContent && (type === 'docs' || type === 'word')) {
-      initialData.content = customContent;
+    let initialData = this.getDefaultData(type, title);
+    if (customContent) {
+      if ((type === 'docs' || type === 'word') && typeof customContent === 'string') {
+        initialData.content = customContent;
+      } else if (type === 'slides' && typeof customContent === 'object' && Array.isArray(customContent.slides)) {
+        initialData = customContent;
+      }
     }
     const jsonString = JSON.stringify(initialData, null, 2);
 
@@ -485,6 +492,29 @@ export class CanvasService {
     let textContent: string | null = null;
     const cachedBlob = await binaryStorage.getBlob(file.storage_path);
     if (cachedBlob) {
+      if ((type === 'docs' || type === 'word') && file.name.toLowerCase().endsWith('.docx')) {
+        try {
+          const buf = await cachedBlob.arrayBuffer();
+          if (DocDocxService.isDocxZipBuffer(buf)) {
+            const parsedDocx = await DocDocxService.importDocxBuffer(buf, file.name.replace(/\.[^.]+$/, ''));
+            const txt = parsedDocx.html.replace(/<[^>]+>/g, ' ').trim();
+            return {
+              file,
+              data: {
+                title: parsedDocx.title,
+                content: parsedDocx.html,
+                version: 1,
+                wordCount: txt ? txt.split(/\s+/).length : 0,
+                charCount: txt.length,
+                lastSavedAt: file.updated_at,
+              } as unknown as T,
+            };
+          }
+        } catch (e) {
+          console.warn('DOCX parse fallback to text:', e);
+        }
+      }
+
       try {
         textContent = await cachedBlob.text();
       } catch {}
@@ -527,9 +557,14 @@ export class CanvasService {
   }
 
   // Save an existing document to Master Cloud with local cache update
-  static async saveCanvasDocument<T extends { lastSavedAt?: string }>(fileId: string, data: T): Promise<FileItem> {
+  static async saveCanvasDocument<T extends { lastSavedAt?: string; content?: string }>(fileId: string, data: T): Promise<FileItem> {
+    const cleanedContent =
+      typeof data.content === 'string'
+        ? DocSearchService.stripHighlightMarksFromHtml(data.content)
+        : data.content;
     const payload = {
       ...data,
+      ...(cleanedContent !== undefined ? { content: cleanedContent } : {}),
       lastSavedAt: new Date().toISOString(),
     };
     const jsonString = JSON.stringify(payload, null, 2);

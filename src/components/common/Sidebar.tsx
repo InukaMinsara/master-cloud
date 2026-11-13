@@ -63,9 +63,6 @@ export function Sidebar() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
-    { label: 'Docs', path: '/docs', icon: FileText, iconImg: '/docs-logo.png' },
-    { label: 'Slides', path: '/slides', icon: Presentation, iconImg: '/slides-logo.png' },
-
     { label: 'Shared with me', path: '/shared', icon: Users },
     { label: 'Recent', path: '/recent', icon: Clock },
     { label: 'Starred', path: '/starred', icon: Star },
@@ -121,15 +118,6 @@ export function Sidebar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="left" className="w-56">
-            <DropdownMenuItem onClick={() => navigate('/canvas/docs/new')}>
-              <img src="/docs-logo.png" alt="Docs" className="h-4 w-4 rounded-xs object-cover" />
-              <span>Word Document (.docx)</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/canvas/slides/new')}>
-              <img src="/slides-logo.png" alt="Slides" className="h-4 w-4 rounded-xs object-cover" />
-              <span>PowerPoint Slide (.pptx)</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setNewFolderModalOpen(true)}>
               <FolderPlus className="h-4 w-4 text-primary" />
               <span>New folder</span>
