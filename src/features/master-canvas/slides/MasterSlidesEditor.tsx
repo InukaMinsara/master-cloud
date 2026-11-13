@@ -1130,6 +1130,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
         onClearSlideInks={handleClearSlideInks}
         isAnimationPainterActive={!!animPainterSource}
         onToggleAnimationPainter={handleToggleAnimationPainter}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onBringForward={() => selectedObjectId && handleBringForward(selectedObjectId)}
         onSendBackward={() => selectedObjectId && handleSendBackward(selectedObjectId)}
         onBringToFront={() => selectedObjectId && handleBringToFront(selectedObjectId)}
@@ -1202,6 +1203,7 @@ export function MasterSlidesEditor({ initialFile, initialData, onSave }: MasterS
           onEraseInkStroke={handleEraseInkStroke}
           animPainterSource={animPainterSource}
           onApplyPainterAnimation={handleApplyPainterAnimation}
+          onAddObject={handleAddObject}
         />
 
         {/* PowerPoint Designer Ideas Panel */}

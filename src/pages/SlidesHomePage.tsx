@@ -127,9 +127,11 @@ export function SlidesHomePage() {
         {/* 1. Clean PowerPoint Start Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/60">
           <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-xl bg-[#B7472A] text-white flex items-center justify-center font-black text-xl shadow-sm shrink-0">
-              P
-            </div>
+            <img
+              src="/slides-logo.png"
+              alt="Slides Logo"
+              className="h-11 w-11 rounded-xl object-cover shadow-sm shrink-0"
+            />
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">Slides</h1>
               <p className="text-xs text-muted-foreground">

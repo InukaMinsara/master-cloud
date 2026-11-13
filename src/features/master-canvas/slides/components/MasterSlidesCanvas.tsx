@@ -8,6 +8,11 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Table as TableIcon,
+  BarChart3,
+  Square,
+  Image as ImageIcon,
+  Play,
 } from 'lucide-react';
 import { MasterSlide, MasterSlideObject, SlideThemeConfig, ShapeKind, SlideInkStroke } from '../types';
 import { SlideTemplates } from '../services/SlideTemplates';
@@ -34,6 +39,7 @@ interface MasterSlidesCanvasProps {
   showRulers?: boolean;
   showNotesDrawer?: boolean;
   onToggleNotesDrawer?: () => void;
+  onAddObject?: (type: MasterSlideObject['type'], shapeKind?: ShapeKind) => void;
 
   // Inking (Draw tab)
   drawTool?: 'select' | 'pen' | 'highlighter' | 'eraser';
@@ -72,6 +78,7 @@ export function MasterSlidesCanvas({
   onEraseInkStroke,
   animPainterSource = null,
   onApplyPainterAnimation,
+  onAddObject,
 }: MasterSlidesCanvasProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<ResizeHandle | null>(null);
@@ -80,6 +87,8 @@ export function MasterSlidesCanvas({
   const [initialObjDim, setInitialObjDim] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [transitionPlaying, setTransitionPlaying] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<{ x: number; y: number }[] | null>(null);
+  const [smartGuideX, setSmartGuideX] = useState<number | null>(null);
+  const [smartGuideY, setSmartGuideY] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const themes = SlideTemplates.getThemes();
@@ -94,12 +103,13 @@ export function MasterSlidesCanvas({
   useEffect(() => {
     if (slide.transition && slide.transition.type !== 'none') {
       setTransitionPlaying(true);
+      SlideAnimationService.playPptSound(slide.transition.sound || 'whoosh');
       const timer = setTimeout(() => {
         setTransitionPlaying(false);
       }, (slide.transition.durationSeconds || 0.5) * 1000 + 100);
       return () => clearTimeout(timer);
     }
-  }, [slide.id, previewTransitionTrigger, slide.transition?.type, slide.transition?.durationSeconds]);
+  }, [slide.id, previewTransitionTrigger, slide.transition?.type, slide.transition?.durationSeconds, slide.transition?.sound]);
 
   // Helper to convert client coordinates to 0-100% canvas coordinates
   const getCanvasCoords = (clientX: number, clientY: number) => {
@@ -174,9 +184,28 @@ export function MasterSlidesCanvas({
 
       const obj = slide.objects.find((o) => o.id === selectedObjectId);
       if (obj) {
+        let nextX = Math.max(0, Math.min(100 - obj.width, obj.x + deltaXPercent));
+        let nextY = Math.max(0, Math.min(100 - obj.height, obj.y + deltaYPercent));
+
+        // PowerPoint Smart Guides snapping (Center X 50%, Center Y 50%)
+        const centerX = nextX + obj.width / 2;
+        const centerY = nextY + obj.height / 2;
+        if (Math.abs(centerX - 50) < 1.4) {
+          nextX = 50 - obj.width / 2;
+          setSmartGuideX(50);
+        } else {
+          setSmartGuideX(null);
+        }
+        if (Math.abs(centerY - 50) < 1.4) {
+          nextY = 50 - obj.height / 2;
+          setSmartGuideY(50);
+        } else {
+          setSmartGuideY(null);
+        }
+
         onUpdateObject(selectedObjectId, {
-          x: Math.max(0, Math.min(100 - obj.width, obj.x + deltaXPercent)),
-          y: Math.max(0, Math.min(100 - obj.height, obj.y + deltaYPercent)),
+          x: nextX,
+          y: nextY,
         });
         setDragStartPos({ x: e.clientX, y: e.clientY });
       }
@@ -253,6 +282,8 @@ export function MasterSlidesCanvas({
     setIsRotating(false);
     setDragStartPos(null);
     setInitialObjDim(null);
+    setSmartGuideX(null);
+    setSmartGuideY(null);
   };
 
   // Animated objects list for ordering badge
@@ -381,6 +412,20 @@ export function MasterSlidesCanvas({
             )}
           </svg>
 
+          {/* PowerPoint Smart Alignment Guides */}
+          {smartGuideX !== null && (
+            <div
+              style={{ left: `${smartGuideX}%` }}
+              className="absolute top-0 bottom-0 w-[1px] border-l border-dashed border-[#B7472A] z-40 pointer-events-none"
+            />
+          )}
+          {smartGuideY !== null && (
+            <div
+              style={{ top: `${smartGuideY}%` }}
+              className="absolute left-0 right-0 h-[1px] border-t border-dashed border-[#B7472A] z-40 pointer-events-none"
+            />
+          )}
+
           {/* Render Slide Objects */}
           {slide.objects.map((obj) => {
             if (obj.isHidden) return null;
@@ -425,6 +470,8 @@ export function MasterSlidesCanvas({
                 className={`group transition-shadow ${
                   isSelected
                     ? 'ring-1 ring-[#B7472A] border border-[#B7472A] shadow-md'
+                    : isPlaceholder
+                    ? 'border border-dashed border-black/25 dark:border-white/25 hover:border-black/50'
                     : 'hover:ring-1 hover:ring-black/25 dark:hover:ring-white/30'
                 }`}
               >
@@ -441,64 +488,129 @@ export function MasterSlidesCanvas({
 
                 {/* 1. TEXT OBJECT (WYSIWYG Click-to-edit with placeholder support) */}
                 {obj.type === 'text' && (
-                  <div
-                    contentEditable={!obj.isLocked}
-                    suppressContentEditableWarning
-                    onFocus={(e) => {
-                      if (isPlaceholder) {
-                        e.currentTarget.innerText = '';
-                        onUpdateObject(obj.id, { content: '' });
-                      }
-                    }}
-                    onInput={(e) => {
-                      onUpdateObject(obj.id, { content: e.currentTarget.innerText });
-                    }}
-                    onBlur={(e) => {
-                      const text = e.currentTarget.innerText.trim();
-                      if (!text) {
-                        // Restore layout placeholder if user cleared it completely
-                        const fallback =
-                          obj.name?.toLowerCase().includes('subtitle') || obj.y > 40
-                            ? 'Click to add subtitle'
-                            : 'Click to add title';
-                        e.currentTarget.innerText = fallback;
-                        onUpdateObject(obj.id, { content: fallback });
-                      } else {
-                        onUpdateObject(obj.id, { content: text });
-                      }
-                    }}
-                    style={{
-                      fontSize: `${f.fontSize || 20}px`,
-                      fontWeight: f.bold ? 700 : 400,
-                      fontStyle: f.italic ? 'italic' : 'normal',
-                      textDecoration: f.underline
-                        ? 'underline'
-                        : f.strikethrough
-                        ? 'line-through'
-                        : 'none',
-                      color: isPlaceholder
-                        ? currentTheme.subtextColor || '#71717a'
-                        : f.textColor || currentTheme.textColor,
-                      opacity: isPlaceholder ? 0.65 : 1,
-                      backgroundColor: f.fillColor || 'transparent',
-                      textAlign: f.align || 'left',
-                      fontFamily: f.fontFamily || currentTheme.fontFamily,
-                      borderRadius: `${f.borderRadius || 0}px`,
-                      border: f.strokeWidth
-                        ? `${f.strokeWidth}px solid ${f.strokeColor || '#ffffff30'}`
-                        : 'none',
-                      justifyContent:
-                        f.verticalAlign === 'middle'
-                          ? 'center'
-                          : f.verticalAlign === 'bottom'
-                          ? 'flex-end'
-                          : 'flex-start',
-                      letterSpacing: f.letterSpacing ? `${f.letterSpacing}px` : undefined,
-                      textShadow: f.shadow ? '1px 1px 2px rgba(0,0,0,0.5)' : undefined,
-                    }}
-                    className="w-full h-full p-2 outline-none leading-snug flex flex-col whitespace-pre-wrap select-text cursor-text"
-                  >
-                    {obj.content}
+                  <div className="relative w-full h-full">
+                    <div
+                      contentEditable={!obj.isLocked}
+                      suppressContentEditableWarning
+                      onFocus={(e) => {
+                        if (isPlaceholder) {
+                          e.currentTarget.innerText = '';
+                          onUpdateObject(obj.id, { content: '' });
+                        }
+                      }}
+                      onInput={(e) => {
+                        onUpdateObject(obj.id, { content: e.currentTarget.innerText });
+                      }}
+                      onBlur={(e) => {
+                        const text = e.currentTarget.innerText.trim();
+                        if (!text) {
+                          // Restore layout placeholder if user cleared it completely
+                          const fallback =
+                            obj.name?.toLowerCase().includes('subtitle') || obj.y > 40
+                              ? 'Click to add subtitle'
+                              : 'Click to add title';
+                          e.currentTarget.innerText = fallback;
+                          onUpdateObject(obj.id, { content: fallback });
+                        } else {
+                          onUpdateObject(obj.id, { content: text });
+                        }
+                      }}
+                      style={{
+                        fontSize: `${f.fontSize || 20}px`,
+                        fontWeight: f.bold ? 700 : 400,
+                        fontStyle: f.italic ? 'italic' : 'normal',
+                        textDecoration: f.underline
+                          ? 'underline'
+                          : f.strikethrough
+                          ? 'line-through'
+                          : 'none',
+                        color: isPlaceholder
+                          ? currentTheme.subtextColor || '#71717a'
+                          : f.textColor || currentTheme.textColor,
+                        opacity: isPlaceholder ? 0.65 : 1,
+                        backgroundColor: f.fillColor || 'transparent',
+                        textAlign: f.align || 'left',
+                        fontFamily: f.fontFamily || currentTheme.fontFamily,
+                        borderRadius: `${f.borderRadius || 0}px`,
+                        border: f.strokeWidth
+                          ? `${f.strokeWidth}px solid ${f.strokeColor || '#ffffff30'}`
+                          : 'none',
+                        justifyContent:
+                          f.verticalAlign === 'middle'
+                            ? 'center'
+                            : f.verticalAlign === 'bottom'
+                            ? 'flex-end'
+                            : 'flex-start',
+                        letterSpacing: f.letterSpacing ? `${f.letterSpacing}px` : undefined,
+                        textShadow: f.shadow ? '1px 1px 2px rgba(0,0,0,0.5)' : undefined,
+                      }}
+                      className="w-full h-full p-2 outline-none leading-snug flex flex-col whitespace-pre-wrap select-text cursor-text"
+                    >
+                      {obj.content}
+                    </div>
+
+                    {/* Authentic PowerPoint 6-icon quick-insert hub inside content placeholders */}
+                    {isPlaceholder && (obj.content.includes('Click to add text') || obj.content.includes('Click to add left') || obj.content.includes('Click to add right')) && (
+                      <div className="absolute inset-x-0 bottom-2 flex items-center justify-center pointer-events-none">
+                        <div className="flex items-center gap-1.5 p-1 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xs rounded-lg border border-black/10 dark:border-white/10 shadow-xs pointer-events-auto">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddObject?.('table');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-[#156082] transition-colors"
+                            title="Insert Table"
+                          >
+                            <TableIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddObject?.('chart');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-emerald-600 transition-colors"
+                            title="Insert Chart"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddObject?.('shape', 'rounded');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-blue-600 transition-colors"
+                            title="Insert Shapes"
+                          >
+                            <Square className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddObject?.('image');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-amber-600 transition-colors"
+                            title="Insert Pictures"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddObject?.('button');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-rose-600 transition-colors"
+                            title="Insert Action Button"
+                          >
+                            <Play className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

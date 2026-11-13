@@ -93,9 +93,11 @@ export function CanvasPage() {
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="h-14 w-14 rounded-2xl bg-[#B7472A] text-white font-black text-2xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200">
-                    P
-                  </div>
+                  <img
+                    src="/slides-logo.png"
+                    alt="Slides Logo"
+                    className="h-14 w-14 rounded-2xl object-cover shadow-md group-hover:scale-105 transition-transform duration-200"
+                  />
                   <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#B7472A]/12 text-[#B7472A] dark:bg-orange-500/15 dark:text-orange-400">
                     PowerPoint Engine
                   </span>

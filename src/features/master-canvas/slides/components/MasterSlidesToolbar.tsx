@@ -63,6 +63,9 @@ import {
   ArrowDown,
   Move,
   Plus,
+  Camera,
+  Mic,
+  Video,
 } from 'lucide-react';
 import {
   MasterPresentationData,
@@ -91,6 +94,7 @@ export type SlideTabType =
   | 'TRANSITIONS'
   | 'ANIMATIONS'
   | 'SLIDESHOW'
+  | 'RECORD'
   | 'REVIEW'
   | 'VIEW'
   | 'SHAPE_FORMAT'
@@ -188,6 +192,9 @@ interface MasterSlidesToolbarProps {
   isAnimationPainterActive?: boolean;
   onToggleAnimationPainter?: () => void;
 
+  // Search & Help (Office 365)
+  onOpenCommandPalette?: () => void;
+
   // Contextual Arrange & Table Tools
   onBringForward?: () => void;
   onSendBackward?: () => void;
@@ -259,6 +266,7 @@ export function MasterSlidesToolbar({
   onClearSlideInks,
   isAnimationPainterActive = false,
   onToggleAnimationPainter,
+  onOpenCommandPalette,
   onBringForward,
   onSendBackward,
   onBringToFront,
@@ -314,6 +322,7 @@ export function MasterSlidesToolbar({
     { id: 'TRANSITIONS', label: 'Transitions' },
     { id: 'ANIMATIONS', label: 'Animations' },
     { id: 'SLIDESHOW', label: 'Slide Show' },
+    { id: 'RECORD', label: 'Record' },
     { id: 'REVIEW', label: 'Review' },
     { id: 'VIEW', label: 'View' },
   ];
@@ -352,7 +361,7 @@ export function MasterSlidesToolbar({
     <div className="flex flex-col bg-[#f3f2f1] dark:bg-slate-900 border-b border-black/[0.08] dark:border-border shrink-0 select-none z-20">
       {/* ── 1. PowerPoint 365 Windows 11 Title Bar & QAT ─────────────── */}
       <header className="h-9 px-3 flex items-center justify-between gap-3">
-        {/* Left: Back + PowerPoint 'P' Badge + QAT + Document Title */}
+        {/* Left: Back + PowerPoint Logo + AutoSave + QAT + Document Title */}
         <div className="flex items-center gap-1.5 min-w-0">
           {onBackToHome && (
             <button
@@ -365,11 +374,18 @@ export function MasterSlidesToolbar({
             </button>
           )}
 
-          <div
-            className="h-6 w-6 rounded bg-[#B7472A] text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0 select-none"
+          <img
+            src="/slides-logo.png"
+            alt="Slides Logo"
+            className="h-6 w-6 rounded object-cover shadow-xs shrink-0 select-none"
             title="Microsoft PowerPoint Engine (Master Cloud)"
-          >
-            P
+          />
+
+          {/* PowerPoint 365 AutoSave On Indicator */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[10px] font-semibold text-foreground/80 shrink-0 select-none mr-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden md:inline">AutoSave</span>
+            <span className="text-[9px] px-1 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold uppercase">On</span>
           </div>
 
           {/* Quick Access Toolbar */}
@@ -418,7 +434,7 @@ export function MasterSlidesToolbar({
             type="text"
             value={presentation.title}
             onChange={(e) => onUpdateTitle(e.target.value)}
-            className="font-semibold text-xs sm:text-sm bg-transparent border border-transparent hover:border-black/15 focus:border-[#B7472A] focus:bg-white dark:focus:bg-slate-800 rounded px-1.5 py-0.5 max-w-[200px] sm:max-w-xs transition-colors text-foreground truncate"
+            className="font-semibold text-xs sm:text-sm bg-transparent border border-transparent hover:border-black/15 focus:border-[#B7472A] focus:bg-white dark:focus:bg-slate-800 rounded px-1.5 py-0.5 max-w-[180px] sm:max-w-xs transition-colors text-foreground truncate"
             placeholder="Untitled Presentation"
           />
 
@@ -439,7 +455,19 @@ export function MasterSlidesToolbar({
           </div>
         </div>
 
-        {/* Right: Designer / Presenter / Present F5 */}
+        {/* Center: Office 365 Search Bar (Alt+Q) */}
+        <button
+          type="button"
+          onClick={onOpenCommandPalette}
+          className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 border border-black/15 dark:border-white/15 rounded-md text-xs text-muted-foreground w-60 xl:w-72 shadow-2xs transition-all mx-2"
+          title="Search commands, tools & PowerPoint features (Ctrl+K or Alt+Q)"
+        >
+          <Search className="h-3.5 w-3.5 text-muted-foreground/70" />
+          <span className="truncate">Search (Alt+Q)</span>
+          <kbd className="ml-auto text-[9.5px] font-mono bg-black/5 dark:bg-white/10 px-1 py-0.5 rounded text-muted-foreground">Ctrl+K</kbd>
+        </button>
+
+        {/* Right: Designer / Presenter / Present F5 / Windows Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
           {onToggleDesigner && (
             <button
@@ -484,6 +512,34 @@ export function MasterSlidesToolbar({
             <Play className="h-3 w-3 fill-current" />
             <span>Present</span>
           </button>
+
+          {/* Windows 11 Window Controls */}
+          <div className="hidden sm:flex items-center gap-0.5 pl-1.5 border-l border-black/10 dark:border-white/10 text-muted-foreground">
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="h-6 w-6 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 rounded text-xs font-bold transition-colors"
+              title="Minimize to Slides Hub"
+            >
+              —
+            </button>
+            <button
+              type="button"
+              onClick={() => onStartPresentation(false)}
+              className="h-6 w-6 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 rounded text-xs transition-colors"
+              title="Slide Show (F5)"
+            >
+              ▢
+            </button>
+            <button
+              type="button"
+              onClick={onBackToHome}
+              className="h-6 w-6 flex items-center justify-center hover:bg-rose-600 hover:text-white rounded text-xs transition-colors"
+              title="Close PowerPoint"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1702,6 +1758,80 @@ export function MasterSlidesToolbar({
               >
                 <MonitorPlay className="h-4 w-4 text-[#B7472A]" />
                 <span className="text-[10px] mt-0.5">Presenter View</span>
+              </button>
+            </RibbonGroup>
+          </>
+        )}
+
+        {/* ──────── TAB: RECORD ──────── */}
+        {activeTab === 'RECORD' && (
+          <>
+            <RibbonGroup label="Record">
+              <button
+                type="button"
+                onClick={() => onStartPresentation(false)}
+                className="flex flex-col items-center px-3 py-1 rounded bg-[#B7472A] hover:bg-[#9c3a20] text-white text-xs font-semibold shadow-2xs"
+                title="Record Slide Show from Beginning"
+              >
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                </div>
+                <span className="text-[10px] mt-0.5">From Beginning</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onStartPresentation(true)}
+                className="flex flex-col items-center px-2 py-1 rounded hover:bg-accent text-xs font-medium"
+                title="Record Slide Show from Current Slide"
+              >
+                <div className="flex items-center gap-1 text-rose-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                  <Play className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-[10px] mt-0.5">From Current</span>
+              </button>
+            </RibbonGroup>
+
+            <RibbonGroup label="Cameo & Media">
+              <button
+                type="button"
+                onClick={() => onAddObject('shape', 'circle')}
+                className="flex flex-col items-center px-2 py-1 rounded hover:bg-accent text-xs font-medium"
+                title="Insert Cameo circular presenter camera frame"
+              >
+                <Camera className="h-4 w-4 text-purple-600" />
+                <span className="text-[10px] mt-0.5">Cameo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onStartPresentation(true)}
+                className="flex flex-col items-center px-2 py-1 rounded hover:bg-accent text-xs font-medium"
+                title="Audio recording"
+              >
+                <Mic className="h-4 w-4 text-blue-600" />
+                <span className="text-[10px] mt-0.5">Audio</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onStartPresentation(false)}
+                className="flex flex-col items-center px-2 py-1 rounded hover:bg-accent text-xs font-medium"
+                title="Screen Recording"
+              >
+                <Video className="h-4 w-4 text-emerald-600" />
+                <span className="text-[10px] mt-0.5">Screen Rec</span>
+              </button>
+            </RibbonGroup>
+
+            <RibbonGroup label="Export">
+              <button
+                type="button"
+                onClick={onExportHtml}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-accent text-xs font-medium border border-black/10"
+                title="Export presentation as interactive self-playing video deck"
+              >
+                <Download className="h-4 w-4 text-[#B7472A]" />
+                <span>Export to Video</span>
               </button>
             </RibbonGroup>
           </>
