@@ -2533,7 +2533,7 @@ async function runSupabaseSyncLoop() {
 
         if (!rErr && Array.isArray(remoteFiles)) {
           let updatedManifest = false;
-          const botToken = '***REMOVED***';
+          const botToken = (process.env.VITE_TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '').trim();
 
           for (const rf of remoteFiles) {
             const rel = rf.name;

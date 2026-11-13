@@ -1,8 +1,12 @@
+/**
+ * aiService.ts
+ * Master Cloud Drive Workspace AI Bridge -> Powered by MASTER AI CORE v2.0.
+ */
+
 import { FileItem } from '@/types/file';
 import { api } from './api';
-import { ApiKeyStore } from './apiKeyStore';
 import { AIGateway, QWEN_OMNI_VIDEO_MODEL, VideoStoryboardResult } from './aiGateway';
-
+import { originalBrainController } from './ai/originalBrainController';
 
 export interface AIMessage {
   id: string;
@@ -15,6 +19,8 @@ export interface AIMessage {
     sizeBytes: number;
   };
   tokensUsed?: number;
+  modelTag?: string;
+  brainUsed?: 'original' | 'local' | 'cloud';
 }
 
 export interface AIChatSession {
@@ -37,9 +43,8 @@ export interface AIGatewayStats {
 const STORAGE_KEY = 'master_cloud_ai_sessions';
 
 export class AIService {
-  // Aliases configuration (virtual identity layer)
   static readonly ALIASES = {
-    CHAT: 'master-chat',
+    CHAT: 'master-ai-v2-orchestrator',
     IMAGE: 'master-image',
     VIDEO: QWEN_OMNI_VIDEO_MODEL,
   };
@@ -54,7 +59,7 @@ export class AIService {
     return [
       {
         id: 'session-default',
-        title: 'Master AI Assistant',
+        title: 'MASTER AI v2.0 Copilot',
         persona: 'general',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -62,9 +67,12 @@ export class AIService {
           {
             id: 'msg-welcome',
             role: 'assistant',
-            content: 'Hello! I am **Master AI**, your intelligent cloud workspace copilot.\n\nI can analyze files directly from your Master Cloud Drive, write code, formulate spreadsheet calculations, create summaries, or help you brainstorm.\n\nHow can I help you today?',
+            content:
+              'Hello! I am **MASTER AI CORE v2.0** (Three-Brain Hybrid Architecture: Original Brain Orchestrator + Local Open-Weight Engine + Optional Authorized Cloud).\n\nAttach a Drive file or ask questions in **Sinhala or English**.',
             timestamp: new Date().toISOString(),
-            tokensUsed: 42,
+            tokensUsed: 44,
+            modelTag: 'master-ai-v2-orchestrator',
+            brainUsed: 'original',
           },
         ],
       },
@@ -79,101 +87,101 @@ export class AIService {
     }
   }
 
-  // Stream assistant response with realistic token generation
   static async *streamResponse(
     prompt: string,
     history: AIMessage[],
     attachedFile?: FileItem | null,
     persona: 'general' | 'analyst' | 'coder' | 'writer' = 'general',
-    userId?: string
+    _userId?: string,
+    options?: { manualModelId?: string; offlineOnly?: boolean },
   ): AsyncGenerator<string, void, unknown> {
-    let fileContext = '';
+    let externalFileContext: { name: string; contentExcerpt: string } | null = null;
     if (attachedFile) {
       const fileText = await api.getFileContentText(attachedFile.id);
-      fileContext = `\n\n[Attached File: "${attachedFile.name}" (${attachedFile.extension.toUpperCase()}, ${attachedFile.size_bytes} bytes)]\nContent excerpt:\n${fileText ? fileText.slice(0, 1500) : 'Binary or media asset.'}`;
+      externalFileContext = {
+        name: attachedFile.name,
+        contentExcerpt: fileText ? fileText.slice(0, 4000) : '',
+      };
     }
 
-    const messages = history.map(m => ({ role: m.role, content: m.content }));
-    messages.push({ role: 'user', content: prompt });
+    const storedHistory = history.map((m, idx) => ({
+      id: m.id || `m_${idx}`,
+      sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+      text: m.content,
+      timestamp: Date.parse(m.timestamp) || Date.now(),
+    }));
 
-    const modelAlias = persona === 'coder' ? 'master-coder' : 'master-chat';
+    const buffered: string[] = [];
+    let wakeup: (() => void) | null = null;
+    let finished = false;
+    let errCaptured: unknown = null;
 
-    try {
-      const chatStream = AIGateway.streamChat({
-        messages,
-        persona,
-        fileContext,
-        modelAlias,
+    const personaHint =
+      persona === 'coder'
+        ? '[Persona: Code Architect]\n'
+        : persona === 'analyst'
+          ? '[Persona: Evidence Analyst]\n'
+          : persona === 'writer'
+            ? '[Persona: Technical Writer]\n'
+            : '';
+
+    const run = originalBrainController
+      .processQuery({
+        query: `${personaHint}${prompt}`.trim(),
+        history: storedHistory,
+        externalFileContext,
+        manualModelId: options?.manualModelId,
+        offlineOnly: options?.offlineOnly,
+        onProgress: (partial) => {
+          buffered.push(partial);
+          wakeup?.();
+          wakeup = null;
+        },
+      })
+      .then((res) => {
+        buffered.push(res.text);
+        finished = true;
+        wakeup?.();
+        wakeup = null;
+      })
+      .catch((err) => {
+        errCaptured = err;
+        finished = true;
+        wakeup?.();
+        wakeup = null;
       });
 
-      for await (const chunk of chatStream) {
-        yield chunk;
-      }
-    } catch (err) {
-      console.warn('[AIService] AIGateway streaming failed, using fallback synthesis:', err);
-      const fallbackText = this.generateResponseText(prompt, attachedFile, fileContext, persona);
-      const words = fallbackText.split(' ');
-      let accumulated = '';
-      for (let i = 0; i < words.length; i++) {
-        accumulated += (i === 0 ? '' : ' ') + words[i];
-        yield accumulated;
-        await new Promise(resolve => setTimeout(resolve, 20));
+    while (!finished || buffered.length > 0) {
+      if (buffered.length > 0) {
+        const latest = buffered[buffered.length - 1];
+        buffered.length = 0;
+        yield latest;
+      } else if (!finished) {
+        await new Promise<void>((resolve) => {
+          wakeup = resolve;
+        });
       }
     }
+
+    await run;
+    if (errCaptured) throw errCaptured;
   }
 
-  private static generateResponseText(
-    prompt: string,
-    file?: FileItem | null,
-    fileContext?: string,
-    persona?: string
-  ): string {
-    const p = prompt.toLowerCase();
-
-    if (file) {
-      return `### Document Analysis: \`${file.name}\`\n\nI have thoroughly examined the attached file from your **Master Cloud Drive**:\n\n- **File Name**: \`${file.name}\`\n- **Format**: \`${file.extension.toUpperCase()}\`\n- **Storage Path**: \`${file.storage_path}\`\n- **Encryption Status**: Zero-Trust End-to-End Verified\n\n**Executive Key Findings**:\n1. **Core Subject**: This document provides specifications and structural configurations for Master Cloud workspace items.\n2. **Actionable Recommendations**: You can edit this directly in **Master Canvas** or generate structured data summaries.\n\nIs there a specific section or formula in this file you would like me to rewrite or compute?`;
-    }
-
-    if (p.includes('10 tb') || p.includes('quota') || p.includes('storage')) {
-      return `### Free 10 TB Storage Architecture\n\nEvery registered user on **Master Cloud** is provisioned with **10 TB of free, permanent cloud storage** (\`10,995,116,277,760 bytes\`).\n\n**Key Guarantees**:\n- **No Paid Plans or Upsells**: Master Cloud has zero subscription tiers, billing prompts, or payment gateways.\n- **Universal Allocation**: All users receive the exact same 10 TB high-performance quota upon registration.\n- **Quota Enforcement**: Verified server-side via database constraints and storage triggers.\n\nYou can inspect your real-time quota consumption anytime in the **Storage & Quota Analytics** page.`;
-    }
-
-    if (p.includes('canvas') || p.includes('doc') || p.includes('sheet') || p.includes('slide')) {
-      return `### Master Canvas Productivity Suite\n\nMaster Canvas is natively integrated with your cloud drive. Any document you create is stored as an authentic cloud file:\n\n- **Master Docs** (\`.mdoc\`): Markdown, rich text, and instant export to PDF/Markdown.\n- **Master Sheets** (\`.msheet\`): High-performance cell formula engine (\`=SUM\`, \`=AVERAGE\`, arithmetic).\n- **Master Slides** (\`.mslide\`): Slide decks with full-screen presentation mode.\n- **Master Forms** (\`.mform\`): Responsive survey questionnaires with live response analytics.\n- **Master Draw** (\`.mdraw\`): Vector whiteboard diagrams with SVG export.\n- **Master Notes** (\`.mnote\`): OneNote-style notebooks with interactive task checklists.\n\nYou can create new items directly from the left sidebar or by right-clicking anywhere in your Drive.`;
-    }
-
-    if (persona === 'coder' || p.includes('code') || p.includes('function') || p.includes('typescript')) {
-      return `Here is a production-grade TypeScript implementation for your request:\n\n\`\`\`typescript\nimport { MasterCloudEngine } from '@/services/engine';\n\nexport async function processMasterWorkflow(payload: Record<string, unknown>) {\n  console.log('[Master Cloud] Processing high-throughput workflow...');\n  \n  // Zero-trust verification\n  const isVerified = await MasterCloudEngine.verifyIntegrity(payload);\n  if (!isVerified) {\n    throw new Error('Integrity verification failed.');\n  }\n  \n  return {\n    success: true,\n    timestamp: new Date().toISOString(),\n    quotaAllocated: '10 TB Free',\n  };\n}\n\`\`\`\n\nWould you like me to add automated unit tests or error boundaries for this module?`;
-    }
-
-    return `I have processed your request using the **Master AI Gateway** (\`master-chat\` virtual alias).\n\nHere are the key takeaways:\n\n1. **High Efficiency**: All computations are handled with sub-millisecond response latency.\n2. **Cloud Drive Synergy**: You can attach any document or media file directly to this conversation for context-aware reasoning.\n3. **Continuous Productivity**: Everything generated here can be copied into Master Docs or saved into your Drive.\n\nLet me know if you would like me to expand on this or generate a complete document outline!`;
-  }
-
-  // System Center diagnostics for AI Gateway
   static async getGatewayDiagnostics(): Promise<AIGatewayStats[]> {
     const diag = await AIGateway.getDiagnostics();
-    return diag.map(d => ({
+    return diag.map((d) => ({
       alias: d.alias,
       upstreamTarget: d.upstreamTarget,
       latencyMs: d.latencyMs,
       requestsCount: d.totalRequests,
-      health: d.status === 'online' ? 'healthy' : 'degraded',
+      health: d.status === 'online' ? 'healthy' : d.status === 'degraded' ? 'degraded' : 'offline',
     }));
   }
 
-  /**
-   * Direct multi-scene video storyboard using qwen/qwen3.8-omni-flash:free
-   */
-  static async directVideoStoryboard(
-    concept: string,
-    sceneCount: number = 3
-  ): Promise<VideoStoryboardResult> {
+  static async directVideoStoryboard(concept: string, sceneCount: number = 3): Promise<VideoStoryboardResult> {
     return AIGateway.directVideoWithQwen(concept, sceneCount);
   }
 
-  /**
-   * Enhance video concept prompt using Qwen 3.8 Omni Flash
-   */
   static async enhanceVideoPrompt(prompt: string): Promise<string> {
     return AIGateway.enhanceVideoPromptWithQwen(prompt);
   }

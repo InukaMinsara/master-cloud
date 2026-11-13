@@ -18,7 +18,11 @@
     "desktop:start": "electron desktop/main.cjs",
     "desktop:build": "node scripts/build-desktop.mjs",
     "vgpu:start": "node scripts/master-50x-vgpu.mjs",
-    "vgpu:install": "node scripts/master-50x-vgpu.mjs --install"
+    "vgpu:install": "node scripts/master-50x-vgpu.mjs --install",
+    "ram:start": "node scripts/master-ram-engine.mjs",
+    "ram:optimize": "node scripts/master-ram-engine.mjs --optimize-once",
+    "security:scan": "node scripts/security-shield.mjs --all",
+    "security:check": "node scripts/security-shield.mjs"
   },
   "main": "desktop/main.cjs",
   "dependencies": {
@@ -39,6 +43,7 @@
     "hls.js": "^1.7.4",
     "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
+    "onnxruntime-web": "^1.31.1",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -97,8 +102,11 @@
     "files": [
       "desktop/**/*",
       "scripts/webdav-server.mjs",
+      "scripts/master-ram-engine.mjs",
+      "scripts/ram-zstd-worker.mjs",
       "scripts/cloud-manifest.json",
       "scripts/bin/rclone.exe",
+      "scripts/bin/master-ram-win32.exe",
       "public/logo-icon.svg"
     ],
     "asarUnpack": [

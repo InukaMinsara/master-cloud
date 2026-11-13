@@ -152,6 +152,10 @@ __pycache__/
 *.pt
 *.pth
 *.bin
+*.onnx
+models/**/*.pt
+models/**/*.onnx
+models/**/*.data
 models/master-ai-core/*.pt
 models/master-ai-core/*.data
 

@@ -27,6 +27,8 @@ import { formatBytes } from '@/lib/utils';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { QuantumVgpuHub } from '@/components/QuantumVgpuHub';
+import { MasterRamHub } from '@/components/MasterRamHub';
+import { Cpu } from 'lucide-react';
 import { usePreviewStore, QUALITY_OPTIONS, PreviewQuality } from '@/stores/previewStore';
 
 export function SettingsPage() {
@@ -114,10 +116,11 @@ export function SettingsPage() {
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'plan', label: '10 TB Cloud Plan', icon: HardDrive },
     { id: 'vgpu', label: 'Quantum 50x vGPU', icon: Zap },
+    { id: 'ram', label: 'Master RAM (500 GB)', icon: Cpu },
   ];
 
   // Safeguard against outdated active tab keys
-  const currentTab = ['account', 'security', 'appearance', 'plan', 'vgpu'].includes(activeSettingsTab)
+  const currentTab = ['account', 'security', 'appearance', 'plan', 'vgpu', 'ram'].includes(activeSettingsTab)
     ? activeSettingsTab
     : 'account';
 
@@ -498,6 +501,12 @@ export function SettingsPage() {
           {currentTab === 'vgpu' && (
             <div className="space-y-4 animate-in fade-in">
               <QuantumVgpuHub />
+            </div>
+          )}
+
+          {currentTab === 'ram' && (
+            <div className="space-y-4 animate-in fade-in">
+              <MasterRamHub />
             </div>
           )}
         </div>

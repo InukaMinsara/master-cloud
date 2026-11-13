@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('masterCloudDesktop', {
   openWeb: () => ipcRenderer.invoke('open-web'),
   getWebSession: () => ipcRenderer.invoke('get-web-session'),
   setDriveLetter: (letter) => ipcRenderer.invoke('set-drive-letter', letter),
+  getLocalHardwareProfile: () => ipcRenderer.invoke('ai-get-hardware-profile'),
   minimize: () => ipcRenderer.send('window-minimize'),
   close: () => ipcRenderer.send('window-close'),
   onStatusChange: (callback) => {

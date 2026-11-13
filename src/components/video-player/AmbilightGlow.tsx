@@ -40,7 +40,8 @@ export function AmbilightGlow({ videoRef }: AmbilightGlowProps) {
 
       if (isAudioOnly) {
         // Audio mode: dynamic reactive aura based on frequency spectrum
-        const freqData = audioStudioEngine.getByteFrequencyData();
+        const freqData = new Uint8Array(64);
+        audioStudioEngine.getByteFrequencyData(freqData);
         let bassSum = 0;
         let midSum = 0;
         let trebleSum = 0;

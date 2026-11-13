@@ -10,7 +10,46 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } = require(
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const http = require('http');
+const { spawn, execFile } = require('child_process');
 const { VirtualDriveEngine } = require('./engine.cjs');
+
+function getMasterRamScriptPath() {
+  const candidates = [
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'master-ram-engine.mjs'),
+    path.join(__dirname, '..', 'scripts', 'master-ram-engine.mjs'),
+    path.join(process.resourcesPath || '', 'scripts', 'master-ram-engine.mjs'),
+  ];
+  return candidates.find((c) => c && fs.existsSync(c)) || null;
+}
+
+function isMasterRamAlive() {
+  return new Promise((resolve) => {
+    const req = http.get('http://127.0.0.1:9060/health', { timeout: 900 }, (res) => {
+      res.on('data', () => {});
+      res.on('end', () => resolve(res.statusCode === 200));
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
+async function ensureMasterRamEngine() {
+  try {
+    if (await isMasterRamAlive()) return;
+    const ramScript = getMasterRamScriptPath();
+    if (!ramScript) return;
+    const child = spawn(process.execPath, [ramScript], {
+      stdio: 'ignore',
+      windowsHide: true,
+      detached: true,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    });
+    child.unref();
+  } catch (err) {
+    console.warn('Master RAM background launch skipped:', err.message);
+  }
+}
 
 // Single Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -128,6 +167,18 @@ function createTray() {
         {
           label: `📂 Open ${status.driveLetter} Drive`,
           click: () => engine.openInExplorer(),
+        },
+        {
+          label: '⚡ Boost Host RAM (Master RAM)',
+          click: () => {
+            const req = http.request(
+              { hostname: '127.0.0.1', port: 9060, path: '/api/ram/optimize', method: 'POST', timeout: 4000 },
+              (res) => { res.on('data', () => {}); res.on('end', () => {}); }
+            );
+            req.on('error', () => {});
+            req.write('{}');
+            req.end();
+          },
         },
         {
           label: '🌐 Open Web Dashboard',
@@ -313,6 +364,78 @@ ipcMain.handle('set-drive-letter', async (_event, letter) => {
   return { success: mounted, driveLetter: letter };
 });
 
+function execFileSafe(bin, args, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    execFile(bin, args, { timeout: timeoutMs, windowsHide: true }, (err, stdout, stderr) => {
+      resolve({
+        ok: !err,
+        stdout: (stdout || '').trim(),
+        stderr: (stderr || '').trim(),
+      });
+    });
+  });
+}
+
+ipcMain.handle('ai-get-hardware-profile', async () => {
+  const cpus = os.cpus() || [];
+  const cpuModel = cpus[0]?.model || null;
+  const cpuCores = cpus.length || 4;
+  const totalRamGb = Number((os.totalmem() / 1073741824).toFixed(2));
+  const freeRamGb = Number((os.freemem() / 1073741824).toFixed(2));
+
+  let gpuName = null;
+  let gpuVramTotalMb = null;
+  let gpuVramFreeMb = null;
+  let nvidiaDriverVersion = null;
+  let cudaVerified = false;
+  let cudaVerificationDetail = 'No NVIDIA GPU detected via nvidia-smi.';
+
+  const smi = await execFileSafe('nvidia-smi', [
+    '--query-gpu=name,memory.total,memory.free,driver_version',
+    '--format=csv,noheader,nounits',
+  ]);
+  if (smi.ok && smi.stdout) {
+    const firstLine = smi.stdout.split(/\r?\n/)[0] || '';
+    const parts = firstLine.split(',').map((s) => s.trim());
+    if (parts.length >= 4) {
+      gpuName = parts[0] || null;
+      gpuVramTotalMb = Number(parts[1]) || null;
+      gpuVramFreeMb = Number(parts[2]) || null;
+      nvidiaDriverVersion = parts[3] || null;
+
+      // Verify CUDA availability explicitly rather than assuming from GPU name
+      const nvcc = await execFileSafe('nvcc', ['--version'], 1500);
+      const cudaPath = process.env.CUDA_PATH || '';
+      if (nvcc.ok && nvcc.stdout) {
+        cudaVerified = true;
+        cudaVerificationDetail = `NVIDIA driver ${nvidiaDriverVersion} + NVCC toolkit verified.`;
+      } else if (cudaPath && fs.existsSync(cudaPath)) {
+        cudaVerified = true;
+        cudaVerificationDetail = `NVIDIA driver ${nvidiaDriverVersion} + CUDA_PATH verified (${cudaPath}).`;
+      } else {
+        cudaVerified = false;
+        cudaVerificationDetail = `NVIDIA driver ${nvidiaDriverVersion} (${gpuVramTotalMb} MiB VRAM) detected; local CUDA toolkit/runtime unverified (Ollama Vulkan/CUDA binary probes runtime at load).`;
+      }
+    }
+  }
+
+  const ollamaVer = await execFileSafe('ollama', ['--version'], 1500);
+  return {
+    cpuModel,
+    cpuCores,
+    totalRamGb,
+    freeRamGb,
+    gpuName,
+    gpuVramTotalMb,
+    gpuVramFreeMb,
+    nvidiaDriverVersion,
+    cudaVerified,
+    cudaVerificationDetail,
+    ollamaCliInstalled: ollamaVer.ok,
+    ollamaCliVersion: ollamaVer.ok ? ollamaVer.stdout : null,
+  };
+});
+
 ipcMain.on('window-minimize', () => {
   if (mainWindow) mainWindow.minimize();
 });
@@ -391,6 +514,7 @@ app.on('second-instance', (_event, commandLine) => {
 app.whenReady().then(() => {
   createWindow();
   createTray();
+  ensureMasterRamEngine();
 
   // Check initial command line args for deep link
   const initialDeepLink = process.argv.find((arg) => typeof arg === 'string' && arg.startsWith('mastercloud://'));

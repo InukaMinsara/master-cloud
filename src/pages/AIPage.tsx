@@ -17,6 +17,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
+import { modelRegistry } from '@/services/ai/modelRegistry';
+import { localBrainManager } from '@/services/ai/localBrain';
 import { useFileStore } from '@/stores/fileStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
@@ -32,6 +34,13 @@ export function AIPage() {
   const [attachedFile, setAttachedFile] = useState<FileItem | null>(null);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string>('auto');
+  const [modelsList, setModelsList] = useState(() => modelRegistry.listModels());
+
+  useEffect(() => {
+    void localBrainManager.discoverLocalRuntimes();
+    return modelRegistry.subscribe(() => setModelsList(modelRegistry.listModels()));
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
@@ -141,7 +150,8 @@ export function AIPage() {
         updatedMessages,
         sentFile,
         activeSession.persona,
-        user?.id
+        user?.id,
+        { manualModelId: selectedModelId },
       );
 
       for await (const chunk of stream) {
@@ -194,24 +204,43 @@ export function AIPage() {
           </button>
         </div>
 
-        {/* Persona Selector */}
-        <div className="p-3 border-b border-border/50 space-y-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-            Assistant Persona
-          </label>
-          <select
-            value={activeSession.persona}
-            onChange={(e) => {
-              const updated = sessions.map(s => s.id === activeSession.id ? { ...s, persona: e.target.value as any } : s);
-              setSessions(updated);
-            }}
-            className="w-full bg-muted text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-border/60 focus:outline-none focus:border-primary"
-          >
-            <option value="general">General Copilot</option>
-            <option value="analyst">Document Analyst</option>
-            <option value="coder">Code Architect</option>
-            <option value="writer">Executive Writer</option>
-          </select>
+        {/* Persona & Model Selector */}
+        <div className="p-3 border-b border-border/50 space-y-2">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Assistant Persona
+            </label>
+            <select
+              value={activeSession.persona}
+              onChange={(e) => {
+                const updated = sessions.map(s => s.id === activeSession.id ? { ...s, persona: e.target.value as any } : s);
+                setSessions(updated);
+              }}
+              className="w-full bg-muted text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-border/60 focus:outline-none focus:border-primary"
+            >
+              <option value="general">General Copilot</option>
+              <option value="analyst">Document Analyst</option>
+              <option value="coder">Code Architect</option>
+              <option value="writer">Executive Writer</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Model Router (Brain A/B/C)
+            </label>
+            <select
+              value={selectedModelId}
+              onChange={(e) => setSelectedModelId(e.target.value)}
+              className="w-full bg-muted text-[11px] font-semibold rounded-lg px-2 py-1.5 border border-border/60 focus:outline-none focus:border-primary"
+            >
+              <option value="auto">Auto Router (Brain A)</option>
+              {modelsList.map((m) => (
+                <option key={m.id} value={m.id}>
+                  [{m.brain.toUpperCase()}] {m.name} ({m.availability === 'ready' ? 'Ready' : m.availability})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Sessions List */}
@@ -242,13 +271,20 @@ export function AIPage() {
           })}
         </div>
 
-        {/* Gateway Status Badge */}
-        <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono">
-          <span className="flex items-center gap-1.5 text-emerald-500 font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            master-chat
+        {/* Honest Registry Status Badge */}
+        <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono gap-2">
+          <span className="flex items-center gap-1.5 text-emerald-500 font-semibold truncate">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+            Brain A · {modelsList.filter(m => m.availability === 'ready').length}/{modelsList.length} Ready
           </span>
-          <span>14ms • Online</span>
+          <button
+            type="button"
+            onClick={() => void localBrainManager.discoverLocalRuntimes()}
+            className="text-[10px] underline hover:text-foreground shrink-0"
+            title="Probe local Ollama / llama.cpp runtimes"
+          >
+            Probe Local
+          </button>
         </div>
       </div>
 

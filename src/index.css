@@ -120,6 +120,305 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
+/* Microsoft 365 Word Bundled Fonts */
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Aptos'; src: url('/fonts/word/Aptos-Black.ttf') format('truetype'); font-weight: 900; font-style: normal; font-display: swap; }
+
+@font-face { font-family: 'Aptos Display'; src: url('/fonts/word/AptosDisplay-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos Display'; src: url('/fonts/word/AptosDisplay-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Aptos Display'; src: url('/fonts/word/AptosDisplay-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos Display'; src: url('/fonts/word/AptosDisplay-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+@font-face { font-family: 'Aptos Narrow'; src: url('/fonts/word/AptosNarrow-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos Narrow'; src: url('/fonts/word/AptosNarrow-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Aptos Narrow'; src: url('/fonts/word/AptosNarrow-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Aptos Narrow'; src: url('/fonts/word/AptosNarrow-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+@font-face { font-family: 'Bierstadt'; src: url('/fonts/word/Bierstadt-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Bierstadt'; src: url('/fonts/word/Bierstadt-Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Bierstadt'; src: url('/fonts/word/Bierstadt-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+
+@font-face { font-family: 'Iskoola Pota'; src: url('/fonts/word/IskoolaPota-Normal.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Microsoft 365 Word Clone Document Typography (.master-docs-content) */
+.master-docs-content {
+  --doc-heading-font: 'Aptos Display', 'Calibri Light', 'Iskoola Pota', 'Nirmala UI', system-ui, sans-serif;
+  --doc-body-font: 'Aptos', 'Calibri', 'Iskoola Pota', 'Nirmala UI', system-ui, sans-serif;
+  --doc-accent1: #156082;
+  --doc-accent1-dark: #0F4761;
+  --doc-accent2: #E97132;
+  --doc-muted-text: #595959;
+  --doc-table-header-bg: #eef5f9;
+  font-family: var(--doc-body-font);
+  font-size: 12pt;
+  line-height: 1.16;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.master-docs-content h1 {
+  font-family: var(--doc-heading-font);
+  font-size: 20pt;
+  font-weight: 400;
+  line-height: 1.16;
+  color: var(--doc-accent1-dark);
+  margin-top: 18pt;
+  margin-bottom: 4pt;
+}
+
+.master-docs-content h2 {
+  font-family: var(--doc-heading-font);
+  font-size: 16pt;
+  font-weight: 400;
+  line-height: 1.16;
+  color: var(--doc-accent1-dark);
+  margin-top: 8pt;
+  margin-bottom: 4pt;
+}
+
+.master-docs-content h3 {
+  font-family: var(--doc-body-font);
+  font-size: 14pt;
+  font-weight: 400;
+  line-height: 1.16;
+  color: var(--doc-accent1-dark);
+  margin-top: 8pt;
+  margin-bottom: 4pt;
+}
+
+.master-docs-content h4 {
+  font-family: var(--doc-body-font);
+  font-size: 12pt;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.16;
+  color: var(--doc-accent1-dark);
+  margin-top: 4pt;
+  margin-bottom: 2pt;
+}
+
+.master-docs-content h5 {
+  font-family: var(--doc-body-font);
+  font-size: 12pt;
+  font-weight: 400;
+  color: var(--doc-accent1-dark);
+  margin-top: 4pt;
+  margin-bottom: 2pt;
+}
+
+.master-docs-content h6 {
+  font-family: var(--doc-body-font);
+  font-size: 12pt;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--doc-muted-text);
+  margin-top: 2pt;
+  margin-bottom: 0;
+}
+
+.master-docs-content p {
+  margin-top: 0;
+  margin-bottom: 8pt;
+}
+
+/* Word Quick Styles */
+.master-docs-content .word-title {
+  font-family: var(--doc-heading-font);
+  font-size: 28pt;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: inherit;
+  margin-top: 0;
+  margin-bottom: 4pt;
+}
+
+.master-docs-content .word-subtitle {
+  font-family: var(--doc-body-font);
+  font-size: 14pt;
+  font-weight: 400;
+  line-height: 1.16;
+  color: var(--doc-muted-text);
+  margin-top: 0;
+  margin-bottom: 8pt;
+}
+
+.master-docs-content .word-no-spacing {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.0 !important;
+}
+
+.master-docs-content .word-subtle-emphasis {
+  font-style: italic;
+  color: #404040;
+}
+
+.master-docs-content .word-intense-emphasis {
+  font-style: italic;
+  color: var(--doc-accent1-dark);
+}
+
+.master-docs-content .word-subtle-ref {
+  font-variant: small-caps;
+  color: var(--doc-muted-text);
+}
+
+.master-docs-content .word-intense-ref {
+  font-variant: small-caps;
+  font-weight: 700;
+  color: var(--doc-accent1-dark);
+  letter-spacing: 0.03em;
+}
+
+.master-docs-content .word-book-title {
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.master-docs-content ul {
+  list-style-type: disc;
+  padding-left: 24px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.master-docs-content ol {
+  list-style-type: decimal;
+  padding-left: 24px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.master-docs-content li {
+  margin-bottom: 4px;
+}
+
+.master-docs-content blockquote {
+  border-left: 3px solid var(--doc-accent1);
+  padding: 6px 14px;
+  margin: 8pt 0;
+  font-style: italic;
+  color: #404040;
+  background-color: rgba(21, 96, 130, 0.04);
+  border-radius: 0 4px 4px 0;
+}
+
+.master-docs-content blockquote.word-intense-quote {
+  border-left: none;
+  border-top: 1.5px solid var(--doc-accent1-dark);
+  border-bottom: 1.5px solid var(--doc-accent1-dark);
+  background: transparent;
+  padding: 10px 24px;
+  margin: 18pt 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--doc-accent1-dark);
+}
+
+.master-docs-content pre {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5pt;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid #cbd5e1;
+}
+
+.master-docs-content code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5pt;
+  background-color: rgba(148, 163, 184, 0.18);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.master-docs-content a {
+  color: var(--doc-accent1, #467886);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.master-docs-content hr {
+  border: none;
+  border-top: 1px solid #cbd5e1;
+  margin: 16px 0;
+}
+
+.master-docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+}
+
+.master-docs-content th,
+.master-docs-content td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 12px;
+  vertical-align: top;
+  min-width: 48px;
+}
+
+.master-docs-content th {
+  background-color: var(--doc-table-header-bg, #eef5f9);
+  font-weight: 700;
+  text-align: left;
+}
+
+.master-docs-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.master-docs-content .docs-page-break {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px 0;
+  border-top: 2px dashed #3b82f6;
+  position: relative;
+  user-select: none;
+  height: 16px;
+}
+
+.master-docs-content .docs-page-break::after {
+  content: 'PAGE BREAK';
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 1px 10px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  position: absolute;
+  top: -10px;
+}
+
+.master-docs-content mark.docs-search-match {
+  background-color: #fef08a;
+  color: #0f172a;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.master-docs-content mark.docs-search-match-active {
+  background-color: #f97316;
+  color: #ffffff;
+  border-radius: 2px;
+  padding: 0 2px;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.35);
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * {

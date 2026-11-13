@@ -11,7 +11,25 @@
 import { SubtitleCue } from './subtitleParser';
 import { DetectedScene, MediaBookmark } from './mediaMetadataDb';
 import { localKnowledgeEngine } from './ai/localKnowledgeEngine';
-import { toolAssistedOrchestrator, ToolAssistedResponse } from './ai/toolAssistedLocalMode';
+import {
+  toolAssistedOrchestrator,
+  ToolAssistedProcessOptions,
+  ToolAssistedResponse,
+} from './ai/toolAssistedLocalMode';
+import {
+  ChatSourceBadge,
+  LanguagePreferenceMode,
+  StoredChatMessage,
+} from './ai/conversationMemory';
+import {
+  NeuralGenerationConfig,
+} from './ai/neuralRuntime';
+import { cloudBrainManager } from './ai/cloudBrain';
+import { BrainLayer, modelRegistry } from './ai/modelRegistry';
+import {
+  originalBrainController,
+  ParallelCandidateResult,
+} from './ai/originalBrainController';
 
 export interface VideoAIContext {
   fileName: string;
@@ -36,6 +54,35 @@ export interface ChatMessage {
     payload?: any;
   };
   matchedTimestamps?: { time: number; label: string }[];
+  sourcesUsed?: ChatSourceBadge[];
+  sourceLabel?: string;
+  modelTag?: string;
+  brainUsed?: BrainLayer;
+  confidenceScore?: number;
+  validationWarnings?: string[];
+  rememberedMemoriesCount?: number;
+  orchestrationTrace?: string[];
+  fallbackTriggered?: boolean;
+  estimatedCostUsd?: number;
+  parallelAlternatives?: ParallelCandidateResult[];
+  tokensGenerated?: number;
+  latencyMs?: number;
+  promptTokens?: number;
+  maxContextTokens?: number;
+  compressedNotice?: string | null;
+  isStreaming?: boolean;
+  editedFromId?: string;
+}
+
+export interface LocalChatOptions {
+  signal?: AbortSignal;
+  onProgress?: (partialText: string, generatedTokens: number) => void;
+  languageMode?: LanguagePreferenceMode;
+  genConfig?: Partial<NeuralGenerationConfig>;
+  pureNeuralOnly?: boolean;
+  manualModelId?: string | null;
+  sessionId?: string;
+  enableParallelComparison?: boolean;
 }
 
 export interface AIChapterSuggestion {
@@ -136,22 +183,24 @@ export class MasterAiEngine {
 
   public setMode(mode: 'local' | 'cloud'): void {
     this.mode = mode;
+    cloudBrainManager.updatePrivacyPolicy({
+      allowCloudProcessing: mode === 'cloud',
+    });
     if (typeof window !== 'undefined') {
       localStorage.setItem('master_cloud_ai_mode', mode);
     }
   }
 
   public getApiKey(): string | null {
-    // Pure ephemeral in-memory getter
-    return this.#geminiApiKey;
+    return this.#geminiApiKey || cloudBrainManager.getProviderApiKey('gemini');
   }
 
   public setApiKey(key: string): void {
-    // Strict ephemeral in-memory storage (cleared upon tab closure or page reload)
-    this.#geminiApiKey = key.trim() || null;
+    const clean = key.trim() || null;
+    this.#geminiApiKey = clean;
+    cloudBrainManager.setProviderApiKey('gemini', clean);
     if (typeof window !== 'undefined') {
       try {
-        // Enforce that nothing ever enters persistent or session storage
         localStorage.removeItem('master_cloud_gemini_api_key');
         sessionStorage.removeItem('master_cloud_gemini_api_key_session');
       } catch {
@@ -165,293 +214,174 @@ export class MasterAiEngine {
   }
 
   // -------------------------------------------------------------------------
-  // Main Interactive Chat Interface
+  // Main Interactive Chat Interface — Powered by MASTER AI CORE v2.0 (Three-Brain)
   // -------------------------------------------------------------------------
   public async chat(
     userQuery: string,
     context: VideoAIContext,
     history: ChatMessage[] = [],
+    options: LocalChatOptions = {},
   ): Promise<ChatMessage> {
     const query = userQuery.trim();
     if (!query) {
       return {
         id: `ai_${Date.now()}`,
         sender: 'ai',
-        text: 'Please ask a question about your video or choose one of the recommended analysis prompts below.',
+        text: 'Please ask a question in Sinhala, English, or Mixed language, or choose one of the quick actions below.',
         timestamp: Date.now(),
+        sourcesUsed: ['neural_core'],
+        sourceLabel: 'Brain A · MASTER AI v2.0',
+        brainUsed: 'original',
       };
     }
 
-    // If Cloud mode is active and API key exists, call Gemini API
-    if (this.mode === 'cloud' && this.#geminiApiKey) {
-      try {
-        return await this.chatWithGemini(query, context, history);
-      } catch (err) {
-        console.warn('Gemini Cloud AI failed, falling back to Master Local Neural AI:', err);
-      }
-    }
-
-    // Default: Master Local Neural AI
-    return this.chatWithLocalNeuralAi(query, context);
-  }
-
-  /**
-   * Transparent Tool-Assisted Local Mode (v0.6):
-   * Coordinates verified document retrieval, transcript grounding, deterministic media math,
-   * and original neural formulation with clear provenance attribution.
-   */
-  public async processToolAssistedQuery(
-    userQuery: string,
-    context: VideoAIContext,
-  ): Promise<ToolAssistedResponse> {
-    return toolAssistedOrchestrator.processQuery(userQuery, context);
-  }
-
-  // -------------------------------------------------------------------------
-  // Master Local Neural AI Implementation
-  // -------------------------------------------------------------------------
-  private chatWithLocalNeuralAi(query: string, context: VideoAIContext): ChatMessage {
     const qLower = query.toLowerCase();
-    const timestamps: { time: number; label: string }[] = [];
+    const storedHistory = this.toStoredHistory(history);
 
-    // 1. Chapter generation intent
-    if (/(chapter|timeline marker|split scenes|create chapters|outline|sections)/i.test(qLower)) {
-      const chapters = this.generateSmartChapters(context);
-      let text = `### 🎬 MasterAI Smart Chapters Breakdown\n\nI analyzed **${context.fileName}** (${formatTimestamp(context.duration)}) across detected visual cuts and dialogue shifts. Here is the structured chapter outline:\n\n`;
-
-      chapters.forEach((ch, i) => {
-        const timeStr = `[${formatTimestamp(ch.start)}]`;
-        text += `- **${timeStr} ${ch.title}**: ${ch.description}\n`;
-        timestamps.push({ time: ch.start, label: ch.title });
-      });
-
-      text += `\nClick any timestamp above to jump directly, or click **"Apply to Timeline"** below to add these as interactive chapter markers on your player!`;
-
-      return {
-        id: `ai_${Date.now()}`,
-        sender: 'ai',
-        text,
-        timestamp: Date.now(),
-        matchedTimestamps: timestamps,
-        suggestedAction: {
-          type: 'apply_chapters',
-          label: 'Apply to Timeline',
-          payload: chapters,
-        },
-      };
-    }
-
-    // 2. Summary & Takeaways intent
-    if (/(summar|overview|takeaway|key point|bullet|what is this|gist|brief)/i.test(qLower)) {
-      const summary = this.generateExecutiveSummary(context);
-      let text = `### 📝 MasterAI Executive Summary for *${context.fileName}*\n\n`;
-      text += `${summary.executiveSummary}\n\n`;
-      text += `#### 💡 Key Takeaways:\n`;
-      summary.keyTakeaways.forEach((k) => {
-        text += `- ${k}\n`;
-      });
-      text += `\n**📊 Spoken Pacing**: ${summary.speechPacing.wpm} words/min (${summary.speechPacing.density}) across ${summary.speechPacing.totalWords} spoken words.\n`;
-      text += `**🛠️ Audio Profile**: ${summary.audioProfile}`;
-
-      return {
-        id: `ai_${Date.now()}`,
-        sender: 'ai',
-        text,
-        timestamp: Date.now(),
-        suggestedAction: {
-          type: 'copy_summary',
-          label: 'Copy Summary',
-          payload: text,
-        },
-      };
-    }
-
-    // 3. Technical & Quality analysis intent
-    if (/(quality|resolution|bitrate|codec|format|fps|technical|specs|hardware)/i.test(qLower)) {
-      const res = context.resolution;
-      const resBadge = res ? `${res.width}×${res.height}` : 'Standard';
-      const durationStr = formatTimestamp(context.duration);
-      const estBitrate = context.fileSize && context.duration > 0
-        ? Math.round((context.fileSize * 8) / context.duration / 1000)
-        : 0;
-
-      let text = `### ⚙️ MasterAI Technical Video Inspector\n\n`;
-      text += `- **File**: \`${context.fileName}\`\n`;
-      text += `- **Resolution**: **${resBadge}** ${res ? `(${res.width >= 1920 ? 'High Definition' : 'Standard Definition'})` : ''}\n`;
-      text += `- **Duration**: **${durationStr}** (${Math.round(context.duration)} seconds)\n`;
-      if (estBitrate > 0) {
-        text += `- **Calculated Bitrate**: **${estBitrate.toLocaleString()} kbps**\n`;
-      }
-      text += `- **Aspect Ratio**: ${res ? this.calculateAspectRatio(res.width, res.height) : '16:9 widescreen'}\n`;
-      text += `- **Detected Scene Cuts**: **${context.scenes.length}** distinct transitions\n`;
-      text += `- **Dialogue Cue Count**: **${context.cues.length}** time-coded cues\n\n`;
-      text += `**Optimization Advice**: Master Cloud's hardware-accelerated playback engine is active. For optimal acoustics, try the Audio Studio equalizer (press <kbd>E</kbd>).`;
-
-      return {
-        id: `ai_${Date.now()}`,
-        sender: 'ai',
-        text,
-        timestamp: Date.now(),
-      };
-    }
-
-    // 4. Specific timestamp / scene search intent ("when did", "find where", "jump to", "who said")
-    if (context.cues.length > 0) {
-      const searchMatches = this.semanticSearchCues(qLower, context.cues, 3);
-      if (searchMatches.length > 0) {
-        let text = `### 🔍 Dialogue Search & Moment Identification\n\nI located ${searchMatches.length} matching spoken moments in *${context.fileName}*:\n\n`;
-
-        searchMatches.forEach((m, idx) => {
-          const timeStr = `[${formatTimestamp(m.start)}]`;
-          text += `${idx + 1}. **${timeStr}**: "${m.text}"\n`;
-          timestamps.push({ time: m.start, label: `Match ${idx + 1}` });
+    // Explicit deterministic media UI card commands (only when not Pure Neural and not overridden)
+    if (!options.pureNeuralOnly && (!options.manualModelId || options.manualModelId === 'auto')) {
+      if (/^(generate|create|make)\s+(smart\s+)?chapters\b/i.test(qLower)) {
+        const chapters = this.generateSmartChapters(context);
+        const timestamps = chapters.map((ch) => ({ time: ch.start, label: ch.title }));
+        let text = `### 🎬 MasterAI Deterministic Chapter Breakdown\n\nAnalyzed **${context.fileName}** (${formatTimestamp(context.duration)}) across visual cuts and caption shifts:\n\n`;
+        chapters.forEach((ch) => {
+          text += `- **[${formatTimestamp(ch.start)}] ${ch.title}**: ${ch.description}\n`;
         });
-
-        text += `\nClick on any timestamp above to jump straight to that moment!`;
-
+        text += `\nClick any timestamp or **"Apply to Timeline"** below.`;
         return {
           id: `ai_${Date.now()}`,
           sender: 'ai',
           text,
           timestamp: Date.now(),
           matchedTimestamps: timestamps,
+          sourcesUsed: ['deterministic_calc'],
+          sourceLabel: 'Brain A · Deterministic Chapter Builder',
+          brainUsed: 'original',
+          suggestedAction: { type: 'apply_chapters', label: 'Apply to Timeline', payload: chapters },
+        };
+      }
+
+      if (/^(summarize this video|summarize video|executive summary)\b/i.test(qLower)) {
+        const summary = this.generateExecutiveSummary(context);
+        let text = `### 📝 Local Media Summary for *${context.fileName}*\n\n${summary.executiveSummary}\n\n#### Key Observations:\n`;
+        summary.keyTakeaways.forEach((k) => {
+          text += `- ${k}\n`;
+        });
+        text += `\n**Speech Pacing**: ${summary.speechPacing.wpm} WPM (${summary.speechPacing.density}) across ${summary.speechPacing.totalWords} words.`;
+        return {
+          id: `ai_${Date.now()}`,
+          sender: 'ai',
+          text,
+          timestamp: Date.now(),
+          sourcesUsed: context.cues.length > 0 ? ['transcript_grounding', 'deterministic_calc'] : ['deterministic_calc'],
+          sourceLabel: context.cues.length > 0 ? 'Brain A · Transcript + Media Stats' : 'Brain A · Deterministic Media Stats',
+          brainUsed: 'original',
+          suggestedAction: { type: 'copy_summary', label: 'Copy Summary', payload: text },
+        };
+      }
+
+      if (/^(analyze speech pacing|speech pacing)\b/i.test(qLower)) {
+        const pacing = this.analyzePacingAndMood(context);
+        const text =
+          `### 🎙️ Deterministic Speech & Pacing Analysis\n\n` +
+          `- **Average Speech Rate**: **${pacing.speechRateWpm} WPM** (${pacing.pacingRating})\n` +
+          `- **Dialogue Coverage**: **${pacing.dialogueCoveragePercent}%**\n` +
+          `- **Quiet / Instrumental Intervals**: **${pacing.quietIntervalsCount}**\n` +
+          `- **Suggested EQ Preset**: **${pacing.recommendedEqPreset}**`;
+        return {
+          id: `ai_${Date.now()}`,
+          sender: 'ai',
+          text,
+          timestamp: Date.now(),
+          sourcesUsed: ['deterministic_calc'],
+          sourceLabel: 'Brain A · Deterministic Pacing Analyzer',
+          brainUsed: 'original',
         };
       }
     }
 
-    // 5. Pacing and dialogue flow analysis intent
-    if (/(pacing|speed|tempo|audio|fast|slow|talk|speech rate)/i.test(qLower)) {
-      const pacing = this.analyzePacingAndMood(context);
-      let text = `### 🎙️ MasterAI Speech & Audio Pacing Analysis\n\n`;
-      text += `- **Average Speech Rate**: **${pacing.speechRateWpm} WPM** (${pacing.pacingRating})\n`;
-      text += `- **Dialogue Presence**: Approximately **${pacing.dialogueCoveragePercent}%** of video contains spoken dialogue.\n`;
-      text += `- **Quiet / Instrumental Moments**: Identified **${pacing.quietIntervalsCount}** silent or background music gaps.\n`;
-      text += `- **Recommended EQ Preset**: **${pacing.recommendedEqPreset}** in the Master Cloud Audio Studio.\n`;
+    // Legacy `cloud` mode + `selectedModel` honored cleanly when no v2 manual override passed
+    const resolvedManualModel =
+      options.manualModelId ??
+      (options.pureNeuralOnly
+        ? 'master-ai-v1-onnx'
+        : this.mode === 'cloud' && this.getApiKey()
+          ? modelRegistry.getModel(`gemini:${this.selectedModel}`)?.id || 'gemini:gemini-2.5-flash'
+          : null);
 
-      return {
-        id: `ai_${Date.now()}`,
-        sender: 'ai',
-        text,
-        timestamp: Date.now(),
-      };
-    }
+    const offlineOnly = this.mode === 'local' && !cloudBrainManager.getPrivacyPolicy().allowCloudProcessing;
 
-    // 6. General Conversational Fallback
-    const currentPos = `[${formatTimestamp(context.currentTime)}]`;
-    timestamps.push({ time: context.currentTime, label: 'Current Playhead' });
-
-    let text = `### 🤖 MasterAI Assistant\n\n`;
-    text += `I am active and monitoring **${context.fileName}** at current position **${currentPos}**.\n\n`;
-    text += `Here is what I can do for you right now:\n`;
-    text += `- 📑 **"Generate chapters"**: Automatically splits your video into navigable chapters with timestamps.\n`;
-    text += `- 📝 **"Summarize video"**: Extracts the executive summary and key points.\n`;
-    text += `- 🔍 **"Find [phrase]"**: Searches transcript dialogue and provides 1-click jump links.\n`;
-    text += `- ⚙️ **"Technical analysis"**: Evaluates bitrate, resolution, and audio profile.\n`;
-    text += `- 🎙️ **"Analyze speech pacing"**: Measures words-per-minute and dialogue density.\n\n`;
-    text += `*Tip: You can also switch to **Cloud Gemini AI** in settings for deep multimodal generative video comprehension.*`;
+    const orch = await originalBrainController.processQuery({
+      query,
+      history: storedHistory,
+      sessionId: options.sessionId,
+      mediaContext: context,
+      languageMode: options.languageMode,
+      manualModelId: resolvedManualModel,
+      offlineOnly,
+      pureNeuralOnly: options.pureNeuralOnly,
+      enableParallelComparison: options.enableParallelComparison,
+      temperature: options.genConfig?.temperature,
+      topP: options.genConfig?.topP,
+      topK: options.genConfig?.topK,
+      maxTokens: options.genConfig?.maxNewTokens,
+      repetitionPenalty: options.genConfig?.repetitionPenalty,
+      signal: options.signal,
+      onProgress: options.onProgress,
+    });
 
     return {
       id: `ai_${Date.now()}`,
       sender: 'ai',
-      text,
+      text: orch.text,
       timestamp: Date.now(),
-      matchedTimestamps: timestamps,
+      matchedTimestamps: orch.matchedTimestamps,
+      suggestedAction: orch.suggestedAction as ChatMessage['suggestedAction'],
+      sourcesUsed: orch.sourcesUsed,
+      sourceLabel: orch.sourceLabel,
+      modelTag: orch.modelName,
+      brainUsed: orch.brainUsed,
+      confidenceScore: orch.validation.confidenceScore,
+      validationWarnings: orch.validation.warnings,
+      rememberedMemoriesCount: orch.rememberedMemories.length,
+      orchestrationTrace: orch.orchestrationTrace,
+      fallbackTriggered: orch.fallbackTriggered,
+      estimatedCostUsd: orch.estimatedCostUsd,
+      parallelAlternatives: orch.parallelAlternatives,
+      tokensGenerated: orch.tokensGenerated,
+      latencyMs: orch.latencyMs,
+      promptTokens: orch.promptTokens,
+      maxContextTokens: orch.maxContextTokens,
+      compressedNotice: orch.compressedNotice,
     };
   }
 
-  // -------------------------------------------------------------------------
-  // Cloud Gemini Mode (Google Gemini API via direct HTTPS)
-  // -------------------------------------------------------------------------
-  private async chatWithGemini(
+  /**
+   * Transparent Tool-Assisted Local Mode (v1.0):
+   * Coordinates verified document retrieval, transcript grounding, deterministic media math,
+   * and original neural dialogue via real client-side ONNX Runtime Web.
+   */
+  public async processToolAssistedQuery(
     userQuery: string,
     context: VideoAIContext,
-    history: ChatMessage[],
-  ): Promise<ChatMessage> {
-    // Secure Endpoint: Pass API key strictly via x-goog-api-key header (never in URL query string)
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.selectedModel}:generateContent`;
+    options: ToolAssistedProcessOptions = {},
+  ): Promise<ToolAssistedResponse> {
+    return toolAssistedOrchestrator.processQuery(userQuery, context, options);
+  }
 
-    // Dynamic Context Retrieval via Local Knowledge Engine (BM25 across entire transcript)
-    localKnowledgeEngine.indexTranscript(context.fileName, context.cues);
-    const retrievedPassages = localKnowledgeEngine.query(userQuery, 8);
-
-    let transcriptSnippet = '';
-    if (retrievedPassages.length > 0) {
-      transcriptSnippet = retrievedPassages
-        .map((p) => `${p.formattedTimestamp} ${p.snippet}`)
-        .join('\n');
-    } else {
-      // Fallback to evenly sampled cues across entire duration rather than blind front-truncation
-      const step = Math.max(1, Math.floor(context.cues.length / 40));
-      transcriptSnippet = context.cues
-        .filter((_, idx) => idx % step === 0)
-        .slice(0, 45)
-        .map((c) => `[${formatTimestamp(c.start)}] ${c.text}`)
-        .join('\n');
-    }
-
-    const scenesSnippet = context.scenes
-      .slice(0, 30)
-      .map((s) => `[${formatTimestamp(s.start)} - ${formatTimestamp(s.end)}] ${s.label || 'Scene'}`)
-      .join('\n');
-
-    const systemInstruction = `
-You are MasterAI, the world-class media intelligence co-pilot built natively into MASTER CLOUD Professional Video Player.
-You are analyzing a video loaded by the user.
-
-VIDEO CONTEXT:
-- File Name: "${context.fileName}"
-- Duration: ${formatTimestamp(context.duration)} (${Math.round(context.duration)} seconds)
-- Current Playhead: ${formatTimestamp(context.currentTime)}
-- Resolution: ${context.resolution ? `${context.resolution.width}x${context.resolution.height}` : 'Unknown'}
-- Detected Scene Transitions:
-${scenesSnippet || 'None detected yet'}
-
-TRANSCRIPT / SUBTITLE CUES:
-${transcriptSnippet || 'No spoken transcript loaded'}
-
-CRITICAL FORMATTING RULES:
-1. Always format timestamps as [mm:ss] (e.g. [01:23] or [00:45]) whenever mentioning a scene, quote, or key moment so the video player can create interactive jump links.
-2. If the user asks for chapters, provide clean bullet points like "- [mm:ss] Chapter Title: Brief summary".
-3. Keep your tone professional, concise, and helpful. Use clean GitHub-flavored markdown.
-`.trim();
-
-    const contents = [
-      {
-        role: 'user',
-        parts: [{ text: `${systemInstruction}\n\nUser Question: ${userQuery}` }],
-      },
-    ];
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': this.#geminiApiKey || '',
-      },
-      body: JSON.stringify({ contents }),
-    });
-
-    if (!response.ok) {
-      const errJson = await response.json().catch(() => ({}));
-      throw new Error(errJson?.error?.message || `Gemini API returned HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!candidateText) {
-      throw new Error('Gemini returned an empty response.');
-    }
-
-    // Extract all [mm:ss] timestamps from the text for interactive seeking
-    const timestampMatches = this.extractTimestampsFromText(candidateText);
-
-    return {
-      id: `gemini_${Date.now()}`,
-      sender: 'ai',
-      text: candidateText,
-      timestamp: Date.now(),
-      matchedTimestamps: timestampMatches,
-    };
+  private toStoredHistory(history: ChatMessage[]): StoredChatMessage[] {
+    return history.map((m) => ({
+      id: m.id,
+      sender: m.sender,
+      text: m.text,
+      timestamp: m.timestamp,
+      sourcesUsed: m.sourcesUsed,
+      sourceLabel: m.sourceLabel,
+      modelTag: m.modelTag,
+      tokensGenerated: m.tokensGenerated,
+      latencyMs: m.latencyMs,
+      matchedTimestamps: m.matchedTimestamps,
+    }));
   }
 
   // -------------------------------------------------------------------------

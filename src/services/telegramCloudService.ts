@@ -161,8 +161,8 @@ export class TelegramCloudService {
    * Central platform keys ensure users never configure infrastructure keys.
    */
   static getCredentials(): { botToken: string; chatId: string } {
-    const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '***REMOVED***';
-    const chatId = import.meta.env.VITE_TELEGRAM_CHAT_ID || '***REMOVED***';
+    const botToken = (import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string) || '';
+    const chatId = (import.meta.env.VITE_TELEGRAM_CHAT_ID as string) || '';
     return { botToken: botToken.trim(), chatId: chatId.trim() };
   }
 

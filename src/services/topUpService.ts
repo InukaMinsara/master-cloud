@@ -159,8 +159,8 @@ class TopUpService {
   // Get API automation configurations
   getApiConfig(): TopUpApiConfig {
     const defaults: TopUpApiConfig = {
-      youtubeApiKey: '***REMOVED***',
-      youtubeChannelId: '',
+      youtubeApiKey: (import.meta.env.VITE_YOUTUBE_API_KEY as string) || '',
+      youtubeChannelId: (import.meta.env.VITE_YOUTUBE_CHANNEL_ID as string) || '',
       youtubeChannelId2: '',
       googleOAuthClientId: '',
       telegramBotToken: '',

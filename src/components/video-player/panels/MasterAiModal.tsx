@@ -1,10 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Brain,
   Sparkles,
-  Send,
-  Mic,
-  MicOff,
   Copy,
   Clock,
   Play,
@@ -28,6 +25,9 @@ import {
   Gauge,
   Database,
   Volume2,
+  Trash2,
+  Lock,
+  FlaskConical,
 } from 'lucide-react';
 import { useVideoPlayerStore } from '@/stores/videoPlayerStore';
 import { resourceManager, BrowserCapabilities } from '@/services/resourceManager';
@@ -45,6 +45,26 @@ import {
   speechToTextEngine,
   TranscriptionEvent,
 } from '@/services/videoIntelligence';
+import {
+  conversationMemory,
+  ConversationSession,
+  LanguagePreferenceMode,
+  StoredChatMessage,
+} from '@/services/ai/conversationMemory';
+import {
+  DEFAULT_NEURAL_GEN_CONFIG,
+  NeuralGenerationConfig,
+  neuralRuntime,
+} from '@/services/ai/neuralRuntime';
+import { humanFeedbackStore } from '@/services/ai/feedbackStore';
+import { AiModelDescriptor, modelRegistry } from '@/services/ai/modelRegistry';
+import { MasterAiChatStudio } from './MasterAiChatStudio';
+import {
+  CloudAndRegistryPanel,
+  EvaluationLabPanel,
+  LocalBrainManagerPanel,
+  LongTermMemoryPanel,
+} from './MasterAiV2Panels';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -55,22 +75,32 @@ function formatTimestamp(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function buildWelcomeMessage(
+  mediaName: string | undefined,
+  durationSec: number,
+  cueCount: number,
+  sceneCount: number,
+): ChatMessage {
+  return {
+    id: 'welcome',
+    sender: 'ai',
+    text: `👋 **MASTER AI CORE v1.0** is ready for **${mediaName || 'this media workspace'}**.\n\nIndexed **${formatTimestamp(durationSec)}** duration, **${cueCount}** dialogue cues, and **${sceneCount}** visual scenes. Speak to me naturally in **සිංහල, English, or Mixed** — or switch modes anytime.`,
+    timestamp: Date.now(),
+    sourcesUsed: ['neural_core'],
+    sourceLabel: 'MASTER AI v1.0',
+    modelTag: 'MASTER-AI-v1.0',
+  };
+}
+
 export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVideoElement> }) {
-  // Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'chat' | 'summary' | 'chapters' | 'search' | 'capabilities' | 'export' | 'settings'>('chat');
+  // Navigation Tabs (v1 + v2 Three-Brain Modules)
+  const [activeTab, setActiveTab] = useState<
+    'chat' | 'summary' | 'chapters' | 'search' | 'local_brain' | 'cloud_registry' | 'memory' | 'eval' | 'capabilities' | 'export' | 'settings'
+  >('chat');
   const [capabilities, setCapabilities] = useState<BrowserCapabilities | null>(null);
-
-  // Chat State
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
-
-  // Settings State
-  const [aiMode, setAiMode] = useState<'local' | 'cloud'>(masterAiEngine.getMode());
-  const [apiKeyInput, setApiKeyInput] = useState(masterAiEngine.getApiKey() || '');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [registeredModels, setRegisteredModels] = useState<AiModelDescriptor[]>(() => modelRegistry.listModels());
+  const [manualModelId, setManualModelId] = useState<string>('auto');
+  const [enableParallel, setEnableParallel] = useState<boolean>(false);
 
   // Store Selectors
   const videoFile = useVideoPlayerStore((s) => s.videoFile);
@@ -91,6 +121,44 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
   const activeTrack = subtitleTracks.find((t) => t.id === activeSubtitleTrackId) || subtitleTracks[0];
   const cues = activeTrack?.cues || [];
 
+  // Multi-Session Studio State
+  const [sessions, setSessions] = useState<ConversationSession[]>(() => {
+    const existing = conversationMemory.listSessions();
+    if (existing.length > 0) return existing;
+    return [conversationMemory.createSession(fileName || 'New Conversation', fileName || undefined, 'auto')];
+  });
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
+    const existing = conversationMemory.listSessions();
+    return existing[0]?.id || sessions[0]?.id || '';
+  });
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const existing = conversationMemory.listSessions();
+    const first = existing[0];
+    if (first && first.messages.length > 0) {
+      return first.messages as ChatMessage[];
+    }
+    return [buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)];
+  });
+  const [languageMode, setLanguageMode] = useState<LanguagePreferenceMode>(
+    () => conversationMemory.getSession(conversationMemory.listSessions()[0]?.id || '')?.languageMode || 'auto',
+  );
+  const [pureNeuralOnly, setPureNeuralOnly] = useState(false);
+  const [genConfig, setGenConfig] = useState<NeuralGenerationConfig>(DEFAULT_NEURAL_GEN_CONFIG);
+
+  const [inputText, setInputText] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const abortCtrlRef = useRef<AbortController | null>(null);
+
+  // Settings & Telemetry State
+  const [aiMode, setAiMode] = useState<'local' | 'cloud'>(masterAiEngine.getMode());
+  const [apiKeyInput, setApiKeyInput] = useState(masterAiEngine.getApiKey() || '');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [feedbackConsent, setFeedbackConsent] = useState(() => humanFeedbackStore.isConsentEnabled());
+  const [feedbackStats, setFeedbackStats] = useState(() => humanFeedbackStore.getStats());
+  const [neuralSnapshot, setNeuralSnapshot] = useState(() => neuralRuntime.getStatus());
+
   // Build Context for Master AI
   const aiContext: VideoAIContext = useMemo(() => {
     return {
@@ -106,17 +174,21 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
     };
   }, [fileName, duration, currentTime, resolution, videoFile, cues, detectedScenes, bookmarks, videoRef]);
 
-  // Initial Welcome Message from Master AI
+  const persistSessionMessages = useCallback(
+    (sessId: string, nextMessages: ChatMessage[]) => {
+      const storable = nextMessages.filter((m) => m.id !== 'welcome' && !m.isStreaming) as StoredChatMessage[];
+      if (sessId) {
+        conversationMemory.saveMessages(sessId, storable, true);
+        setSessions(conversationMemory.listSessions());
+      }
+    },
+    [],
+  );
+
+  // Update welcome greeting metadata if still untouched
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'welcome',
-          sender: 'ai',
-          text: `👋 Greetings! I am **MasterAI**, your media intelligence co-pilot for **${fileName || 'this video'}**.\n\nI have indexed your video's timeline (${formatTimestamp(duration)}), ${cues.length} dialogue cues, and ${detectedScenes.length} visual scenes. How can I assist you today?`,
-          timestamp: Date.now(),
-        },
-      ]);
+    if (messages.length === 1 && messages[0].id === 'welcome') {
+      setMessages([buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)]);
     }
   }, [fileName, duration, cues.length, detectedScenes.length]);
 
@@ -127,10 +199,15 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
     }
   }, [messages, isThinking, activeTab]);
 
-  // Load real browser & hardware capabilities
+  // Load real browser capabilities & refresh ONNX/feedback/registry snapshots
   useEffect(() => {
     resourceManager.getBrowserCapabilities(aiMode).then(setCapabilities);
-  }, [aiMode]);
+    setFeedbackConsent(humanFeedbackStore.isConsentEnabled());
+    setFeedbackStats(humanFeedbackStore.getStats());
+    setNeuralSnapshot(neuralRuntime.getStatus());
+    setRegisteredModels(modelRegistry.listModels());
+    return modelRegistry.subscribe(() => setRegisteredModels(modelRegistry.listModels()));
+  }, [aiMode, activeTab]);
 
   // Jump to specific timestamp
   const jumpTo = (seconds: number) => {
@@ -142,39 +219,176 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
     }
   };
 
-  // Send message to Master AI
-  const handleSendMessage = async (textToSend?: string) => {
-    const query = (textToSend || inputText).trim();
+  // Send message to Master AI with true streaming + abort + edit support
+  const handleSendMessage = async (textToSend?: string, editMsgId?: string) => {
+    const query = (textToSend ?? inputText).trim();
     if (!query || isThinking) return;
 
+    let baseAll = messages;
+    if (editMsgId) {
+      const editIdx = messages.findIndex((m) => m.id === editMsgId);
+      if (editIdx >= 0) {
+        baseAll = messages.slice(0, editIdx);
+      }
+    }
+
+    const cleanHistory = baseAll.filter((m) => m.id !== 'welcome' && !m.isStreaming);
     const userMsg: ChatMessage = {
       id: `user_${Date.now()}`,
       sender: 'user',
       text: query,
       timestamp: Date.now(),
     };
+    const streamAiId = `ai_${Date.now() + 1}`;
+    const placeholderAi: ChatMessage = {
+      id: streamAiId,
+      sender: 'ai',
+      text: '',
+      timestamp: Date.now(),
+      isStreaming: true,
+      sourcesUsed: pureNeuralOnly ? ['neural_core'] : ['tool_assisted_neural'],
+      sourceLabel: aiMode === 'cloud' && apiKeyInput ? 'Cloud Gemini' : 'MASTER AI v1.0',
+      modelTag: 'MASTER-AI-v1.0',
+    };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInputText('');
+    const nextWithUser = [...baseAll, userMsg, placeholderAi];
+    setMessages(nextWithUser);
+    if (!textToSend && !editMsgId) setInputText('');
     setIsThinking(true);
 
+    const ctrl = new AbortController();
+    abortCtrlRef.current = ctrl;
+
     try {
-      const response = await masterAiEngine.chat(query, aiContext, messages);
-      setMessages((prev) => [...prev, response]);
+      const response = await masterAiEngine.chat(query, aiContext, cleanHistory, {
+        signal: ctrl.signal,
+        languageMode,
+        genConfig,
+        pureNeuralOnly,
+        manualModelId,
+        sessionId: activeSessionId,
+        enableParallelComparison: enableParallel,
+        onProgress: (partialText) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamAiId ? { ...m, text: partialText } : m)),
+          );
+        },
+      });
+      const finalMsg: ChatMessage = { ...response, isStreaming: false };
+      setMessages((prev) => {
+        const finalized = prev.map((m) => (m.id === streamAiId ? finalMsg : m));
+        persistSessionMessages(activeSessionId, finalized);
+        return finalized;
+      });
+      setNeuralSnapshot(neuralRuntime.getStatus());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err_${Date.now()}`,
-          sender: 'ai',
-          text: `⚠️ **MasterAI Error**: ${msg}\n\nFalling back to Master Local Neural AI.`,
-          timestamp: Date.now(),
-        },
-      ]);
+      const errReply: ChatMessage = {
+        id: streamAiId,
+        sender: 'ai',
+        text: `⚠️ **MasterAI Runtime Notice**: ${msg}`,
+        timestamp: Date.now(),
+        isStreaming: false,
+        sourcesUsed: ['system_notice'],
+        sourceLabel: 'System Diagnostic',
+      };
+      setMessages((prev) => {
+        const finalized = prev.map((m) => (m.id === streamAiId ? errReply : m));
+        persistSessionMessages(activeSessionId, finalized);
+        return finalized;
+      });
     } finally {
+      abortCtrlRef.current = null;
       setIsThinking(false);
     }
+  };
+
+  const handleStopGenerating = () => {
+    abortCtrlRef.current?.abort();
+    setIsThinking(false);
+    setMessages((prev) => prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m)));
+  };
+
+  const handleRegenerateLast = () => {
+    if (isThinking) return;
+    const lastUser = [...messages].reverse().find((m) => m.sender === 'user');
+    if (lastUser) {
+      handleSendMessage(lastUser.text, lastUser.id);
+    }
+  };
+
+  const handleCreateSession = () => {
+    const created = conversationMemory.createSession('New Conversation', fileName || undefined, languageMode);
+    setSessions(conversationMemory.listSessions());
+    setActiveSessionId(created.id);
+    setMessages([buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)]);
+  };
+
+  const handleSelectSession = (sessId: string) => {
+    const sess = conversationMemory.getSession(sessId);
+    if (!sess) return;
+    setActiveSessionId(sess.id);
+    setLanguageMode(sess.languageMode);
+    setMessages(
+      sess.messages.length > 0
+        ? (sess.messages as ChatMessage[])
+        : [buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)],
+    );
+  };
+
+  const handleRenameSession = (sessId: string, newTitle: string) => {
+    conversationMemory.renameSession(sessId, newTitle);
+    setSessions(conversationMemory.listSessions());
+  };
+
+  const handleDeleteSession = (sessId: string) => {
+    conversationMemory.deleteSession(sessId);
+    let nextList = conversationMemory.listSessions();
+    if (nextList.length === 0) {
+      const fresh = conversationMemory.createSession(fileName || 'New Conversation', fileName || undefined, languageMode);
+      nextList = [fresh];
+    }
+    setSessions(nextList);
+    if (sessId === activeSessionId) {
+      const target = nextList[0];
+      setActiveSessionId(target.id);
+      setLanguageMode(target.languageMode);
+      setMessages(
+        target.messages.length > 0
+          ? (target.messages as ChatMessage[])
+          : [buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)],
+      );
+    }
+  };
+
+  const handleClearCurrentSession = () => {
+    conversationMemory.clearSessionMessages(activeSessionId);
+    setSessions(conversationMemory.listSessions());
+    setMessages([buildWelcomeMessage(fileName || undefined, duration, cues.length, detectedScenes.length)]);
+    toast.info('Cleared current conversation session.');
+  };
+
+  const handleLanguageChange = (mode: LanguagePreferenceMode) => {
+    setLanguageMode(mode);
+    conversationMemory.setSessionLanguage(activeSessionId, mode);
+    setSessions(conversationMemory.listSessions());
+  };
+
+  const handleExportSession = (fmt: 'markdown' | 'json') => {
+    const sess = conversationMemory.getSession(activeSessionId);
+    if (!sess) return;
+    const safeTitle = (sess.title || 'master_ai_chat').replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (fmt === 'markdown') {
+      const md = conversationMemory.exportSessionMarkdown(sess);
+      resourceManager.downloadFile(`${safeTitle}.md`, md, 'text/markdown;charset=utf-8');
+    } else {
+      resourceManager.downloadFile(
+        `${safeTitle}.json`,
+        JSON.stringify(sess, null, 2),
+        'application/json;charset=utf-8',
+      );
+    }
+    toast.success(`Exported conversation as .${fmt === 'markdown' ? 'MD' : 'JSON'}`);
   };
 
   // Voice Query using Web Speech API
@@ -363,6 +577,50 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
             Dialogue Search
           </button>
           <button
+            onClick={() => setActiveTab('local_brain')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'local_brain'
+                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            Local Brain
+          </button>
+          <button
+            onClick={() => setActiveTab('cloud_registry')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'cloud_registry'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Cloud &amp; Registry
+          </button>
+          <button
+            onClick={() => setActiveTab('memory')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'memory'
+                ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            Memory
+          </button>
+          <button
+            onClick={() => setActiveTab('eval')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'eval'
+                ? 'bg-lime-500/20 text-lime-300 border border-lime-500/30'
+                : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            Eval Lab
+          </button>
+          <button
             onClick={() => setActiveTab('capabilities')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'capabilities'
@@ -398,144 +656,51 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
         </div>
 
         {/* ================================================================= */}
-        {/* TAB 1: AI CO-PILOT CHAT STREAM                                   */}
+        {/* TAB 1: MASTER AI STUDIO CHAT                                      */}
         {/* ================================================================= */}
         {activeTab === 'chat' && (
-          <div className="flex flex-col flex-1 min-h-0 space-y-3">
-            {/* Chat Messages Scroll Area */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
-                      msg.sender === 'user'
-                        ? 'bg-cyan-600 text-white shadow-md rounded-br-none'
-                        : 'bg-white/5 border border-white/10 text-white/90 shadow-md rounded-bl-none'
-                    }`}
-                  >
-                    {/* Message Body */}
-                    <div className="whitespace-pre-wrap font-sans">
-                      {msg.text}
-                    </div>
-
-                    {/* Matched Timestamps for 1-Click Jumping */}
-                    {msg.matchedTimestamps && msg.matchedTimestamps.length > 0 && (
-                      <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-white/40 font-semibold mr-1">Jump to moment:</span>
-                        {msg.matchedTimestamps.map((ts, i) => (
-                          <button
-                            key={i}
-                            onClick={() => jumpTo(ts.time)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[11px] font-mono font-bold transition-all hover:scale-105"
-                          >
-                            <Play className="w-2.5 h-2.5 fill-current" />
-                            {ts.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Suggested Direct Action Button */}
-                    {msg.suggestedAction && (
-                      <div className="mt-2.5 pt-2 border-t border-white/10">
-                        {msg.suggestedAction.type === 'apply_chapters' && (
-                          <Button
-                            variant="gradient"
-                            size="sm"
-                            onClick={() => handleApplyChapters(msg.suggestedAction?.payload || [])}
-                            className="rounded-lg h-7 px-3 text-[11px] font-bold gap-1.5 shadow-md shadow-cyan-500/20"
-                          >
-                            <Check className="w-3 h-3" />
-                            {msg.suggestedAction.label}
-                          </Button>
-                        )}
-                        {msg.suggestedAction.type === 'copy_summary' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCopySummary}
-                            className="rounded-lg h-7 px-3 text-[11px] font-bold gap-1.5 border-white/20 hover:bg-white/10"
-                          >
-                            <Copy className="w-3 h-3" />
-                            {msg.suggestedAction.label}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[9px] text-white/30 px-1 mt-0.5 font-mono">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))}
-
-              {/* Thinking Indicator */}
-              {isThinking && (
-                <div className="flex items-center gap-2 p-3 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70 max-w-xs animate-pulse">
-                  <Brain className="w-4 h-4 text-cyan-400 animate-spin" />
-                  <span>MasterAI is synthesizing video insights…</span>
-                </div>
-              )}
-              <div ref={chatBottomRef} />
-            </div>
-
-            {/* Quick Action Chips Bar */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1 shrink-0">
-              {QUICK_PROMPTS.map((qp, i) => (
-                <button
-                  key={i}
-                  disabled={isThinking}
-                  onClick={() => handleSendMessage(qp.prompt)}
-                  className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-white/80 hover:text-white whitespace-nowrap transition-colors flex items-center gap-1"
-                >
-                  {qp.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Input Bar */}
-            <div className="relative flex items-center gap-2 pt-1 border-t border-white/10 shrink-0">
-              <input
-                type="text"
-                placeholder={isVoiceActive ? 'Listening to speech…' : 'Ask MasterAI anything about this video (e.g. "What happened at 2:00?")…'}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isThinking}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 focus:border-cyan-400 text-xs text-white outline-none placeholder:text-white/40"
-              />
-
-              {/* Voice Input Button */}
-              <button
-                type="button"
-                onClick={handleToggleVoice}
-                className={`p-2.5 rounded-xl border transition-all ${
-                  isVoiceActive
-                    ? 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse'
-                    : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10 border-white/10'
-                }`}
-                title={isVoiceActive ? 'Stop Voice Recording' : 'Speak to MasterAI'}
-              >
-                {isVoiceActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
-
-              {/* Send Button */}
-              <Button
-                variant="gradient"
-                size="sm"
-                onClick={() => handleSendMessage()}
-                disabled={!inputText.trim() || isThinking}
-                className="h-9 px-4 rounded-xl gap-1.5 font-semibold"
-              >
-                <Send className="w-3.5 h-3.5" />
-                Ask
-              </Button>
-            </div>
-          </div>
+          <MasterAiChatStudio
+            messages={messages}
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            languageMode={languageMode}
+            pureNeuralOnly={pureNeuralOnly}
+            genConfig={genConfig}
+            aiMode={aiMode}
+            isThinking={isThinking}
+            isVoiceActive={isVoiceActive}
+            inputText={inputText}
+            quickPrompts={QUICK_PROMPTS}
+            chatBottomRef={chatBottomRef}
+            registeredModels={registeredModels}
+            manualModelId={manualModelId}
+            enableParallel={enableParallel}
+            onChangeManualModelId={setManualModelId}
+            onToggleParallel={setEnableParallel}
+            onInputChange={setInputText}
+            onSendMessage={handleSendMessage}
+            onStopGenerating={handleStopGenerating}
+            onRegenerateLast={handleRegenerateLast}
+            onToggleVoice={handleToggleVoice}
+            onJumpTo={jumpTo}
+            onApplyChapters={handleApplyChapters}
+            onCopySummary={handleCopySummary}
+            onLanguageChange={handleLanguageChange}
+            onTogglePureNeural={setPureNeuralOnly}
+            onChangeGenConfig={setGenConfig}
+            onCreateSession={handleCreateSession}
+            onSelectSession={handleSelectSession}
+            onRenameSession={handleRenameSession}
+            onDeleteSession={handleDeleteSession}
+            onClearCurrentSession={handleClearCurrentSession}
+            onExportSession={handleExportSession}
+          />
         )}
+
+        {activeTab === 'local_brain' && <LocalBrainManagerPanel />}
+        {activeTab === 'cloud_registry' && <CloudAndRegistryPanel />}
+        {activeTab === 'memory' && <LongTermMemoryPanel />}
+        {activeTab === 'eval' && <EvaluationLabPanel />}
 
         {/* ================================================================= */}
         {/* TAB 2: EXECUTIVE SUMMARY & KEY TAKEAWAYS                          */}
@@ -823,6 +988,50 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
               </div>
             </div>
 
+            {/* Original Neural Core v1.0 Telemetry */}
+            <div className="p-3.5 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Brain className="w-3.5 h-3.5 text-cyan-400" />
+                  MASTER AI CORE v1.0 — Original Neural Runtime
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-bold">
+                  {neuralSnapshot.status.toUpperCase()} ({neuralSnapshot.backend})
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Parameters</div>
+                  <div className="font-mono text-white font-bold">
+                    {neuralSnapshot.manifest
+                      ? `${(neuralSnapshot.manifest.parameter_count / 1e6).toFixed(2)}M`
+                      : '5.16M (v1.0)'}
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Bilingual Vocab</div>
+                  <div className="font-mono text-white font-bold">
+                    {neuralSnapshot.manifest?.vocab_size ?? 7875} tokens
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Context Window</div>
+                  <div className="font-mono text-white font-bold">
+                    {neuralSnapshot.manifest?.max_seq_len ?? 512} RoPE
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Weights Policy</div>
+                  <div className="font-mono text-emerald-300 font-bold">Original Self-Trained</div>
+                </div>
+              </div>
+              {neuralSnapshot.errorMessage && (
+                <div className="text-[10px] text-rose-300 font-mono">
+                  Runtime diagnostic: {neuralSnapshot.errorMessage}
+                </div>
+              )}
+            </div>
+
             {/* Zero Artificial Limits Policy */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-purple-500/10 to-transparent border border-cyan-500/20 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-cyan-300">
@@ -1036,7 +1245,7 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
                   </span>
                 </div>
                 <p className="text-[11px] text-white/70 leading-relaxed">
-                  100% private, offline neural intelligence. Powered by our own trained Transformer model (4.92M parameters), custom subword tokenizer, BM25 knowledge indexing, and deterministic fallback. Zero third-party API dependencies.
+                  100% private, offline original neural intelligence powered by our independently initialized Transformer ({neuralSnapshot.manifest ? `${(neuralSnapshot.manifest.parameter_count / 1e6).toFixed(2)}M` : '5.16M'} params · RMSNorm + RoPE + SwiGLU + GQA · {neuralSnapshot.manifest?.vocab_size ?? 7875}-token custom bilingual Sinhala/English tokenizer · {neuralSnapshot.manifest?.max_seq_len ?? 512} context), BM25 retrieval, and deterministic media calculators. Zero third-party pretrained weights or API dependencies.
                 </p>
               </div>
 
@@ -1082,6 +1291,94 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
                 />
               </div>
             )}
+
+            {/* Opt-In Local Human Feedback & Dataset Curation (Zero Cloud Upload) */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-cyan-400" />
+                    Opt-In Local Feedback &amp; Correction Export
+                  </div>
+                  <p className="text-[11px] text-white/55 mt-0.5">
+                    Strictly local browser storage — never uploads data or claims to modify live ONNX weights. Export JSONL pairs for future human-reviewed offline training.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !feedbackConsent;
+                    humanFeedbackStore.setConsent(next);
+                    setFeedbackConsent(next);
+                    setFeedbackStats(humanFeedbackStore.getStats());
+                    toast.info(next ? 'Local feedback logging enabled.' : 'Local feedback logging disabled.');
+                  }}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold border shrink-0 transition-all ${
+                    feedbackConsent
+                      ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
+                      : 'bg-white/5 border-white/15 text-white/60 hover:text-white'
+                  }`}
+                >
+                  {feedbackConsent ? 'Consent: Enabled' : 'Consent: Disabled'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 text-[10px]">
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Entries</div>
+                  <div className="font-mono text-white font-bold">{feedbackStats.totalEntries}</div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Helpful</div>
+                  <div className="font-mono text-emerald-300 font-bold">{feedbackStats.helpfulCount}</div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Unhelpful</div>
+                  <div className="font-mono text-rose-300 font-bold">{feedbackStats.unhelpfulCount}</div>
+                </div>
+                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div className="text-white/40">Corrections</div>
+                  <div className="font-mono text-cyan-300 font-bold">{feedbackStats.correctionsCount}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={feedbackStats.totalEntries === 0}
+                  onClick={() => {
+                    const jsonl = humanFeedbackStore.exportPreferencePairsJsonl();
+                    resourceManager.downloadFile(
+                      `master_ai_feedback_${Date.now()}.jsonl`,
+                      jsonl,
+                      'application/x-ndjson;charset=utf-8',
+                    );
+                    toast.success('Exported local human feedback preference pairs (.jsonl).');
+                  }}
+                  className="text-xs rounded-xl gap-1.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export JSONL Pairs
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={feedbackStats.totalEntries === 0}
+                  onClick={() => {
+                    humanFeedbackStore.clearAll();
+                    setFeedbackStats(humanFeedbackStore.getStats());
+                    toast.info('Cleared all locally saved feedback entries.');
+                  }}
+                  className="text-xs rounded-xl gap-1.5 text-rose-300 hover:bg-rose-500/10"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear Saved Feedback
+                </Button>
+              </div>
+            </div>
 
             {/* Save Button */}
             <div className="pt-2">
