@@ -42,33 +42,100 @@ export type ShapeKind =
 
 export type TransitionType =
   | 'none'
+  // Subtle
+  | 'morph'
   | 'fade'
   | 'slide-left'
   | 'slide-right'
   | 'slide-up'
   | 'slide-down'
-  | 'zoom'
+  | 'wipe'
+  | 'split'
+  | 'reveal'
+  | 'cut'
+  | 'random-bars'
+  // Exciting
+  | 'curtains'
+  | 'wind'
+  | 'prestige'
+  | 'fracture'
+  | 'crush'
+  | 'peel-off'
+  | 'page-curl'
+  | 'airplane'
+  | 'origami'
+  | 'flash'
+  | 'fall-over'
+  | 'drape'
   | 'flip'
   | 'rotate'
   | 'dissolve'
-  | 'wipe'
-  | 'split'
-  | 'reveal';
+  | 'zoom'
+  | 'shape'
+  // Dynamic Content
+  | 'pan'
+  | 'ferris-wheel'
+  | 'conveyor'
+  | 'orbit'
+  | 'window';
 
 export type AnimationType =
   | 'none'
+  // Entrance (Green Star)
   | 'appear'
   | 'fade-in'
+  | 'fly-in-bottom'
+  | 'fly-in-left'
+  | 'fly-in-right'
+  | 'fly-in-top'
+  | 'float-in'
+  | 'split'
+  | 'wipe'
+  | 'shape-in'
+  | 'wheel'
+  | 'zoom-in'
+  | 'bounce'
+  | 'swivel'
+  | 'grow-turn'
+  | 'elastic'
   | 'slide-up'
   | 'slide-down'
   | 'slide-left'
   | 'slide-right'
-  | 'zoom-in'
-  | 'bounce'
-  | 'flip'
-  | 'spin'
+  // Emphasis (Yellow Star)
   | 'pulse'
-  | 'grow-shrink';
+  | 'color-pulse'
+  | 'teeter'
+  | 'spin'
+  | 'spin-counter'
+  | 'grow-shrink'
+  | 'wave'
+  | 'flash'
+  | 'shimmer'
+  | 'darken'
+  | 'lighten'
+  | 'transparency'
+  // Exit (Red Star)
+  | 'disappear'
+  | 'fade-out'
+  | 'fly-out-bottom'
+  | 'fly-out-left'
+  | 'fly-out-right'
+  | 'fly-out-top'
+  | 'float-out'
+  | 'split-out'
+  | 'wipe-out'
+  | 'zoom-out'
+  | 'swivel-out'
+  | 'bounce-out'
+  | 'shrink-turn'
+  // Motion Paths (Blue)
+  | 'path-line-down'
+  | 'path-line-right'
+  | 'path-line-left'
+  | 'path-line-up'
+  | 'path-arc'
+  | 'path-loop';
 
 export interface SlideObjectFormat {
   bold?: boolean;
@@ -189,7 +256,12 @@ export type SlideThemeId =
   | 'crimson-bold'
   | 'sunset-amber'
   | 'minimal-light'
-  | 'cyber-neon';
+  | 'cyber-neon'
+  | 'aptos-office'
+  | 'pitchbook-coral'
+  | 'widescreen-cyan'
+  | 'berlin-amber'
+  | 'gallery-classic';
 
 export interface SlideThemeConfig {
   id: SlideThemeId;
@@ -230,6 +302,14 @@ export interface SlideSection {
   isCollapsed?: boolean;
 }
 
+export interface SlideInkStroke {
+  id: string;
+  color: string;
+  width: number;
+  isHighlighter?: boolean;
+  points: Array<{ x: number; y: number }>;
+}
+
 export interface SlideMaster {
   bgTheme: SlideThemeId;
   customBgColor?: string;
@@ -252,9 +332,11 @@ export interface MasterSlide {
   transition?: {
     type: TransitionType;
     durationSeconds: number;
+    sound?: string;
   };
   isHidden?: boolean;
   sectionId?: string;
+  inkStrokes?: SlideInkStroke[];
 }
 
 export interface SlideVersionHistoryItem {
