@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Gift,
   FileText,
+  Presentation,
   Sparkles,
+  Cpu,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
@@ -61,7 +63,8 @@ export function Sidebar() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Drive', path: '/drive', icon: HardDrive },
-    { label: 'Docs', path: '/canvas', icon: FileText },
+    { label: 'Docs', path: '/docs', icon: FileText, iconImg: '/docs-logo.png' },
+    { label: 'Slides', path: '/slides', icon: Presentation, iconImg: '/slides-logo.png' },
 
     { label: 'Shared with me', path: '/shared', icon: Users },
     { label: 'Recent', path: '/recent', icon: Clock },
@@ -69,6 +72,7 @@ export function Sidebar() {
     { label: 'Media Library', path: '/media', icon: Film },
     { label: 'Video Player', path: '/player', icon: Clapperboard, badge: 'Pro' },
     { label: 'Storage Analytics', path: '/storage', icon: PieChart },
+    { label: 'Master RAM', path: '/master-ram', icon: Cpu, badge: '500GB' },
     { label: 'Trash', path: '/trash', icon: Trash2 },
   ];
 
@@ -118,8 +122,12 @@ export function Sidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="left" className="w-56">
             <DropdownMenuItem onClick={() => navigate('/canvas/docs/new')}>
-              <FileText className="h-4 w-4 text-blue-500" />
-              <span>New Document</span>
+              <img src="/docs-logo.png" alt="Docs" className="h-4 w-4 rounded-xs object-cover" />
+              <span>Word Document (.docx)</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/canvas/slides/new')}>
+              <img src="/slides-logo.png" alt="Slides" className="h-4 w-4 rounded-xs object-cover" />
+              <span>PowerPoint Slide (.pptx)</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setNewFolderModalOpen(true)}>
@@ -170,7 +178,15 @@ export function Sidebar() {
               }
               title={sidebarCollapsed ? item.label : undefined}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              {(item as any).iconImg ? (
+                <img
+                  src={(item as any).iconImg}
+                  alt={item.label}
+                  className="h-4 w-4 rounded-xs object-cover shrink-0"
+                />
+              ) : (
+                <item.icon className="h-4 w-4 shrink-0" />
+              )}
               {!sidebarCollapsed && (
                 <div className="flex items-center justify-between flex-1">
                   <span>{item.label}</span>

@@ -29,12 +29,14 @@ import { DevicePage } from '@/pages/DevicePage';
 import { ActivityPage } from '@/pages/ActivityPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { SettingsPage } from '@/pages/SettingsPage';
-import { CanvasPage } from '@/pages/CanvasPage';
+import { DocsHomePage } from '@/pages/DocsHomePage';
+import { SlidesHomePage } from '@/pages/SlidesHomePage';
 import { CanvasEditorPage } from '@/pages/CanvasEditorPage';
 import { SyncCenterPage } from '@/pages/SyncCenterPage';
 import { OfflineCenterPage } from '@/pages/OfflineCenterPage';
 import { SecurityCenterPage } from '@/pages/SecurityCenterPage';
 import { DiagnosticsPage } from '@/pages/DiagnosticsPage';
+import { MasterRamPage } from '@/pages/MasterRamPage';
 
 
 // Standalone Shared & Auth Pages
@@ -119,14 +121,16 @@ export function App() {
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
         <Route path="/devices" element={<DevicePage />} />
         <Route path="/activity" element={<ActivityPage />} />
-        {/* Master Canvas Routes */}
-        <Route path="/canvas" element={<CanvasPage />} />
-        <Route path="/docs" element={<Navigate to="/canvas" replace />} />
+        {/* Master Canvas legacy route redirects directly to Docs */}
+        <Route path="/canvas" element={<Navigate to="/docs" replace />} />
+        <Route path="/docs" element={<DocsHomePage />} />
+        <Route path="/slides" element={<SlidesHomePage />} />
         <Route path="/canvas/:app" element={<CanvasEditorPage />} />
         <Route path="/canvas/:app/:id" element={<CanvasEditorPage />} />
 
 
         <Route path="/quantum-vgpu" element={<Navigate to="/settings" replace />} />
+        <Route path="/master-ram" element={<MasterRamPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

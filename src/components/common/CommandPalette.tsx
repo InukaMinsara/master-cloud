@@ -28,6 +28,7 @@ import {
   Sparkles,
   Bot,
   ShieldCheck,
+  Cpu,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -120,11 +121,25 @@ export function CommandPalette() {
       action: () => navigate('/storage'),
     },
     {
-      id: 'cmd-canvas',
-      title: 'Open Master Canvas Suite',
+      id: 'cmd-master-ram',
+      title: 'Open Master RAM (500 GB Hybrid Engine)',
+      category: 'Navigation',
+      icon: Cpu,
+      action: () => navigate('/master-ram'),
+    },
+    {
+      id: 'cmd-docs-home',
+      title: 'Open Word Docs & Templates',
       category: 'Creation',
-      icon: Sparkles,
-      action: () => navigate('/canvas'),
+      icon: FileText,
+      action: () => navigate('/docs'),
+    },
+    {
+      id: 'cmd-slides-home',
+      title: 'Open PowerPoint Slides & Templates',
+      category: 'Creation',
+      icon: Presentation,
+      action: () => navigate('/slides'),
     },
     {
       id: 'cmd-new-doc',

@@ -112,15 +112,15 @@ export function SlidesHomePage() {
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto bg-background">
       <div className="w-full max-w-6xl mx-auto px-6 sm:px-10 py-7 space-y-8 select-none">
-        {/* Back Breadcrumb */}
+        {/* Back Breadcrumb to Drive */}
         <div>
           <button
             type="button"
-            onClick={() => navigate('/canvas')}
+            onClick={() => navigate('/drive')}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to Master Canvas</span>
+            <span>Back to Drive</span>
           </button>
         </div>
 
