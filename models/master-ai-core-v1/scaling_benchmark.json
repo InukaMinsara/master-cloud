@@ -1,0 +1,200 @@
+{
+  "version": "1.0-scaling-benchmark",
+  "cuda_available_in_torch": false,
+  "vocab_size": 7875,
+  "corpus_tokens_available": 96759,
+  "host_memory_snapshot": {
+    "rss_mb": 0.0,
+    "private_commit_mb": 0.0,
+    "sys_avail_phys_mb": 2523.4,
+    "sys_avail_commit_mb": 523.6
+  },
+  "scale_candidates": [
+    {
+      "candidate": "scale_5M",
+      "status": "measured_ok",
+      "config": {
+        "vocab_size": 7875,
+        "d_model": 256,
+        "n_layers": 4,
+        "n_heads": 4,
+        "n_kv_heads": 2,
+        "d_ff": 768,
+        "max_seq_len": 512,
+        "dropout": 0.1,
+        "tie_weights": true,
+        "rope_theta": 10000.0,
+        "norm_eps": 1e-06,
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "use_grad_checkpoint": false
+      },
+      "exact_params": 5164032,
+      "weights_fp32_mb": 19.7,
+      "train_step_ms": 595.1,
+      "train_tokens_per_sec": 860.4,
+      "delta_commit_mb": 0.0,
+      "peak_rss_mb": 0.0,
+      "infer_uncached_tok_s": 43.8,
+      "infer_kv_cache_tok_s": 110.6,
+      "kv_cache_speedup": 2.52
+    },
+    {
+      "candidate": "scale_10M",
+      "status": "measured_ok",
+      "config": {
+        "vocab_size": 7875,
+        "d_model": 320,
+        "n_layers": 7,
+        "n_heads": 8,
+        "n_kv_heads": 2,
+        "d_ff": 896,
+        "max_seq_len": 512,
+        "dropout": 0.1,
+        "tie_weights": true,
+        "rope_theta": 10000.0,
+        "norm_eps": 1e-06,
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "use_grad_checkpoint": true
+      },
+      "exact_params": 10337920,
+      "weights_fp32_mb": 39.44,
+      "train_step_ms": 1277.4,
+      "train_tokens_per_sec": 400.8,
+      "delta_commit_mb": 0.0,
+      "peak_rss_mb": 0.0,
+      "infer_uncached_tok_s": 25.1,
+      "infer_kv_cache_tok_s": 82.1,
+      "kv_cache_speedup": 3.27
+    },
+    {
+      "candidate": "scale_20M",
+      "config": {
+        "vocab_size": 7875,
+        "d_model": 448,
+        "n_layers": 8,
+        "n_heads": 8,
+        "n_kv_heads": 2,
+        "d_ff": 1152,
+        "max_seq_len": 512,
+        "dropout": 0.1,
+        "tie_weights": true,
+        "rope_theta": 10000.0,
+        "norm_eps": 1e-06,
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "use_grad_checkpoint": true
+      },
+      "approx_params": 20731200,
+      "status": "skipped_host_commit_ceiling",
+      "estimated_adamw_mb": 415.9,
+      "sys_avail_commit_mb": 459.6,
+      "reason": "Estimated AdamW training commit (~416 MB) approaches current Windows free virtual commit headroom (460 MB) with CUDA disabled."
+    },
+    {
+      "candidate": "scale_40M",
+      "config": {
+        "vocab_size": 7875,
+        "d_model": 576,
+        "n_layers": 11,
+        "n_heads": 8,
+        "n_kv_heads": 2,
+        "d_ff": 1536,
+        "max_seq_len": 512,
+        "dropout": 0.1,
+        "tie_weights": true,
+        "rope_theta": 10000.0,
+        "norm_eps": 1e-06,
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "use_grad_checkpoint": true
+      },
+      "approx_params": 44680896,
+      "status": "skipped_host_commit_ceiling",
+      "estimated_adamw_mb": 827.0,
+      "sys_avail_commit_mb": 460.3,
+      "reason": "Estimated AdamW training commit (~827 MB) approaches current Windows free virtual commit headroom (460 MB) with CUDA disabled."
+    },
+    {
+      "candidate": "scale_50M",
+      "config": {
+        "vocab_size": 7875,
+        "d_model": 640,
+        "n_layers": 11,
+        "n_heads": 8,
+        "n_kv_heads": 2,
+        "d_ff": 1664,
+        "max_seq_len": 512,
+        "dropout": 0.1,
+        "tie_weights": true,
+        "rope_theta": 10000.0,
+        "norm_eps": 1e-06,
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "use_grad_checkpoint": true
+      },
+      "approx_params": 53700480,
+      "status": "skipped_host_commit_ceiling",
+      "estimated_adamw_mb": 981.8,
+      "sys_avail_commit_mb": 460.9,
+      "reason": "Estimated AdamW training commit (~982 MB) approaches current Windows free virtual commit headroom (461 MB) with CUDA disabled."
+    }
+  ],
+  "context_window_scaling": [
+    {
+      "context_len": 256,
+      "status": "ok",
+      "prefill_ms": 171.03,
+      "ms_per_token": 0.668,
+      "delta_commit_mb": 0.0
+    },
+    {
+      "context_len": 512,
+      "status": "ok",
+      "prefill_ms": 353.82,
+      "ms_per_token": 0.691,
+      "delta_commit_mb": 0.0
+    },
+    {
+      "context_len": 1024,
+      "status": "ok",
+      "prefill_ms": 1039.39,
+      "ms_per_token": 1.015,
+      "delta_commit_mb": 0.0
+    },
+    {
+      "context_len": 2048,
+      "status": "ok",
+      "prefill_ms": 3368.41,
+      "ms_per_token": 1.645,
+      "delta_commit_mb": 0.0
+    }
+  ],
+  "recommended_pilot_architecture": {
+    "name": "scale_10M",
+    "config": {
+      "vocab_size": 7875,
+      "d_model": 320,
+      "n_layers": 7,
+      "n_heads": 8,
+      "n_kv_heads": 2,
+      "d_ff": 896,
+      "max_seq_len": 512,
+      "dropout": 0.1,
+      "tie_weights": true,
+      "rope_theta": 10000.0,
+      "norm_eps": 1e-06,
+      "norm_type": "rmsnorm",
+      "pos_encoding": "rope",
+      "ffn_type": "swiglu",
+      "use_grad_checkpoint": true
+    },
+    "rationale": "On current CPU host (torch+cpu, commit headroom ~524 MB) and 96,759-token Stage-0 corpus, scale_10M (max_seq_len=512, RoPE + RMSNorm + SwiGLU + GQA) is the largest reliably trainable configuration with comfortable commit safety and strong KV-cache speedup. 20M/40M/50M configurations require PyTorch+CUDA on the local RTX 3050 6GB GPU plus Stage A-C corpora (1M-20M tokens) to train effectively without underfitting or hitting Windows CPU commit ceilings."
+  }
+}

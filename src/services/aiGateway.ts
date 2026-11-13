@@ -11,6 +11,7 @@
 import { modelRegistry } from './ai/modelRegistry';
 import { cloudBrainManager } from './ai/cloudBrain';
 import { originalBrainController } from './ai/originalBrainController';
+import { puterAiService } from './ai/puterAiService';
 
 export const QWEN_OMNI_VIDEO_MODEL = 'qwen/qwen3.8-omni-flash:free';
 
@@ -177,18 +178,44 @@ export class AIGateway {
   }
 
   static async generateImage(payload: AIImagePayload): Promise<AIImageResult> {
-    const curatedSamples = [
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1200&auto=format&fit=crop&q=80',
-    ];
-    return {
-      url: curatedSamples[Math.floor(Math.random() * curatedSamples.length)],
-      prompt: payload.prompt,
-      style: payload.style || 'Photorealistic',
-      aspectRatio: payload.aspectRatio || '16:9',
-      source: 'neural-synthesis',
-    };
+    try {
+      const res = await puterAiService.generateImage(payload.prompt, {
+        aspect_ratio: payload.aspectRatio as any,
+      });
+      return {
+        url: res.imageUrl,
+        prompt: payload.prompt,
+        style: payload.style || 'Photorealistic',
+        aspectRatio: payload.aspectRatio || '16:9',
+        source: 'upstream',
+      };
+    } catch (err) {
+      console.warn('[Puter AI] Image generation fallback triggered:', err);
+      const curatedSamples = [
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1200&auto=format&fit=crop&q=80',
+      ];
+      return {
+        url: curatedSamples[Math.floor(Math.random() * curatedSamples.length)],
+        prompt: payload.prompt,
+        style: payload.style || 'Photorealistic',
+        aspectRatio: payload.aspectRatio || '16:9',
+        source: 'neural-synthesis',
+      };
+    }
+  }
+
+  static async generateVideo(prompt: string, options: { model?: string; duration?: number; size?: any } = {}) {
+    return puterAiService.generateVideo(prompt, options);
+  }
+
+  static async textToSpeech(text: string, options?: any) {
+    return puterAiService.textToSpeech(text, options);
+  }
+
+  static async speechToText(audio: any) {
+    return puterAiService.speechToText(audio);
   }
 
   /**

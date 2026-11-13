@@ -24,6 +24,7 @@ import {
   ChevronRight,
   ArrowRight,
   Gift,
+  Sparkles,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -393,6 +394,17 @@ export function AppHeader() {
             </>
           )}
         </div>
+
+        {/* Master AI Direct Navigation Button */}
+        <button
+          onClick={() => navigate('/ai')}
+          title="Open Master AI Studio (Three-Brain Architecture v2.2)"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-500/35 bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 text-xs font-bold transition-all shadow-sm shadow-purple-500/10 cursor-pointer"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+          <span className="hidden sm:inline">Master AI</span>
+          <span className="px-1.5 py-0.5 rounded-md bg-purple-500/25 text-[10px] text-purple-200 font-extrabold">v2.2</span>
+        </button>
 
         {/* Smart Storage Optimizer Button */}
         <Button

@@ -1,0 +1,24 @@
+{
+  "model_name": "MASTER AI CORE v1.0",
+  "version": "1.0.0-pilot",
+  "architecture": "RMSNORM + ROPE + SWIGLU + GQA(4/2)",
+  "parameter_count": 5164032,
+  "vocab_size": 7875,
+  "max_seq_len": 512,
+  "onnx_size_mb": 27.62,
+  "onnx_sha256": "8470db1e296649e0d89f4e6a5810deba1fa17cae7ed431221235cbe9656b62c8",
+  "tokenizer_sha256": "f1a4068ca04559b0854c6b0da9f1fe9aed8b0be556ffca43e8e98a587a4e036f",
+  "special_tokens": {
+    "pad": 0,
+    "unk": 1,
+    "bos": 2,
+    "eos": 3,
+    "system": 5,
+    "user": 6,
+    "assistant": 7,
+    "tool": 8,
+    "tool_result": 9,
+    "endturn": 10
+  },
+  "policy": "100% Original Neural Weights Trained From Scratch \u2014 Zero External LLMs"
+}

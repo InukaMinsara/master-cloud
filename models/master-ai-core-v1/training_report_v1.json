@@ -1,0 +1,112 @@
+{
+  "version": "1.0.0-pilot",
+  "policy": "Original Independently Initialized & Trained Weights (Zero Third-Party LLMs)",
+  "architecture": {
+    "vocab_size": 7875,
+    "d_model": 256,
+    "n_layers": 4,
+    "n_heads": 4,
+    "n_kv_heads": 2,
+    "d_ff": 768,
+    "max_seq_len": 512,
+    "dropout": 0.15,
+    "tie_weights": true,
+    "rope_theta": 10000.0,
+    "norm_eps": 1e-06,
+    "norm_type": "rmsnorm",
+    "pos_encoding": "rope",
+    "ffn_type": "swiglu",
+    "use_grad_checkpoint": true
+  },
+  "parameter_count": 5164032,
+  "seed": 42,
+  "device": "cpu (torch 2.15.0+cpu)",
+  "stage1_pretraining": {
+    "epochs": 4,
+    "train_windows": 393,
+    "val_windows": 32,
+    "test_windows": 26,
+    "init_val_loss": 9.044,
+    "best_val_loss": 5.3667,
+    "test_metrics": {
+      "loss": 6.5941,
+      "perplexity": 730.74,
+      "tokens": 4992
+    },
+    "elapsed_sec": 1131.1,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 6.5499,
+        "val_loss": 5.7951,
+        "val_perplexity": 328.69,
+        "elapsed_sec": 194.7
+      },
+      {
+        "epoch": 2,
+        "train_loss": 4.5645,
+        "val_loss": 5.4434,
+        "val_perplexity": 231.22,
+        "elapsed_sec": 154.9
+      },
+      {
+        "epoch": 3,
+        "train_loss": 3.8314,
+        "val_loss": 5.3667,
+        "val_perplexity": 214.15,
+        "elapsed_sec": 210.5
+      },
+      {
+        "epoch": 4,
+        "train_loss": 3.4887,
+        "val_loss": 5.3736,
+        "val_perplexity": 215.65,
+        "elapsed_sec": 569.8
+      }
+    ]
+  },
+  "stage2_sft": {
+    "epochs": 4,
+    "train_samples": 415,
+    "val_samples": 44,
+    "test_samples": 25,
+    "pre_sft_val_loss": 7.0171,
+    "best_val_loss": 5.698,
+    "test_metrics": {
+      "loss": 6.3827,
+      "perplexity": 591.52,
+      "target_tokens": 1576
+    },
+    "elapsed_sec": 1614.1,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 4.501,
+        "val_loss": 5.7916,
+        "val_perplexity": 327.54,
+        "elapsed_sec": 483.1
+      },
+      {
+        "epoch": 2,
+        "train_loss": 3.8054,
+        "val_loss": 5.698,
+        "val_perplexity": 298.26,
+        "elapsed_sec": 552.2
+      },
+      {
+        "epoch": 3,
+        "train_loss": 3.5476,
+        "val_loss": 5.712,
+        "val_perplexity": 302.48,
+        "elapsed_sec": 360.1
+      },
+      {
+        "epoch": 4,
+        "train_loss": 3.3929,
+        "val_loss": 5.7346,
+        "val_perplexity": 309.39,
+        "elapsed_sec": 217.9
+      }
+    ]
+  }
+}

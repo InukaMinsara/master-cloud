@@ -1,0 +1,201 @@
+{
+  "audit_version": "v0.6 -> v1.0 Baseline Audit",
+  "timestamp": "2026-11-11T10:11:48Z",
+  "preserved_artifacts": {
+    "checkpoint_v0.2.pt": {
+      "exists": true,
+      "size_bytes": 60821043,
+      "sha256": "dab9eee6c28fc2a26b07c6f7ec70f20f2a05aa604b97f6b93aa38a48d3f6fa35"
+    },
+    "checkpoint_v0.3.pt": {
+      "exists": true,
+      "size_bytes": 62393971,
+      "sha256": "2d82e470dd6d97059a9d70d87c8b58bcb0eca54c84fe38d08803cdbf7b8010e0"
+    },
+    "checkpoint_v0.4.pt": {
+      "exists": true,
+      "size_bytes": 62393971,
+      "sha256": "6689da607e453388435b32bcc094bca401af7f0a498894b363c685a89af7408a"
+    },
+    "checkpoint_v0.5_stageA.pt": {
+      "exists": true,
+      "size_bytes": 62396311,
+      "sha256": "3ab372a1ea1b2e9720cf7e79a8a4ebddfa88ba2d9b9504f2503147cc5a448301"
+    },
+    "checkpoint_v0.5_stageB.pt": {
+      "exists": true,
+      "size_bytes": 62396311,
+      "sha256": "4c97f1125e6d1d18b0dfa80d10c2f3215f346d345a4cc29e38da8eac660c1633"
+    },
+    "checkpoint_v0.5.pt": {
+      "exists": true,
+      "size_bytes": 62394035,
+      "sha256": "77865d04fd2547d0705888d88b5e06f1c352ad58969390625a9e6f66ee534079"
+    },
+    "checkpoint_v0.6.pt": {
+      "exists": true,
+      "size_bytes": 62394035,
+      "sha256": "644025005b50092127ff1bb8f06937b3e59315611af4e40897c5590bc8dac506"
+    },
+    "checkpoint_best.pt": {
+      "exists": true,
+      "size_bytes": 62394035,
+      "sha256": "644025005b50092127ff1bb8f06937b3e59315611af4e40897c5590bc8dac506"
+    },
+    "master_ai_core.onnx": {
+      "exists": true,
+      "size_bytes": 22085366,
+      "sha256": "a645ae4830ac0f1b2f335e59561fea8c85a6896070d398c5b57f66f94a3defcc"
+    },
+    "vocab.json": {
+      "exists": true,
+      "size_bytes": 90000,
+      "sha256": "04b410ab61f9068d444e93d30fea9c9e8b0468f64c0925f8c1361b47598438c8"
+    },
+    "merges.json": {
+      "exists": true,
+      "size_bytes": 30446,
+      "sha256": "40ec3cadf313d8d6b11d247735b30d9fe762b857fc780673ba951bc9b7764e09"
+    },
+    "config.json": {
+      "exists": true,
+      "size_bytes": 164,
+      "sha256": "3a0f2d5b5ab71f7abd5eca0f5138bdb6eb6116b7933abadc2a71943a391f1038"
+    }
+  },
+  "v06_architecture": {
+    "vocab_size": 1024,
+    "d_model": 256,
+    "n_layers": 6,
+    "n_heads": 4,
+    "d_ff": 1024,
+    "max_seq_len": 256,
+    "dropout": 0.15,
+    "tie_weights": true,
+    "parameters": 5060608,
+    "normalization": "LayerNorm",
+    "positional_encoding": "Learned Absolute Position Embedding",
+    "ffn_activation": "GELU",
+    "kv_cache": false
+  },
+  "v06_training_data": {
+    "total_samples": 442,
+    "total_tokens": 57839,
+    "train_samples": 293,
+    "val_samples": 80,
+    "test_samples": 69,
+    "language_distribution": {
+      "english": 273,
+      "sinhala": 90,
+      "mixed": 79
+    },
+    "stage1_continuous_prose_tokens": 0,
+    "note": "Corpus consists solely of 442 short instruction/QA entries; zero Stage-1 continuous language pretraining."
+  },
+  "v06_training_stats": {
+    "epochs": 25,
+    "batch_size": 8,
+    "total_time_seconds": 936.64,
+    "best_val_loss": 3.4972,
+    "final_test_loss": 3.5774,
+    "final_test_perplexity": 35.78
+  },
+  "v06_generation_quality": {
+    "held_out_100": {
+      "average_3gram_repetition_rate": 0.1501,
+      "clean_eos_stop_percentage": 60.0,
+      "keyword_relevance_rate": 18.0,
+      "complete_sentence_generation_rate": 52.0,
+      "rubric_averages_0_to_5": {
+        "correctness": 1.25,
+        "grammar": 1.94,
+        "naturalness": 1.88,
+        "relevance": 1.35,
+        "instruction_following": 1.89,
+        "factual_accuracy": 1.25
+      }
+    },
+    "acceptance_30_raw_onnx": {
+      "clean_eos_stop_rate": 0.1667,
+      "mean_3gram_repetition": 0.2471,
+      "concept_match_rate": 0.2333,
+      "mean_tokens_per_second": 147.3,
+      "sample_english_raw": "key the or the to the press the to to video the to the to to in Press the to the the the the to your playback. press the the the or ",
+      "sample_sinhala_raw": "යතුර එබීමෙන් ව කියෝව සැතෝ ව ව ව වේ හැවත ඔබා පු වේ. ව ව විට ව ගේ ව ව ව"
+    },
+    "tool_assisted_acceptance": {
+      "totalPassed": 60,
+      "totalFailed": 0,
+      "successRate": 100
+    }
+  },
+  "v06_onnx_and_inference": {
+    "onnx_parity_status": "PASSED",
+    "onnx_size_mb": 21.06,
+    "single_thread_ort_benchmark": {
+      "seq_1": {
+        "mean_latency_ms": 1.96,
+        "min_latency_ms": 1.53,
+        "output_shape": [
+          1,
+          1,
+          1024
+        ]
+      },
+      "seq_32": {
+        "mean_latency_ms": 6.94,
+        "min_latency_ms": 6.08,
+        "output_shape": [
+          1,
+          32,
+          1024
+        ]
+      },
+      "seq_128": {
+        "mean_latency_ms": 26.27,
+        "min_latency_ms": 24.32,
+        "output_shape": [
+          1,
+          128,
+          1024
+        ]
+      },
+      "seq_256": {
+        "mean_latency_ms": 50.28,
+        "min_latency_ms": 45.18,
+        "output_shape": [
+          1,
+          256,
+          1024
+        ]
+      }
+    }
+  },
+  "hardware_and_os_environment": {
+    "gpu_hardware": {
+      "detected": true,
+      "raw": "NVIDIA GeForce RTX 3050 6GB Laptop GPU, 6144 MiB, 6001 MiB, 610.91"
+    },
+    "pytorch_runtime": {
+      "version": "2.15.0+cpu",
+      "cuda_available": false,
+      "device_count": 0
+    },
+    "os_memory": {
+      "memory_load_percent": 88,
+      "physical_total_gb": 15.64,
+      "physical_available_gb": 1.75,
+      "commit_limit_gb": 19.64,
+      "commit_available_gb": 0.36
+    }
+  },
+  "application_integration_audit": {
+    "onnxruntime_web_installed": false,
+    "masterAiEngine_uses_regex_local_fallback": true,
+    "toolAssisted_neural_fallback_currently_static_template": true,
+    "streaming_supported": false,
+    "kv_cache_supported": false,
+    "multi_turn_memory_manager_exists": false,
+    "human_feedback_preference_store_exists": false
+  }
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "run_id": "v1_pilot_seed42_1794399675",
+    "params": 5164032,
+    "s1_best_val_loss": 5.3667,
+    "s1_test_ppl": 730.74,
+    "s2_best_val_loss": 5.698,
+    "s2_test_ppl": 591.52,
+    "total_sec": 2745.2
+  }
+]

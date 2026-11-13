@@ -1272,23 +1272,21 @@ export function MasterAiModal({ videoRef }: { videoRef?: React.RefObject<HTMLVid
               </div>
             </div>
 
-            {/* Gemini API Key Section (if Cloud mode selected) */}
+            {/* Puter.js Gateway Section (Keyless Zero-Cost Cloud Mode) */}
             {aiMode === 'cloud' && (
-              <div className="p-4 rounded-2xl bg-white/5 border border-purple-500/30 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-white">
-                  <Key className="w-4 h-4 text-purple-400" />
-                  Google Gemini API Key (Ephemeral In-Memory Only)
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/30 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-white">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    Puter.js Unified AI Platform (Keyless Architecture)
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    $0 Developer Cost
+                  </span>
                 </div>
-                <p className="text-[11px] text-white/60">
-                  <strong className="text-amber-300">Security Notice:</strong> Enabling Cloud Mode transmits video metadata and retrieved dialogue passages over the public internet to Google servers. Your key is stored strictly in volatile in-memory state (never in localStorage or sessionStorage) and is immediately wiped when you close or reload this tab. Transmitted securely via <code className="text-cyan-300">x-goog-api-key</code> HTTP header (never in URL query parameters).
+                <p className="text-[11px] text-white/70">
+                  External AI providers are unified through Puter.js. No private API keys required from users or developers. Free open models (Gemma 4, Nemotron 3.5, Cohere North, Qwen 3.8) run with zero user credit consumption.
                 </p>
-                <input
-                  type="password"
-                  placeholder="AIzaSy…"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl bg-black/50 border border-white/15 focus:border-purple-400 text-white outline-none font-mono"
-                />
               </div>
             )}
 

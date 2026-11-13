@@ -1,0 +1,69 @@
+{
+  "status": "PASSED",
+  "max_abs_diff_overall": 6.7e-06,
+  "all_argmax_match": true,
+  "onnx_size_mb": 27.62,
+  "onnx_sha256": "8470db1e296649e0d89f4e6a5810deba1fa17cae7ed431221235cbe9656b62c8",
+  "checks": [
+    {
+      "kind": "random_seq_8",
+      "seq_len": 8,
+      "max_abs_diff": 3.3e-06,
+      "pt_next_token": 57,
+      "ort_next_token": 57,
+      "argmax_match": true,
+      "ort_latency_ms": 8.29
+    },
+    {
+      "kind": "random_seq_32",
+      "seq_len": 32,
+      "max_abs_diff": 3.3e-06,
+      "pt_next_token": 57,
+      "ort_next_token": 57,
+      "argmax_match": true,
+      "ort_latency_ms": 8.67
+    },
+    {
+      "kind": "random_seq_128",
+      "seq_len": 128,
+      "max_abs_diff": 3.8e-06,
+      "pt_next_token": 725,
+      "ort_next_token": 725,
+      "argmax_match": true,
+      "ort_latency_ms": 27.3
+    },
+    {
+      "kind": "random_seq_256",
+      "seq_len": 256,
+      "max_abs_diff": 4.1e-06,
+      "pt_next_token": 725,
+      "ort_next_token": 725,
+      "argmax_match": true,
+      "ort_latency_ms": 65.15
+    },
+    {
+      "kind": "bilingual_probe_0",
+      "seq_len": 20,
+      "max_abs_diff": 5.2e-06,
+      "pt_next_token": 794,
+      "ort_next_token": 794,
+      "argmax_match": true
+    },
+    {
+      "kind": "bilingual_probe_1",
+      "seq_len": 15,
+      "max_abs_diff": 6.7e-06,
+      "pt_next_token": 894,
+      "ort_next_token": 894,
+      "argmax_match": true
+    },
+    {
+      "kind": "bilingual_probe_2",
+      "seq_len": 36,
+      "max_abs_diff": 4.8e-06,
+      "pt_next_token": 894,
+      "ort_next_token": 894,
+      "argmax_match": true
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "version": "1.0-controlled-ablation",
+  "seed": 42,
+  "steps_per_variant": 40,
+  "seq_len": 128,
+  "vocab_size": 7875,
+  "variants": [
+    {
+      "variant": "v1_rmsnorm_rope_swiglu_mha",
+      "exact_params": 5426176,
+      "architecture": {
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "n_heads": 4,
+        "n_kv_heads": 4
+      },
+      "steps": 40,
+      "init_val_loss": 9.0136,
+      "final_train_loss_last5": 4.6435,
+      "final_val_loss": 5.3764,
+      "final_val_perplexity": 216.25,
+      "val_loss_reduction": 3.6372,
+      "train_elapsed_sec": 17.97,
+      "infer_kv_tok_s": 336.9
+    },
+    {
+      "variant": "v1_full (RMSNorm+RoPE+SwiGLU+GQA2)",
+      "exact_params": 5164032,
+      "architecture": {
+        "norm_type": "rmsnorm",
+        "pos_encoding": "rope",
+        "ffn_type": "swiglu",
+        "n_heads": 4,
+        "n_kv_heads": 2
+      },
+      "steps": 40,
+      "init_val_loss": 9.0441,
+      "final_train_loss_last5": 4.6313,
+      "final_val_loss": 5.3266,
+      "final_val_perplexity": 205.74,
+      "val_loss_reduction": 3.7175,
+      "train_elapsed_sec": 24.25,
+      "infer_kv_tok_s": 651.7
+    },
+    {
+      "variant": "baseline_v06_blocks (LayerNorm+AbsPos+GELU+MHA)",
+      "exact_params": 5461248,
+      "architecture": {
+        "norm_type": "layernorm",
+        "pos_encoding": "learned_abs",
+        "ffn_type": "gelu",
+        "n_heads": 4,
+        "n_kv_heads": 4
+      },
+      "steps": 40,
+      "init_val_loss": 9.0233,
+      "final_train_loss_last5": 4.5897,
+      "final_val_loss": 5.277,
+      "final_val_perplexity": 195.79,
+      "val_loss_reduction": 3.7463,
+      "train_elapsed_sec": 32.59,
+      "infer_kv_tok_s": 1008.1
+    }
+  ],
+  "best_variant": "baseline_v06_blocks (LayerNorm+AbsPos+GELU+MHA)"
+}

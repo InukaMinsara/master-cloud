@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   HardDrive,
   Clock,
@@ -9,6 +9,7 @@ import {
   Camera,
   Upload,
   FolderPlus,
+  Sparkles,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useUploadStore } from '@/stores/uploadStore';
@@ -16,6 +17,7 @@ import { useFileStore } from '@/stores/fileStore';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown';
 
 export function MobileBottomNav() {
+  const navigate = useNavigate();
   const { setNewFolderModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
   const { currentFolderId } = useFileStore();
@@ -58,21 +60,21 @@ export function MobileBottomNav() {
           )}
         </NavLink>
 
-        {/* Tab 2: Recent */}
+        {/* Tab 2: Master AI */}
         <NavLink
-          to="/recent"
+          to="/ai"
           className={({ isActive }) =>
             `flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 transition-colors ${
-              isActive ? 'text-primary font-semibold' : 'text-muted-foreground hover:text-foreground'
+              isActive ? 'text-purple-400 font-semibold' : 'text-muted-foreground hover:text-foreground'
             }`
           }
         >
           {({ isActive }) => (
             <>
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-primary/15' : ''}`}>
-                <Clock className="h-5 w-5" />
+              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-purple-500/20 text-purple-400' : ''}`}>
+                <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-[11px] tracking-tight">Recent</span>
+              <span className="text-[11px] tracking-tight">Master AI</span>
             </>
           )}
         </NavLink>
@@ -86,6 +88,10 @@ export function MobileBottomNav() {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-56 mb-2">
+              <DropdownMenuItem onClick={() => navigate('/ai')} className="gap-2.5 py-2.5">
+                <Sparkles className="h-4 w-4 text-purple-400" />
+                <span className="font-medium">Master AI Studio</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setNewFolderModalOpen(true)} className="gap-2.5 py-2.5">
                 <FolderPlus className="h-4 w-4 text-blue-500" />
                 <span className="font-medium">New folder</span>

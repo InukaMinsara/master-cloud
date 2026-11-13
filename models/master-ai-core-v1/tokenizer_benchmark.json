@@ -1,0 +1,162 @@
+{
+  "version": "1.0-tokenizer-benchmark",
+  "candidates_tested": [
+    1024,
+    4096,
+    8192,
+    16384
+  ],
+  "results": [
+    {
+      "target_vocab_size": 1024,
+      "actual_vocab_size": 1024,
+      "merges_learned": 757,
+      "train_time_sec": 0.33,
+      "roundtrip_passed": 18,
+      "roundtrip_total": 18,
+      "roundtrip_accuracy_pct": 100.0,
+      "sinhala_metrics": {
+        "avg_tokens_per_sentence": 39.4,
+        "chars_per_token": 1.751,
+        "tokens_per_word": 3.863,
+        "total_tokens": 197
+      },
+      "english_metrics": {
+        "avg_tokens_per_sentence": 36.0,
+        "chars_per_token": 2.483,
+        "tokens_per_word": 3.273,
+        "total_tokens": 180
+      },
+      "mixed_metrics": {
+        "avg_tokens_per_sentence": 41.8,
+        "chars_per_token": 2.038,
+        "tokens_per_word": 3.167,
+        "total_tokens": 209
+      },
+      "sinhala_to_english_token_ratio": 1.094,
+      "utf8_bytes_per_token": 3.653,
+      "eval_merge_vocab_utilization": 0.9234,
+      "efficiency_score": 7.38
+    },
+    {
+      "target_vocab_size": 4096,
+      "actual_vocab_size": 4096,
+      "merges_learned": 3829,
+      "train_time_sec": 1.07,
+      "roundtrip_passed": 18,
+      "roundtrip_total": 18,
+      "roundtrip_accuracy_pct": 100.0,
+      "sinhala_metrics": {
+        "avg_tokens_per_sentence": 20.0,
+        "chars_per_token": 3.45,
+        "tokens_per_word": 1.961,
+        "total_tokens": 100
+      },
+      "english_metrics": {
+        "avg_tokens_per_sentence": 22.0,
+        "chars_per_token": 4.064,
+        "tokens_per_word": 2.0,
+        "total_tokens": 110
+      },
+      "mixed_metrics": {
+        "avg_tokens_per_sentence": 27.2,
+        "chars_per_token": 3.132,
+        "tokens_per_word": 2.061,
+        "total_tokens": 136
+      },
+      "sinhala_to_english_token_ratio": 0.909,
+      "utf8_bytes_per_token": 6.652,
+      "eval_merge_vocab_utilization": 0.5148,
+      "efficiency_score": 11.8716
+    },
+    {
+      "target_vocab_size": 8192,
+      "actual_vocab_size": 7875,
+      "merges_learned": 7608,
+      "train_time_sec": 2.33,
+      "roundtrip_passed": 18,
+      "roundtrip_total": 18,
+      "roundtrip_accuracy_pct": 100.0,
+      "sinhala_metrics": {
+        "avg_tokens_per_sentence": 15.8,
+        "chars_per_token": 4.367,
+        "tokens_per_word": 1.549,
+        "total_tokens": 79
+      },
+      "english_metrics": {
+        "avg_tokens_per_sentence": 17.6,
+        "chars_per_token": 5.08,
+        "tokens_per_word": 1.6,
+        "total_tokens": 88
+      },
+      "mixed_metrics": {
+        "avg_tokens_per_sentence": 24.2,
+        "chars_per_token": 3.521,
+        "tokens_per_word": 1.833,
+        "total_tokens": 121
+      },
+      "sinhala_to_english_token_ratio": 0.898,
+      "utf8_bytes_per_token": 8.345,
+      "eval_merge_vocab_utilization": 0.2877,
+      "efficiency_score": 12.4818
+    },
+    {
+      "target_vocab_size": 16384,
+      "actual_vocab_size": 7875,
+      "merges_learned": 7608,
+      "train_time_sec": 3.7,
+      "roundtrip_passed": 18,
+      "roundtrip_total": 18,
+      "roundtrip_accuracy_pct": 100.0,
+      "sinhala_metrics": {
+        "avg_tokens_per_sentence": 15.8,
+        "chars_per_token": 4.367,
+        "tokens_per_word": 1.549,
+        "total_tokens": 79
+      },
+      "english_metrics": {
+        "avg_tokens_per_sentence": 17.6,
+        "chars_per_token": 5.08,
+        "tokens_per_word": 1.6,
+        "total_tokens": 88
+      },
+      "mixed_metrics": {
+        "avg_tokens_per_sentence": 24.2,
+        "chars_per_token": 3.521,
+        "tokens_per_word": 1.833,
+        "total_tokens": 121
+      },
+      "sinhala_to_english_token_ratio": 0.898,
+      "utf8_bytes_per_token": 8.345,
+      "eval_merge_vocab_utilization": 0.2877,
+      "efficiency_score": 11.8418
+    }
+  ],
+  "selected_candidate": {
+    "target_vocab_size": 8192,
+    "actual_vocab_size": 7875,
+    "reason": "Selected target=8192 (actual=7875 unique tokens learned from clean corpus) for achieving 100% Unicode NFC round-trip accuracy, balanced Sinhala/English fertility (0.898x), 8.345 UTF-8 bytes/token, and 28.8% eval merge utilization.",
+    "note_on_v06_comparison": "Unlike v0.6's 1024-vocab byte-level tokenizer, v1.0 adds NFC + Sinhala ZWJ cluster handling, 11 explicit role/tool control tokens (<|system|>, <|user|>, <|assistant|>, <|tool|>, <|tool_result|>, <|endturn|>), and newly trained BPE merges for freshly initialized v1.0 embeddings (never reusing v0.6 weights)."
+  },
+  "exact_corpus_tokens_with_winner": {
+    "total": 96759,
+    "stage1": {
+      "documents": 480,
+      "total_tokens": 33965,
+      "by_language_tokens": {
+        "english": 21977,
+        "sinhala": 7058,
+        "mixed": 4930
+      }
+    },
+    "stage2": {
+      "documents": 484,
+      "total_tokens": 62794,
+      "by_language_tokens": {
+        "english": 37967,
+        "sinhala": 13226,
+        "mixed": 11601
+      }
+    }
+  }
+}

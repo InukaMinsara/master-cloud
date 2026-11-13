@@ -146,7 +146,11 @@ ios/App/App/public/
 android/app/src/main/assets/public/
 
 # Python & Machine Learning Artifacts
+# Python cache
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 *.py[cod]
 *$py.class
 *.pt
