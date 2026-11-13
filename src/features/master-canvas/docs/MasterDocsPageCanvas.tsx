@@ -29,6 +29,9 @@ interface MasterDocsPageCanvasProps {
   onActiveCellChange?: (cell: HTMLTableCellElement | null) => void;
   isFormatPainterActive?: boolean;
   onApplyFormatPainter?: () => void;
+  drawTool?: 'select' | 'pen' | 'highlighter' | 'eraser';
+  penColor?: string;
+  penWidth?: number;
 }
 
 export function MasterDocsPageCanvas({
@@ -54,12 +57,16 @@ export function MasterDocsPageCanvas({
   onActiveCellChange,
   isFormatPainterActive,
   onApplyFormatPainter,
+  drawTool = 'select',
+  penColor = '#111827',
+  penWidth = 2,
 }: MasterDocsPageCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentInkStroke, setCurrentInkStroke] = useState<{ x: number; y: number }[] | null>(null);
 
   // Header & Footer inline edit states
   const [editingHeader, setEditingHeader] = useState(false);
@@ -195,6 +202,69 @@ export function MasterDocsPageCanvas({
       node = node.parentNode;
     }
     onActiveCellChange(null);
+  };
+
+  const getSheetCoords = (clientX: number, clientY: number) => {
+    if (!sheetRef.current) return null;
+    const rect = sheetRef.current.getBoundingClientRect();
+    const effectiveZoom = isWebLayout ? 1 : zoomLevel;
+    return {
+      x: Math.round((clientX - rect.left) / effectiveZoom),
+      y: Math.round((clientY - rect.top) / effectiveZoom),
+    };
+  };
+
+  const handleSheetMouseDown = (e: React.MouseEvent) => {
+    if (drawTool === 'pen' || drawTool === 'highlighter') {
+      const coords = getSheetCoords(e.clientX, e.clientY);
+      if (coords) {
+        setCurrentInkStroke([coords]);
+      }
+      return;
+    }
+    if (drawTool === 'eraser' && onUpdateShapes) {
+      const coords = getSheetCoords(e.clientX, e.clientY);
+      if (coords) {
+        const remaining = shapes.filter((s) => {
+          if (s.type !== 'ink' || !s.points) return true;
+          return !s.points.some((p) => Math.hypot(p.x - coords.x, p.y - coords.y) < 28);
+        });
+        if (remaining.length !== shapes.length) {
+          onUpdateShapes(remaining);
+        }
+      }
+    }
+  };
+
+  const handleSheetMouseMove = (e: React.MouseEvent) => {
+    if (currentInkStroke && (drawTool === 'pen' || drawTool === 'highlighter')) {
+      const coords = getSheetCoords(e.clientX, e.clientY);
+      if (coords) {
+        setCurrentInkStroke((prev) => (prev ? [...prev, coords] : [coords]));
+      }
+    }
+  };
+
+  const handleSheetMouseUp = () => {
+    if (currentInkStroke && currentInkStroke.length > 1 && onUpdateShapes) {
+      const isHighlighter = drawTool === 'highlighter';
+      const newInk: DocShapeElement = {
+        id: `ink-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'ink',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        strokeColor: penColor || '#111827',
+        fillColor: isHighlighter ? 'highlighter' : 'transparent',
+        strokeWidth: isHighlighter ? (penWidth || 16) : (penWidth || 2),
+        zIndex: isHighlighter ? 1 : 15,
+        pageIndex: 0,
+        points: currentInkStroke,
+      };
+      onUpdateShapes([...shapes, newInk]);
+    }
+    setCurrentInkStroke(null);
   };
 
   const updateFloatingToolbar = () => {
@@ -412,6 +482,10 @@ export function MasterDocsPageCanvas({
         {/* Realistic Word Page Sheet */}
         <div
           ref={sheetRef}
+          onMouseDown={handleSheetMouseDown}
+          onMouseMove={handleSheetMouseMove}
+          onMouseUp={handleSheetMouseUp}
+          onMouseLeave={handleSheetMouseUp}
           style={{
             width: isWebLayout ? '100%' : `${pageWidth}px`,
             minHeight: `${pageMinHeight}px`,
@@ -421,6 +495,7 @@ export function MasterDocsPageCanvas({
             paddingRight: isWebLayout ? '48px' : padding,
             backgroundColor: isDocDarkMode ? '#0f172a' : pageLayout?.pageBgColor || '#ffffff',
             color: isDocDarkMode ? '#f8fafc' : '#1e293b',
+            cursor: drawTool !== 'select' ? (drawTool === 'eraser' ? 'cell' : 'crosshair') : undefined,
           }}
           className="rounded-none shadow-[0_2px_12px_rgba(0,0,0,0.09)] border border-[#d2d0ce] dark:border-border/80 relative flex flex-col justify-between transition-colors overflow-hidden"
         >
@@ -487,6 +562,27 @@ export function MasterDocsPageCanvas({
           {/* Embedded Drawing Shapes Layer */}
           {shapes && onUpdateShapes && (
             <MasterDocsShapesLayer shapes={shapes} onUpdateShapes={onUpdateShapes} />
+          )}
+
+          {/* Active Ink Stroke Preview */}
+          {currentInkStroke && currentInkStroke.length > 1 && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible"
+              style={{ position: 'absolute', inset: 0 }}
+            >
+              <path
+                d={currentInkStroke.reduce(
+                  (acc, pt, idx) => (idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`),
+                  ''
+                )}
+                fill="none"
+                stroke={penColor === 'galaxy' ? '#ec4899' : penColor}
+                strokeWidth={drawTool === 'highlighter' ? (penWidth || 16) : (penWidth || 2)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={drawTool === 'highlighter' ? 0.45 : 1}
+              />
+            </svg>
           )}
 
           {/* Editable Document Body */}

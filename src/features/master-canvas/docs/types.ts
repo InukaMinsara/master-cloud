@@ -76,7 +76,7 @@ export interface DocCrossReference {
 
 export interface DocShapeElement {
   id: string;
-  type: 'rectangle' | 'rounded' | 'circle' | 'arrow' | 'callout' | 'star' | 'textbox' | 'line';
+  type: 'rectangle' | 'rounded' | 'circle' | 'arrow' | 'callout' | 'star' | 'textbox' | 'line' | 'ink';
   x: number;
   y: number;
   width: number;
@@ -90,6 +90,7 @@ export interface DocShapeElement {
   fontSize?: number;
   zIndex: number;
   pageIndex: number;
+  points?: Array<{ x: number; y: number }>;
 }
 
 export interface DocFormField {

@@ -116,6 +116,35 @@ export function MasterDocsShapesLayer({
               </div>
             )}
 
+            {shape.type === 'ink' && shape.points && shape.points.length > 0 && (
+              <svg
+                className="w-full h-full overflow-visible pointer-events-none"
+                style={{ position: 'absolute', inset: 0 }}
+              >
+                <defs>
+                  <linearGradient id={`docGalaxyGrad-${shape.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="25%" stopColor="#8b5cf6" />
+                    <stop offset="50%" stopColor="#3b82f6" />
+                    <stop offset="75%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#f59e0b" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d={shape.points.reduce(
+                    (acc, pt, idx) => (idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`),
+                    ''
+                  )}
+                  fill="none"
+                  stroke={shape.strokeColor === 'galaxy' ? `url(#docGalaxyGrad-${shape.id})` : shape.strokeColor}
+                  strokeWidth={shape.strokeWidth || 2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={shape.fillColor === 'highlighter' ? 0.45 : 1}
+                />
+              </svg>
+            )}
+
             {/* Selected Shape Controls */}
             {isSelected && !isReadOnly && (
               <div className="absolute -top-7 right-0 flex items-center gap-1 bg-card border border-border shadow-md rounded-lg p-0.5 z-20">

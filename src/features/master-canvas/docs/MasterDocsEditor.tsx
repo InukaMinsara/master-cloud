@@ -29,6 +29,9 @@ import {
   Globe,
   FileSpreadsheet,
   PanelLeft,
+  Minus,
+  Square,
+  X,
 } from 'lucide-react';
 import { CanvasDocData } from '@/types/canvas';
 import {
@@ -179,6 +182,11 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSplitViewOpen, setIsSplitViewOpen] = useState(false);
   const [splitOrientation, setSplitOrientation] = useState<'horizontal' | 'vertical'>('vertical');
+
+  // Draw (Inking) tab state
+  const [drawTool, setDrawTool] = useState<'select' | 'pen' | 'highlighter' | 'eraser'>('select');
+  const [penColor, setPenColor] = useState<string>('#111827');
+  const [penWidth, setPenWidth] = useState<number>(2);
 
   // Core modals
   const [isEquationModalOpen, setIsEquationModalOpen] = useState(false);
@@ -1231,7 +1239,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
       }`}
     >
       {/* ── 1. Microsoft 365 Word Fluent Title Bar & QAT ─────────────────── */}
-      <header className="flex h-10 items-center justify-between px-3 bg-[#f3f2f1] dark:bg-slate-900 text-foreground z-30 shrink-0 gap-3">
+      <header className="flex h-10 items-center justify-between px-3 bg-[#f3f2f1] dark:bg-slate-900 text-foreground z-30 shrink-0 gap-3 border-b border-black/[0.06] dark:border-border/60">
         {/* Left: Back + Docs App Icon + AutoSave + QAT + Doc Title */}
         <div className="flex items-center gap-1.5 min-w-0">
           <button
@@ -1246,8 +1254,16 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           <img
             src="/docs-logo.png"
             alt="Docs"
-            className="h-6 w-6 rounded object-cover shadow-xs shrink-0"
+            className="h-6 w-6 rounded object-cover shadow-xs shrink-0 select-none"
+            title="Microsoft Word Engine (Master Cloud)"
           />
+
+          {/* Word 365 AutoSave On Indicator */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[10px] font-semibold text-foreground/80 shrink-0 select-none mr-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden md:inline">AutoSave</span>
+            <span className="text-[9px] px-1 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold uppercase">On</span>
+          </div>
 
           {/* Quick Access Toolbar (QAT) */}
           <div className="hidden sm:flex items-center gap-0.5 px-1">
@@ -1294,6 +1310,7 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
               placeholder="Document1"
               className="font-semibold text-xs bg-transparent hover:bg-black/[0.05] dark:hover:bg-white/10 focus:bg-white dark:focus:bg-slate-800 rounded px-2 py-1 max-w-[160px] sm:max-w-[210px] truncate focus:outline-none focus:ring-1 focus:ring-[#185abd] transition-colors"
             />
+            <span className="hidden md:inline text-[10px] text-muted-foreground font-mono">.docx</span>
             <button
               onClick={() => setIsStarred(!isStarred)}
               className={`p-1 rounded transition-colors ${
@@ -1332,14 +1349,20 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
         <button
           onClick={() => setIsCommandPaletteOpen(true)}
           className="hidden md:flex items-center gap-2 px-3 py-1 w-64 lg:w-80 rounded-md bg-white/90 dark:bg-card border border-black/10 dark:border-border text-xs text-muted-foreground hover:border-[#185abd]/50 shadow-2xs transition-colors"
-          title="Search commands & document (Ctrl+K)"
+          title="Search commands & document (Alt+Q / Ctrl+K)"
         >
           <Search className="h-3.5 w-3.5 text-[#185abd]" />
-          <span className="truncate flex-1 text-left">Search (Ctrl+K)</span>
+          <span className="truncate flex-1 text-left">Search (Alt+Q)</span>
+          <kbd className="text-[9px] font-mono px-1.5 py-0.5 bg-black/[0.05] dark:bg-white/10 rounded">Ctrl+K</kbd>
         </button>
 
-        {/* Right: Collaborators, History, Word Blue Share Button */}
+        {/* Right: Cloud Drive, Collaborators, History, Share & Windows 11 Controls */}
         <div className="flex items-center gap-1.5">
+          <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground px-2 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
+            <Cloud className="h-3 w-3 text-[#185abd]" />
+            <span>10 TB Drive</span>
+          </div>
+
           <div className="hidden lg:flex items-center mr-1">
             <div
               className="h-6 w-6 rounded-full bg-[#185abd] text-white text-[11px] font-bold flex items-center justify-center shadow-2xs"
@@ -1369,6 +1392,48 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
             <Share2 className="h-3.5 w-3.5" />
             <span>Share</span>
           </button>
+
+          {/* Windows 11 Window Controls */}
+          <div className="flex items-center text-muted-foreground ml-1">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.documentElement;
+                if (!document.fullscreenElement) {
+                  el.requestFullscreen?.().catch(() => {});
+                } else {
+                  document.exitFullscreen?.().catch(() => {});
+                }
+              }}
+              className="p-1.5 hover:bg-black/[0.08] dark:hover:bg-white/10 hover:text-foreground rounded transition-colors"
+              title="Minimize / Restore"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.documentElement;
+                if (!document.fullscreenElement) {
+                  el.requestFullscreen?.().catch(() => {});
+                } else {
+                  document.exitFullscreen?.().catch(() => {});
+                }
+              }}
+              className="p-1.5 hover:bg-black/[0.08] dark:hover:bg-white/10 hover:text-foreground rounded transition-colors"
+              title="Maximize"
+            >
+              <Square className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/docs')}
+              className="p-1.5 hover:bg-rose-500 hover:text-white rounded transition-colors"
+              title="Close Document"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1451,6 +1516,73 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
         setIsFullscreen={setIsFullscreen}
         isDocDarkMode={isDocDarkMode}
         setIsDocDarkMode={setIsDocDarkMode}
+        drawTool={drawTool}
+        setDrawTool={setDrawTool}
+        penColor={penColor}
+        setPenColor={setPenColor}
+        penWidth={penWidth}
+        setPenWidth={setPenWidth}
+        onClearInk={() => {
+          const updated = { ...docData, shapes: (docData.shapes || []).filter((s) => s.type !== 'ink') };
+          setDocData(updated);
+          triggerAutoSave(updated);
+          toast.success('Cleared inking on document');
+        }}
+        isTableCellFocused={Boolean(activeTableCellRef.current)}
+        onInsertRowAbove={() =>
+          handleTableAction(
+            () => DocTableService.insertRow(activeTableCellRef.current!, 'above'),
+            'Row inserted above'
+          )
+        }
+        onInsertRowBelow={() =>
+          handleTableAction(
+            () => DocTableService.insertRow(activeTableCellRef.current!, 'below'),
+            'Row inserted below'
+          )
+        }
+        onInsertColLeft={() =>
+          handleTableAction(
+            () => DocTableService.insertColumn(activeTableCellRef.current!, 'left'),
+            'Column inserted left'
+          )
+        }
+        onInsertColRight={() =>
+          handleTableAction(
+            () => DocTableService.insertColumn(activeTableCellRef.current!, 'right'),
+            'Column inserted right'
+          )
+        }
+        onDeleteRow={() =>
+          handleTableAction(
+            () => DocTableService.deleteRow(activeTableCellRef.current!),
+            'Row deleted'
+          )
+        }
+        onDeleteCol={() =>
+          handleTableAction(
+            () => DocTableService.deleteColumn(activeTableCellRef.current!),
+            'Column deleted'
+          )
+        }
+        onDeleteTable={() =>
+          handleTableAction(
+            () => DocTableService.deleteTable(activeTableCellRef.current!),
+            'Table deleted'
+          )
+        }
+        onToggleTableHeader={() =>
+          handleTableAction(
+            () => DocTableService.toggleHeaderRow(activeTableCellRef.current!),
+            'Toggled table header row'
+          )
+        }
+        onShadeCell={(color) =>
+          handleTableAction(
+            () => DocTableService.setCellBackground(activeTableCellRef.current!, color),
+            'Cell shading updated'
+          )
+        }
       />
 
       {/* ── 3. Interactive Document Ruler ──────────────────────────────── */}
@@ -1514,6 +1646,9 @@ export function MasterDocsEditor({ initialFile, initialData, onSave }: MasterDoc
           }}
           isFormatPainterActive={Boolean(copiedFormat)}
           onApplyFormatPainter={handleApplyFormatPainter}
+          drawTool={drawTool}
+          penColor={penColor}
+          penWidth={penWidth}
         />
 
         {/* Split Screen View (If enabled) */}

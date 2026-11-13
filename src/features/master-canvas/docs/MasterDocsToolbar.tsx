@@ -56,7 +56,13 @@ import {
   Globe,
   FileSpreadsheet,
   SlidersHorizontal,
+  MousePointer,
+  Highlighter,
+  Check,
+  Trash2,
+  Plus,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { CanvasDocData } from '@/types/canvas';
 import { WORD_FONT_FAMILIES, WORD_FONT_SIZES_PT } from './services/DocThemesService';
 
@@ -76,12 +82,14 @@ export type RibbonTab =
   | 'file'
   | 'home'
   | 'insert'
+  | 'draw'
   | 'design'
   | 'layout'
   | 'references'
   | 'automate'
   | 'review'
-  | 'view';
+  | 'view'
+  | 'table-design';
 
 interface MasterDocsToolbarProps {
   activeTab: RibbonTab;
@@ -150,6 +158,27 @@ interface MasterDocsToolbarProps {
   setIsFullscreen: (full: boolean) => void;
   isDocDarkMode: boolean;
   setIsDocDarkMode: (dark: boolean) => void;
+
+  // Inking (Draw tab)
+  drawTool?: 'select' | 'pen' | 'highlighter' | 'eraser';
+  setDrawTool?: (tool: 'select' | 'pen' | 'highlighter' | 'eraser') => void;
+  penColor?: string;
+  setPenColor?: (color: string) => void;
+  penWidth?: number;
+  setPenWidth?: (width: number) => void;
+  onClearInk?: () => void;
+
+  // Contextual Table Design tab
+  isTableCellFocused?: boolean;
+  onInsertRowAbove?: () => void;
+  onInsertRowBelow?: () => void;
+  onInsertColLeft?: () => void;
+  onInsertColRight?: () => void;
+  onDeleteRow?: () => void;
+  onDeleteCol?: () => void;
+  onDeleteTable?: () => void;
+  onToggleTableHeader?: () => void;
+  onShadeCell?: (color: string) => void;
 }
 
 const RibbonGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -228,6 +257,23 @@ export function MasterDocsToolbar({
   setIsFullscreen,
   isDocDarkMode,
   setIsDocDarkMode,
+  drawTool = 'select',
+  setDrawTool,
+  penColor = '#111827',
+  setPenColor,
+  penWidth = 2,
+  setPenWidth,
+  onClearInk,
+  isTableCellFocused = false,
+  onInsertRowAbove,
+  onInsertRowBelow,
+  onInsertColLeft,
+  onInsertColRight,
+  onDeleteRow,
+  onDeleteCol,
+  onDeleteTable,
+  onToggleTableHeader,
+  onShadeCell,
 }: MasterDocsToolbarProps) {
   const [selectedFont, setSelectedFont] = useState(WORD_FONT_FAMILIES[0].value);
   const [selectedFontSizePt, setSelectedFontSizePt] = useState('12');
@@ -320,6 +366,7 @@ export function MasterDocsToolbar({
             [
               { id: 'home', label: 'Home' },
               { id: 'insert', label: 'Insert' },
+              { id: 'draw', label: 'Draw' },
               { id: 'design', label: 'Design' },
               { id: 'layout', label: 'Layout' },
               { id: 'references', label: 'References' },
@@ -343,6 +390,20 @@ export function MasterDocsToolbar({
               </button>
             );
           })}
+
+          {/* Contextual Table Design Tab */}
+          {(isTableCellFocused || activeTab === 'table-design') && (
+            <button
+              onClick={() => setActiveTab('table-design')}
+              className={`px-3 py-1 text-xs rounded-md transition-all relative font-semibold ${
+                activeTab === 'table-design'
+                  ? 'bg-[#185abd]/15 text-[#185abd] dark:text-sky-300 after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-[2.5px] after:bg-[#185abd] after:rounded-full'
+                  : 'text-[#185abd] dark:text-sky-400 hover:bg-[#185abd]/10'
+              }`}
+            >
+              Table Design
+            </button>
+          )}
         </div>
 
         {/* Right Quick Controls: Copilot + Comments + Editing */}
@@ -784,6 +845,202 @@ export function MasterDocsToolbar({
           </>
         )}
 
+        {/* ──────── TAB: DRAW (Word 365 Inking) ──────── */}
+        {activeTab === 'draw' && (
+          <>
+            <RibbonGroup label="Tools">
+              <button
+                onClick={() => setDrawTool?.('select')}
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  drawTool === 'select'
+                    ? 'bg-[#185abd]/15 text-[#185abd] dark:text-sky-300 font-semibold'
+                    : 'hover:bg-black/[0.05]'
+                }`}
+                title="Select Mode (Cursor)"
+              >
+                <MousePointer className="h-4 w-4" />
+                <span>Select</span>
+              </button>
+              <button
+                onClick={() => setDrawTool?.('eraser')}
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  drawTool === 'eraser'
+                    ? 'bg-[#185abd]/15 text-[#185abd] dark:text-sky-300 font-semibold'
+                    : 'hover:bg-black/[0.05]'
+                }`}
+                title="Eraser (Erase drawing strokes)"
+              >
+                <Eraser className="h-4 w-4 text-rose-500" />
+                <span>Eraser</span>
+              </button>
+            </RibbonGroup>
+
+            <RibbonGroup label="Pens">
+              <div className="flex items-center gap-1.5 px-1">
+                {/* Black Pen 0.5mm */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('pen');
+                    setPenColor?.('#111827');
+                    setPenWidth?.(2);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'pen' && penColor === '#111827'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Black Ballpoint Pen (0.5mm)"
+                >
+                  <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-white" />
+                  <span className="text-[9px] font-bold">0.5</span>
+                </button>
+
+                {/* Word Blue Pen 1mm */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('pen');
+                    setPenColor?.('#185abd');
+                    setPenWidth?.(3);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'pen' && penColor === '#185abd'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Word Blue Pen (1mm)"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#185abd]" />
+                  <span className="text-[9px] font-bold text-[#185abd]">Blue</span>
+                </button>
+
+                {/* Red Pen 1mm */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('pen');
+                    setPenColor?.('#dc2626');
+                    setPenWidth?.(3);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'pen' && penColor === '#dc2626'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Red Annotation Pen (1mm)"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                  <span className="text-[9px] font-bold text-red-600">Red</span>
+                </button>
+
+                {/* Emerald Green Pen 1mm */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('pen');
+                    setPenColor?.('#16a34a');
+                    setPenWidth?.(3);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'pen' && penColor === '#16a34a'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Emerald Green Pen (1mm)"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                  <span className="text-[9px] font-bold text-emerald-600">Green</span>
+                </button>
+
+                {/* Galaxy Pen (Gradient / Shimmer) */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('pen');
+                    setPenColor?.('galaxy');
+                    setPenWidth?.(4);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'pen' && penColor === 'galaxy'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Office Galaxy Shimmer Pen"
+                >
+                  <span className="w-3 h-3 rounded-full bg-gradient-to-tr from-pink-500 via-purple-500 to-amber-400 shadow-xs" />
+                  <span className="text-[8.5px] font-bold text-purple-600">Galaxy</span>
+                </button>
+
+                {/* Yellow Highlighter */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('highlighter');
+                    setPenColor?.('#fde047');
+                    setPenWidth?.(16);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'highlighter' && penColor === '#fde047'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Yellow Highlighter (16pt)"
+                >
+                  <span className="w-3 h-3 rounded bg-yellow-300" />
+                  <span className="text-[8.5px] font-bold text-amber-700">Highlite</span>
+                </button>
+
+                {/* Neon Green Highlighter */}
+                <button
+                  onClick={() => {
+                    setDrawTool?.('highlighter');
+                    setPenColor?.('#86efac');
+                    setPenWidth?.(16);
+                  }}
+                  className={`flex flex-col items-center justify-between w-9 h-11 py-1 rounded border transition-all ${
+                    drawTool === 'highlighter' && penColor === '#86efac'
+                      ? 'border-[#185abd] bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-[#185abd]'
+                      : 'border-black/10 dark:border-border hover:bg-black/[0.04]'
+                  }`}
+                  title="Neon Green Highlighter"
+                >
+                  <span className="w-3 h-3 rounded bg-green-300" />
+                  <span className="text-[8.5px] font-bold text-green-700">Neon</span>
+                </button>
+
+                {/* Clear All Inks */}
+                {onClearInk && (
+                  <button
+                    onClick={onClearInk}
+                    className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-rose-50 text-rose-600 text-[10px] font-medium transition-colors"
+                    title="Clear all inking on document"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Clear Ink</span>
+                  </button>
+                )}
+              </div>
+            </RibbonGroup>
+
+            <RibbonGroup label="Convert">
+              <button
+                onClick={onInsertEquation}
+                className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-md hover:bg-black/[0.05] text-[11px] font-medium"
+                title="Ink to Math"
+              >
+                <Sigma className="h-4 w-4 text-purple-600" />
+                <span>Ink to Math</span>
+              </button>
+              <button
+                onClick={() => {
+                  setDrawTool?.('pen');
+                  toast.info('Draw any shape: ink strokes will be preserved on document pages');
+                }}
+                className="flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-md hover:bg-black/[0.05] text-[11px] font-medium"
+                title="Draw Canvas"
+              >
+                <PenTool className="h-4 w-4 text-[#185abd]" />
+                <span>Draw Canvas</span>
+              </button>
+            </RibbonGroup>
+          </>
+        )}
+
         {/* ──────── TAB: DESIGN ──────── */}
         {activeTab === 'design' && (
           <>
@@ -1052,6 +1309,109 @@ export function MasterDocsToolbar({
                 </button>
                 <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-1.5 rounded-md hover:bg-black/[0.06]" title="Focus Mode / Fullscreen">
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </button>
+              </div>
+            </RibbonGroup>
+          </>
+        )}
+
+        {/* ──────── TAB: TABLE DESIGN (Word 365 Contextual) ──────── */}
+        {activeTab === 'table-design' && (
+          <>
+            <RibbonGroup label="Table Style Options">
+              <button
+                onClick={onToggleTableHeader}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-black/[0.05] text-xs font-medium"
+                title="Toggle Table Header Row"
+              >
+                <Check className="h-3.5 w-3.5 text-[#185abd]" />
+                <span>Header Row</span>
+              </button>
+            </RibbonGroup>
+
+            <RibbonGroup label="Shading">
+              <div className="flex items-center gap-1 px-1">
+                {[
+                  { label: 'Blue', color: '#eff6ff' },
+                  { label: 'Slate', color: '#f1f5f9' },
+                  { label: 'Emerald', color: '#ecfdf5' },
+                  { label: 'Amber', color: '#fffbeb' },
+                  { label: 'Rose', color: '#fff1f2' },
+                  { label: 'Clear', color: 'transparent' },
+                ].map((shade) => (
+                  <button
+                    key={shade.label}
+                    onClick={() => onShadeCell?.(shade.color)}
+                    style={{ backgroundColor: shade.color === 'transparent' ? '#ffffff' : shade.color }}
+                    className="w-5 h-5 rounded border border-black/20 hover:scale-110 transition-transform shadow-2xs"
+                    title={`Shade Cell: ${shade.label}`}
+                  />
+                ))}
+              </div>
+            </RibbonGroup>
+
+            <RibbonGroup label="Rows & Columns">
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={onInsertRowAbove}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-black/[0.05] text-[10.5px] font-medium"
+                  title="Insert Row Above"
+                >
+                  <Plus className="h-3.5 w-3.5 text-[#185abd]" />
+                  <span>Insert Above</span>
+                </button>
+                <button
+                  onClick={onInsertRowBelow}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-black/[0.05] text-[10.5px] font-medium"
+                  title="Insert Row Below"
+                >
+                  <Plus className="h-3.5 w-3.5 text-[#185abd]" />
+                  <span>Insert Below</span>
+                </button>
+                <button
+                  onClick={onInsertColLeft}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-black/[0.05] text-[10.5px] font-medium"
+                  title="Insert Column Left"
+                >
+                  <Plus className="h-3.5 w-3.5 text-[#185abd]" />
+                  <span>Insert Left</span>
+                </button>
+                <button
+                  onClick={onInsertColRight}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-black/[0.05] text-[10.5px] font-medium"
+                  title="Insert Column Right"
+                >
+                  <Plus className="h-3.5 w-3.5 text-[#185abd]" />
+                  <span>Insert Right</span>
+                </button>
+              </div>
+            </RibbonGroup>
+
+            <RibbonGroup label="Delete">
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={onDeleteRow}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-rose-50 text-rose-600 text-[10.5px] font-medium"
+                  title="Delete Selected Row"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Row</span>
+                </button>
+                <button
+                  onClick={onDeleteCol}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-rose-50 text-rose-600 text-[10.5px] font-medium"
+                  title="Delete Selected Column"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Col</span>
+                </button>
+                <button
+                  onClick={onDeleteTable}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-rose-50 text-rose-600 text-[10.5px] font-bold"
+                  title="Delete Entire Table"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Table</span>
                 </button>
               </div>
             </RibbonGroup>
