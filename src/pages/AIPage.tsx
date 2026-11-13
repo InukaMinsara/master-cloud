@@ -134,7 +134,7 @@ export function AIPage() {
           id: 'msg-' + Date.now(),
           role: 'assistant',
           content:
-            '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI capabilities (Chat, Image Studio, Video Studio, Voice & Audio) run directly via Puter.js with verified 100% free models and zero developer cost ($0).\n\n- **100% Free Chat Models**: Google Gemma 4 31B, NVIDIA Nemotron 3.5, Cohere Code, Qwen 3.8\n- **Zero API Keys**: No personal API keys or setups needed\n- **Bilingual**: Ask questions in **English** or **සිංහල (Sinhala)** anytime!',
+            '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI capabilities (Chat, Image Studio, Video Studio, Voice & Audio) run directly via Puter.js with verified 100% free models and zero developer cost ($0).\n\n- **100% Free Chat Models**: Google Gemini 3.8 Flash, Google Gemma 4 31B, NVIDIA Nemotron 3.5, Cohere Code, Qwen 3.8\n- **Zero API Keys**: No personal API keys or setups needed\n- **Bilingual**: Ask questions in **English** or **සිංහල (Sinhala)** anytime!',
           timestamp: new Date().toISOString(),
           tokensUsed: 32,
         },

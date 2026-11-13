@@ -105,6 +105,7 @@ export interface PuterSttResult {
 
 // ─── VERIFIED FREE CHAT MODELS CHAIN (PRIORITIZED) ───
 export const VERIFIED_FREE_CHAT_MODELS = [
+  { id: 'openrouter:google/gemini-3.8-flash:free', name: 'Google Gemini 3.8 Flash (Free)', category: 'fast' },
   { id: 'openrouter:google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B (Free)', category: 'general' },
   { id: 'openrouter:nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', category: 'reasoning' },
   { id: 'openrouter:cohere/north-mini-code:free', name: 'Cohere North Mini Code (Free)', category: 'coding' },
@@ -117,6 +118,7 @@ export const VERIFIED_FREE_CHAT_MODELS = [
 
 // Standard models supported through Puter's generous user allowance
 export const PUTER_STANDARD_MODELS = [
+  { id: 'gemini-3.8-flash', name: 'Google Gemini 3.8 Flash', category: 'fast' },
   { id: 'claude-3-5-sonnet', name: 'Anthropic Claude 3.5 Sonnet', category: 'coding' },
   { id: 'gpt-4o', name: 'OpenAI GPT-4o', category: 'general' },
   { id: 'gpt-4o-mini', name: 'OpenAI GPT-4o Mini', category: 'fast' },
@@ -341,12 +343,18 @@ class PuterAiPlatformService {
 
     // Determine initial candidate model
     const requestedModel = options.model || VERIFIED_FREE_CHAT_MODELS[0].id;
-    const fallbackList = [
-      requestedModel,
-      ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id).filter((id) => id !== requestedModel),
-      'gpt-4o-mini',
-      'claude-3-5-sonnet',
-    ];
+    const geminiFallbacks = requestedModel.includes('gemini-3.8')
+      ? ['gemini-3.8-flash', 'openrouter:google/gemini-3.8-flash:free', 'gemini-2.5-flash']
+      : [];
+    const fallbackList = Array.from(
+      new Set([
+        requestedModel,
+        ...geminiFallbacks,
+        ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id),
+        'gpt-4o-mini',
+        'claude-3-5-sonnet',
+      ]),
+    );
 
     const startTime = performance.now();
     let lastError: any = null;
@@ -405,11 +413,17 @@ class PuterAiPlatformService {
     }
 
     const requestedModel = options.model || VERIFIED_FREE_CHAT_MODELS[0].id;
-    const fallbackList = [
-      requestedModel,
-      ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id).filter((id) => id !== requestedModel),
-      'gpt-4o-mini',
-    ];
+    const geminiFallbacks = requestedModel.includes('gemini-3.8')
+      ? ['gemini-3.8-flash', 'openrouter:google/gemini-3.8-flash:free', 'gemini-2.5-flash']
+      : [];
+    const fallbackList = Array.from(
+      new Set([
+        requestedModel,
+        ...geminiFallbacks,
+        ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id),
+        'gpt-4o-mini',
+      ]),
+    );
 
     const startTime = performance.now();
     const messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
