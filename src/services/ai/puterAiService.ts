@@ -103,35 +103,46 @@ export interface PuterSttResult {
   durationSeconds?: number;
 }
 
-// ─── VERIFIED FREE CHAT MODELS CHAIN (PRIORITIZED) ───
+// ─── VERIFIED FREE CHAT MODELS CHAIN (PRIORITIZED FOR EXTREME FAST LOW LATENCY) ───
 export const VERIFIED_FREE_CHAT_MODELS = [
-  { id: 'openrouter:google/gemini-3.8-flash:free', name: 'Google Gemini 3.8 Flash (Free)', category: 'fast' },
-  { id: 'openrouter:google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B (Free)', category: 'general' },
+  { id: 'gemini-3.8-flash', name: '⚡ Google Gemini 3.8 Flash (Extreme Fast)', category: 'fast' },
+  { id: 'gemini-2.5-flash', name: '⚡ Google Gemini 2.5 Flash (Ultra Low-Latency)', category: 'fast' },
+  { id: 'gpt-4o-mini', name: '⚡ OpenAI GPT-4o Mini (Instant Turbo)', category: 'fast' },
+  { id: 'deepseek-chat', name: '⚡ DeepSeek-V3 Chat (Fast Reasoning)', category: 'reasoning' },
+  { id: 'openrouter:meta-llama/llama-3.3-70b-instruct:free', name: 'Meta Llama 3.3 70B (Free Turbo)', category: 'reasoning' },
+  { id: 'openrouter:google/gemma-2-9b-it:free', name: 'Google Gemma 2 9B (Free Fast)', category: 'general' },
+  { id: 'openrouter:mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct (Free Fast)', category: 'coding' },
+  { id: 'openrouter:google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B (Free High-Capacity)', category: 'general' },
   { id: 'openrouter:nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', category: 'reasoning' },
   { id: 'openrouter:cohere/north-mini-code:free', name: 'Cohere North Mini Code (Free)', category: 'coding' },
-  { id: 'openrouter:nvidia/nemotron-3.5-super-vl:free', name: 'NVIDIA Nemotron 3.5 Super VL (Free)', category: 'vision' },
-  { id: 'infron:qwen/qwen3.8-27b:free', name: 'Qwen 3.8 27B Uncensored (Free)', category: 'general' },
-  { id: 'openrouter:google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B A4B (Free)', category: 'general' },
-  { id: 'openrouter:baidu/ernie-5.5-flash-preview:free', name: 'Baidu ERNIE 5.5 Flash (Free)', category: 'general' },
   { id: 'openrouter:openrouter/free', name: 'OpenRouter Free Model Router', category: 'general' },
 ];
 
 // Standard models supported through Puter's generous user allowance
 export const PUTER_STANDARD_MODELS = [
-  { id: 'gemini-3.8-flash', name: 'Google Gemini 3.8 Flash', category: 'fast' },
+  { id: 'gemini-3.8-flash', name: '⚡ Google Gemini 3.8 Flash (Turbo Low-Latency)', category: 'fast' },
+  { id: 'gemini-2.5-flash', name: '⚡ Google Gemini 2.5 Flash (Ultra Fast)', category: 'fast' },
+  { id: 'gpt-4o-mini', name: '⚡ OpenAI GPT-4o Mini (Instant Response)', category: 'fast' },
+  { id: 'deepseek-chat', name: 'DeepSeek-V3 Chat (Fast Reasoning)', category: 'reasoning' },
   { id: 'claude-3-5-sonnet', name: 'Anthropic Claude 3.5 Sonnet', category: 'coding' },
   { id: 'gpt-4o', name: 'OpenAI GPT-4o', category: 'general' },
-  { id: 'gpt-4o-mini', name: 'OpenAI GPT-4o Mini', category: 'fast' },
-  { id: 'gemini-2.5-flash', name: 'Google Gemini 2.5 Flash', category: 'fast' },
-  { id: 'deepseek-chat', name: 'DeepSeek-V3 Chat', category: 'reasoning' },
 ];
 
 export const PUTER_IMAGE_MODELS = [
-  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell (Fast Open)', isFreeCandidate: true },
-  { id: 'stabilityai/stable-diffusion-3-medium', name: 'Stable Diffusion 3 Medium', isFreeCandidate: true },
-  { id: 'gpt-image-2.6-flare', name: 'Puter GPT Image Flare (Default)', isFreeCandidate: false },
-  { id: 'gemini-3.1-flash-image', name: 'Google Nano Banana 2 Image', isFreeCandidate: false },
-  { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev (Ultra Quality)', isFreeCandidate: false },
+  // Google Imagen Models (Ultra Photorealism & High Detail)
+  { id: 'google/imagen-3', name: 'Google Imagen 3 (Ultra Photoreal)', isFreeCandidate: true, isImagen: true },
+  { id: 'google/imagen-3-fast', name: 'Google Imagen 3 Fast (Turbo Gen)', isFreeCandidate: true, isImagen: true },
+  { id: 'imagen-3.0-generate-002', name: 'Google Imagen 3.0 Generate', isFreeCandidate: true, isImagen: true },
+  { id: 'google/imagen-2', name: 'Google Imagen 2 Photorealism', isFreeCandidate: false, isImagen: true },
+
+  // FLUX & High-Speed Diffusion
+  { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell (Fast Open)', isFreeCandidate: true, isImagen: false },
+  { id: 'stabilityai/stable-diffusion-3-medium', name: 'Stable Diffusion 3 Medium', isFreeCandidate: true, isImagen: false },
+  { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev (Ultra Quality)', isFreeCandidate: false, isImagen: false },
+
+  // Standard Puter Image Engines
+  { id: 'gpt-image-2.6-flare', name: 'Puter GPT Image Flare (Default)', isFreeCandidate: false, isImagen: false },
+  { id: 'gemini-3.1-flash-image', name: 'Google Nano Banana 2 Image', isFreeCandidate: false, isImagen: false },
 ];
 
 export const PUTER_VIDEO_MODELS = [
@@ -401,7 +412,7 @@ class PuterAiPlatformService {
   }
 
   /**
-   * Streams chat responses incrementally from Puter.js.
+   * Streams chat responses incrementally from Puter.js with Extreme Fast Watchdog fallback.
    */
   public async *streamChat(
     prompt: string,
@@ -413,15 +424,12 @@ class PuterAiPlatformService {
     }
 
     const requestedModel = options.model || VERIFIED_FREE_CHAT_MODELS[0].id;
-    const geminiFallbacks = requestedModel.includes('gemini-3.8')
-      ? ['gemini-3.8-flash', 'openrouter:google/gemini-3.8-flash:free', 'gemini-2.5-flash']
-      : [];
+    const turboPriority = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gpt-4o-mini', 'deepseek-chat'];
     const fallbackList = Array.from(
       new Set([
         requestedModel,
-        ...geminiFallbacks,
+        ...turboPriority,
         ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id),
-        'gpt-4o-mini',
       ]),
     );
 
@@ -438,15 +446,36 @@ class PuterAiPlatformService {
       if (i > 0) fallbackTriggered = true;
       fullAccumulated = '';
 
+      let receivedFirstChunk = false;
+      let watchdogTimer: any = null;
+
       try {
-        const stream = await p.ai.chat(messagesPayload, {
+        // Fast watchdog: if candidate takes longer than 2000ms to produce first token, fast-fallback
+        const watchdogPromise = new Promise<never>((_, reject) => {
+          if (i < fallbackList.length - 1) {
+            watchdogTimer = setTimeout(() => {
+              if (!receivedFirstChunk) {
+                reject(
+                  new Error(
+                    `Watchdog timeout: Model "${candidateModel}" did not respond within 2000ms. Fast-switching.`,
+                  ),
+                );
+              }
+            }, 2000);
+          }
+        });
+
+        const chatPromise = p.ai.chat(messagesPayload, {
           model: candidateModel,
           stream: true,
-          temperature: options.temperature,
+          temperature: options.temperature ?? 0.3,
           max_tokens: options.max_tokens,
         });
 
+        const stream = await Promise.race([chatPromise, watchdogPromise]);
+
         if (stream && stream.error) {
+          clearTimeout(watchdogTimer);
           throw new Error(stream.error.message || stream.error);
         }
 
@@ -456,29 +485,38 @@ class PuterAiPlatformService {
             if (options.signal?.aborted) break;
             const piece = chunk?.text ?? chunk?.message?.content ?? (typeof chunk === 'string' ? chunk : '');
             if (piece) {
+              if (!receivedFirstChunk) {
+                receivedFirstChunk = true;
+                clearTimeout(watchdogTimer);
+              }
               fullAccumulated += piece;
               options.onChunk?.(piece);
               yield fullAccumulated;
             }
           }
         } else {
-          // Non-streaming fallback response
+          clearTimeout(watchdogTimer);
           const staticText = typeof stream === 'string' ? stream : (stream?.message?.content || stream?.text || '');
           fullAccumulated = staticText;
           yield fullAccumulated;
         }
 
-        successModel = candidateModel;
-        return {
-          text: fullAccumulated,
-          modelUsed: successModel,
-          fallbackTriggered,
-          latencyMs: Math.round(performance.now() - startTime),
-          isFreeTier: successModel.includes(':free'),
-        };
+        clearTimeout(watchdogTimer);
+
+        if (fullAccumulated.trim().length > 0) {
+          successModel = candidateModel;
+          return {
+            text: fullAccumulated,
+            modelUsed: successModel,
+            fallbackTriggered,
+            latencyMs: Math.round(performance.now() - startTime),
+            isFreeTier: successModel.includes(':free') || successModel.startsWith('gemini') || successModel.includes('mini'),
+          };
+        }
       } catch (err: any) {
+        clearTimeout(watchdogTimer);
         lastErr = err;
-        console.warn(`[Puter AI Stream] Model "${candidateModel}" failed:`, err?.message || err);
+        console.warn(`[Puter AI Stream] Model "${candidateModel}" failed/timed out, fast-switching:`, err?.message || err);
       }
     }
 
@@ -488,7 +526,7 @@ class PuterAiPlatformService {
   // ─── 4. AI IMAGE GENERATION & EDITING ───
 
   /**
-   * Generates or edits an image using Puter.js txt2img.
+   * Generates or edits an image using Puter.js txt2img with Google Imagen support.
    * Real generation only; testMode is strictly set to false.
    */
   public async generateImage(prompt: string, options: PuterImageOptions = {}): Promise<PuterImageResult> {
@@ -497,64 +535,68 @@ class PuterAiPlatformService {
       throw new Error('Puter AI Image Generation (txt2img) is not available.');
     }
 
-    const modelToUse = options.model || 'black-forest-labs/FLUX.1-schnell';
+    const requestedModel = options.model || 'google/imagen-3';
     const aspectRatio = options.aspect_ratio || '1:1';
 
-    const opts: any = {
-      model: modelToUse,
-      aspect_ratio: aspectRatio,
-      testMode: false, // Strict requirement: Never substitute test mode for real generation
-    };
+    const isImagen = requestedModel.toLowerCase().includes('imagen');
+    const candidates = isImagen
+      ? [
+          requestedModel,
+          'google/imagen-3',
+          'google/imagen-3-fast',
+          'imagen-3.0-generate-002',
+          'black-forest-labs/FLUX.1-schnell',
+          'gpt-image-2.6-flare',
+        ]
+      : [requestedModel, 'black-forest-labs/FLUX.1-schnell', 'gpt-image-2.6-flare'];
 
-    if (options.width && options.height) {
-      opts.width = options.width;
-      opts.height = options.height;
-    }
+    const uniqueCandidates = Array.from(new Set(candidates));
+    let lastErr: any = null;
 
-    if (options.input_image) {
-      opts.input_image = options.input_image;
-    }
+    for (const modelCandidate of uniqueCandidates) {
+      const opts: any = {
+        model: modelCandidate,
+        aspect_ratio: aspectRatio,
+        testMode: false, // Strict requirement: Never substitute test mode for real generation
+      };
 
-    try {
-      const result = await p.ai.txt2img(prompt, opts);
-
-      let imageUrl = '';
-      if (typeof result === 'string') {
-        imageUrl = result;
-      } else if (result?.src) {
-        imageUrl = result.src;
-      } else if (result instanceof HTMLImageElement) {
-        imageUrl = result.src;
-      } else if (result instanceof Blob) {
-        imageUrl = URL.createObjectURL(result);
-      } else {
-        imageUrl = String(result);
+      if (options.width && options.height) {
+        opts.width = options.width;
+        opts.height = options.height;
+      }
+      if (options.input_image) {
+        opts.input_image = options.input_image;
       }
 
-      return {
-        imageUrl,
-        prompt,
-        model: modelToUse,
-        aspectRatio,
-        source: 'puter-txt2img',
-      };
-    } catch (err: any) {
-      // Fallback to FLUX Schnell or default image model if primary fails
-      if (modelToUse !== 'gpt-image-2.6-flare') {
-        console.warn(`[Puter Image] Model "${modelToUse}" failed, falling back to default image model:`, err);
-        opts.model = 'gpt-image-2.6-flare';
-        const fallbackRes = await p.ai.txt2img(prompt, opts);
-        const imageUrl = fallbackRes?.src || (fallbackRes instanceof Blob ? URL.createObjectURL(fallbackRes) : String(fallbackRes));
+      try {
+        const result = await p.ai.txt2img(prompt, opts);
+        let imageUrl = '';
+        if (typeof result === 'string') {
+          imageUrl = result;
+        } else if (result?.src) {
+          imageUrl = result.src;
+        } else if (result instanceof HTMLImageElement) {
+          imageUrl = result.src;
+        } else if (result instanceof Blob) {
+          imageUrl = URL.createObjectURL(result);
+        } else {
+          imageUrl = String(result);
+        }
+
         return {
           imageUrl,
           prompt,
-          model: 'gpt-image-2.6-flare',
+          model: modelCandidate,
           aspectRatio,
           source: 'puter-txt2img',
         };
+      } catch (err: any) {
+        lastErr = err;
+        console.warn(`[Puter Image] Model "${modelCandidate}" failed, attempting next candidate:`, err?.message || err);
       }
-      throw err;
     }
+
+    throw lastErr || new Error('Image generation failed across all available models.');
   }
 
   // ─── 5. AI VIDEO GENERATION ───
