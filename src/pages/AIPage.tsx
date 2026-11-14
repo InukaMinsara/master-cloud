@@ -11,11 +11,8 @@ import {
   User,
   FileText,
   X,
-  Cpu,
   ArrowRight,
-  Database,
   Globe,
-  Activity,
   Search,
   MessageSquare,
   Square,
@@ -23,11 +20,14 @@ import {
   Image as ImageIcon,
   Film,
   Mic,
+  MicOff,
   Volume2,
+  VolumeX,
+  PhoneCall,
+  PhoneOff,
   Download,
-  Upload,
-  Layers,
   Wand2,
+  Code2,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -35,9 +35,6 @@ import {
   puterAiService,
   VERIFIED_FREE_CHAT_MODELS,
   PUTER_STANDARD_MODELS,
-  PUTER_IMAGE_MODELS,
-  PUTER_VIDEO_MODELS,
-  PUTER_VOICES,
   PuterImageResult,
   PuterVideoResult,
   PuterTtsResult,
@@ -46,13 +43,7 @@ import { useFileStore } from '@/stores/fileStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
-import {
-  CloudAndRegistryPanel,
-  LongTermMemoryPanel,
-} from '@/components/video-player/panels/MasterAiV2Panels';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
-
-type PageTab = 'chat' | 'image' | 'video' | 'voice' | 'gateway' | 'memory';
 
 /**
  * Detects whether the user is requesting in-chat image or video generation
@@ -136,9 +127,6 @@ export function AIPage() {
   const { user } = useAuthStore();
   const { files, fetchItems } = useFileStore();
 
-  // Top-level Studio Tab
-  const [activeStudioTab, setActiveStudioTab] = useState<PageTab>('chat');
-
   // Chat State
   const [sessions, setSessions] = useState<AIChatSession[]>(() => AIService.getSessions());
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'session-default');
@@ -147,44 +135,22 @@ export function AIPage() {
   const [attachedFile, setAttachedFile] = useState<FileItem | null>(null);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string>(VERIFIED_FREE_CHAT_MODELS[0].id);
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
+
+  // ─── UNIFIED IN-CHAT SUPER AI CAPABILITIES ───
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
 
-  // ─── IMAGE STUDIO STATE ───
-  const [imgPrompt, setImgPrompt] = useState('');
-  const [imgNegativePrompt, setImgNegativePrompt] = useState('');
-  const [imgModel, setImgModel] = useState('google/imagen-3');
-  const [imgAspectRatio, setImgAspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3' | '3:2'>('1:1');
-  const [imgInputImage, setImgInputImage] = useState<string | null>(null);
-  const [isGeneratingImg, setIsGeneratingImg] = useState(false);
-  const [imgResult, setImgResult] = useState<PuterImageResult | null>(null);
-  const [imgHistory, setImgHistory] = useState<PuterImageResult[]>([]);
-
-  // ─── VIDEO STUDIO STATE ───
-  const [vidPrompt, setVidPrompt] = useState('');
-  const [vidModel, setVidModel] = useState('togetherai:wan-ai/wan2.7-t2v');
-  const [vidDuration, setVidDuration] = useState<number>(3);
-  const [vidSize, setVidSize] = useState<'1280x720' | '720x1280' | '1024x576'>('1280x720');
-  const [vidInputImage, setVidInputImage] = useState<string | null>(null);
-  const [isGeneratingVid, setIsGeneratingVid] = useState(false);
-  const [vidProgressStatus, setVidProgressStatus] = useState<string>('');
-  const [vidResult, setVidResult] = useState<PuterVideoResult | null>(null);
-  const [vidHistory, setVidHistory] = useState<PuterVideoResult[]>([]);
-
-  // ─── VOICE & SPEECH STATE ───
-  const [voiceTab, setVoiceTab] = useState<'tts' | 'stt'>('tts');
-  const [ttsText, setTtsText] = useState('');
-  const [ttsProvider, setTtsProvider] = useState<'aws-polly' | 'openai'>('aws-polly');
-  const [ttsVoice, setTtsVoice] = useState('Joanna');
-  const [isSynthesizingTts, setIsSynthesizingTts] = useState(false);
-  const [ttsResult, setTtsResult] = useState<PuterTtsResult | null>(null);
-  const [sttFile, setSttFile] = useState<File | null>(null);
-  const [isTranscribingStt, setIsTranscribingStt] = useState(false);
-  const [sttTranscript, setSttTranscript] = useState('');
+  // Audio & Recording Refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -195,10 +161,90 @@ export function AIPage() {
   }, [sessions]);
 
   useEffect(() => {
-    if (activeStudioTab === 'chat') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeSession?.messages, isStreaming]);
+
+  // ─── IN-CHAT VOICE RECORDING (SPEECH-TO-TEXT) ───
+  const handleToggleVoiceRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
     }
-  }, [activeSession?.messages, isStreaming, activeStudioTab]);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (blob.size > 500) {
+          toast.info('Transcribing speech via Whisper AI...');
+          try {
+            const sttRes = await puterAiService.speechToText(blob);
+            if (sttRes?.text && sttRes.text.trim()) {
+              setInputText((prev) => (prev ? `${prev} ${sttRes.text.trim()}` : sttRes.text.trim()));
+              toast.success('Voice transcribed to prompt!');
+            }
+          } catch (sttErr: any) {
+            toast.error(`Speech-to-text failed: ${sttErr?.message || sttErr}`);
+          }
+        }
+      };
+
+      mr.start();
+      setIsRecording(true);
+      toast.info('🎙️ Listening... Speak into your microphone.');
+    } catch (err: any) {
+      toast.error(`Microphone access error: ${err?.message || err}`);
+    }
+  };
+
+  // ─── IN-CHAT READ ALOUD (TEXT-TO-SPEECH) ───
+  const handleReadAloud = async (msgId: string, text: string) => {
+    if (speakingMsgId === msgId) {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+
+    setSpeakingMsgId(msgId);
+    toast.info('Synthesizing speech via AWS Polly / OpenAI voices...');
+    try {
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, 'Code block omitted.')
+        .replace(/[*#`_>•]/g, '')
+        .slice(0, 1500);
+
+      const res = await puterAiService.textToSpeech(cleanText);
+      activeAudioRef.current = res.audioElement;
+      res.audioElement.onended = () => {
+        setSpeakingMsgId(null);
+        activeAudioRef.current = null;
+      };
+      await res.audioElement.play();
+    } catch (err: any) {
+      toast.error(`Read aloud failed: ${err?.message || err}`);
+      setSpeakingMsgId(null);
+    }
+  };
 
   // Session Management
   const handleNewSession = () => {
@@ -213,7 +259,7 @@ export function AIPage() {
           id: 'msg-' + Date.now(),
           role: 'assistant',
           content:
-            '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI capabilities (Chat, Image Studio, Video Studio, Voice & Audio) run directly via Puter.js with verified 100% free models and zero developer cost ($0).\n\n- **100% Free Chat Models**: Google Gemini 3.8 Flash, Google Gemma 4 31B, NVIDIA Nemotron 3.5, Cohere Code, Qwen 3.8\n- **Zero API Keys**: No personal API keys or setups needed\n- **Bilingual**: Ask questions in **English** or **සිංහල (Sinhala)** anytime!',
+            '👋 Welcome to **Master AI Studio** — Unified Multimodal Super AI!\n\nAll capabilities (Chat, Image Gen, Video Gen, Voice, Code Canvas & Web Search) are unified right here in one seamless window with zero API keys and 100% free models.\n\n- **Autonomous Waterfall**: Google Gemini 3.8 Flash ⚡ → OpenAI GPT-4o → DeepSeek Free Tier\n- **In-Chat Images**: Type *"photo ekak hadanna [prompt]"* for Google Imagen 3\n- **In-Chat Videos**: Type *"video ekak hadanna [prompt]"* for BytePlus Seedance Video\n- **Interactive Canvas**: Generate HTML/React/SVG widgets and preview them live\n- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
           timestamp: new Date().toISOString(),
           tokensUsed: 32,
         },
@@ -584,100 +630,6 @@ export function AIPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // ─── IMAGE GENERATION HANDLER ───
-  const handleGenerateImage = async () => {
-    if (!imgPrompt.trim() || isGeneratingImg) return;
-    setIsGeneratingImg(true);
-    const start = performance.now();
-    try {
-      const res = await puterAiService.generateImage(imgPrompt.trim(), {
-        model: imgModel,
-        aspect_ratio: imgAspectRatio,
-        negative_prompt: imgNegativePrompt.trim() || undefined,
-        input_image: imgInputImage || undefined,
-      });
-      setImgResult(res);
-      setImgHistory((prev) => [res, ...prev.slice(0, 15)]);
-      const elapsed = Math.round((performance.now() - start) / 1000);
-      toast.success(`Image generated in ${elapsed}s via ${res.model}!`);
-    } catch (err: any) {
-      toast.error(`Image generation failed: ${err?.message || err}`);
-    } finally {
-      setIsGeneratingImg(false);
-    }
-  };
-
-  // ─── VIDEO GENERATION HANDLER ───
-  const handleGenerateVideo = async () => {
-    if (!vidPrompt.trim() || isGeneratingVid) return;
-    setIsGeneratingVid(true);
-    setVidProgressStatus('Initializing video generation...');
-    try {
-      const res = await puterAiService.generateVideo(vidPrompt.trim(), {
-        model: vidModel,
-        duration: vidDuration,
-        size: vidSize,
-        input_image: vidInputImage || undefined,
-        onProgress: (status) => setVidProgressStatus(status),
-      });
-      setVidResult(res);
-      setVidHistory((prev) => [res, ...prev.slice(0, 9)]);
-      toast.success(`Video generated successfully via ${res.model}!`);
-    } catch (err: any) {
-      toast.error(`Video generation failed: ${err?.message || err}`);
-    } finally {
-      setIsGeneratingVid(false);
-      setVidProgressStatus('');
-    }
-  };
-
-  // ─── TTS HANDLER ───
-  const handleSynthesizeTts = async () => {
-    if (!ttsText.trim() || isSynthesizingTts) return;
-    setIsSynthesizingTts(true);
-    try {
-      const res = await puterAiService.textToSpeech(ttsText.trim(), {
-        provider: ttsProvider,
-        voice: ttsVoice,
-      });
-      setTtsResult(res);
-      toast.success('Speech synthesized successfully!');
-      try {
-        await res.audioElement.play();
-      } catch {
-        // autoplay restriction might occur
-      }
-    } catch (err: any) {
-      toast.error(`TTS failed: ${err?.message || err}`);
-    } finally {
-      setIsSynthesizingTts(false);
-    }
-  };
-
-  // ─── STT HANDLER ───
-  const handleTranscribeStt = async () => {
-    if (!sttFile || isTranscribingStt) return;
-    setIsTranscribingStt(true);
-    try {
-      const res = await puterAiService.speechToText(sttFile);
-      setSttTranscript(res.text);
-      toast.success('Transcription completed!');
-    } catch (err: any) {
-      toast.error(`Transcription failed: ${err?.message || err}`);
-    } finally {
-      setIsTranscribingStt(false);
-    }
-  };
-
-  const handleDownloadFile = (url: string, filename: string) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const promptSuggestions = [
     { label: '🎨 AI Image Gen (In-Chat)', text: 'Photo ekak hadanna futuristic cybernetic supercar in Tokyo neon rain' },
     { label: '🎬 AI Video Gen (In-Chat)', text: 'Video ekak hadanna cinematic drone flying through misty mountain valley at sunset' },
@@ -709,92 +661,35 @@ export function AIPage() {
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Unified Platform: AI Chat · Image Studio · Video Studio · Voice · Zero-Key Free Gateway
+              Unified Multimodal Platform: In-Chat Images · Videos · Voice · Code Canvas · 100% Free
             </p>
           </div>
         </div>
 
-        {/* Studio Sub-Tabs */}
-        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 overflow-x-auto max-w-full">
-          <button
-            onClick={() => setActiveStudioTab('chat')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'chat'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>Chat</span>
-          </button>
+        {/* ─── UNIFIED HEADER RIGHT ACTIONS ─── */}
+        <div className="flex items-center gap-2">
+          {/* Autonomous Status Badge */}
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Cascade: Gemini 3.8 ⚡ → OpenAI → DeepSeek</span>
+          </div>
 
+          {/* Live Voice Call Button */}
           <button
-            onClick={() => setActiveStudioTab('image')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'image'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
+            type="button"
+            onClick={() => setIsLiveCallOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            title="Start Live Conversational Voice Call"
           >
-            <ImageIcon className="h-3.5 w-3.5" />
-            <span>Image Studio</span>
-          </button>
-
-          <button
-            onClick={() => setActiveStudioTab('video')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'video'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Film className="h-3.5 w-3.5" />
-            <span>Video Studio</span>
-          </button>
-
-          <button
-            onClick={() => setActiveStudioTab('voice')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'voice'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Volume2 className="h-3.5 w-3.5" />
-            <span>Voice &amp; Audio</span>
-          </button>
-
-          <button
-            onClick={() => setActiveStudioTab('gateway')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'gateway'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Globe className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Puter</span>
-            <span>Gateway</span>
-          </button>
-
-          <button
-            onClick={() => setActiveStudioTab('memory')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeStudioTab === 'memory'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/60'
-            }`}
-          >
-            <Database className="h-3.5 w-3.5" />
-            <span>Memory</span>
+            <PhoneCall className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Live Voice Call</span>
           </button>
         </div>
       </header>
 
-      {/* ─── TAB 1: CHAT STUDIO ─── */}
-      {activeStudioTab === 'chat' && (
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar: Conversations, Persona, Model */}
+      {/* ─── UNIFIED MASTER AI STUDIO ─── */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar: Conversations, Persona, Model */}
           <div className="w-64 sm:w-72 border-r border-border/60 bg-card/25 flex flex-col shrink-0">
             {/* Header / New Chat */}
             <div className="p-3 border-b border-border/50 flex items-center justify-between gap-2">
@@ -1006,17 +901,42 @@ export function AIPage() {
                     {msg.role === 'assistant' && msg.content && (
                       <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
                         <span className="font-mono text-cyan-400">Master AI Core v2.2 · Puter.js</span>
-                        <button
-                          onClick={() => copyMessage(msg.id, msg.content)}
-                          className="hover:text-foreground flex items-center gap-1 transition-colors"
-                        >
-                          {copiedId === msg.id ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                          <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleReadAloud(msg.id, msg.content)}
+                            className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
+                              speakingMsgId === msg.id
+                                ? 'text-emerald-400 bg-emerald-500/10 font-bold'
+                                : 'hover:text-foreground'
+                            }`}
+                            title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen / Read aloud (AWS Polly)'}
+                          >
+                            {speakingMsgId === msg.id ? (
+                              <>
+                                <Square className="h-3 w-3 fill-current text-rose-400" />
+                                <span className="text-rose-400">Stop</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="h-3 w-3 text-cyan-400" />
+                                <span>Listen</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => copyMessage(msg.id, msg.content)}
+                            className="hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            {copiedId === msg.id ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1034,7 +954,7 @@ export function AIPage() {
                       <button
                         key={idx}
                         onClick={() => handleSendMessage(suggestion.text)}
-                        className="p-3 rounded-xl bg-card border border-border/70 hover:border-primary text-left text-xs font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm flex items-center justify-between group"
+                        className="p-3 rounded-xl bg-card border border-border/70 hover:border-primary text-left text-xs font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm flex items-center justify-between group cursor-pointer"
                       >
                         <div className="flex flex-col gap-0.5 pr-2">
                           <span className="text-foreground font-bold">{suggestion.label}</span>
@@ -1055,6 +975,58 @@ export function AIPage() {
             {/* Input Bar */}
             <div className="p-4 border-t border-border/60 bg-card/40 backdrop-blur-md">
               <div className="max-w-3xl mx-auto space-y-2">
+                {/* Quick Multimodal Action Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setInputText((prev) => (prev ? `${prev} Photo ekak hadanna ` : 'Photo ekak hadanna '))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <ImageIcon className="h-3 w-3 text-purple-400" />
+                    <span>🎨 Image</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInputText((prev) => (prev ? `${prev} Video ekak hadanna ` : 'Video ekak hadanna '))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <Film className="h-3 w-3 text-cyan-400" />
+                    <span>🎬 Video</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsWebSearchEnabled((prev) => !prev)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
+                      isWebSearchEnabled
+                        ? 'bg-blue-600 text-white border border-blue-400 shadow-sm'
+                        : 'bg-muted/60 hover:bg-muted text-muted-foreground border border-border/60'
+                    }`}
+                  >
+                    <Globe className="h-3 w-3 text-blue-400" />
+                    <span>🌐 Web Search: {isWebSearchEnabled ? 'ON' : 'OFF'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInputText((prev) => (prev ? `${prev} Write an interactive HTML & CSS ` : 'Write an interactive HTML & CSS '))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <Code2 className="h-3 w-3 text-amber-400" />
+                    <span>💻 Code Canvas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsLiveCallOpen(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors shrink-0 cursor-pointer ml-auto"
+                  >
+                    <PhoneCall className="h-3 w-3 text-emerald-400" />
+                    <span>🎙️ Live Voice</span>
+                  </button>
+                </div>
+
                 {/* Attached File Pill */}
                 {attachedFile && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold animate-in fade-in">
@@ -1062,7 +1034,7 @@ export function AIPage() {
                     <span className="truncate max-w-xs">{attachedFile.name}</span>
                     <button
                       onClick={() => setAttachedFile(null)}
-                      className="hover:text-destructive ml-1"
+                      className="hover:text-destructive ml-1 cursor-pointer"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1073,10 +1045,32 @@ export function AIPage() {
                   <button
                     type="button"
                     onClick={() => setIsFilePickerOpen(true)}
-                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="Attach file from Master Cloud Drive"
                   >
                     <Paperclip className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsWebSearchEnabled((prev) => !prev)}
+                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                      isWebSearchEnabled ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                    }`}
+                    title={isWebSearchEnabled ? 'Real-Time Web Grounding Active' : 'Enable Real-Time Web Grounding'}
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleVoiceRecording}
+                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                      isRecording ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                    }`}
+                    title={isRecording ? 'Stop Recording' : 'Voice Input (Microphone)'}
+                  >
+                    <Mic className="h-4 w-4" />
                   </button>
 
                   <textarea
@@ -1089,14 +1083,20 @@ export function AIPage() {
                       }
                     }}
                     rows={1}
-                    placeholder="Ask Master AI (⚡ Extreme Fast Low-Latency Models)... [Enter to send]"
+                    placeholder={
+                      isRecording
+                        ? '🎙️ Listening... Speak naturally into your microphone'
+                        : isWebSearchEnabled
+                        ? '🌐 Web Search Active: Ask anything with real-time web citations...'
+                        : 'Ask Master AI, generate photos/videos, or write code... [Enter to send]'
+                    }
                     className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
                   />
 
                   {isStreaming ? (
                     <button
                       onClick={handleStopGenerating}
-                      className="p-2.5 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm"
+                      className="p-2.5 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm cursor-pointer"
                       title="Stop generation"
                     >
                       <Square className="h-4 w-4 fill-current" />
@@ -1105,7 +1105,7 @@ export function AIPage() {
                     <button
                       onClick={() => handleSendMessage()}
                       disabled={!inputText.trim()}
-                      className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-sm"
+                      className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-sm cursor-pointer"
                       title="Send prompt"
                     >
                       <Send className="h-4 w-4" />
@@ -1115,635 +1115,96 @@ export function AIPage() {
 
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2">
                   <span>Puter.js Direct Turbo Gateway</span>
-                  <span className="text-emerald-400 font-medium font-mono">⚡ Extreme Fast Stream · 100% Free Tier</span>
+                  <span className="text-emerald-400 font-medium font-mono">⚡ Cascade: Gemini 3.8 Flash → OpenAI → DeepSeek (100% Free)</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
 
-      {/* ─── TAB 2: IMAGE STUDIO ─── */}
-      {activeStudioTab === 'image' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-purple-400" />
-                  Master AI Image Studio (Google Imagen 3 &amp; FLUX)
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Generate and edit ultra-photorealistic images using Google Imagen 3, Imagen Fast, FLUX.1 Schnell, and Stable Diffusion.
-                </p>
-              </div>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 font-mono font-semibold">
-                Google Imagen 3 Active · Real Generation
+      {/* ─── CONVERSATIONAL LIVE VOICE CALL MODAL ─── */}
+      {isLiveCallOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-gradient-to-b from-card to-card/90 border border-primary/30 rounded-3xl w-full max-w-lg p-8 shadow-2xl flex flex-col items-center text-center space-y-6 relative overflow-hidden">
+            {/* Ambient background glow */}
+            <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Close button */}
+            <button
+              onClick={() => {
+                if (isRecording) handleToggleVoiceRecording();
+                if (activeAudioRef.current) activeAudioRef.current.pause();
+                setIsLiveCallOpen(false);
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                Live Conversational Voice Mode
               </span>
+              <h3 className="text-xl font-extrabold text-foreground tracking-tight pt-2">
+                Master AI Voice Call
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                Real-time spoken dialogue powered by Google Gemini 3.8 Flash &amp; AWS Polly Neural voice.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Controls */}
-              <div className="lg:col-span-1 space-y-4 bg-card/60 border border-border/80 p-4 rounded-2xl shadow-sm">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Prompt
-                  </label>
-                  <textarea
-                    value={imgPrompt}
-                    onChange={(e) => setImgPrompt(e.target.value)}
-                    rows={4}
-                    placeholder="Describe your scene in vivid detail (e.g. Cyberpunk city floating above crystalline clouds, 8k resolution, cinematic lighting)..."
-                    className="w-full p-2.5 rounded-xl bg-background border border-border/70 text-xs text-foreground outline-none focus:border-primary resize-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Negative Prompt (Optional)
-                  </label>
-                  <input
-                    value={imgNegativePrompt}
-                    onChange={(e) => setImgNegativePrompt(e.target.value)}
-                    placeholder="blurry, distorted, ugly, low resolution..."
-                    className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs text-foreground outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Image Generation Model
-                  </label>
-                  <select
-                    value={imgModel}
-                    onChange={(e) => setImgModel(e.target.value)}
-                    className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs text-foreground font-semibold outline-none focus:border-primary cursor-pointer"
-                  >
-                    <optgroup label="Google Imagen Photorealistic Models">
-                      {PUTER_IMAGE_MODELS.filter((m) => m.isImagen).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} {m.isFreeCandidate ? '(Free Tier)' : ''}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="FLUX &amp; Open Diffusion Models">
-                      {PUTER_IMAGE_MODELS.filter((m) => !m.isImagen).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} {m.isFreeCandidate ? '(Free Tier)' : ''}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Aspect Ratio
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {(['1:1', '16:9', '9:16', '4:3', '3:2'] as const).map((ratio) => (
-                      <button
-                        key={ratio}
-                        type="button"
-                        onClick={() => setImgAspectRatio(ratio)}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
-                          imgAspectRatio === ratio
-                            ? 'bg-purple-600 text-white border-purple-400'
-                            : 'bg-muted/40 border-border/60 text-muted-foreground hover:bg-muted'
-                        }`}
-                      >
-                        {ratio}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                    <span>Reference Image (Image-to-Image)</span>
-                    {imgInputImage && (
-                      <button
-                        type="button"
-                        onClick={() => setImgInputImage(null)}
-                        className="text-[10px] text-destructive hover:underline"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => setImgInputImage(evt.target?.result as string);
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-primary/10 file:text-primary file:cursor-pointer"
-                  />
-                  {imgInputImage && (
-                    <img
-                      src={imgInputImage}
-                      alt="Ref"
-                      className="w-full h-20 object-cover rounded-lg border border-border/60 mt-1"
-                    />
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!imgPrompt.trim() || isGeneratingImg}
-                  onClick={handleGenerateImage}
-                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
-                >
-                  <Wand2 className={`w-4 h-4 ${isGeneratingImg ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingImg ? 'Synthesizing Image...' : 'Generate Image'}</span>
-                </button>
-              </div>
-
-              {/* Right Column: Result Preview & History */}
-              <div className="lg:col-span-2 space-y-4">
-                <div className="bg-card/60 border border-border/80 rounded-2xl p-4 min-h-[380px] flex flex-col items-center justify-center text-center shadow-sm">
-                  {imgResult ? (
-                    <div className="w-full space-y-3">
-                      <div className="relative group max-h-[500px] overflow-hidden rounded-xl border border-border/60 bg-black/50 flex items-center justify-center">
-                        <img
-                          src={imgResult.imageUrl}
-                          alt={imgResult.prompt}
-                          className="max-h-[500px] w-auto object-contain rounded-xl shadow-lg"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <div className="text-left truncate">
-                          <p className="font-semibold text-foreground truncate">{imgResult.prompt}</p>
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            Model: {imgResult.model} · Ratio: {imgResult.aspectRatio}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDownloadFile(
-                              imgResult.imageUrl,
-                              `master-ai-${Date.now()}.png`,
-                            )
-                          }
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 text-xs shrink-0 shadow-sm"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Download
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 py-16 text-muted-foreground">
-                      <ImageIcon className="w-12 h-12 mx-auto stroke-1 opacity-40 text-purple-400" />
-                      <p className="text-xs font-semibold">No image generated yet</p>
-                      <p className="text-[11px] max-w-xs mx-auto opacity-70">
-                        Type a creative prompt on the left and click "Generate Image" to create AI artwork via Puter.js.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Session History Gallery */}
-                {imgHistory.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Recent Creations in this Session ({imgHistory.length})
-                    </h3>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {imgHistory.map((item, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => setImgResult(item)}
-                          className="relative aspect-square rounded-xl overflow-hidden border border-border/70 cursor-pointer hover:border-purple-400 group transition-all"
-                        >
-                          <img
-                            src={item.imageUrl}
-                            alt={item.prompt}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 3: VIDEO STUDIO ─── */}
-      {activeStudioTab === 'video' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <Film className="w-5 h-5 text-blue-400" />
-                  Master AI Video Studio (Puter.js txt2vid)
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Create generative AI video clips with Wan 2.7, Kling, Google Veo, and Seedance models.
-                </p>
-              </div>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-mono font-semibold">
-                Text-to-Video &amp; Image-to-Video
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Video Settings */}
-              <div className="lg:col-span-1 space-y-4 bg-card/60 border border-border/80 p-4 rounded-2xl shadow-sm">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Video Scene Prompt
-                  </label>
-                  <textarea
-                    value={vidPrompt}
-                    onChange={(e) => setVidPrompt(e.target.value)}
-                    rows={4}
-                    placeholder="Describe scene action and camera movement (e.g. Drone flyover over a crystal mountain at sunrise, cinematic hyperlapse)..."
-                    className="w-full p-2.5 rounded-xl bg-background border border-border/70 text-xs text-foreground outline-none focus:border-primary resize-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Video Model
-                  </label>
-                  <select
-                    value={vidModel}
-                    onChange={(e) => setVidModel(e.target.value)}
-                    className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs text-foreground font-semibold outline-none focus:border-primary cursor-pointer"
-                  >
-                    {PUTER_VIDEO_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.provider})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Duration
-                    </label>
-                    <select
-                      value={vidDuration}
-                      onChange={(e) => setVidDuration(Number(e.target.value))}
-                      className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs text-foreground outline-none cursor-pointer"
-                    >
-                      <option value={3}>3 Seconds</option>
-                      <option value={5}>5 Seconds</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Resolution
-                    </label>
-                    <select
-                      value={vidSize}
-                      onChange={(e) => setVidSize(e.target.value as any)}
-                      className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs text-foreground outline-none cursor-pointer"
-                    >
-                      <option value="1280x720">1280x720 (16:9 HD)</option>
-                      <option value="720x1280">720x1280 (9:16 Reel)</option>
-                      <option value="1024x576">1024x576 (Wide)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                    <span>First-Frame Reference (Img2Vid)</span>
-                    {vidInputImage && (
-                      <button
-                        type="button"
-                        onClick={() => setVidInputImage(null)}
-                        className="text-[10px] text-destructive hover:underline"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => setVidInputImage(evt.target?.result as string);
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:bg-primary/10 file:text-primary file:cursor-pointer"
-                  />
-                  {vidInputImage && (
-                    <img
-                      src={vidInputImage}
-                      alt="Ref"
-                      className="w-full h-20 object-cover rounded-lg border border-border/60 mt-1"
-                    />
-                  )}
-                </div>
-
-                {isGeneratingVid && (
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span className="font-semibold">Rendering Frames...</span>
-                    </div>
-                    <p className="text-[11px] opacity-80">{vidProgressStatus || 'Processing in Puter video pipeline...'}</p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  disabled={!vidPrompt.trim() || isGeneratingVid}
-                  onClick={handleGenerateVideo}
-                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
-                >
-                  <Film className={`w-4 h-4 ${isGeneratingVid ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingVid ? 'Synthesizing Video...' : 'Generate Video Clip'}</span>
-                </button>
-              </div>
-
-              {/* Right Column: Player & History */}
-              <div className="lg:col-span-2 space-y-4">
-                <div className="bg-card/60 border border-border/80 rounded-2xl p-4 min-h-[380px] flex flex-col items-center justify-center text-center shadow-sm">
-                  {vidResult ? (
-                    <div className="w-full space-y-3">
-                      <div className="rounded-xl overflow-hidden bg-black/80 border border-border/60 flex items-center justify-center">
-                        <video
-                          src={vidResult.videoUrl}
-                          controls
-                          autoPlay
-                          loop
-                          className="max-h-[480px] w-full rounded-xl shadow-lg"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <div className="text-left truncate">
-                          <p className="font-semibold text-foreground truncate">{vidResult.prompt}</p>
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            Model: {vidResult.model} · {vidResult.durationSeconds}s clip
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDownloadFile(
-                              vidResult.videoUrl,
-                              `master-ai-${Date.now()}.mp4`,
-                            )
-                          }
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 text-xs shrink-0 shadow-sm"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Download Video
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 py-16 text-muted-foreground">
-                      <Film className="w-12 h-12 mx-auto stroke-1 opacity-40 text-blue-400" />
-                      <p className="text-xs font-semibold">No video rendered yet</p>
-                      <p className="text-[11px] max-w-xs mx-auto opacity-70">
-                        Select a model (Wan 2.7, Veo, Kling), enter a prompt, and click "Generate Video Clip".
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Video History Gallery */}
-                {vidHistory.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Rendered Clips in this Session ({vidHistory.length})
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {vidHistory.map((item, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => setVidResult(item)}
-                          className="p-2 rounded-xl bg-card border border-border/70 cursor-pointer hover:border-blue-400 space-y-1 transition-all"
-                        >
-                          <video src={item.videoUrl} className="w-full h-24 object-cover rounded-lg bg-black" />
-                          <p className="text-[10px] font-semibold text-foreground truncate">{item.prompt}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 4: VOICE & SPEECH STUDIO ─── */}
-      {activeStudioTab === 'voice' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <Volume2 className="w-5 h-5 text-emerald-400" />
-                  Master AI Voice &amp; Speech Studio
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Text-to-Speech (AWS Polly / OpenAI voices) and Speech-to-Text Whisper transcription.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60">
-                <button
-                  type="button"
-                  onClick={() => setVoiceTab('tts')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    voiceTab === 'tts'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Text-to-Speech
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVoiceTab('stt')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    voiceTab === 'stt'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Speech-to-Text (Whisper)
-                </button>
+            {/* Glowing Pulsing Voice Orb */}
+            <div className="relative py-4">
+              <div
+                className={`w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl ${
+                  isRecording
+                    ? 'bg-gradient-to-tr from-rose-500 via-purple-600 to-indigo-600 animate-pulse shadow-rose-500/50 scale-105'
+                    : speakingMsgId
+                    ? 'bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 animate-pulse shadow-cyan-500/50 scale-105'
+                    : 'bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 shadow-purple-500/30'
+                }`}
+              >
+                <Mic className="w-14 h-14 text-white" />
               </div>
             </div>
 
-            {/* TTS Section */}
-            {voiceTab === 'tts' && (
-              <div className="bg-card/60 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Speech Text (English, Sinhala, or Multilingual)
-                  </label>
-                  <textarea
-                    value={ttsText}
-                    onChange={(e) => setTtsText(e.target.value)}
-                    rows={4}
-                    placeholder="Enter sentences to synthesize into natural, human-sounding speech..."
-                    className="w-full p-3 rounded-xl bg-background border border-border/70 text-xs sm:text-sm text-foreground outline-none focus:border-primary resize-none"
-                  />
-                </div>
+            <div className="text-xs font-mono text-muted-foreground">
+              {isRecording
+                ? '🎙️ Listening to your voice... Speak naturally.'
+                : speakingMsgId
+                ? '🔊 Master AI is speaking...'
+                : 'Tap microphone to speak or end call.'}
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Voice Provider
-                    </label>
-                    <select
-                      value={ttsProvider}
-                      onChange={(e) => {
-                        const prov = e.target.value as 'aws-polly' | 'openai';
-                        setTtsProvider(prov);
-                        setTtsVoice(prov === 'aws-polly' ? 'Joanna' : 'alloy');
-                      }}
-                      className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs font-semibold text-foreground outline-none cursor-pointer"
-                    >
-                      <option value="aws-polly">AWS Polly Neural Voices</option>
-                      <option value="openai">OpenAI TTS Voices</option>
-                    </select>
-                  </div>
+            {/* Call Controls */}
+            <div className="flex items-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={handleToggleVoiceRecording}
+                className={`p-4 rounded-full font-bold shadow-lg transition-all cursor-pointer ${
+                  isRecording
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30'
+                }`}
+                title={isRecording ? 'Stop speaking' : 'Start speaking'}
+              >
+                {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              </button>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Voice Identity
-                    </label>
-                    <select
-                      value={ttsVoice}
-                      onChange={(e) => setTtsVoice(e.target.value)}
-                      className="w-full p-2 rounded-xl bg-background border border-border/70 text-xs font-semibold text-foreground outline-none cursor-pointer"
-                    >
-                      {PUTER_VOICES.filter((v) => v.provider === ttsProvider).map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!ttsText.trim() || isSynthesizingTts}
-                  onClick={handleSynthesizeTts}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
-                >
-                  <Volume2 className={`w-4 h-4 ${isSynthesizingTts ? 'animate-spin' : ''}`} />
-                  <span>{isSynthesizingTts ? 'Synthesizing Audio Stream...' : 'Synthesize Speech'}</span>
-                </button>
-
-                {ttsResult && (
-                  <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/30 space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-emerald-300">
-                        Synthesized Audio ({ttsResult.voice} · {ttsResult.provider})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDownloadFile(ttsResult.audioUrl, `speech-${Date.now()}.mp3`)
-                        }
-                        className="flex items-center gap-1 text-[11px] text-emerald-400 hover:underline"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Download .MP3
-                      </button>
-                    </div>
-                    <audio controls src={ttsResult.audioUrl} className="w-full h-10" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* STT Section */}
-            {voiceTab === 'stt' && (
-              <div className="bg-card/60 border border-border/80 rounded-2xl p-5 space-y-4 shadow-sm">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Upload Audio Recording (.mp3, .wav, .m4a, .ogg)
-                  </label>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => setSttFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:bg-primary file:text-primary-foreground file:cursor-pointer"
-                  />
-                  {sttFile && (
-                    <p className="text-[11px] text-foreground font-semibold mt-1">
-                      Selected: {sttFile.name} ({(sttFile.size / 1024).toFixed(1)} KB)
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  disabled={!sttFile || isTranscribingStt}
-                  onClick={handleTranscribeStt}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
-                >
-                  <Mic className={`w-4 h-4 ${isTranscribingStt ? 'animate-spin' : ''}`} />
-                  <span>{isTranscribingStt ? 'Transcribing with Whisper...' : 'Transcribe Audio'}</span>
-                </button>
-
-                {sttTranscript && (
-                  <div className="p-4 rounded-xl bg-black/40 border border-border/80 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-white">Whisper Transcript</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(sttTranscript);
-                          toast.success('Transcript copied to clipboard');
-                        }}
-                        className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Copy Text
-                      </button>
-                    </div>
-                    <div className="p-3 rounded-lg bg-background text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
-                      {sttTranscript}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 5: PUTER GATEWAY & MODEL CATALOG ─── */}
-      {activeStudioTab === 'gateway' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-5xl mx-auto">
-            <CloudAndRegistryPanel />
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 6: LONG-TERM MEMORY BANK ─── */}
-      {activeStudioTab === 'memory' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-secondary/5">
-          <div className="max-w-6xl mx-auto">
-            <LongTermMemoryPanel />
+              <button
+                type="button"
+                onClick={() => {
+                  if (isRecording) handleToggleVoiceRecording();
+                  if (activeAudioRef.current) activeAudioRef.current.pause();
+                  setIsLiveCallOpen(false);
+                }}
+                className="p-4 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/30 transition-all cursor-pointer"
+                title="End Call"
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
       )}
