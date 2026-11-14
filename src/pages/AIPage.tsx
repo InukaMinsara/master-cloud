@@ -50,6 +50,7 @@ import {
   CloudAndRegistryPanel,
   LongTermMemoryPanel,
 } from '@/components/video-player/panels/MasterAiV2Panels';
+import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
 
 type PageTab = 'chat' | 'image' | 'video' | 'voice' | 'gateway' | 'memory';
 
@@ -717,8 +718,10 @@ export function AIPage() {
                 .map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex gap-3 max-w-3xl ${
-                    msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
+                  className={`flex gap-3 w-full ${
+                    msg.role === 'user'
+                      ? 'ml-auto flex-row-reverse justify-start'
+                      : 'mr-auto max-w-3xl lg:max-w-4xl'
                   }`}
                 >
                   <div
@@ -732,10 +735,10 @@ export function AIPage() {
                   </div>
 
                   <div
-                    className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed max-w-xl shadow-sm ${
+                    className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
                       msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground font-medium'
-                        : 'bg-card border border-border/80 text-foreground'
+                        ? 'bg-primary text-primary-foreground font-medium max-w-xl'
+                        : 'bg-card border border-border/80 text-foreground w-full overflow-hidden'
                     }`}
                   >
                     {msg.attachedFile && (
@@ -745,9 +748,14 @@ export function AIPage() {
                       </div>
                     )}
 
-                    <div className="whitespace-pre-line prose prose-sm dark:prose-invert">
-                      {msg.content || (isStreaming ? 'Thinking...' : '')}
-                    </div>
+                    {msg.role === 'user' ? (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    ) : (
+                      <ChatMarkdownRenderer
+                        content={msg.content}
+                        isStreaming={isStreaming && msg.id === activeSession.messages[activeSession.messages.length - 1]?.id}
+                      />
+                    )}
 
                     {msg.role === 'assistant' && msg.content && (
                       <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
