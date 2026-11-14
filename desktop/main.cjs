@@ -51,6 +51,43 @@ async function ensureMasterRamEngine() {
   }
 }
 
+function getMasterVgpuScriptPath() {
+  const candidates = [
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'scripts', 'master-50x-vgpu.mjs'),
+    path.join(__dirname, '..', 'scripts', 'master-50x-vgpu.mjs'),
+    path.join(process.resourcesPath || '', 'scripts', 'master-50x-vgpu.mjs'),
+  ];
+  return candidates.find((c) => c && fs.existsSync(c)) || null;
+}
+
+function isMasterVgpuAlive() {
+  return new Promise((resolve) => {
+    const req = http.get('http://127.0.0.1:9050/health', { timeout: 900 }, (res) => {
+      res.on('data', () => {});
+      res.on('end', () => resolve(res.statusCode === 200));
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
+async function ensureMasterVgpuEngine() {
+  try {
+    if (await isMasterVgpuAlive()) return;
+    const vgpuScript = getMasterVgpuScriptPath();
+    if (!vgpuScript) return;
+    const child = spawn(process.execPath, [vgpuScript], {
+      stdio: 'ignore',
+      windowsHide: true,
+      detached: true,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    });
+    child.unref();
+  } catch (err) {
+    console.warn('Master vGPU background launch skipped:', err.message);
+  }
+}
+
 // Single Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -515,6 +552,7 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   ensureMasterRamEngine();
+  ensureMasterVgpuEngine();
 
   // Check initial command line args for deep link
   const initialDeepLink = process.argv.find((arg) => typeof arg === 'string' && arg.startsWith('mastercloud://'));

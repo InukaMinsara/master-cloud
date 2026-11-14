@@ -34,6 +34,13 @@ export interface PuterModelEntry {
   toolCall?: boolean;
 }
 
+export interface AiMemoryItem {
+  id: string;
+  fact: string;
+  category: 'user_profile' | 'preference' | 'project' | 'custom';
+  createdAt: string;
+}
+
 export interface PuterChatOptions {
   model?: string;
   stream?: boolean;
@@ -43,6 +50,7 @@ export interface PuterChatOptions {
   onChunk?: (chunk: string) => void;
   signal?: AbortSignal;
   image?: string | Blob;
+  memories?: AiMemoryItem[];
 }
 
 export interface PuterChatResult {
@@ -299,9 +307,19 @@ class PuterAiPlatformService {
   public sanitizeChatPayload(
     prompt: string,
     history?: Array<{ role?: string; content?: string }>,
+    memories?: AiMemoryItem[],
   ): string | Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
     const cleanPrompt = (prompt || '').trim();
     const sanitized: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
+
+    // Inject Long-Term Persistent Memory if available
+    if (Array.isArray(memories) && memories.length > 0) {
+      const memoryText = memories.map((m) => `- ${m.fact}`).join('\n');
+      sanitized.push({
+        role: 'system',
+        content: `You are Master AI, a world-class multimodal supercopilot.\n[LONG-TERM MEMORY BANK - REMEMBER THESE FACTS ABOUT THE USER]:\n${memoryText}`,
+      });
+    }
 
     if (Array.isArray(history)) {
       for (const m of history) {
@@ -426,7 +444,7 @@ class PuterAiPlatformService {
     let fallbackTriggered = false;
 
     // Build strictly-validated chat payload
-    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
+    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages, options.memories);
 
     for (let i = 0; i < fallbackList.length; i++) {
       const candidateModel = fallbackList[i];
@@ -511,7 +529,7 @@ class PuterAiPlatformService {
     );
 
     const startTime = performance.now();
-    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
+    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages, options.memories);
 
     let fullAccumulated = '';
     let successModel = requestedModel;
@@ -915,6 +933,49 @@ Prompt to polish:
     } catch {
       return rawPrompt;
     }
+  }
+
+  /**
+   * Retrieves long-term persistent memories stored across sessions.
+   */
+  public getMemories(): AiMemoryItem[] {
+    try {
+      const raw = localStorage.getItem('master_ai_long_term_memories');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Saves a persistent memory fact.
+   */
+  public saveMemory(
+    fact: string,
+    category: 'user_profile' | 'preference' | 'project' | 'custom' = 'custom',
+  ): AiMemoryItem {
+    const list = this.getMemories();
+    const item: AiMemoryItem = {
+      id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      fact: fact.trim(),
+      category,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [item, ...list.slice(0, 49)];
+    try {
+      localStorage.setItem('master_ai_long_term_memories', JSON.stringify(updated));
+    } catch {}
+    return item;
+  }
+
+  /**
+   * Deletes a persistent memory fact by ID.
+   */
+  public deleteMemory(id: string): void {
+    const list = this.getMemories().filter((m) => m.id !== id);
+    try {
+      localStorage.setItem('master_ai_long_term_memories', JSON.stringify(list));
+    } catch {}
   }
 }
 

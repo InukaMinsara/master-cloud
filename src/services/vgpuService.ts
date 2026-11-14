@@ -28,6 +28,7 @@ export interface VgpuStats {
   previewCacheHits: number;
   acceleratedFilesCount: number;
   uptimeSeconds: number;
+  bridgeUrl?: string;
 }
 
 export class VgpuService {
@@ -79,6 +80,7 @@ export class VgpuService {
       previewCacheHits: 12,
       acceleratedFilesCount: 4,
       uptimeSeconds: 60,
+      bridgeUrl: 'http://127.0.0.1:11434',
     };
     this.cachedStats = fallback;
     return fallback;

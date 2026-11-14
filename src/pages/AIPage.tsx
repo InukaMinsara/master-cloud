@@ -32,11 +32,13 @@ import {
   Upload,
   Camera,
   Radio,
+  Brain,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
 import {
   puterAiService,
+  AiMemoryItem,
   VERIFIED_FREE_CHAT_MODELS,
   PUTER_STANDARD_MODELS,
   PuterImageResult,
@@ -159,6 +161,16 @@ export function AIPage() {
   const videoStreamRef = useRef<HTMLVideoElement | null>(null);
   const cameraMediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
+
+  // ─── LONG-TERM MEMORY & PROJECT ASTRA CONTINUOUS VISION ───
+  const [memories, setMemories] = useState<AiMemoryItem[]>(() => puterAiService.getMemories());
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [newMemoryInput, setNewMemoryInput] = useState('');
+
+  const [isAstraVisionActive, setIsAstraVisionActive] = useState(false);
+  const astraIntervalRef = useRef<any>(null);
+  const astraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const astraStreamRef = useRef<MediaStream | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -405,6 +417,102 @@ export function AIPage() {
       cameraMediaStreamRef.current = null;
     }
     setIsCameraOpen(false);
+  };
+
+  // ─── LIVE WEBPAGE URL SCRAPER ───
+  const extractUrlFromText = (text: string): string | null => {
+    const match = text.match(/https?:\/\/[^\s]+/i);
+    return match ? match[0] : null;
+  };
+
+  const scrapeUrlContent = async (url: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, {
+        signal: AbortSignal.timeout(3500),
+      });
+      if (res.ok) {
+        const html = await res.text();
+        const clean = html
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return clean.slice(0, 4000);
+      }
+    } catch {}
+    return null;
+  };
+
+  // ─── PROJECT ASTRA CONTINUOUS LIVE VISION ───
+  const startAstraVision = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+      astraStreamRef.current = stream;
+      setIsAstraVisionActive(true);
+      setTimeout(() => {
+        if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
+      }, 100);
+
+      toast.info('🛰️ Project Astra Live Continuous Vision activated!');
+
+      astraIntervalRef.current = setInterval(async () => {
+        if (!astraVideoRef.current || isStreaming) return;
+        const video = astraVideoRef.current;
+        if (video.videoWidth === 0) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(video.videoWidth, 640);
+        canvas.height = Math.min(video.videoHeight, 480);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const frameDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+        try {
+          const res = await puterAiService.chat(
+            'You are Project Astra live continuous vision AI. In 1 concise conversational sentence, describe any objects or action you see through the camera right now to the user.',
+            { image: frameDataUrl, temperature: 0.3 },
+          );
+          if (res?.text && !speakingMsgId) {
+            handleReadAloud('astra-live', res.text);
+          }
+        } catch {}
+      }, 4500);
+    } catch (err: any) {
+      toast.error(`Astra camera access error: ${err?.message || err}`);
+      stopAstraVision();
+    }
+  };
+
+  const stopAstraVision = () => {
+    if (astraIntervalRef.current) {
+      clearInterval(astraIntervalRef.current);
+      astraIntervalRef.current = null;
+    }
+    if (astraStreamRef.current) {
+      astraStreamRef.current.getTracks().forEach((t) => t.stop());
+      astraStreamRef.current = null;
+    }
+    setIsAstraVisionActive(false);
+  };
+
+  // ─── MEMORY HANDLERS ───
+  const handleAddManualMemory = () => {
+    if (!newMemoryInput.trim()) return;
+    const item = puterAiService.saveMemory(newMemoryInput.trim());
+    setMemories((prev) => [item, ...prev]);
+    setNewMemoryInput('');
+    toast.success('Saved to Long-Term Memory!');
+  };
+
+  const handleDeleteMemory = (id: string) => {
+    puterAiService.deleteMemory(id);
+    setMemories((prev) => prev.filter((m) => m.id !== id));
+    toast.info('Memory deleted.');
   };
 
   // ─── PROMPT POLISHER / MAGIC WAND ───
@@ -759,6 +867,28 @@ export function AIPage() {
 
     try {
       let promptToSend = textToSend.trim();
+
+      // ─── LIVE WEBPAGE URL SCRAPING & GROUNDING ───
+      const foundUrl = extractUrlFromText(textToSend);
+      if (foundUrl) {
+        toast.info(`🌐 Reading & scraping webpage: ${foundUrl}...`);
+        const scraped = await scrapeUrlContent(foundUrl);
+        if (scraped) {
+          promptToSend = `[Live Scraped Webpage Content from ${foundUrl}]:\n${scraped}\n\n[User Request]:\n${promptToSend}`;
+          toast.success('Live webpage grounded into prompt!');
+        }
+      }
+
+      // ─── AUTO-SAVE TO LONG-TERM MEMORY ───
+      if (/remember that|mathaka thiyaganna|my name is|mage nama|i work as|i am a /i.test(textToSend)) {
+        const cleanFact = textToSend.replace(/^(please )?(remember that|mathaka thiyaganna)\s*/i, '').trim();
+        if (cleanFact.length > 5 && cleanFact.length < 200) {
+          const saved = puterAiService.saveMemory(cleanFact);
+          setMemories((prev) => [saved, ...prev]);
+          toast.success(`🧠 Saved to AI Long-Term Memory: "${cleanFact.slice(0, 36)}..."`);
+        }
+      }
+
       if (sentFile) {
         try {
           const fileExcerpt = await api.getFileContentText(sentFile.id);
@@ -785,6 +915,7 @@ export function AIPage() {
         messages: historyForPuter,
         signal: abortCtrl.signal,
         image: sentImage?.url,
+        memories,
       });
 
       for await (const chunk of puterStream) {
@@ -1074,6 +1205,17 @@ export function AIPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
                   ⚡ Extreme Fast Stream Active (~120 tok/s)
                 </span>
+
+                {/* Long-Term Memory Badge */}
+                <button
+                  type="button"
+                  onClick={() => setIsMemoryModalOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-[11px] font-semibold text-purple-300 transition-colors cursor-pointer"
+                  title="View and manage AI cross-session long-term memory"
+                >
+                  <Brain className="h-3 w-3 text-purple-400" />
+                  <span>Memory ({memories.length})</span>
+                </button>
 
                 {/* Chat Export Menu */}
                 <div className="relative">
@@ -1520,6 +1662,39 @@ export function AIPage() {
                 Real-time spoken dialogue powered by Google Gemini 3.8 Flash &amp; AWS Polly Neural voice.
               </p>
             </div>
+
+            {/* Project Astra Continuous Live Vision Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => (isAstraVisionActive ? stopAstraVision() : startAstraVision())}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  isAstraVisionActive
+                    ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 animate-pulse'
+                    : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>{isAstraVisionActive ? '🛰️ Astra Live Vision: ACTIVE' : '🛰️ Enable Project Astra Live Lens'}</span>
+              </button>
+            </div>
+
+            {/* Video Viewfinder for Astra Continuous Vision */}
+            {isAstraVisionActive && (
+              <div className="relative w-full max-w-xs aspect-video rounded-2xl overflow-hidden border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 bg-black">
+                <video
+                  ref={astraVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <span>ASTRA LIVE LENS</span>
+                </div>
+              </div>
+            )}
 
             {/* Glowing Pulsing Voice Orb */}
             <div className="relative py-4">
