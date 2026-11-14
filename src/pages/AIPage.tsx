@@ -33,6 +33,13 @@ import {
   Camera,
   Radio,
   Brain,
+  FlipHorizontal,
+  Laptop,
+  FileCode,
+  UploadCloud,
+  Monitor,
+  MapPin,
+  Layers,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -131,6 +138,20 @@ function detectMediaIntent(text: string): { type: 'image' | 'video' | 'none'; pr
   return { type: 'none', prompt: clean };
 }
 
+export interface LocalAttachedFile {
+  name: string;
+  size: number;
+  type: string;
+  content: string;
+  rawFile?: File;
+}
+
+export interface AstraObjectEntry {
+  id: string;
+  time: string;
+  description: string;
+}
+
 export function AIPage() {
   const { user } = useAuthStore();
   const { files, fetchItems } = useFileStore();
@@ -141,7 +162,10 @@ export function AIPage() {
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [attachedFile, setAttachedFile] = useState<FileItem | null>(null);
+  const [attachedLocalFile, setAttachedLocalFile] = useState<LocalAttachedFile | null>(null);
   const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
+  const [attachmentModalTab, setAttachmentModalTab] = useState<'local' | 'cloud'>('local');
+  const fileInputLocalRef = useRef<HTMLInputElement | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
 
@@ -158,6 +182,9 @@ export function AIPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string>('Joanna');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+  const [cameraResolution, setCameraResolution] = useState<string>('Full HD 1080p');
+  const [isCameraFilterEnhanced, setIsCameraFilterEnhanced] = useState(false);
   const videoStreamRef = useRef<HTMLVideoElement | null>(null);
   const cameraMediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
@@ -168,6 +195,10 @@ export function AIPage() {
   const [newMemoryInput, setNewMemoryInput] = useState('');
 
   const [isAstraVisionActive, setIsAstraVisionActive] = useState(false);
+  const [isAstraScreenMode, setIsAstraScreenMode] = useState(false);
+  const [astraObjectLog, setAstraObjectLog] = useState<AstraObjectEntry[]>([]);
+  const [isAstraFinderOpen, setIsAstraFinderOpen] = useState(false);
+  const [finderSearchQuery, setFinderSearchQuery] = useState('');
   const astraIntervalRef = useRef<any>(null);
   const astraVideoRef = useRef<HTMLVideoElement | null>(null);
   const astraStreamRef = useRef<MediaStream | null>(null);
@@ -215,6 +246,16 @@ export function AIPage() {
 
   // ─── IN-CHAT VOICE RECORDING (SPEECH-TO-TEXT) ───
   const handleToggleVoiceRecording = async () => {
+    // ─── FULL-DUPLEX REAL-TIME VOICE BARGE-IN ───
+    // If AI is currently speaking, interrupt it immediately
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if (speakingMsgId) {
+      setSpeakingMsgId(null);
+    }
+
     if (isRecording) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
@@ -340,6 +381,51 @@ export function AIPage() {
     e.target.value = '';
   };
 
+  // ─── LOCAL PC FILE ATTACHMENT HANDLER ───
+  const handleAttachLocalFile = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        setAttachedImage({
+          url: dataUrl,
+          file,
+          name: file.name,
+        });
+        toast.success(`📸 Image attached from PC: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
+      setIsFilePickerOpen(false);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const textContent = (event.target?.result as string) || '';
+      setAttachedLocalFile({
+        name: file.name,
+        size: file.size,
+        type: file.type || 'text/plain',
+        content: textContent,
+        rawFile: file,
+      });
+      setIsFilePickerOpen(false);
+      toast.success(`💻 Attached local PC file: "${file.name}" (${(file.size / 1024).toFixed(1)} KB)`);
+    };
+    reader.onerror = () => {
+      toast.error(`Could not read local file "${file.name}"`);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSelectLocalFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleAttachLocalFile(file);
+    }
+    e.target.value = '';
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(true);
@@ -354,36 +440,65 @@ export function AIPage() {
     setIsDraggingOver(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
+    handleAttachLocalFile(file);
+  };
 
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        setAttachedImage({
-          url: dataUrl,
-          file,
-          name: file.name,
+  // ─── HIGH QUALITY CAMERA STREAM BUILDER ───
+  const getCameraStreamWithQuality = async (facing: 'user' | 'environment') => {
+    try {
+      // 1st Priority: Full HD 1080p stream with 30fps
+      return await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facing,
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          frameRate: { ideal: 30, min: 24 },
+        },
+        audio: false,
+      });
+    } catch {
+      try {
+        // 2nd Priority: Standard HD (720p)
+        return await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
         });
-        toast.success(`📸 Image attached: ${file.name}`);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast.info(`Please use the paperclip icon to attach drive file "${file.name}".`);
+      } catch {
+        // Fallback: Default browser camera
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing },
+          audio: false,
+        });
+      }
     }
   };
 
   // ─── LIVE CAMERA SNAPSHOT FOR VISION AI ───
-  const handleStartCamera = async () => {
+  const handleStartCamera = async (targetFacing?: 'user' | 'environment') => {
     try {
+      if (cameraMediaStreamRef.current) {
+        cameraMediaStreamRef.current.getTracks().forEach((t) => t.stop());
+        cameraMediaStreamRef.current = null;
+      }
       setIsCameraOpen(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false,
-      });
+      const facing = (targetFacing === 'user' || targetFacing === 'environment') ? targetFacing : cameraFacingMode;
+      const stream = await getCameraStreamWithQuality(facing);
       cameraMediaStreamRef.current = stream;
+
       setTimeout(() => {
         if (videoStreamRef.current) {
           videoStreamRef.current.srcObject = stream;
+          videoStreamRef.current.onloadedmetadata = () => {
+            if (videoStreamRef.current) {
+              const w = videoStreamRef.current.videoWidth;
+              const h = videoStreamRef.current.videoHeight;
+              setCameraResolution(w >= 1920 ? '1080p Full HD' : w >= 1280 ? '720p HD' : `${w}×${h}`);
+            }
+          };
         }
       }, 100);
     } catch (err: any) {
@@ -392,21 +507,32 @@ export function AIPage() {
     }
   };
 
+  const handleToggleCameraFacing = async () => {
+    const nextFacing = cameraFacingMode === 'user' ? 'environment' : 'user';
+    setCameraFacingMode(nextFacing);
+    await handleStartCamera(nextFacing);
+    toast.info(`Switched to ${nextFacing === 'user' ? 'Front (Selfie)' : 'Back (World)'} camera`);
+  };
+
   const handleCaptureSnap = () => {
     if (!videoStreamRef.current) return;
     const video = videoStreamRef.current;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    // Native high-res sensor capture
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Ultra-HD 0.95 quality JPEG for crystal clear Vision AI analysis
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
       setAttachedImage({
         url: dataUrl,
-        name: `Camera_Snap_${Date.now()}.jpg`,
+        name: `HD_Camera_Snap_${canvas.width}x${canvas.height}_${Date.now()}.jpg`,
       });
-      toast.success('📸 Photo snapped & attached for Vision AI analysis!');
+      toast.success(`📸 HD Photo snapped (${canvas.width}×${canvas.height}) & attached for Vision AI!`);
     }
     handleCloseCamera();
   };
@@ -444,46 +570,91 @@ export function AIPage() {
     return null;
   };
 
-  // ─── PROJECT ASTRA CONTINUOUS LIVE VISION ───
-  const startAstraVision = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      });
-      astraStreamRef.current = stream;
-      setIsAstraVisionActive(true);
-      setTimeout(() => {
-        if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
-      }, 100);
+  // ─── PROJECT ASTRA CONTINUOUS LIVE VISION & SCREEN LENS ───
+  const startAstraVisionLoop = (isScreen: boolean) => {
+    if (astraIntervalRef.current) clearInterval(astraIntervalRef.current);
+    astraIntervalRef.current = setInterval(async () => {
+      if (!astraVideoRef.current || isStreaming) return;
+      const video = astraVideoRef.current;
+      if (video.videoWidth === 0) return;
 
-      toast.info('🛰️ Project Astra Live Continuous Vision activated!');
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.min(video.videoWidth, 1280);
+      canvas.height = Math.min(video.videoHeight, 720);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frameDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-      astraIntervalRef.current = setInterval(async () => {
-        if (!astraVideoRef.current || isStreaming) return;
-        const video = astraVideoRef.current;
-        if (video.videoWidth === 0) return;
+      try {
+        const modePrompt = isScreen
+          ? 'You are Project Astra live screen-sharing AI. In 1 concise conversational sentence, describe what the user has open on their computer screen (code, document, website) and give 1 helpful insight or tip.'
+          : 'You are Project Astra continuous live vision AI. In 1 concise conversational sentence, describe any objects, text, or action you see through the camera right now to the user.';
 
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.min(video.videoWidth, 640);
-        canvas.height = Math.min(video.videoHeight, 480);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const frameDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const res = await puterAiService.chat(modePrompt, { image: frameDataUrl, temperature: 0.3 });
+        if (res?.text && res.text.trim()) {
+          const observation = res.text.trim();
+          // Log to Spatial Object Memory ("Astra Finder")
+          setAstraObjectLog((prev) => [
+            {
+              id: 'obj-' + Date.now(),
+              time: new Date().toLocaleTimeString(),
+              description: observation,
+            },
+            ...prev.slice(0, 49),
+          ]);
 
-        try {
-          const res = await puterAiService.chat(
-            'You are Project Astra live continuous vision AI. In 1 concise conversational sentence, describe any objects or action you see through the camera right now to the user.',
-            { image: frameDataUrl, temperature: 0.3 },
-          );
-          if (res?.text && !speakingMsgId) {
-            handleReadAloud('astra-live', res.text);
+          if (!speakingMsgId) {
+            handleReadAloud('astra-live', observation);
           }
-        } catch {}
-      }, 4500);
+        }
+      } catch {}
+    }, 4000);
+  };
+
+  const startAstraVision = async (mode: 'camera' | 'screen' = 'camera') => {
+    try {
+      if (mode === 'screen') {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: 'monitor' } as any,
+          audio: false,
+        });
+        if (astraStreamRef.current) {
+          astraStreamRef.current.getTracks().forEach((t) => t.stop());
+        }
+        astraStreamRef.current = stream;
+        setIsAstraVisionActive(true);
+        setIsAstraScreenMode(true);
+        setTimeout(() => {
+          if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
+        }, 100);
+
+        stream.getVideoTracks()[0].onended = () => {
+          stopAstraVision();
+          toast.info('Screen share ended.');
+        };
+
+        toast.success('🖥️ Project Astra Screen Lens ACTIVE! AI is observing your screen.');
+        startAstraVisionLoop(true);
+      } else {
+        const stream = await getCameraStreamWithQuality('environment');
+        if (astraStreamRef.current) {
+          astraStreamRef.current.getTracks().forEach((t) => t.stop());
+        }
+        astraStreamRef.current = stream;
+        setIsAstraVisionActive(true);
+        setIsAstraScreenMode(false);
+        setTimeout(() => {
+          if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
+        }, 100);
+
+        toast.info('🛰️ Project Astra Live Continuous Vision activated (Full HD)!');
+        startAstraVisionLoop(false);
+      }
     } catch (err: any) {
-      toast.error(`Astra camera access error: ${err?.message || err}`);
+      toast.error(`Astra vision error: ${err?.message || err}`);
       stopAstraVision();
     }
   };
@@ -498,6 +669,7 @@ export function AIPage() {
       astraStreamRef.current = null;
     }
     setIsAstraVisionActive(false);
+    setIsAstraScreenMode(false);
   };
 
   // ─── MEMORY HANDLERS ───
@@ -630,8 +802,10 @@ export function AIPage() {
 
     const sentFile = attachedFile;
     const sentImage = attachedImage;
+    const sentLocalFile = attachedLocalFile;
     setAttachedFile(null);
     setAttachedImage(null);
+    setAttachedLocalFile(null);
 
     const userMsg: AIMessage = {
       id: 'msg-' + Date.now(),
@@ -898,6 +1072,10 @@ export function AIPage() {
         } catch {
           // Continue with prompt alone
         }
+      }
+
+      if (sentLocalFile) {
+        promptToSend = `[Attached Local PC File: ${sentLocalFile.name} (${(sentLocalFile.size / 1024).toFixed(1)} KB)]\n\`\`\`\n${sentLocalFile.content.slice(0, 15000)}\n\`\`\`\n\n[User Prompt]:\n${promptToSend}`;
       }
 
       // Stream directly through Puter.js with automatic waterfall cascade
@@ -1217,6 +1395,17 @@ export function AIPage() {
                   <span>Memory ({memories.length})</span>
                 </button>
 
+                {/* Astra Spatial Object Finder */}
+                <button
+                  type="button"
+                  onClick={() => setIsAstraFinderOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-[11px] font-semibold text-cyan-300 transition-colors cursor-pointer"
+                  title="Astra Spatial Object Memory (Lost item finder & visual observation log)"
+                >
+                  <MapPin className="h-3 w-3 text-cyan-400" />
+                  <span>Astra Finder {astraObjectLog.length > 0 && `(${astraObjectLog.length})`}</span>
+                </button>
+
                 {/* Chat Export Menu */}
                 <div className="relative">
                   <button
@@ -1282,8 +1471,9 @@ export function AIPage() {
             >
               {isDraggingOver && (
                 <div className="absolute inset-4 bg-primary/20 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl z-30 flex flex-col items-center justify-center gap-2 pointer-events-none">
-                  <Upload className="h-10 w-10 text-primary animate-bounce" />
-                  <span className="text-sm font-bold text-primary">Drop image to analyze with Vision AI</span>
+                  <UploadCloud className="h-12 w-12 text-cyan-400 animate-bounce" />
+                  <span className="text-sm font-bold text-foreground">Drop files from your PC to attach to Master AI</span>
+                  <span className="text-xs text-muted-foreground">Code, documents, data (.json, .csv, .py, .pdf) or images</span>
                 </div>
               )}
 
@@ -1492,14 +1682,33 @@ export function AIPage() {
                   </button>
                 </div>
 
-                {/* Attached File Pill */}
+                {/* Attached File Pill (Cloud Drive) */}
                 {attachedFile && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold animate-in fade-in">
                     <FileText className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-xs">{attachedFile.name}</span>
+                    <span className="truncate max-w-xs">{attachedFile.name} (Drive)</span>
                     <button
                       onClick={() => setAttachedFile(null)}
                       className="hover:text-destructive ml-1 cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Attached Local PC File Pill */}
+                {attachedLocalFile && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold animate-in fade-in">
+                    <Laptop className="h-3.5 w-3.5 text-cyan-400" />
+                    <span className="truncate max-w-xs">{attachedLocalFile.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      ({(attachedLocalFile.size / 1024).toFixed(1)} KB · PC)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedLocalFile(null)}
+                      className="hover:text-destructive ml-1 cursor-pointer"
+                      title="Remove local file"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1527,7 +1736,7 @@ export function AIPage() {
                     type="button"
                     onClick={() => setIsFilePickerOpen(true)}
                     className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Attach file from Master Cloud Drive"
+                    title="Attach file from Local PC or Master Cloud Drive"
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
@@ -1550,7 +1759,7 @@ export function AIPage() {
 
                   <button
                     type="button"
-                    onClick={handleStartCamera}
+                    onClick={() => handleStartCamera()}
                     className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title="Snap live photo with webcam/camera for Vision AI"
                   >
@@ -1663,20 +1872,49 @@ export function AIPage() {
               </p>
             </div>
 
-            {/* Project Astra Continuous Live Vision Toggle */}
-            <div className="flex items-center gap-2">
+            {/* Project Astra Continuous Live Vision & Screen Lens Toggles */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
               <button
                 type="button"
-                onClick={() => (isAstraVisionActive ? stopAstraVision() : startAstraVision())}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  isAstraVisionActive
+                onClick={() => {
+                  if (isAstraVisionActive && !isAstraScreenMode) stopAstraVision();
+                  else startAstraVision('camera');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  isAstraVisionActive && !isAstraScreenMode
                     ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 animate-pulse'
                     : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                 }`}
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>{isAstraVisionActive ? '🛰️ Astra Live Vision: ACTIVE' : '🛰️ Enable Project Astra Live Lens'}</span>
+                <span>{isAstraVisionActive && !isAstraScreenMode ? '📷 Camera: ACTIVE' : '📷 Camera Lens'}</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (isAstraVisionActive && isAstraScreenMode) stopAstraVision();
+                  else startAstraVision('screen');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  isAstraVisionActive && isAstraScreenMode
+                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 animate-pulse'
+                    : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                }`}
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>{isAstraVisionActive && isAstraScreenMode ? '🖥️ Screen: ACTIVE' : '🖥️ Screen Lens'}</span>
+              </button>
+
+              {isAstraVisionActive && (
+                <button
+                  type="button"
+                  onClick={stopAstraVision}
+                  className="px-2.5 py-1 rounded-full bg-destructive/20 hover:bg-destructive/30 text-destructive text-[11px] font-bold cursor-pointer"
+                >
+                  Stop Lens
+                </button>
+              )}
             </div>
 
             {/* Video Viewfinder for Astra Continuous Vision */}
@@ -1691,7 +1929,7 @@ export function AIPage() {
                 />
                 <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                  <span>ASTRA LIVE LENS</span>
+                  <span>{isAstraScreenMode ? 'ASTRA SCREEN LENS' : 'ASTRA CAMERA LENS'}</span>
                 </div>
               </div>
             )}
@@ -1717,6 +1955,11 @@ export function AIPage() {
                 : speakingMsgId
                 ? '🔊 Master AI is speaking...'
                 : 'Tap microphone to speak or end call.'}
+            </div>
+
+            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Full-Duplex Barge-in: Speak anytime to interrupt AI</span>
             </div>
 
             {/* Voice Personality Selector */}
@@ -1781,15 +2024,39 @@ export function AIPage() {
             <div className="flex items-center justify-between w-full pb-2 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <Camera className="w-5 h-5 text-cyan-400" />
-                <span className="font-bold text-sm text-foreground">Live Camera Snapshot</span>
+                <span className="font-bold text-sm text-foreground">HD Camera Snapshot</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {cameraResolution}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={handleCloseCamera}
-                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleToggleCameraFacing}
+                  className="p-1.5 rounded-lg hover:bg-muted text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                  title="Flip Camera (Front / Back)"
+                >
+                  <FlipHorizontal className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCameraFilterEnhanced((p) => !p)}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    isCameraFilterEnhanced ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Toggle Contrast / Low-Light Boost"
+                >
+                  <Sparkles className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseCamera}
+                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-inner flex items-center justify-center">
@@ -1798,12 +2065,18 @@ export function AIPage() {
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-all ${
+                  isCameraFilterEnhanced ? 'contrast-125 brightness-105 saturate-110' : ''
+                }`}
               />
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span>{cameraFacingMode === 'user' ? 'Front Lens' : 'World Lens'} • {cameraResolution}</span>
+              </div>
             </div>
 
             <p className="text-[11px] text-muted-foreground">
-              Point your camera at any document, diagram, error, or object to analyze with Vision AI.
+              Ultra-clear sensor feed for OCR, document scan, diagrams, and object recognition.
             </p>
 
             <div className="flex items-center gap-3 w-full">
@@ -1817,55 +2090,217 @@ export function AIPage() {
               <button
                 type="button"
                 onClick={handleCaptureSnap}
-                className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-lg shadow-primary/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Camera className="w-4 h-4" />
-                <span>Capture &amp; Attach</span>
+                <span>Capture HD &amp; Attach</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Cloud File Context Picker Modal */}
+      {/* ─── UNIFIED FILE ATTACHMENT MODAL (LOCAL PC & CLOUD DRIVE) ─── */}
       {isFilePickerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-card border border-border/80 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card border border-border/80 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                <span>Select File from Master Cloud</span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <Paperclip className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-sm text-foreground">Attach File to AI Context</h3>
+              </div>
               <button
                 onClick={() => setIsFilePickerOpen(false)}
-                className="hover:text-foreground text-muted-foreground"
+                className="hover:text-foreground text-muted-foreground p-1 rounded-lg hover:bg-muted cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto space-y-1.5">
-              {files
-                .filter((f) => !f.deleted_at)
-                .map((file) => (
-                  <div
-                    key={file.id}
-                    onClick={() => {
-                      setAttachedFile(file);
-                      setIsFilePickerOpen(false);
-                      toast.success(`Attached "${file.name}" to context`);
-                    }}
-                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-accent cursor-pointer transition-colors text-xs"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
-                      <span className="font-medium truncate">{file.name}</span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                      {file.extension.toUpperCase()}
-                    </span>
+            {/* Source Switcher Tabs */}
+            <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50 border border-border/60">
+              <button
+                type="button"
+                onClick={() => setAttachmentModalTab('local')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  attachmentModalTab === 'local'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Laptop className="h-4 w-4" />
+                <span>💻 From Local PC</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttachmentModalTab('cloud')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  attachmentModalTab === 'cloud'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+                <span>☁️ Master Cloud ({files.filter((f) => !f.deleted_at).length})</span>
+              </button>
+            </div>
+
+            {/* TAB 1: LOCAL PC FILE BROWSER & DRAG ZONE */}
+            {attachmentModalTab === 'local' && (
+              <div className="space-y-4">
+                <div
+                  onClick={() => fileInputLocalRef.current?.click()}
+                  className="border-2 border-dashed border-border/80 hover:border-primary/80 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:bg-accent/40 group bg-card/40"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <UploadCloud className="h-7 w-7 text-primary" />
                   </div>
-                ))}
+                  <span className="font-bold text-sm text-foreground">Choose files from your Computer</span>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                    Click to browse or drop any file here. Supports Code (.ts, .py, .js), Documents (.pdf, .txt, .md), Data (.json, .csv), and Images for Vision AI.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputLocalRef.current?.click();
+                    }}
+                    className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Laptop className="h-4 w-4" />
+                    <span>Browse Local Disk</span>
+                  </button>
+                  <input
+                    ref={fileInputLocalRef}
+                    type="file"
+                    onChange={handleSelectLocalFile}
+                    className="hidden"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
+                  <span>Client-Side Fast FileReader</span>
+                  <span className="text-cyan-400 font-mono font-medium">Auto-Grounded into Context</span>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: MASTER CLOUD DRIVE FILES */}
+            {attachmentModalTab === 'cloud' && (
+              <div className="space-y-2">
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                  {files
+                    .filter((f) => !f.deleted_at)
+                    .map((file) => (
+                      <div
+                        key={file.id}
+                        onClick={() => {
+                          setAttachedFile(file);
+                          setIsFilePickerOpen(false);
+                          toast.success(`Attached "${file.name}" to context`);
+                        }}
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-accent cursor-pointer transition-colors text-xs border border-border/40 hover:border-border"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-medium truncate">{file.name}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground shrink-0 ml-2 font-mono">
+                          {file.extension.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── ASTRA SPATIAL OBJECT FINDER & MEMORY LOG MODAL ─── */}
+      {isAstraFinderOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card border border-cyan-500/30 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-cyan-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-foreground">Project Astra Spatial Object Finder</h3>
+                  <p className="text-[10px] text-muted-foreground">Chronological log of items, text, and scenes observed via Astra Lens</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAstraFinderOpen(false)}
+                className="hover:text-foreground text-muted-foreground p-1 rounded-lg hover:bg-muted cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Search Finder */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={finderSearchQuery}
+                onChange={(e) => setFinderSearchQuery(e.target.value)}
+                placeholder="Search lost items (e.g. keys, phone, invoice, book)..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-background border border-border/70 text-xs focus:outline-none focus:border-cyan-400 text-foreground"
+              />
+            </div>
+
+            {/* Observations Log */}
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {astraObjectLog.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+                  <Camera className="w-8 h-8 text-cyan-400/50 mx-auto" />
+                  <p>No visual observations logged yet.</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Activate <strong>Project Astra Live Lens</strong> in Live Voice Call or Camera to automatically record objects!
+                  </p>
+                </div>
+              ) : (
+                astraObjectLog
+                  .filter((entry) =>
+                    finderSearchQuery
+                      ? entry.description.toLowerCase().includes(finderSearchQuery.toLowerCase())
+                      : true
+                  )
+                  .map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="p-3 rounded-2xl bg-muted/40 border border-border/50 text-xs space-y-1 hover:border-cyan-500/40 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                          Observed at {entry.time}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputText(`Where did you see my ${finderSearchQuery || 'items'}? Based on observation: "${entry.description}"`);
+                            setIsAstraFinderOpen(false);
+                          }}
+                          className="hover:underline text-[10px] text-primary cursor-pointer font-sans"
+                        >
+                          Ask about this ➔
+                        </button>
+                      </div>
+                      <p className="text-foreground leading-relaxed">{entry.description}</p>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
+              <span>{astraObjectLog.length} Spatial Memories Cached</span>
+              <button
+                type="button"
+                onClick={() => setAstraObjectLog([])}
+                className="hover:text-destructive transition-colors cursor-pointer"
+              >
+                Clear Log
+              </button>
             </div>
           </div>
         </div>

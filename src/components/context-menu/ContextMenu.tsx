@@ -21,7 +21,9 @@ import {
   Link,
   FolderOpen,
   Sparkles,
+  Wand2,
 } from 'lucide-react';
+import { puterAiService } from '@/services/ai/puterAiService';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
 import { useFileStore } from '@/stores/fileStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -181,6 +183,30 @@ export function ContextMenu() {
     closeContextMenu();
   };
 
+  const handleAiSmartRename = async () => {
+    if (!targetFile) return;
+    const fileToRename = targetFile;
+    closeContextMenu();
+    const toastId = toast.loading(`✨ AI analyzing "${fileToRename.name}" to generate smart name...`);
+    try {
+      let excerpt = '';
+      try {
+        excerpt = await api.getFileContentText(fileToRename.id);
+      } catch {}
+
+      const prompt = `Suggest a clean, concise, human-readable file name for a file currently named "${fileToRename.name}" (${fileToRename.extension}). File content excerpt: "${(excerpt || '').slice(0, 300)}". Output ONLY the single proposed filename (e.g. "Project_Proposal.pdf" or "Sigiriya_Sunset_View.jpg") with no extra text or markdown quotes.`;
+      const res = await puterAiService.chat(prompt, { temperature: 0.2 });
+      let proposed = res.text.replace(/[`"'\n\r]/g, '').trim();
+      if (!proposed.endsWith(`.${fileToRename.extension}`)) {
+        proposed = `${proposed}.${fileToRename.extension}`;
+      }
+      await renameItem(fileToRename.id, false, proposed);
+      toast.success(`✨ Smart Renamed to "${proposed}"!`, { id: toastId });
+    } catch (err: any) {
+      toast.error(`Smart rename failed: ${err?.message || err}`, { id: toastId });
+    }
+  };
+
   const handleFileTrash = async () => {
     if (targetFile) {
       await deleteItem(targetFile.id, false);
@@ -295,6 +321,14 @@ export function ContextMenu() {
           >
             <Edit2 className="h-4 w-4 text-muted-foreground" />
             <span>Rename</span>
+          </button>
+
+          <button
+            onClick={handleAiSmartRename}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl font-medium hover:bg-accent text-purple-400 hover:text-purple-300 text-left transition-colors"
+          >
+            <Wand2 className="h-4 w-4 text-purple-400" />
+            <span>🏷️ AI Smart Rename</span>
           </button>
 
           <button

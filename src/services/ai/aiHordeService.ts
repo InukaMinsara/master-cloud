@@ -63,26 +63,30 @@ class AIHordeService {
   }
 
   loadApiKey(): string {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_HORDE_API);
-      if (saved && saved.trim().length > 0) {
-        this.activeApiKey = saved.trim();
-        return this.activeApiKey;
+    try {
+      if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && typeof window.localStorage.getItem === 'function') {
+        const saved = window.localStorage.getItem(STORAGE_KEY_HORDE_API);
+        if (saved && saved.trim().length > 0) {
+          this.activeApiKey = saved.trim();
+          return this.activeApiKey;
+        }
       }
-    }
+    } catch {}
     this.activeApiKey = ANONYMOUS_KEY;
     return this.activeApiKey;
   }
 
   setApiKey(key: string): void {
     this.activeApiKey = key.trim() || ANONYMOUS_KEY;
-    if (typeof localStorage !== 'undefined') {
-      if (key && key.trim() !== ANONYMOUS_KEY) {
-        localStorage.setItem(STORAGE_KEY_HORDE_API, key.trim());
-      } else {
-        localStorage.removeItem(STORAGE_KEY_HORDE_API);
+    try {
+      if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+        if (key && key.trim() !== ANONYMOUS_KEY) {
+          window.localStorage.setItem(STORAGE_KEY_HORDE_API, key.trim());
+        } else {
+          window.localStorage.removeItem(STORAGE_KEY_HORDE_API);
+        }
       }
-    }
+    } catch {}
   }
 
   getApiKey(): string {
