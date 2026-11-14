@@ -42,6 +42,7 @@ export interface PuterChatOptions {
   max_tokens?: number;
   onChunk?: (chunk: string) => void;
   signal?: AbortSignal;
+  image?: string | Blob;
 }
 
 export interface PuterChatResult {
@@ -434,11 +435,19 @@ class PuterAiPlatformService {
       try {
         let res: any;
         try {
-          res = await p.ai.chat(messagesPayload, {
-            model: candidateModel,
-            temperature: options.temperature,
-            max_tokens: options.max_tokens,
-          });
+          if (options.image) {
+            res = await (p.ai.chat as any)(prompt.trim(), options.image, {
+              model: candidateModel,
+              temperature: options.temperature,
+              max_tokens: options.max_tokens,
+            });
+          } else {
+            res = await p.ai.chat(messagesPayload, {
+              model: candidateModel,
+              temperature: options.temperature,
+              max_tokens: options.max_tokens,
+            });
+          }
         } catch (firstErr: any) {
           // If error mentions content or message property, immediately retry this model with plain string prompt
           if (Array.isArray(messagesPayload) && (firstErr?.message?.includes('content') || firstErr?.message?.includes('property'))) {
@@ -535,12 +544,21 @@ class PuterAiPlatformService {
 
         let chatPromise: Promise<any>;
         try {
-          chatPromise = p.ai.chat(messagesPayload, {
-            model: candidateModel,
-            stream: true,
-            temperature: options.temperature ?? 0.3,
-            max_tokens: options.max_tokens,
-          });
+          if (options.image) {
+            chatPromise = (p.ai.chat as any)(prompt.trim(), options.image, {
+              model: candidateModel,
+              stream: true,
+              temperature: options.temperature ?? 0.3,
+              max_tokens: options.max_tokens,
+            });
+          } else {
+            chatPromise = p.ai.chat(messagesPayload, {
+              model: candidateModel,
+              stream: true,
+              temperature: options.temperature ?? 0.3,
+              max_tokens: options.max_tokens,
+            });
+          }
         } catch (syncErr: any) {
           if (Array.isArray(messagesPayload) && (syncErr?.message?.includes('content') || syncErr?.message?.includes('property'))) {
             messagesPayload = prompt.trim();
@@ -869,6 +887,33 @@ class PuterAiPlatformService {
     } catch (err: any) {
       console.error('[Puter STT] Speech transcription failed:', err);
       throw err;
+    }
+  }
+
+  /**
+   * Enhances and polishes a user prompt using AI magic wand.
+   * Expands visual descriptions for Imagen/Seedance and refines logical clarity for coding.
+   */
+  public async polishPrompt(rawPrompt: string): Promise<string> {
+    if (!rawPrompt || !rawPrompt.trim()) return rawPrompt;
+    const metaPrompt = `You are a world-class AI prompt engineer. Refine and enhance the following user prompt for maximum output quality, photorealism (if describing an image or video), or structural precision (if asking a question or coding task).
+Rules:
+1. Preserve the user's core intent. If in Sinhala or Singlish, keep appropriate Sinhala context or translate visual keywords into vivid descriptive English for image/video models.
+2. For visual image/video generation requests, enrich with cinematic lighting, camera perspective, texture, and 8k detail.
+3. Return ONLY the enhanced prompt string. Do not include quotes, greetings, or explanations.
+
+Prompt to polish:
+"${rawPrompt.trim()}"`;
+
+    try {
+      const res = await this.chat(metaPrompt, {
+        temperature: 0.7,
+        max_tokens: 250,
+      });
+      const cleaned = res.text.replace(/^["']|["']$/g, '').trim();
+      return cleaned || rawPrompt;
+    } catch {
+      return rawPrompt;
     }
   }
 }

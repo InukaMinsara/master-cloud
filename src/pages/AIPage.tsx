@@ -28,6 +28,8 @@ import {
   Download,
   Wand2,
   Code2,
+  Share2,
+  Upload,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -143,6 +145,13 @@ export function AIPage() {
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
 
+  // Vision Image Attachment & Polishing & Export State
+  const [attachedImage, setAttachedImage] = useState<{ url: string; file?: File; name: string } | null>(null);
+  const [isPolishingPrompt, setIsPolishingPrompt] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputImageRef = useRef<HTMLInputElement | null>(null);
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
@@ -246,6 +255,130 @@ export function AIPage() {
     }
   };
 
+  // ─── VISION IMAGE ATTACHMENT & CLIPBOARD PASTE (CTRL+V) ───
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            setAttachedImage({
+              url: dataUrl,
+              file,
+              name: file.name || `Pasted_Screenshot_${Date.now()}.png`,
+            });
+            toast.success('📸 Screenshot attached from clipboard for Vision AI!');
+          };
+          reader.readAsDataURL(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const handleSelectImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setAttachedImage({
+        url: dataUrl,
+        file,
+        name: file.name,
+      });
+      toast.success(`Attached image for Vision AI: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        setAttachedImage({
+          url: dataUrl,
+          file,
+          name: file.name,
+        });
+        toast.success(`📸 Image attached: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.info(`Please use the paperclip icon to attach drive file "${file.name}".`);
+    }
+  };
+
+  // ─── PROMPT POLISHER / MAGIC WAND ───
+  const handlePolishPrompt = async () => {
+    if (!inputText.trim()) {
+      toast.info('Please enter a prompt first to polish.');
+      return;
+    }
+    setIsPolishingPrompt(true);
+    toast.info('✨ Enhancing prompt with AI Magic Wand...');
+    try {
+      const polished = await puterAiService.polishPrompt(inputText.trim());
+      setInputText(polished);
+      toast.success('Prompt polished & enhanced!');
+    } catch {
+      toast.error('Could not polish prompt.');
+    } finally {
+      setIsPolishingPrompt(false);
+    }
+  };
+
+  // ─── CHAT EXPORT (MARKDOWN & PRINT) ───
+  const handleExportMarkdown = () => {
+    if (!activeSession) return;
+    let md = `# ${activeSession.title}\n*Exported from Master AI Studio on ${new Date().toLocaleString()}*\n\n---\n\n`;
+    for (const msg of activeSession.messages) {
+      const roleName = msg.role === 'user' ? '👤 User' : '🤖 Master AI';
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      md += `### ${roleName} (${time})\n\n${msg.content}\n\n`;
+      if (msg.mediaAttachment) {
+        md += `*Attached ${msg.mediaAttachment.type}: [View Media](${msg.mediaAttachment.url})*\n\n`;
+      }
+      md += `---\n\n`;
+    }
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeSession.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_chat.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Chat exported as Markdown (.md)!');
+  };
+
+  const handlePrintChat = () => {
+    window.print();
+  };
+
   // Session Management
   const handleNewSession = () => {
     const newSession: AIChatSession = {
@@ -310,18 +443,24 @@ export function AIPage() {
 
     const mediaIntent = detectMediaIntent(textToSend);
 
+    const sentFile = attachedFile;
+    const sentImage = attachedImage;
+    setAttachedFile(null);
+    setAttachedImage(null);
+
     const userMsg: AIMessage = {
       id: 'msg-' + Date.now(),
       role: 'user',
       content: textToSend.trim(),
       timestamp: new Date().toISOString(),
-      attachedFile: attachedFile
+      attachedFile: sentFile
         ? {
-            id: attachedFile.id,
-            name: attachedFile.name,
-            sizeBytes: attachedFile.size_bytes,
+            id: sentFile.id,
+            name: sentFile.name,
+            sizeBytes: sentFile.size_bytes,
           }
         : undefined,
+      imageAttachment: sentImage?.url,
     };
 
     // Purge any ghost/empty messages from prior failed turns
@@ -344,8 +483,6 @@ export function AIPage() {
 
     setSessions(updatedSessions);
     setInputText('');
-    const sentFile = attachedFile;
-    setAttachedFile(null);
     setIsStreaming(true);
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
@@ -556,6 +693,7 @@ export function AIPage() {
       const puterStream = puterAiService.streamChat(promptToSend, {
         messages: historyForPuter,
         signal: abortCtrl.signal,
+        image: sentImage?.url,
       });
 
       for await (const chunk of puterStream) {
@@ -841,6 +979,53 @@ export function AIPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
                   ⚡ Extreme Fast Stream Active (~120 tok/s)
                 </span>
+
+                {/* Chat Export Menu */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] font-semibold text-foreground transition-colors cursor-pointer"
+                    title="Export chat transcript"
+                  >
+                    <Share2 className="h-3 w-3 text-primary" />
+                    <span>Export</span>
+                  </button>
+
+                  {isExportMenuOpen && (
+                    <div className="absolute right-0 mt-1 w-52 rounded-xl bg-card border border-border/80 shadow-2xl z-30 py-1.5 text-xs animate-in fade-in zoom-in-95">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          handleExportMarkdown();
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground"
+                      >
+                        <FileText className="h-4 w-4 text-purple-400" />
+                        <div>
+                          <div className="font-semibold">Markdown (.md)</div>
+                          <div className="text-[10px] text-muted-foreground">Download formatted text</div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          handlePrintChat();
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground border-t border-border/40"
+                      >
+                        <Download className="h-4 w-4 text-cyan-400" />
+                        <div>
+                          <div className="font-semibold">Print / Save PDF</div>
+                          <div className="text-[10px] text-muted-foreground">Save as PDF document</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleClearCurrentSession}
                   className="px-2 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] text-muted-foreground hover:text-foreground transition-colors"
@@ -852,7 +1037,19 @@ export function AIPage() {
             </div>
 
             {/* Message Thread */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 relative"
+            >
+              {isDraggingOver && (
+                <div className="absolute inset-4 bg-primary/20 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl z-30 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                  <Upload className="h-10 w-10 text-primary animate-bounce" />
+                  <span className="text-sm font-bold text-primary">Drop image to analyze with Vision AI</span>
+                </div>
+              )}
+
               {activeSession.messages
                 .filter((msg) => msg.role === 'user' || Boolean(msg.content && msg.content.trim().length > 0) || isStreaming)
                 .map((msg) => (
@@ -889,7 +1086,18 @@ export function AIPage() {
                     )}
 
                     {msg.role === 'user' ? (
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                      <div className="space-y-2">
+                        {msg.imageAttachment && (
+                          <div className="max-w-sm rounded-xl overflow-hidden border border-white/20 shadow-md">
+                            <img
+                              src={msg.imageAttachment}
+                              alt="Vision attachment"
+                              className="max-h-60 w-auto object-contain rounded-lg"
+                            />
+                          </div>
+                        )}
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
                     ) : (
                       <ChatMarkdownRenderer
                         content={msg.content}
@@ -1025,6 +1233,17 @@ export function AIPage() {
                     <PhoneCall className="h-3 w-3 text-emerald-400" />
                     <span>🎙️ Live Voice</span>
                   </button>
+
+                  <button
+                    type="button"
+                    disabled={isPolishingPrompt || !inputText.trim()}
+                    onClick={handlePolishPrompt}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                    title="Polish and enrich prompt with AI Magic Wand"
+                  >
+                    <Wand2 className={`h-3 w-3 text-purple-400 ${isPolishingPrompt ? 'animate-spin' : ''}`} />
+                    <span>{isPolishingPrompt ? 'Polishing...' : '✨ Polish'}</span>
+                  </button>
                 </div>
 
                 {/* Attached File Pill */}
@@ -1041,6 +1260,22 @@ export function AIPage() {
                   </div>
                 )}
 
+                {/* Attached Image Pill (Vision AI) */}
+                {attachedImage && (
+                  <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-semibold animate-in fade-in">
+                    <img src={attachedImage.url} alt="Attached Preview" className="h-7 w-7 object-cover rounded-md border border-purple-500/40" />
+                    <span className="truncate max-w-xs text-purple-300">{attachedImage.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedImage(null)}
+                      className="hover:text-destructive ml-1 cursor-pointer"
+                      title="Remove attached image"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 bg-background border border-border/70 rounded-2xl p-2 shadow-md focus-within:border-primary transition-colors">
                   <button
                     type="button"
@@ -1050,6 +1285,22 @@ export function AIPage() {
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputImageRef.current?.click()}
+                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title="Attach photo/screenshot for Vision AI analysis"
+                  >
+                    <ImageIcon className="h-4 w-4 text-purple-400" />
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputImageRef}
+                    accept="image/*"
+                    onChange={handleSelectImageFile}
+                    className="hidden"
+                  />
 
                   <button
                     type="button"
@@ -1076,6 +1327,7 @@ export function AIPage() {
                   <textarea
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onPaste={handlePaste}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -1088,7 +1340,9 @@ export function AIPage() {
                         ? '🎙️ Listening... Speak naturally into your microphone'
                         : isWebSearchEnabled
                         ? '🌐 Web Search Active: Ask anything with real-time web citations...'
-                        : 'Ask Master AI, generate photos/videos, or write code... [Enter to send]'
+                        : attachedImage
+                        ? 'Ask Master AI anything about this attached image/screenshot... [Enter to send]'
+                        : 'Ask Master AI, generate photos/videos, paste screenshots (Ctrl+V)... [Enter]'
                     }
                     className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
                   />

@@ -11,7 +11,12 @@ import {
   Sparkles,
   Film,
   Image as ImageIcon,
+  CloudDownload,
+  HardDrive,
 } from 'lucide-react';
+import { api } from '@/services/api';
+import { useFileStore } from '@/stores/fileStore';
+import { toast } from 'sonner';
 
 export interface InlineMediaAttachmentProps {
   type: 'image' | 'video' | 'audio';
@@ -238,6 +243,7 @@ export function InlineMediaRenderer({
   media: InlineMediaAttachmentProps;
 }) {
   const [downloading, setDownloading] = useState(false);
+  const [savingToDrive, setSavingToDrive] = useState(false);
 
   const handleDownload = () => {
     setDownloading(true);
@@ -250,6 +256,29 @@ export function InlineMediaRenderer({
     a.click();
     document.body.removeChild(a);
     setTimeout(() => setDownloading(false), 1500);
+  };
+
+  const handleSaveToDrive = async () => {
+    if (savingToDrive) return;
+    setSavingToDrive(true);
+    try {
+      toast.info('Saving to Master Cloud Drive...');
+      const response = await fetch(media.url);
+      const blob = await response.blob();
+      const ext = media.type === 'video' ? 'mp4' : media.type === 'audio' ? 'mp3' : 'png';
+      const filename = `AI_${media.type.toUpperCase()}_${Date.now()}.${ext}`;
+      const file = new File([blob], filename, {
+        type: blob.type || (media.type === 'video' ? 'video/mp4' : media.type === 'audio' ? 'audio/mpeg' : 'image/png'),
+      });
+
+      await api.uploadFile(file);
+      await useFileStore.getState().fetchItems();
+      toast.success(`Saved to Master Cloud Drive: ${filename}`);
+    } catch (err: any) {
+      toast.error(`Failed to save to Drive: ${err?.message || err}`);
+    } finally {
+      setSavingToDrive(false);
+    }
   };
 
   return (
@@ -268,14 +297,28 @@ export function InlineMediaRenderer({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleDownload}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-secondary hover:bg-secondary/80 text-foreground transition-all cursor-pointer"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>{downloading ? 'Downloading...' : 'Download'}</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={savingToDrive}
+            onClick={handleSaveToDrive}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all cursor-pointer disabled:opacity-50"
+            title="Save directly to Master Cloud Drive storage"
+          >
+            <CloudDownload className={`w-3.5 h-3.5 ${savingToDrive ? 'animate-bounce' : ''}`} />
+            <span>{savingToDrive ? 'Saving...' : 'Save to Drive'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-secondary hover:bg-secondary/80 text-foreground transition-all cursor-pointer"
+            title="Download file to computer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{downloading ? 'Downloading...' : 'Download'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Media Content Box */}

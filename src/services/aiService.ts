@@ -27,6 +27,7 @@ export interface AIMessage {
     prompt?: string;
     modelUsed?: string;
   };
+  imageAttachment?: string;
   webSources?: Array<{ title: string; url: string; snippet?: string }>;
 }
 
