@@ -54,6 +54,84 @@ import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
 
 type PageTab = 'chat' | 'image' | 'video' | 'voice' | 'gateway' | 'memory';
 
+/**
+ * Detects whether the user is requesting in-chat image or video generation
+ * Supports English, Sinhala, and Singlish trigger phrases.
+ */
+function detectMediaIntent(text: string): { type: 'image' | 'video' | 'none'; prompt: string } {
+  const clean = text.trim();
+  const lower = clean.toLowerCase();
+
+  // ─── 1. Video Patterns (English, Sinhala, Singlish) ───
+  const isVideoKeyword =
+    lower.includes('video') ||
+    lower.includes('වීඩියෝ') ||
+    lower.startsWith('animate') ||
+    lower.includes('animation');
+
+  const isVideoAction =
+    lower.includes('generate') ||
+    lower.includes('create') ||
+    lower.includes('make') ||
+    lower.includes('hadanna') ||
+    lower.includes('hadapan') ||
+    lower.includes('hadala') ||
+    lower.includes('render') ||
+    lower.startsWith('animate');
+
+  if (isVideoKeyword && isVideoAction) {
+    let promptPart = clean
+      .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|make|render|animate)\s+(?:an?\s+)?video\s+(?:of|about|showing)?\s*/i, '')
+      .replace(/^(?:video\s+ekak\s+(?:hadanna|hadapan|hadala\s+denna|generate\s+karanna))\s*/i, '')
+      .replace(/^(?:meke\s+video\s+ekak\s+hadanna|hadapan)\s*/i, '')
+      .replace(/video\s*ekak\s*(?:hadanna|hadapan|generate\s*karanna)/gi, '')
+      .trim();
+
+    if (!promptPart || promptPart.length < 3) promptPart = clean;
+    return { type: 'video', prompt: promptPart };
+  }
+
+  // ─── 2. Image Patterns (English, Sinhala, Singlish) ───
+  const isImageKeyword =
+    lower.includes('image') ||
+    lower.includes('photo') ||
+    lower.includes('picture') ||
+    lower.includes('wallpaper') ||
+    lower.includes('chithra') ||
+    lower.includes('පින්තූර') ||
+    lower.startsWith('draw') ||
+    lower.startsWith('paint') ||
+    lower.startsWith('sketch');
+
+  const isImageAction =
+    lower.includes('generate') ||
+    lower.includes('create') ||
+    lower.includes('make') ||
+    lower.includes('hadanna') ||
+    lower.includes('hadapan') ||
+    lower.includes('hadala') ||
+    lower.includes('andinna') ||
+    lower.includes('andala') ||
+    lower.startsWith('draw') ||
+    lower.startsWith('paint') ||
+    lower.startsWith('sketch');
+
+  if (isImageKeyword && isImageAction) {
+    let promptPart = clean
+      .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|make|render)\s+(?:an?\s+)?(?:image|photo|picture|wallpaper|art|drawing)\s+(?:of|about|showing)?\s*/i, '')
+      .replace(/^(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:image|photo|picture)?\s*(?:of)?\s*/i, '')
+      .replace(/^(?:photo\s+ekak|image\s+ekak|pic\s+ekak)\s+(?:hadanna|hadapan|hadala\s+denna|generate\s+karanna|andinna)\s*/i, '')
+      .replace(/^(?:chithrayak|chithra)\s+(?:andinna|andala\s+denna|hadanna)\s*/i, '')
+      .replace(/(?:photo|image)\s*ekak\s*(?:hadanna|hadapan|generate\s*karanna|andinna)/gi, '')
+      .trim();
+
+    if (!promptPart || promptPart.length < 3) promptPart = clean;
+    return { type: 'image', prompt: promptPart };
+  }
+
+  return { type: 'none', prompt: clean };
+}
+
 export function AIPage() {
   const { user } = useAuthStore();
   const { files, fetchItems } = useFileStore();
@@ -179,10 +257,12 @@ export function AIPage() {
     toast.info('Chat history cleared for this session.');
   };
 
-  // Send message with streaming + cancel support
+  // Send message with streaming + cancel support + in-chat media generation
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputText;
     if (!textToSend.trim() || isStreaming) return;
+
+    const mediaIntent = detectMediaIntent(textToSend);
 
     const userMsg: AIMessage = {
       id: 'msg-' + Date.now(),
@@ -223,6 +303,166 @@ export function AIPage() {
     setIsStreaming(true);
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
+
+    // ─── 1. IN-CHAT IMAGE GENERATION (GOOGLE IMAGEN 3 WATERFALL) ───
+    if (mediaIntent.type === 'image') {
+      const initialAssistantMsg: AIMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: `🎨 Synthesizing photorealistic image with **Google Imagen 3** engine...\n\n> Prompt: *"${mediaIntent.prompt}"*`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return { ...s, messages: [...s.messages, initialAssistantMsg] };
+          }
+          return s;
+        }),
+      );
+
+      try {
+        const imgRes = await puterAiService.generateImage(mediaIntent.prompt, {
+          aspect_ratio: '1:1',
+        });
+
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `✨ Here is your generated image powered by **${imgRes.model}**:\n\n> *"${mediaIntent.prompt}"*`,
+                      mediaAttachment: {
+                        type: 'image' as const,
+                        url: imgRes.imageUrl,
+                        prompt: mediaIntent.prompt,
+                        modelUsed: imgRes.model,
+                      },
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+        toast.success(`Image generated in chat via ${imgRes.model}!`);
+      } catch (err: any) {
+        toast.error(`Image generation failed: ${err?.message || err}`);
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `⚠️ Image generation could not be completed across waterfall candidates: ${err?.message || err}`,
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+      } finally {
+        setIsStreaming(false);
+      }
+      return;
+    }
+
+    // ─── 2. IN-CHAT VIDEO GENERATION (BYTEPLUS SEEDANCE WATERFALL) ───
+    if (mediaIntent.type === 'video') {
+      const initialAssistantMsg: AIMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: `🎬 Initializing **BytePlus Seedance Video** pipeline...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Synthesizing video motion frames (this may take a few moments)...*`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return { ...s, messages: [...s.messages, initialAssistantMsg] };
+          }
+          return s;
+        }),
+      );
+
+      try {
+        const vidRes = await puterAiService.generateVideo(mediaIntent.prompt, {
+          duration: 3,
+          onProgress: (status) => {
+            setSessions((prev) =>
+              prev.map((s) => {
+                if (s.id === activeSession.id) {
+                  const msgs = s.messages.map((m) =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          content: `🎬 Initializing **BytePlus Seedance Video** pipeline...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Status: ${status}*`,
+                        }
+                      : m,
+                  );
+                  return { ...s, messages: msgs };
+                }
+                return s;
+              }),
+            );
+          },
+        });
+
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `🎬 Here is your rendered video clip powered by **${vidRes.model}**:\n\n> *"${mediaIntent.prompt}"*`,
+                      mediaAttachment: {
+                        type: 'video' as const,
+                        url: vidRes.videoUrl,
+                        prompt: mediaIntent.prompt,
+                        modelUsed: vidRes.model,
+                      },
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+        toast.success(`Video generated in chat via ${vidRes.model}!`);
+      } catch (err: any) {
+        toast.error(`Video generation failed: ${err?.message || err}`);
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `⚠️ Video generation could not be completed across waterfall candidates: ${err?.message || err}`,
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+      } finally {
+        setIsStreaming(false);
+      }
+      return;
+    }
+
+    // ─── 3. TEXT CHAT STREAMING (GEMINI -> OPENAI -> DEEPSEEK CASCADE) ───
     const initialAssistantMsg: AIMessage = {
       id: assistantMsgId,
       role: 'assistant',
@@ -252,11 +492,11 @@ export function AIPage() {
             promptToSend = `[Attached File: ${sentFile.name}]\n${fileExcerpt.slice(0, 6000)}\n\n[User Prompt]:\n${promptToSend}`;
           }
         } catch {
-          // Continue with prompt alone if excerpt read fails
+          // Continue with prompt alone
         }
       }
 
-      // Stream directly through Puter.js with automatic verified free model fallback
+      // Stream directly through Puter.js with automatic waterfall cascade
       const historyForPuter = cleanedPriorMessages
         .filter((m) => m.id !== 'msg-welcome' && m.content && m.content.trim().length > 0)
         .map((m) => ({
@@ -268,7 +508,6 @@ export function AIPage() {
       let lastRenderTime = 0;
 
       const puterStream = puterAiService.streamChat(promptToSend, {
-        model: selectedModelId,
         messages: historyForPuter,
         signal: abortCtrl.signal,
       });
@@ -440,10 +679,10 @@ export function AIPage() {
   };
 
   const promptSuggestions = [
-    { label: 'සිංහල හැඳින්වීම (Sinhala)', text: 'Master AI Puter.js Studio එක ගැන කෙටියෙන් සිංහලෙන් පහදන්න.' },
-    { label: 'Code Assistant', text: 'Write a modern TypeScript debounce utility function with unit tests.' },
-    { label: 'Math & Logic', text: 'Solve this step by step: Calculate the monthly loan payment for $25,000 at 6.5% interest over 5 years.' },
-    { label: 'Cloud Storage Summary', text: 'Summarize my Master Cloud zero-trust encryption architecture and 10 TB storage quota.' },
+    { label: '🎨 AI Image Gen (In-Chat)', text: 'Photo ekak hadanna futuristic cybernetic supercar in Tokyo neon rain' },
+    { label: '🎬 AI Video Gen (In-Chat)', text: 'Video ekak hadanna cinematic drone flying through misty mountain valley at sunset' },
+    { label: '⚡ Extreme Fast Chat (Sinhala)', text: 'Master AI Puter.js Studio එක ගැන කෙටියෙන් සිංහලෙන් පහදන්න.' },
+    { label: '💻 Interactive Canvas Artifact', text: 'Write an interactive HTML & CSS modern calculator widget with working buttons.' },
   ];
 
   const filteredSessions = sessions.filter(
@@ -609,33 +848,39 @@ export function AIPage() {
                 </select>
               </div>
 
-              <div className="space-y-1">
+              {/* Autonomous AI Waterfall Routing Engine (Models hidden from user, auto-switching) */}
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 via-purple-500/5 to-cyan-500/10 border border-primary/20 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    Puter.js Model Selector
-                  </label>
-                  <span className="text-[9px] text-emerald-400 font-bold">100% Free Tier</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">
+                      Autonomous AI Cascade
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-emerald-400 font-bold font-mono">100% Free</span>
                 </div>
-                <select
-                  value={selectedModelId}
-                  onChange={(e) => setSelectedModelId(e.target.value)}
-                  className="w-full bg-background text-[11px] font-semibold rounded-lg px-2 py-1.5 border border-border/60 focus:outline-none focus:border-primary cursor-pointer truncate"
-                >
-                  <optgroup label="Verified 100% Free Models ($0)">
-                    {VERIFIED_FREE_CHAT_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Puter.js Standard Cloud Models">
-                    {PUTER_STANDARD_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+
+                <div className="text-[11px] space-y-1 text-muted-foreground font-mono">
+                  <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
+                    <span className="text-[10px] text-zinc-500">1.</span>
+                    <span>⚡ Google Gemini 3.8 Flash</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 ml-auto">Active</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <span className="text-[10px] text-zinc-600">2.</span>
+                    <span>⚡ OpenAI GPT-4o Mini</span>
+                    <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 2</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <span className="text-[10px] text-zinc-600">3.</span>
+                    <span>⚡ DeepSeek &amp; Open Weights</span>
+                    <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 3</span>
+                  </div>
+                </div>
+
+                <p className="text-[9px] text-muted-foreground/80 pt-0.5 leading-snug">
+                  Zero manual switches. If Google Gemini free tier is exhausted, it seamlessly routes to OpenAI, then DeepSeek.
+                </p>
               </div>
             </div>
 
@@ -753,6 +998,7 @@ export function AIPage() {
                     ) : (
                       <ChatMarkdownRenderer
                         content={msg.content}
+                        mediaAttachment={msg.mediaAttachment}
                         isStreaming={isStreaming && msg.id === activeSession.messages[activeSession.messages.length - 1]?.id}
                       />
                     )}

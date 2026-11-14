@@ -1,9 +1,29 @@
 import React, { useState } from 'react';
-import { Check, Copy, Code2, Terminal } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Code2,
+  Terminal,
+  Eye,
+  RefreshCw,
+  Download,
+  Maximize2,
+  Sparkles,
+  Film,
+  Image as ImageIcon,
+} from 'lucide-react';
+
+export interface InlineMediaAttachmentProps {
+  type: 'image' | 'video' | 'audio';
+  url: string;
+  prompt?: string;
+  modelUsed?: string;
+}
 
 interface ChatMarkdownRendererProps {
   content: string;
   isStreaming?: boolean;
+  mediaAttachment?: InlineMediaAttachmentProps;
 }
 
 /**
@@ -72,7 +92,8 @@ function highlightCodeLine(line: string): React.ReactNode[] {
 }
 
 /**
- * Dedicated ChatGPT-style Code Block with header, language badge, and copy button.
+ * Dedicated ChatGPT-style Code Block with header, language badge, copy button,
+ * and Live Interactive Artifacts / Preview Canvas.
  */
 export function ChatGPTCodeBlock({
   code,
@@ -84,9 +105,15 @@ export function ChatGPTCodeBlock({
   isStreaming?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
 
   const cleanLang = (language || '').toLowerCase().trim();
   const displayLang = cleanLang || 'code';
+  const isPreviewable =
+    ['html', 'htm', 'svg', 'xml'].includes(cleanLang) ||
+    cleanLang.includes('react') ||
+    cleanLang === 'jsx' ||
+    cleanLang === 'tsx';
 
   const handleCopy = () => {
     if (!navigator.clipboard) return;
@@ -100,15 +127,46 @@ export function ChatGPTCodeBlock({
 
   return (
     <div className="my-3.5 rounded-xl overflow-hidden border border-zinc-800 bg-[#0d0d11] shadow-lg group">
-      {/* Code Header Bar (ChatGPT Style) */}
+      {/* Code Header Bar (ChatGPT / Claude Artifacts Style) */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e24] border-b border-zinc-800 text-xs font-mono select-none">
-        <div className="flex items-center gap-1.5 text-zinc-400 font-medium">
-          {displayLang === 'bash' || displayLang === 'sh' || displayLang === 'shell' ? (
-            <Terminal className="w-3.5 h-3.5 text-amber-400" />
-          ) : (
-            <Code2 className="w-3.5 h-3.5 text-cyan-400" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-zinc-400 font-medium">
+            {displayLang === 'bash' || displayLang === 'sh' || displayLang === 'shell' ? (
+              <Terminal className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Code2 className="w-3.5 h-3.5 text-cyan-400" />
+            )}
+            <span className="capitalize">{displayLang}</span>
+          </div>
+
+          {isPreviewable && !isStreaming && (
+            <div className="flex items-center gap-1 bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-700/60 ml-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('code')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'code'
+                    ? 'bg-zinc-700 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Code2 className="w-3 h-3" />
+                <span>Code</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('preview')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'preview'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-zinc-400 hover:text-cyan-300'
+                }`}
+              >
+                <Eye className="w-3 h-3 text-cyan-400" />
+                <span>Live Preview ⚡</span>
+              </button>
+            </div>
           )}
-          <span className="capitalize">{displayLang}</span>
         </div>
 
         <button
@@ -131,24 +189,129 @@ export function ChatGPTCodeBlock({
         </button>
       </div>
 
-      {/* Code Body */}
-      <pre className="p-4 overflow-x-auto text-xs sm:text-[13px] font-mono leading-relaxed text-zinc-100 scrollbar-thin scrollbar-thumb-zinc-700">
-        <code>
-          {lines.map((l, idx) => (
-            <div key={`cl_${idx}`} className="table-row">
-              <span className="table-cell select-none text-right pr-4 text-zinc-600 text-[11px] font-mono w-8">
-                {idx + 1}
-              </span>
-              <span className="table-cell whitespace-pre">
-                {highlightCodeLine(l)}
-                {isStreaming && idx === lines.length - 1 && (
-                  <span className="inline-block w-2 h-4 bg-cyan-400 animate-pulse ml-0.5 align-middle" />
-                )}
-              </span>
-            </div>
-          ))}
-        </code>
-      </pre>
+      {/* Code Body or Live Preview Canvas */}
+      {activeTab === 'preview' && isPreviewable && !isStreaming ? (
+        <div className="w-full bg-[#18181b] border-t border-zinc-800 overflow-hidden">
+          {cleanLang === 'svg' ? (
+            <div
+              className="p-6 bg-zinc-950 flex items-center justify-center min-h-[220px]"
+              dangerouslySetInnerHTML={{ __html: code }}
+            />
+          ) : (
+            <iframe
+              title="Interactive Live Canvas"
+              sandbox="allow-scripts allow-same-origin"
+              className="w-full h-80 bg-white dark:bg-zinc-950 border-0 rounded-b-xl"
+              srcDoc={code}
+            />
+          )}
+        </div>
+      ) : (
+        <pre className="p-4 overflow-x-auto text-xs sm:text-[13px] font-mono leading-relaxed text-zinc-100 scrollbar-thin scrollbar-thumb-zinc-700">
+          <code>
+            {lines.map((l, idx) => (
+              <div key={`cl_${idx}`} className="table-row">
+                <span className="table-cell select-none text-right pr-4 text-zinc-600 text-[11px] font-mono w-8">
+                  {idx + 1}
+                </span>
+                <span className="table-cell whitespace-pre">
+                  {highlightCodeLine(l)}
+                  {isStreaming && idx === lines.length - 1 && (
+                    <span className="inline-block w-2 h-4 bg-cyan-400 animate-pulse ml-0.5 align-middle" />
+                  )}
+                </span>
+              </div>
+            ))}
+          </code>
+        </pre>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Inline Media Renderer for in-chat image & video generation.
+ */
+export function InlineMediaRenderer({
+  media,
+}: {
+  media: InlineMediaAttachmentProps;
+}) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = () => {
+    setDownloading(true);
+    const a = document.createElement('a');
+    a.href = media.url;
+    a.download = `master-ai-${media.type}-${Date.now()}.${
+      media.type === 'video' ? 'mp4' : media.type === 'audio' ? 'mp3' : 'png'
+    }`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => setDownloading(false), 1500);
+  };
+
+  return (
+    <div className="my-3 rounded-2xl overflow-hidden border border-border/70 bg-card shadow-md">
+      {/* Header Bar */}
+      <div className="px-3.5 py-2 bg-muted/40 border-b border-border/50 flex items-center justify-between text-xs font-medium">
+        <div className="flex items-center gap-1.5 text-foreground font-semibold">
+          {media.type === 'image' && <Sparkles className="w-4 h-4 text-purple-400" />}
+          {media.type === 'video' && <Film className="w-4 h-4 text-cyan-400" />}
+          {media.type === 'audio' && <Sparkles className="w-4 h-4 text-emerald-400" />}
+          <span className="capitalize">{media.type} Generation</span>
+          {media.modelUsed && (
+            <span className="ml-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              {media.modelUsed}
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-secondary hover:bg-secondary/80 text-foreground transition-all cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>{downloading ? 'Downloading...' : 'Download'}</span>
+        </button>
+      </div>
+
+      {/* Media Content Box */}
+      <div className="p-2 sm:p-3 bg-black/40 flex flex-col items-center justify-center">
+        {media.type === 'image' && (
+          <div className="relative group max-w-full">
+            <img
+              src={media.url}
+              alt={media.prompt || 'Generated AI Image'}
+              className="rounded-xl max-h-[500px] w-auto object-contain border border-white/10 shadow-lg"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        {media.type === 'video' && (
+          <video
+            controls
+            playsInline
+            loop
+            preload="metadata"
+            className="rounded-xl max-h-[500px] w-full object-contain border border-white/10 shadow-lg bg-black"
+            src={media.url}
+          />
+        )}
+
+        {media.type === 'audio' && (
+          <audio controls className="w-full mt-2" src={media.url} />
+        )}
+
+        {media.prompt && (
+          <p className="mt-2 text-[11px] text-muted-foreground text-center italic line-clamp-2 px-2">
+            "{media.prompt}"
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -217,8 +380,12 @@ function renderInlineFormatting(text: string, keyPrefix: string): React.ReactNod
 /**
  * Main Markdown and Code Renderer for Chat Messages (ChatGPT Style).
  */
-export function ChatMarkdownRenderer({ content, isStreaming = false }: ChatMarkdownRendererProps) {
-  if (!content && isStreaming) {
+export function ChatMarkdownRenderer({
+  content,
+  isStreaming = false,
+  mediaAttachment,
+}: ChatMarkdownRendererProps) {
+  if (!content && isStreaming && !mediaAttachment) {
     return (
       <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-mono py-1">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -360,5 +527,10 @@ export function ChatMarkdownRenderer({ content, isStreaming = false }: ChatMarkd
     );
   }
 
-  return <div className="space-y-0.5 leading-relaxed break-words">{elements}</div>;
+  return (
+    <div className="space-y-1.5 leading-relaxed break-words">
+      {mediaAttachment && <InlineMediaRenderer media={mediaAttachment} />}
+      {elements}
+    </div>
+  );
 }

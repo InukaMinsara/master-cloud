@@ -21,6 +21,13 @@ export interface AIMessage {
   tokensUsed?: number;
   modelTag?: string;
   brainUsed?: 'original' | 'local' | 'cloud';
+  mediaAttachment?: {
+    type: 'image' | 'video' | 'audio';
+    url: string;
+    prompt?: string;
+    modelUsed?: string;
+  };
+  webSources?: Array<{ title: string; url: string; snippet?: string }>;
 }
 
 export interface AIChatSession {

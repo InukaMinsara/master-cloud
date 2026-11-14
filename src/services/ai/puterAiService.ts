@@ -103,6 +103,53 @@ export interface PuterSttResult {
   durationSeconds?: number;
 }
 
+// ─── STRICT WATERFALL CHAINS (AUTONOMOUS MULTI-TIER ROUTING) ───
+// Tier 1: Google Gemini (Extreme Fast, Turbo, Low-Latency)
+// Tier 2: OpenAI (Instant fallback when Gemini free tier / quota is exhausted)
+// Tier 3: DeepSeek & OpenRouter Free Tier (Unrestricted high-capacity fallback)
+export const CHAT_WATERFALL_CHAIN = [
+  'gemini-3.8-flash',
+  'gemini-2.5-flash',
+  'openrouter:google/gemini-3.8-flash:free',
+  'openrouter:google/gemma-2-9b-it:free',
+  'gpt-4o-mini',
+  'gpt-4o',
+  'deepseek-chat',
+  'openrouter:meta-llama/llama-3.3-70b-instruct:free',
+  'openrouter:mistralai/mistral-7b-instruct:free',
+  'openrouter:google/gemma-4-31b-it:free',
+  'openrouter:nvidia/nemotron-3.5-lightning:free',
+  'openrouter:cohere/north-mini-code:free',
+  'openrouter:openrouter/free',
+];
+
+// Image Waterfall: Google Imagen 3 -> Imagen 3.0 -> Imagen 3 Fast -> FLUX.1 -> SD3 -> Puter Flare
+export const IMAGE_WATERFALL_CHAIN = [
+  'google/imagen-3',
+  'imagen-3.0-generate-002',
+  'google/imagen-3-fast',
+  'black-forest-labs/FLUX.1-schnell',
+  'stabilityai/stable-diffusion-3-medium',
+  'gpt-image-2.6-flare',
+];
+
+// Video Waterfall: BytePlus Seedance -> Wan 2.7 -> Kling -> MiniMax -> Google Veo
+export const VIDEO_WATERFALL_CHAIN = [
+  'byteplus:seedance',
+  'togetherai:wan-ai/wan2.7-t2v',
+  'kling',
+  'minimax',
+  'google:veo',
+];
+
+// Voice TTS Waterfall: AWS Polly Neural -> OpenAI TTS
+export const TTS_WATERFALL_CHAIN = [
+  { provider: 'aws-polly', voice: 'Joanna' },
+  { provider: 'aws-polly', voice: 'Matthew' },
+  { provider: 'openai', voice: 'alloy' },
+  { provider: 'openai', voice: 'nova' },
+];
+
 // ─── VERIFIED FREE CHAT MODELS CHAIN (PRIORITIZED FOR EXTREME FAST LOW LATENCY) ───
 export const VERIFIED_FREE_CHAT_MODELS = [
   { id: 'gemini-3.8-flash', name: '⚡ Google Gemini 3.8 Flash (Extreme Fast)', category: 'fast' },
@@ -146,11 +193,11 @@ export const PUTER_IMAGE_MODELS = [
 ];
 
 export const PUTER_VIDEO_MODELS = [
-  { id: 'togetherai:wan-ai/wan2.7-t2v', name: 'Wan 2.7 Video (Default)', provider: 'Together AI' },
-  { id: 'byteplus:seedance', name: 'BytePlus Seedance Video', provider: 'BytePlus' },
-  { id: 'google:veo', name: 'Google Veo Video Preview', provider: 'Google' },
-  { id: 'kling', name: 'Kling AI Video', provider: 'Kling' },
-  { id: 'minimax', name: 'MiniMax Video', provider: 'MiniMax' },
+  { id: 'byteplus:seedance', name: 'BytePlus Seedance Video (Priority 1)', provider: 'BytePlus' },
+  { id: 'togetherai:wan-ai/wan2.7-t2v', name: 'Wan 2.7 Video (Priority 2)', provider: 'Together AI' },
+  { id: 'kling', name: 'Kling AI Video (Priority 3)', provider: 'Kling' },
+  { id: 'minimax', name: 'MiniMax Video (Priority 4)', provider: 'MiniMax' },
+  { id: 'google:veo', name: 'Google Veo Video Preview (Priority 5)', provider: 'Google' },
 ];
 
 export const PUTER_VOICES = [
@@ -248,7 +295,7 @@ class PuterAiPlatformService {
    * Sanitizes conversation history and prompt into a strictly valid payload
    * conforming to Puter / OpenRouter API constraints (non-empty content, valid roles, no orphan assistant openers).
    */
-  private sanitizeChatPayload(
+  public sanitizeChatPayload(
     prompt: string,
     history?: Array<{ role?: string; content?: string }>,
   ): string | Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
@@ -257,7 +304,8 @@ class PuterAiPlatformService {
 
     if (Array.isArray(history)) {
       for (const m of history) {
-        if (!m || typeof m.content !== 'string') continue;
+        if (!m || typeof m !== 'object') continue;
+        if (typeof m.content !== 'string') continue;
         const text = m.content.trim();
         if (!text) continue; // Skip empty content entirely
 
@@ -279,7 +327,16 @@ class PuterAiPlatformService {
       return sanitized[0]?.content || cleanPrompt || 'Hello';
     }
 
-    return sanitized;
+    // Double check that every element has valid content
+    const strictlyValid = sanitized.filter(
+      (m) => typeof m.role === 'string' && typeof m.content === 'string' && m.content.length > 0
+    );
+
+    if (strictlyValid.length <= 1) {
+      return strictlyValid[0]?.content || cleanPrompt || 'Hello';
+    }
+
+    return strictlyValid;
   }
 
   public async listAvailableModels(forceRefresh: boolean = false): Promise<PuterModelEntry[]> {
@@ -341,10 +398,13 @@ class PuterAiPlatformService {
     }));
   }
 
-  // ─── 3. AI CHAT WITH AUTOMATIC FALLBACK & STREAMING ───
+  // ─── 3. AI CHAT WITH AUTOMATIC CASCADE & WATERFALL ───
 
   /**
-   * Executes AI chat generation using Puter.js with automatic free model fallback.
+   * Executes AI chat generation using Puter.js with automatic multi-tier waterfall:
+   * 1. Google Gemini Tier
+   * 2. OpenAI Tier
+   * 3. DeepSeek & OpenRouter Free Tier
    */
   public async chat(prompt: string, options: PuterChatOptions = {}): Promise<PuterChatResult> {
     const p = this.getPuter();
@@ -352,18 +412,11 @@ class PuterAiPlatformService {
       throw new Error('Puter AI chat is not available in this environment.');
     }
 
-    // Determine initial candidate model
-    const requestedModel = options.model || VERIFIED_FREE_CHAT_MODELS[0].id;
-    const geminiFallbacks = requestedModel.includes('gemini-3.8')
-      ? ['gemini-3.8-flash', 'openrouter:google/gemini-3.8-flash:free', 'gemini-2.5-flash']
-      : [];
+    const requestedModel = options.model || CHAT_WATERFALL_CHAIN[0];
     const fallbackList = Array.from(
       new Set([
         requestedModel,
-        ...geminiFallbacks,
-        ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id),
-        'gpt-4o-mini',
-        'claude-3-5-sonnet',
+        ...CHAT_WATERFALL_CHAIN,
       ]),
     );
 
@@ -372,18 +425,34 @@ class PuterAiPlatformService {
     let fallbackTriggered = false;
 
     // Build strictly-validated chat payload
-    const messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
+    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
 
     for (let i = 0; i < fallbackList.length; i++) {
       const candidateModel = fallbackList[i];
       if (i > 0) fallbackTriggered = true;
 
       try {
-        const res = await p.ai.chat(messagesPayload, {
-          model: candidateModel,
-          temperature: options.temperature,
-          max_tokens: options.max_tokens,
-        });
+        let res: any;
+        try {
+          res = await p.ai.chat(messagesPayload, {
+            model: candidateModel,
+            temperature: options.temperature,
+            max_tokens: options.max_tokens,
+          });
+        } catch (firstErr: any) {
+          // If error mentions content or message property, immediately retry this model with plain string prompt
+          if (Array.isArray(messagesPayload) && (firstErr?.message?.includes('content') || firstErr?.message?.includes('property'))) {
+            console.warn(`[Puter AI] Format warning on "${candidateModel}", retrying with raw prompt.`);
+            messagesPayload = prompt.trim();
+            res = await p.ai.chat(messagesPayload, {
+              model: candidateModel,
+              temperature: options.temperature,
+              max_tokens: options.max_tokens,
+            });
+          } else {
+            throw firstErr;
+          }
+        }
 
         if (res && res.error) {
           throw new Error(res.error.message || res.error);
@@ -398,21 +467,22 @@ class PuterAiPlatformService {
           modelUsed: candidateModel,
           fallbackTriggered,
           latencyMs: Math.round(performance.now() - startTime),
-          isFreeTier: candidateModel.includes(':free'),
+          isFreeTier: candidateModel.includes(':free') || candidateModel.startsWith('gemini'),
         };
       } catch (err: any) {
         lastError = err;
-        console.warn(`[Puter AI] Model "${candidateModel}" failed, attempting fallback:`, err?.message || err);
+        console.warn(`[Puter AI Waterfall] Model "${candidateModel}" failed, switching to next tier:`, err?.message || err);
       }
     }
 
     throw new Error(
-      `All Puter.js AI candidate models were unavailable or rate-limited. Last error: ${lastError?.message || lastError}`,
+      `All Puter.js AI waterfall models were unavailable or rate-limited. Last error: ${lastError?.message || lastError}`,
     );
   }
 
   /**
-   * Streams chat responses incrementally from Puter.js with Extreme Fast Watchdog fallback.
+   * Streams chat responses incrementally from Puter.js with Extreme Fast Watchdog & Strict Waterfall:
+   * Priority: Google Gemini -> OpenAI -> DeepSeek/OpenRouter Free
    */
   public async *streamChat(
     prompt: string,
@@ -423,18 +493,16 @@ class PuterAiPlatformService {
       throw new Error('Puter AI chat is not available.');
     }
 
-    const requestedModel = options.model || VERIFIED_FREE_CHAT_MODELS[0].id;
-    const turboPriority = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gpt-4o-mini', 'deepseek-chat'];
+    const requestedModel = options.model || CHAT_WATERFALL_CHAIN[0];
     const fallbackList = Array.from(
       new Set([
         requestedModel,
-        ...turboPriority,
-        ...VERIFIED_FREE_CHAT_MODELS.map((m) => m.id),
+        ...CHAT_WATERFALL_CHAIN,
       ]),
     );
 
     const startTime = performance.now();
-    const messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
+    let messagesPayload = this.sanitizeChatPayload(prompt, options.messages);
 
     let fullAccumulated = '';
     let successModel = requestedModel;
@@ -450,29 +518,62 @@ class PuterAiPlatformService {
       let watchdogTimer: any = null;
 
       try {
-        // Fast watchdog: if candidate takes longer than 2000ms to produce first token, fast-fallback
+        // Fast watchdog: if candidate takes longer than 2200ms to produce first token, fast-fallback
         const watchdogPromise = new Promise<never>((_, reject) => {
           if (i < fallbackList.length - 1) {
             watchdogTimer = setTimeout(() => {
               if (!receivedFirstChunk) {
                 reject(
                   new Error(
-                    `Watchdog timeout: Model "${candidateModel}" did not respond within 2000ms. Fast-switching.`,
+                    `Watchdog timeout: Model "${candidateModel}" did not respond within 2200ms. Cascading to next tier.`,
                   ),
                 );
               }
-            }, 2000);
+            }, 2200);
           }
         });
 
-        const chatPromise = p.ai.chat(messagesPayload, {
-          model: candidateModel,
-          stream: true,
-          temperature: options.temperature ?? 0.3,
-          max_tokens: options.max_tokens,
-        });
+        let chatPromise: Promise<any>;
+        try {
+          chatPromise = p.ai.chat(messagesPayload, {
+            model: candidateModel,
+            stream: true,
+            temperature: options.temperature ?? 0.3,
+            max_tokens: options.max_tokens,
+          });
+        } catch (syncErr: any) {
+          if (Array.isArray(messagesPayload) && (syncErr?.message?.includes('content') || syncErr?.message?.includes('property'))) {
+            messagesPayload = prompt.trim();
+            chatPromise = p.ai.chat(messagesPayload, {
+              model: candidateModel,
+              stream: true,
+              temperature: options.temperature ?? 0.3,
+              max_tokens: options.max_tokens,
+            });
+          } else {
+            throw syncErr;
+          }
+        }
 
-        const stream = await Promise.race([chatPromise, watchdogPromise]);
+        let stream: any;
+        try {
+          stream = await Promise.race([chatPromise, watchdogPromise]);
+        } catch (raceErr: any) {
+          // If error mentions content property, retry this model with plain string
+          if (Array.isArray(messagesPayload) && (raceErr?.message?.includes('content') || raceErr?.message?.includes('property'))) {
+            console.warn(`[Puter AI Stream] Format warning on "${candidateModel}", retrying with raw prompt.`);
+            messagesPayload = prompt.trim();
+            chatPromise = p.ai.chat(messagesPayload, {
+              model: candidateModel,
+              stream: true,
+              temperature: options.temperature ?? 0.3,
+              max_tokens: options.max_tokens,
+            });
+            stream = await Promise.race([chatPromise, watchdogPromise]);
+          } else {
+            throw raceErr;
+          }
+        }
 
         if (stream && stream.error) {
           clearTimeout(watchdogTimer);
@@ -516,18 +617,23 @@ class PuterAiPlatformService {
       } catch (err: any) {
         clearTimeout(watchdogTimer);
         lastErr = err;
-        console.warn(`[Puter AI Stream] Model "${candidateModel}" failed/timed out, fast-switching:`, err?.message || err);
+        console.warn(`[Puter AI Waterfall] Model "${candidateModel}" failed/timed out, fast-switching:`, err?.message || err);
       }
     }
 
-    throw new Error(`Puter streaming failed across candidates. Last error: ${lastErr?.message || lastErr}`);
+    throw new Error(`Puter streaming failed across waterfall models. Last error: ${lastErr?.message || lastErr}`);
   }
 
-  // ─── 4. AI IMAGE GENERATION & EDITING ───
+  // ─── 4. AI IMAGE GENERATION (GOOGLE IMAGEN 3 WATERFALL) ───
 
   /**
-   * Generates or edits an image using Puter.js txt2img with Google Imagen support.
-   * Real generation only; testMode is strictly set to false.
+   * Generates images using Puter.js txt2img with strict multi-tier fallback:
+   * 1. Google Imagen 3 (Ultra Photoreal)
+   * 2. Google Imagen 3.0 Generate
+   * 3. Google Imagen 3 Fast
+   * 4. FLUX.1 Schnell
+   * 5. Stable Diffusion 3 Medium
+   * 6. Puter GPT Image Flare
    */
   public async generateImage(prompt: string, options: PuterImageOptions = {}): Promise<PuterImageResult> {
     const p = this.getPuter();
@@ -535,29 +641,23 @@ class PuterAiPlatformService {
       throw new Error('Puter AI Image Generation (txt2img) is not available.');
     }
 
-    const requestedModel = options.model || 'google/imagen-3';
+    const cleanPrompt = prompt.trim();
     const aspectRatio = options.aspect_ratio || '1:1';
 
-    const isImagen = requestedModel.toLowerCase().includes('imagen');
-    const candidates = isImagen
-      ? [
-          requestedModel,
-          'google/imagen-3',
-          'google/imagen-3-fast',
-          'imagen-3.0-generate-002',
-          'black-forest-labs/FLUX.1-schnell',
-          'gpt-image-2.6-flare',
-        ]
-      : [requestedModel, 'black-forest-labs/FLUX.1-schnell', 'gpt-image-2.6-flare'];
+    const candidates = Array.from(
+      new Set([
+        ...(options.model ? [options.model] : []),
+        ...IMAGE_WATERFALL_CHAIN,
+      ]),
+    );
 
-    const uniqueCandidates = Array.from(new Set(candidates));
     let lastErr: any = null;
 
-    for (const modelCandidate of uniqueCandidates) {
+    for (const modelCandidate of candidates) {
       const opts: any = {
         model: modelCandidate,
         aspect_ratio: aspectRatio,
-        testMode: false, // Strict requirement: Never substitute test mode for real generation
+        testMode: false, // Strict requirement: Real generation only
       };
 
       if (options.width && options.height) {
@@ -567,9 +667,13 @@ class PuterAiPlatformService {
       if (options.input_image) {
         opts.input_image = options.input_image;
       }
+      if (options.negative_prompt) {
+        opts.negative_prompt = options.negative_prompt;
+      }
 
       try {
-        const result = await p.ai.txt2img(prompt, opts);
+        console.log(`[Puter Image Waterfall] Generating image with model: ${modelCandidate}`);
+        const result = await p.ai.txt2img(cleanPrompt, opts);
         let imageUrl = '';
         if (typeof result === 'string') {
           imageUrl = result;
@@ -583,27 +687,33 @@ class PuterAiPlatformService {
           imageUrl = String(result);
         }
 
-        return {
-          imageUrl,
-          prompt,
-          model: modelCandidate,
-          aspectRatio,
-          source: 'puter-txt2img',
-        };
+        if (imageUrl) {
+          return {
+            imageUrl,
+            prompt: cleanPrompt,
+            model: modelCandidate,
+            aspectRatio,
+            source: 'puter-txt2img',
+          };
+        }
       } catch (err: any) {
         lastErr = err;
-        console.warn(`[Puter Image] Model "${modelCandidate}" failed, attempting next candidate:`, err?.message || err);
+        console.warn(`[Puter Image Waterfall] Model "${modelCandidate}" failed, falling back to next:`, err?.message || err);
       }
     }
 
-    throw lastErr || new Error('Image generation failed across all available models.');
+    throw lastErr || new Error('Image generation failed across all available waterfall models.');
   }
 
-  // ─── 5. AI VIDEO GENERATION ───
+  // ─── 5. AI VIDEO GENERATION (BYTEPLUS SEEDANCE WATERFALL) ───
 
   /**
-   * Generates video clips using Puter.js txt2vid.
-   * Real video generation; testMode is strictly set to false.
+   * Generates video clips using Puter.js txt2vid with strict multi-tier fallback:
+   * 1. BytePlus Seedance Video
+   * 2. Wan 2.7 Video
+   * 3. Kling AI Video
+   * 4. MiniMax Video
+   * 5. Google Veo Video Preview
    */
   public async generateVideo(prompt: string, options: PuterVideoOptions = {}): Promise<PuterVideoResult> {
     const p = this.getPuter();
@@ -611,59 +721,72 @@ class PuterAiPlatformService {
       throw new Error('Puter AI Video Generation (txt2vid) is not available.');
     }
 
-    const modelToUse = options.model || 'togetherai:wan-ai/wan2.7-t2v';
+    const cleanPrompt = prompt.trim();
     const duration = options.duration || 3;
     const size = options.size || '1280x720';
 
-    options.onProgress?.('Initializing Puter video pipeline...');
+    const candidates = Array.from(
+      new Set([
+        ...(options.model ? [options.model] : []),
+        ...VIDEO_WATERFALL_CHAIN,
+      ]),
+    );
 
-    const opts: any = {
-      model: modelToUse,
-      duration,
-      size,
-      testMode: false, // Strict requirement: real generation
-    };
+    let lastErr: any = null;
 
-    if (options.input_image) {
-      opts.input_image = options.input_image;
-    }
+    for (const modelCandidate of candidates) {
+      options.onProgress?.(`Synthesizing motion frames with ${modelCandidate}...`);
 
-    options.onProgress?.(`Synthesizing motion frames with model ${modelToUse}...`);
+      const opts: any = {
+        model: modelCandidate,
+        duration,
+        size,
+        testMode: false, // Strict requirement: Real video generation
+      };
 
-    try {
-      const result = await p.ai.txt2vid(prompt, opts);
-
-      let videoUrl = '';
-      if (typeof result === 'string') {
-        videoUrl = result;
-      } else if (result?.src) {
-        videoUrl = result.src;
-      } else if (result instanceof HTMLVideoElement) {
-        videoUrl = result.src;
-      } else if (result instanceof Blob) {
-        videoUrl = URL.createObjectURL(result);
-      } else {
-        videoUrl = String(result);
+      if (options.input_image) {
+        opts.input_image = options.input_image;
       }
 
-      options.onProgress?.('Video generation complete!');
+      try {
+        console.log(`[Puter Video Waterfall] Generating video with model: ${modelCandidate}`);
+        const result = await p.ai.txt2vid(cleanPrompt, opts);
 
-      return {
-        videoUrl,
-        prompt,
-        model: modelToUse,
-        durationSeconds: duration,
-      };
-    } catch (err: any) {
-      console.error('[Puter Video] Video generation failed:', err);
-      throw err;
+        let videoUrl = '';
+        if (typeof result === 'string') {
+          videoUrl = result;
+        } else if (result?.src) {
+          videoUrl = result.src;
+        } else if (result instanceof HTMLVideoElement) {
+          videoUrl = result.src;
+        } else if (result instanceof Blob) {
+          videoUrl = URL.createObjectURL(result);
+        } else {
+          videoUrl = String(result);
+        }
+
+        if (videoUrl) {
+          options.onProgress?.(`Video generation complete via ${modelCandidate}!`);
+          return {
+            videoUrl,
+            prompt: cleanPrompt,
+            model: modelCandidate,
+            durationSeconds: duration,
+          };
+        }
+      } catch (err: any) {
+        lastErr = err;
+        console.warn(`[Puter Video Waterfall] Model "${modelCandidate}" failed, falling back to next:`, err?.message || err);
+      }
     }
+
+    throw lastErr || new Error('Video generation failed across all waterfall models.');
   }
 
-  // ─── 6. AI SPEECH & AUDIO ───
+  // ─── 6. AI SPEECH & AUDIO (AWS POLLY -> OPENAI WATERFALL) ───
 
   /**
-   * Converts text to speech using Puter.js txt2speech.
+   * Converts text to speech using Puter.js txt2speech with AWS Polly -> OpenAI TTS fallback.
    */
   public async textToSpeech(text: string, options: PuterTtsOptions = {}): Promise<PuterTtsResult> {
     const p = this.getPuter();
@@ -671,50 +794,60 @@ class PuterAiPlatformService {
       throw new Error('Puter AI Text-to-Speech (txt2speech) is not available.');
     }
 
-    const provider = options.provider || 'aws-polly';
-    const voice = options.voice || 'Joanna';
+    const candidates = [
+      { provider: options.provider || 'aws-polly', voice: options.voice || 'Joanna' },
+      { provider: 'aws-polly', voice: 'Matthew' },
+      { provider: 'openai', voice: 'alloy' },
+      { provider: 'openai', voice: 'nova' },
+    ];
 
-    const opts: any = {
-      provider,
-      voice,
-      testMode: false,
-    };
+    let lastErr: any = null;
 
-    if (options.engine) opts.engine = options.engine;
-    if (options.language) opts.language = options.language;
-
-    try {
-      const audioResult = await p.ai.txt2speech(text, opts);
-
-      let audioElement: HTMLAudioElement;
-      let audioUrl = '';
-
-      if (audioResult instanceof HTMLAudioElement) {
-        audioElement = audioResult;
-        audioUrl = audioElement.src;
-      } else if (audioResult?.src) {
-        audioUrl = audioResult.src;
-        audioElement = new Audio(audioUrl);
-      } else if (audioResult instanceof Blob) {
-        audioUrl = URL.createObjectURL(audioResult);
-        audioElement = new Audio(audioUrl);
-      } else if (typeof audioResult === 'string') {
-        audioUrl = audioResult;
-        audioElement = new Audio(audioUrl);
-      } else {
-        audioElement = new Audio();
-      }
-
-      return {
-        audioElement,
-        audioUrl,
-        voice,
-        provider,
+    for (const c of candidates) {
+      const opts: any = {
+        provider: c.provider,
+        voice: c.voice,
+        testMode: false,
       };
-    } catch (err: any) {
-      console.error('[Puter TTS] Speech synthesis failed:', err);
-      throw err;
+
+      if (options.engine) opts.engine = options.engine;
+      if (options.language) opts.language = options.language;
+
+      try {
+        const audioResult = await p.ai.txt2speech(text, opts);
+
+        let audioElement: HTMLAudioElement;
+        let audioUrl = '';
+
+        if (audioResult instanceof HTMLAudioElement) {
+          audioElement = audioResult;
+          audioUrl = audioElement.src;
+        } else if (audioResult?.src) {
+          audioUrl = audioResult.src;
+          audioElement = new Audio(audioUrl);
+        } else if (audioResult instanceof Blob) {
+          audioUrl = URL.createObjectURL(audioResult);
+          audioElement = new Audio(audioUrl);
+        } else if (typeof audioResult === 'string') {
+          audioUrl = audioResult;
+          audioElement = new Audio(audioUrl);
+        } else {
+          audioElement = new Audio();
+        }
+
+        return {
+          audioElement,
+          audioUrl,
+          voice: c.voice,
+          provider: c.provider,
+        };
+      } catch (err: any) {
+        lastErr = err;
+        console.warn(`[Puter TTS Waterfall] ${c.provider}:${c.voice} failed, falling back:`, err?.message || err);
+      }
     }
+
+    throw lastErr || new Error('TTS failed across all fallback providers.');
   }
 
   /**
