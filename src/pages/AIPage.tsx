@@ -30,6 +30,8 @@ import {
   Code2,
   Share2,
   Upload,
+  Camera,
+  Radio,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -46,6 +48,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
+import { aiHordeService } from '@/services/ai/aiHordeService';
+import { webGpuEngine } from '@/services/ai/webGpuEngine';
 
 /**
  * Detects whether the user is requesting in-chat image or video generation
@@ -151,6 +155,9 @@ export function AIPage() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string>('Joanna');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoStreamRef = useRef<HTMLVideoElement | null>(null);
+  const cameraMediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -177,6 +184,12 @@ export function AIPage() {
         setInputText(`Please analyze and summarize "${found.name}" for me.`);
         toast.info(`Attached "${found.name}" from Drive!`);
       }
+    }
+
+    const aiSearchQuery = sessionStorage.getItem('master_ai_search_query');
+    if (aiSearchQuery) {
+      sessionStorage.removeItem('master_ai_search_query');
+      setInputText(`Search and analyze my Master Cloud Drive for files matching: "${aiSearchQuery}"`);
     }
   }, [files]);
 
@@ -345,6 +358,53 @@ export function AIPage() {
     } else {
       toast.info(`Please use the paperclip icon to attach drive file "${file.name}".`);
     }
+  };
+
+  // ─── LIVE CAMERA SNAPSHOT FOR VISION AI ───
+  const handleStartCamera = async () => {
+    try {
+      setIsCameraOpen(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      });
+      cameraMediaStreamRef.current = stream;
+      setTimeout(() => {
+        if (videoStreamRef.current) {
+          videoStreamRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err: any) {
+      toast.error(`Camera access error: ${err?.message || err}`);
+      setIsCameraOpen(false);
+    }
+  };
+
+  const handleCaptureSnap = () => {
+    if (!videoStreamRef.current) return;
+    const video = videoStreamRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      setAttachedImage({
+        url: dataUrl,
+        name: `Camera_Snap_${Date.now()}.jpg`,
+      });
+      toast.success('📸 Photo snapped & attached for Vision AI analysis!');
+    }
+    handleCloseCamera();
+  };
+
+  const handleCloseCamera = () => {
+    if (cameraMediaStreamRef.current) {
+      cameraMediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraMediaStreamRef.current = null;
+    }
+    setIsCameraOpen(false);
   };
 
   // ─── PROMPT POLISHER / MAGIC WAND ───
@@ -523,9 +583,23 @@ export function AIPage() {
       );
 
       try {
-        const imgRes = await puterAiService.generateImage(mediaIntent.prompt, {
-          aspect_ratio: '1:1',
-        });
+        let finalUrl = '';
+        let finalModel = '';
+
+        try {
+          const imgRes = await puterAiService.generateImage(mediaIntent.prompt, {
+            aspect_ratio: '1:1',
+          });
+          finalUrl = imgRes.imageUrl;
+          finalModel = imgRes.model;
+        } catch (puterErr) {
+          console.warn('[Puter AI] Falling back to AI Horde Cloud GPU:', puterErr);
+          const hordeRes = await aiHordeService.generateImage(mediaIntent.prompt, {
+            aspectRatio: '1:1',
+          });
+          finalUrl = hordeRes.url;
+          finalModel = `AI Horde Cloud GPU (${hordeRes.model})`;
+        }
 
         setSessions((prev) =>
           prev.map((s) => {
@@ -534,12 +608,12 @@ export function AIPage() {
                 m.id === assistantMsgId
                   ? {
                       ...m,
-                      content: `✨ Here is your generated image powered by **${imgRes.model}**:\n\n> *"${mediaIntent.prompt}"*`,
+                      content: `✨ Here is your generated image powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`,
                       mediaAttachment: {
                         type: 'image' as const,
-                        url: imgRes.imageUrl,
+                        url: finalUrl,
                         prompt: mediaIntent.prompt,
-                        modelUsed: imgRes.model,
+                        modelUsed: finalModel,
                       },
                     }
                   : m,
@@ -549,7 +623,7 @@ export function AIPage() {
             return s;
           }),
         );
-        toast.success(`Image generated in chat via ${imgRes.model}!`);
+        toast.success(`Image generated in chat via ${finalModel}!`);
       } catch (err: any) {
         toast.error(`Image generation failed: ${err?.message || err}`);
         setSessions((prev) =>
@@ -814,6 +888,10 @@ export function AIPage() {
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 Puter.js Unified
               </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                WebGPU + AI Horde
+              </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
               Unified Multimodal Platform: In-Chat Images · Videos · Voice · Code Canvas · 100% Free
@@ -826,7 +904,7 @@ export function AIPage() {
           {/* Autonomous Status Badge */}
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Cascade: Gemini 3.8 ⚡ → OpenAI → DeepSeek</span>
+            <span>Cloud GPU: WebGPU ⚡ + AI Horde Swarm + Gemini</span>
           </div>
 
           {/* Live Voice Call Button */}
@@ -1244,6 +1322,15 @@ export function AIPage() {
 
                   <button
                     type="button"
+                    onClick={() => setInputText((prev) => (prev ? `${prev} Convert our discussion and notes into a 2-host conversational podcast script with Host A (Alex) and Host B (Sarah) discussing the key insights dynamically.` : 'Convert our discussion and notes into a 2-host conversational podcast script with Host A (Alex) and Host B (Sarah) discussing the key insights dynamically.'))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <Radio className="h-3 w-3 text-rose-400" />
+                    <span>🎙️ AI Podcast</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setIsLiveCallOpen(true)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors shrink-0 cursor-pointer ml-auto"
                   >
@@ -1318,6 +1405,15 @@ export function AIPage() {
                     onChange={handleSelectImageFile}
                     className="hidden"
                   />
+
+                  <button
+                    type="button"
+                    onClick={handleStartCamera}
+                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title="Snap live photo with webcam/camera for Vision AI"
+                  >
+                    <Camera className="h-4 w-4 text-cyan-400" />
+                  </button>
 
                   <button
                     type="button"
@@ -1497,6 +1593,59 @@ export function AIPage() {
                 title="End Call"
               >
                 <PhoneOff className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── LIVE WEBCAM SNAP MODAL ─── */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-card border border-primary/30 rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col items-center text-center space-y-4 relative overflow-hidden">
+            <div className="flex items-center justify-between w-full pb-2 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-cyan-400" />
+                <span className="font-bold text-sm text-foreground">Live Camera Snapshot</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseCamera}
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-inner flex items-center justify-center">
+              <video
+                ref={videoStreamRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Point your camera at any document, diagram, error, or object to analyze with Vision AI.
+            </p>
+
+            <div className="flex items-center gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleCloseCamera}
+                className="flex-1 py-2.5 rounded-xl border border-border/80 hover:bg-accent text-xs font-semibold text-foreground transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCaptureSnap}
+                className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-lg shadow-primary/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Capture &amp; Attach</span>
               </button>
             </div>
           </div>

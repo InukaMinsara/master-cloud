@@ -226,6 +226,28 @@ export function AppHeader() {
           </div>
         </form>
 
+        {/* Semantic AI Smart Search Trigger */}
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          onClick={() => {
+            const q = searchQuery.trim();
+            if (q) {
+              sessionStorage.setItem('master_ai_search_query', q);
+              navigate('/ai');
+              toast.info(`Asking Master AI to search and analyze Drive for: "${q}"...`);
+            } else {
+              navigate('/ai');
+            }
+          }}
+          className="hidden lg:flex items-center gap-1.5 rounded-xl h-9 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 bg-purple-500/5 cursor-pointer font-semibold text-xs"
+          title="Search all files and documents by semantic meaning using Master AI"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+          <span>AI Search</span>
+        </Button>
+
         {/* Category Filter Dropdown / Quick filter */}
         <DropdownMenu>
           <DropdownMenuTrigger>

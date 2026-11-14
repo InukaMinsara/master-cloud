@@ -12,6 +12,10 @@ import { modelRegistry } from './ai/modelRegistry';
 import { cloudBrainManager } from './ai/cloudBrain';
 import { originalBrainController } from './ai/originalBrainController';
 import { puterAiService } from './ai/puterAiService';
+import { aiHordeService } from './ai/aiHordeService';
+import { webGpuEngine } from './ai/webGpuEngine';
+
+export { aiHordeService, webGpuEngine };
 
 export const QWEN_OMNI_VIDEO_MODEL = 'qwen/qwen3.8-omni-flash:free';
 
@@ -178,6 +182,7 @@ export class AIGateway {
   }
 
   static async generateImage(payload: AIImagePayload): Promise<AIImageResult> {
+    // 1. Try Puter AI first
     try {
       const res = await puterAiService.generateImage(payload.prompt, {
         aspect_ratio: payload.aspectRatio as any,
@@ -189,8 +194,24 @@ export class AIGateway {
         aspectRatio: payload.aspectRatio || '16:9',
         source: 'upstream',
       };
-    } catch (err) {
-      console.warn('[Puter AI] Image generation fallback triggered:', err);
+    } catch (puterErr) {
+      console.warn('[Puter AI] Image generation unavailable, falling back to AI Horde Cloud GPU:', puterErr);
+    }
+
+    // 2. Fall back to AI Horde (Free distributed community cloud GPU - Stable Diffusion / SDXL)
+    try {
+      const hordeRes = await aiHordeService.generateImage(payload.prompt, {
+        aspectRatio: payload.aspectRatio,
+      });
+      return {
+        url: hordeRes.url,
+        prompt: hordeRes.prompt,
+        style: payload.style || 'Photorealistic',
+        aspectRatio: payload.aspectRatio || '16:9',
+        source: 'upstream',
+      };
+    } catch (hordeErr) {
+      console.warn('[AI Horde] Cloud GPU fallback failed:', hordeErr);
       const curatedSamples = [
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
         'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200&auto=format&fit=crop&q=80',
@@ -333,5 +354,20 @@ export class AIGateway {
         successRate,
       };
     });
+  }
+
+  /**
+   * Unified hardware telemetry for WebGPU, AI Horde Cluster GPUs, and Puter AI.
+   */
+  static async getCloudGpuTelemetry() {
+    const [webGpu, horde] = await Promise.all([
+      webGpuEngine.getDiagnostics(),
+      aiHordeService.getPerformanceStats(),
+    ]);
+
+    return {
+      webGpu,
+      horde,
+    };
   }
 }

@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   CloudDownload,
   HardDrive,
+  Wand2,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { useFileStore } from '@/stores/fileStore';
@@ -252,11 +253,13 @@ export function InlineMediaRenderer({
 }) {
   const [downloading, setDownloading] = useState(false);
   const [savingToDrive, setSavingToDrive] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState(media.url);
 
   const handleDownload = () => {
     setDownloading(true);
     const a = document.createElement('a');
-    a.href = media.url;
+    a.href = currentUrl;
     a.download = `master-ai-${media.type}-${Date.now()}.${
       media.type === 'video' ? 'mp4' : media.type === 'audio' ? 'mp3' : 'png'
     }`;
@@ -266,12 +269,65 @@ export function InlineMediaRenderer({
     setTimeout(() => setDownloading(false), 1500);
   };
 
+  const handleRemoveBg = () => {
+    if (removingBg) return;
+    setRemovingBg(true);
+    toast.info('🪄 AI Magic Eraser: Removing background...');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = currentUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas context not available');
+
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        // Sample corner pixel for dominant background color
+        const bgR = data[0];
+        const bgG = data[1];
+        const bgB = data[2];
+        const threshold = 38;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const diff = Math.sqrt(
+            Math.pow(r - bgR, 2) + Math.pow(g - bgG, 2) + Math.pow(b - bgB, 2),
+          );
+          if (diff < threshold) {
+            data[i + 3] = 0; // Alpha transparent
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        const transparentDataUrl = canvas.toDataURL('image/png');
+        setCurrentUrl(transparentDataUrl);
+        toast.success('🪄 Background removed! Transparent PNG ready.');
+      } catch {
+        toast.error('Could not remove background from this image.');
+      } finally {
+        setRemovingBg(false);
+      }
+    };
+    img.onerror = () => {
+      toast.error('Failed to load image for processing.');
+      setRemovingBg(false);
+    };
+  };
+
   const handleSaveToDrive = async () => {
     if (savingToDrive) return;
     setSavingToDrive(true);
     try {
       toast.info('Saving to Master Cloud Drive...');
-      const response = await fetch(media.url);
+      const response = await fetch(currentUrl);
       const blob = await response.blob();
       const ext = media.type === 'video' ? 'mp4' : media.type === 'audio' ? 'mp3' : 'png';
       const filename = `AI_${media.type.toUpperCase()}_${Date.now()}.${ext}`;
@@ -305,7 +361,20 @@ export function InlineMediaRenderer({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {media.type === 'image' && (
+            <button
+              type="button"
+              disabled={removingBg}
+              onClick={handleRemoveBg}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-all cursor-pointer disabled:opacity-50"
+              title="Remove background with AI Magic Eraser"
+            >
+              <Wand2 className={`w-3.5 h-3.5 text-purple-400 ${removingBg ? 'animate-spin' : ''}`} />
+              <span>{removingBg ? 'Erasing...' : '🪄 Remove BG'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             disabled={savingToDrive}
@@ -334,7 +403,7 @@ export function InlineMediaRenderer({
         {media.type === 'image' && (
           <div className="relative group max-w-full">
             <img
-              src={media.url}
+              src={currentUrl}
               alt={media.prompt || 'Generated AI Image'}
               className="rounded-xl max-h-[500px] w-auto object-contain border border-white/10 shadow-lg"
               loading="lazy"

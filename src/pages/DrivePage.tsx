@@ -19,6 +19,7 @@ import { FileListRow } from '@/components/files/FileListRow';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
+import { toast } from 'sonner';
 
 export function DrivePage() {
   const { openContextMenu } = useContextMenuStore();
@@ -35,12 +36,89 @@ export function DrivePage() {
     folders: rawFolders,
     searchQuery,
     categoryFilter,
+    createFolder,
+    moveItem,
   } = useFileStore();
 
   const { setNewFolderModalOpen, setFileRequestModalOpen } = useUIStore();
   const { addFiles } = useUploadStore();
 
   const [isDropOver, setIsDropOver] = React.useState(false);
+  const [isOrganizing, setIsOrganizing] = React.useState(false);
+
+  const handleAiAutoOrganize = async () => {
+    if (rawFiles.length === 0) {
+      toast.info('No files in this folder to organize.');
+      return;
+    }
+    setIsOrganizing(true);
+    toast.info('🤖 AI is categorizing and organizing files into smart folders...');
+    try {
+      const folderTypes = [
+        { name: 'Photos & Media', cat: 'image' },
+        { name: 'Video Library', cat: 'video' },
+        { name: 'Documents & Notes', cat: 'document' },
+        { name: 'Source Code', cat: 'code' },
+        { name: 'Audio & Music', cat: 'audio' },
+      ];
+
+      let movedCount = 0;
+      for (const ft of folderTypes) {
+        const matchFiles = rawFiles.filter((f) => {
+          if (ft.cat === 'image') return f.mime_type?.startsWith('image/');
+          if (ft.cat === 'video') return f.mime_type?.startsWith('video/');
+          if (ft.cat === 'audio') return f.mime_type?.startsWith('audio/');
+          if (ft.cat === 'document') {
+            return (
+              f.mime_type?.includes('pdf') ||
+              f.mime_type?.includes('text') ||
+              f.mime_type?.includes('word') ||
+              f.name.endsWith('.pdf') ||
+              f.name.endsWith('.docx') ||
+              f.name.endsWith('.txt')
+            );
+          }
+          if (ft.cat === 'code') {
+            return (
+              f.name.endsWith('.js') ||
+              f.name.endsWith('.ts') ||
+              f.name.endsWith('.tsx') ||
+              f.name.endsWith('.json') ||
+              f.name.endsWith('.py') ||
+              f.name.endsWith('.html')
+            );
+          }
+          return false;
+        });
+
+        if (matchFiles.length >= 2) {
+          let folder = rawFolders.find((f) => f.name.toLowerCase() === ft.name.toLowerCase());
+          if (!folder) {
+            await createFolder(ft.name);
+            await fetchItems();
+            folder = useFileStore.getState().folders.find((f) => f.name.toLowerCase() === ft.name.toLowerCase());
+          }
+          if (folder) {
+            for (const mf of matchFiles) {
+              await moveItem(mf.id, false, folder.id);
+              movedCount++;
+            }
+          }
+        }
+      }
+
+      await fetchItems();
+      if (movedCount > 0) {
+        toast.success(`✨ AI Organized ${movedCount} files into smart categorized folders!`);
+      } else {
+        toast.info('Files are already categorized.');
+      }
+    } catch (err: any) {
+      toast.error(`Auto-organize failed: ${err?.message || err}`);
+    } finally {
+      setIsOrganizing(false);
+    }
+  };
 
   const handleContextMenu = (e: React.MouseEvent) => {
     // Only open empty area context menu if click didn't come from an interactive button
@@ -113,6 +191,19 @@ export function DrivePage() {
         <Breadcrumbs />
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
+          {/* AI Smart Auto-Organize */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isOrganizing}
+            onClick={handleAiAutoOrganize}
+            className="rounded-xl h-8 text-xs font-semibold border-purple-500/30 text-purple-300 hover:bg-purple-500/10 bg-purple-500/5 cursor-pointer disabled:opacity-50"
+            title="Automatically categorize and organize messy files into smart folders with AI"
+          >
+            <Sparkles className={`h-3.5 w-3.5 mr-1 text-purple-400 ${isOrganizing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isOrganizing ? 'Organizing...' : 'AI Organize'}</span>
+          </Button>
+
           {/* File Request button */}
           <Button
             variant="outline"
