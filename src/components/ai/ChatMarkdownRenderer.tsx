@@ -115,10 +115,18 @@ export function ChatGPTCodeBlock({
   const cleanLang = (language || '').toLowerCase().trim();
   const displayLang = cleanLang || 'code';
   const isPreviewable =
-    ['html', 'htm', 'svg', 'xml'].includes(cleanLang) ||
+    ['html', 'htm', 'svg', 'xml', 'chart', 'charts', 'graph'].includes(cleanLang) ||
     cleanLang.includes('react') ||
     cleanLang === 'jsx' ||
-    cleanLang === 'tsx';
+    cleanLang === 'tsx' ||
+    code.includes('<!DOCTYPE html>') ||
+    code.includes('<svg') ||
+    code.includes('<canvas');
+
+  const getPreviewDoc = () => {
+    if (code.includes('<!DOCTYPE') || code.includes('<html')) return code;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script><script src="https://cdn.tailwindcss.com"><\/script><style>body{margin:0;padding:16px;background:#0d0d11;color:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;}canvas{max-width:100%!important;max-height:280px!important;}</style></head><body>${code}</body></html>`;
+  };
 
   const handleCopy = () => {
     if (!navigator.clipboard) return;
@@ -207,7 +215,7 @@ export function ChatGPTCodeBlock({
               title="Interactive Live Canvas"
               sandbox="allow-scripts allow-same-origin"
               className="w-full h-80 bg-white dark:bg-zinc-950 border-0 rounded-b-xl"
-              srcDoc={code}
+              srcDoc={getPreviewDoc()}
             />
           )}
         </div>

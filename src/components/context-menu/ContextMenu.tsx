@@ -20,6 +20,7 @@ import {
   Edit2,
   Link,
   FolderOpen,
+  Sparkles,
 } from 'lucide-react';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
 import { useFileStore } from '@/stores/fileStore';
@@ -104,6 +105,15 @@ export function ContextMenu() {
   if (!isOpen) return null;
 
   // File context actions
+  const handleAskAI = () => {
+    if (targetFile) {
+      sessionStorage.setItem('master_ai_attached_file_id', targetFile.id);
+      navigate('/ai');
+      toast.info(`Opening Master AI with "${targetFile.name}"...`);
+    }
+    closeContextMenu();
+  };
+
   const handleFilePreview = () => {
     if (targetFile) openPreview(targetFile, files);
     closeContextMenu();
@@ -236,6 +246,14 @@ export function ContextMenu() {
           <div className="px-2.5 py-1.5 border-b border-border/60 mb-1 flex items-center gap-2">
             <span className="font-bold text-foreground truncate max-w-[190px]">{targetFile.name}</span>
           </div>
+
+          <button
+            onClick={handleAskAI}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl font-bold bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-cyan-500/15 hover:from-purple-500/25 hover:to-cyan-500/25 text-purple-300 hover:text-purple-200 text-left transition-colors border border-purple-500/30"
+          >
+            <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+            <span>⚡ Ask Master AI</span>
+          </button>
 
           <button
             onClick={handleFilePreview}

@@ -150,6 +150,7 @@ export function AIPage() {
   const [isPolishingPrompt, setIsPolishingPrompt] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<string>('Joanna');
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -164,6 +165,20 @@ export function AIPage() {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  // Context-action from Drive: auto-attach file if passed via sessionStorage
+  useEffect(() => {
+    const preAttachedId = sessionStorage.getItem('master_ai_attached_file_id');
+    if (preAttachedId && files.length > 0) {
+      sessionStorage.removeItem('master_ai_attached_file_id');
+      const found = files.find((f) => f.id === preAttachedId);
+      if (found) {
+        setAttachedFile(found);
+        setInputText(`Please analyze and summarize "${found.name}" for me.`);
+        toast.info(`Attached "${found.name}" from Drive!`);
+      }
+    }
+  }, [files]);
 
   useEffect(() => {
     AIService.saveSessions(sessions);
@@ -242,7 +257,9 @@ export function AIPage() {
         .replace(/[*#`_>•]/g, '')
         .slice(0, 1500);
 
-      const res = await puterAiService.textToSpeech(cleanText);
+      const res = await puterAiService.textToSpeech(cleanText, {
+        voice: selectedVoice,
+      });
       activeAudioRef.current = res.audioElement;
       res.audioElement.onended = () => {
         setSpeakingMsgId(null);
@@ -1429,6 +1446,29 @@ export function AIPage() {
                 : speakingMsgId
                 ? '🔊 Master AI is speaking...'
                 : 'Tap microphone to speak or end call.'}
+            </div>
+
+            {/* Voice Personality Selector */}
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-background/50 border border-border/60 text-[11px] font-medium flex-wrap justify-center">
+              {[
+                { id: 'Joanna', label: '🌸 Joanna (Natural)' },
+                { id: 'Matthew', label: '🎙️ Matthew (Deep)' },
+                { id: 'alloy', label: '⚡ Alloy (OpenAI)' },
+                { id: 'nova', label: '🌟 Nova (Studio)' },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setSelectedVoice(v.id)}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    selectedVoice === v.id
+                      ? 'bg-primary text-primary-foreground font-bold shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
 
             {/* Call Controls */}

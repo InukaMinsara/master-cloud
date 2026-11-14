@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Captions,
   Upload,
@@ -10,10 +10,12 @@ import {
   Palette,
   Type,
   Layout,
+  Sparkles,
 } from 'lucide-react';
 import { useVideoPlayerStore, SubtitleSettings } from '@/stores/videoPlayerStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { puterAiService } from '@/services/ai/puterAiService';
 
 export function SubtitleStudioModal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +30,60 @@ export function SubtitleStudioModal() {
   const setSubtitleOffset = useVideoPlayerStore((s) => s.setSubtitleOffset);
   const updateSubtitleStyles = useVideoPlayerStore((s) => s.updateSubtitleStyles);
   const setActivePanel = useVideoPlayerStore((s) => s.setActivePanel);
+
+  const [isGeneratingAiSubtitles, setIsGeneratingAiSubtitles] = useState(false);
+
+  const handleAutoGenerateSubtitles = async () => {
+    const { videoSrc, videoFile, duration } = useVideoPlayerStore.getState();
+    const mediaSource = videoFile || videoSrc;
+    if (!mediaSource) {
+      toast.error('No video source loaded.');
+      return;
+    }
+    setIsGeneratingAiSubtitles(true);
+    toast.info('🎙️ Whisper AI is analyzing speech in this video...');
+    try {
+      const res = await puterAiService.speechToText(mediaSource);
+      if (!res?.text || !res.text.trim()) {
+        toast.warning('No spoken speech detected in this audio/video stream.');
+        return;
+      }
+
+      // Break transcript into natural sentences / phrases
+      const rawSentences = res.text
+        .replace(/([.?!])\s+/g, '$1|')
+        .split('|')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      const totalDuration = duration > 0 ? duration : 60;
+      const step = totalDuration / (rawSentences.length || 1);
+
+      const trackId = `ai_track_${Date.now()}`;
+      const newTrack = {
+        id: trackId,
+        label: `Whisper AI Subtitles (${rawSentences.length} lines)`,
+        language: 'en',
+        cues: rawSentences.map((text, idx) => ({
+          id: `cue_${trackId}_${idx}`,
+          start: idx * step,
+          end: Math.min((idx + 1) * step, totalDuration),
+          text,
+        })),
+      };
+
+      useVideoPlayerStore.setState((state) => ({
+        subtitleTracks: [...state.subtitleTracks, newTrack],
+        activeSubtitleTrackId: trackId,
+      }));
+
+      toast.success('✨ Subtitles auto-generated & enabled via Whisper AI!');
+    } catch (err: any) {
+      toast.error(`Whisper AI subtitle generation failed: ${err?.message || err}`);
+    } finally {
+      setIsGeneratingAiSubtitles(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,17 +118,31 @@ export function SubtitleStudioModal() {
 
         {/* 1. Track Selection */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-semibold text-white/80">Available Tracks</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-7 text-[11px] gap-1.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 rounded-lg"
-            >
-              <Upload className="w-3 h-3" />
-              <span>Load SRT / VTT</span>
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isGeneratingAiSubtitles}
+                onClick={handleAutoGenerateSubtitles}
+                className="h-7 text-[11px] gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10 rounded-lg bg-purple-500/5 cursor-pointer disabled:opacity-50"
+                title="Generate subtitles automatically from video audio using Whisper AI"
+              >
+                <Sparkles className={`w-3 h-3 text-purple-400 ${isGeneratingAiSubtitles ? 'animate-spin' : ''}`} />
+                <span>{isGeneratingAiSubtitles ? 'Whisper Working...' : '✨ Auto AI Subtitles'}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-7 text-[11px] gap-1.5 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 rounded-lg cursor-pointer"
+              >
+                <Upload className="w-3 h-3" />
+                <span>Load SRT / VTT</span>
+              </Button>
+            </div>
             <input
               type="file"
               ref={fileInputRef}
