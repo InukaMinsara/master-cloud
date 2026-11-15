@@ -932,13 +932,23 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
           finalUrl = imgRes.imageUrl;
           finalModel = imgRes.model;
         } catch (puterErr) {
-          console.warn('[Puter AI] Falling back to AI Horde Cloud GPU:', puterErr);
-          const hordeRes = await aiHordeService.generateImage(targetPrompt, {
-            aspectRatio: '1:1',
-            sourceImage: sentImage?.url,
-          });
-          finalUrl = hordeRes.url;
-          finalModel = `AI Horde Cloud GPU (${hordeRes.model})`;
+          console.warn('[Puter AI] Falling back to Zero-Limit Providers:', puterErr);
+          try {
+            const pollinationsRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
+              aspect_ratio: '1:1',
+              input_image: sentImage?.url,
+            });
+            finalUrl = pollinationsRes.imageUrl;
+            finalModel = pollinationsRes.model;
+          } catch (pollErr) {
+            console.warn('[Pollinations Fallback Failed, trying AI Horde]:', pollErr);
+            const hordeRes = await aiHordeService.generateImage(targetPrompt, {
+              aspectRatio: '1:1',
+              sourceImage: sentImage?.url,
+            });
+            finalUrl = hordeRes.url;
+            finalModel = `AI Horde Cloud GPU (${hordeRes.model})`;
+          }
         }
 
         setSessions((prev) =>
@@ -990,12 +1000,12 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
       return;
     }
 
-    // ─── 2. IN-CHAT VIDEO GENERATION (BYTEPLUS SEEDANCE WATERFALL) ───
+    // ─── 2. IN-CHAT VIDEO GENERATION (BYTEPLUS SEEDANCE WATERFALL & UNLIMITED MOTION ENGINE) ───
     if (mediaIntent.type === 'video') {
       const initialAssistantMsg: AIMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: `🎬 Initializing **BytePlus Seedance Video** pipeline...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Synthesizing video motion frames (this may take a few moments)...*`,
+        content: `🎬 Initializing **BytePlus Seedance Video** pipeline (Zero-Limit Cascade)...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Synthesizing video motion frames (this may take a few moments)...*`,
         timestamp: new Date().toISOString(),
       };
 
