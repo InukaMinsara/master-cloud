@@ -103,6 +103,7 @@
     "files": [
       "desktop/**/*",
       "scripts/webdav-server.mjs",
+      "scripts/master-50x-vgpu.mjs",
       "scripts/master-ram-engine.mjs",
       "scripts/ram-zstd-worker.mjs",
       "scripts/cloud-manifest.json",

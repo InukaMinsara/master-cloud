@@ -64,7 +64,7 @@ import { webGpuEngine } from '@/services/ai/webGpuEngine';
  * Detects whether the user is requesting in-chat image or video generation
  * Supports English, Sinhala, and Singlish trigger phrases.
  */
-function detectMediaIntent(text: string): { type: 'image' | 'video' | 'none'; prompt: string } {
+function detectMediaIntent(text: string, hasAttachedImage: boolean = false): { type: 'image' | 'video' | 'none'; prompt: string; isImg2Img?: boolean } {
   const clean = text.trim();
   const lower = clean.toLowerCase();
 
@@ -132,7 +132,36 @@ function detectMediaIntent(text: string): { type: 'image' | 'video' | 'none'; pr
       .trim();
 
     if (!promptPart || promptPart.length < 3) promptPart = clean;
-    return { type: 'image', prompt: promptPart };
+    return { type: 'image', prompt: promptPart, isImg2Img: hasAttachedImage };
+  }
+
+  // ─── 3. Attached Image Transformation / Inpainting / Clothing / Face Modification Intent ───
+  if (hasAttachedImage) {
+    const isEditAction =
+      lower.includes('dress') ||
+      lower.includes('wear') ||
+      lower.includes('clothes') ||
+      lower.includes('outfit') ||
+      lower.includes('suit') ||
+      lower.includes('costume') ||
+      lower.includes('andanna') ||
+      lower.includes('andapan') ||
+      lower.includes('ඇඳුමක්') ||
+      lower.includes('අඳින්න') ||
+      lower.includes('change background') ||
+      lower.includes('replace background') ||
+      lower.includes('edit') ||
+      lower.includes('modify') ||
+      lower.includes('transform') ||
+      lower.includes('restyle') ||
+      lower.includes('make him') ||
+      lower.includes('make her') ||
+      lower.includes('put on') ||
+      lower.includes('swap');
+
+    if (isEditAction) {
+      return { type: 'image', prompt: clean, isImg2Img: true };
+    }
   }
 
   return { type: 'none', prompt: clean };
@@ -798,7 +827,7 @@ export function AIPage() {
     const textToSend = customPrompt || inputText;
     if (!textToSend.trim() || isStreaming) return;
 
-    const mediaIntent = detectMediaIntent(textToSend);
+    const mediaIntent = detectMediaIntent(textToSend, Boolean(attachedImage));
 
     const sentFile = attachedFile;
     const sentImage = attachedImage;
@@ -846,12 +875,15 @@ export function AIPage() {
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
 
-    // ─── 1. IN-CHAT IMAGE GENERATION (GOOGLE IMAGEN 3 WATERFALL) ───
+    // ─── 1. IN-CHAT IMAGE GENERATION (GOOGLE IMAGEN 3 WATERFALL & MULTIMODAL IMG2IMG) ───
     if (mediaIntent.type === 'image') {
+      const isImg2Img = Boolean(sentImage);
       const initialAssistantMsg: AIMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: `🎨 Synthesizing photorealistic image with **Google Imagen 3** engine...\n\n> Prompt: *"${mediaIntent.prompt}"*`,
+        content: isImg2Img
+          ? `🎨 Analyzing reference photo with **Gemini Multimodal Vision** to preserve facial identity & generating transformation...\n\n> Edit: *"${mediaIntent.prompt}"*`
+          : `🎨 Synthesizing photorealistic image with **Google Imagen 3** engine...\n\n> Prompt: *"${mediaIntent.prompt}"*`,
         timestamp: new Date().toISOString(),
       };
 
@@ -867,17 +899,43 @@ export function AIPage() {
       try {
         let finalUrl = '';
         let finalModel = '';
+        let targetPrompt = mediaIntent.prompt;
+
+        // ─── MULTIMODAL IDENTITY PRESERVATION PROMPT ENRICHMENT ───
+        if (sentImage) {
+          try {
+            toast.info('🔍 Vision AI analyzing reference photo to lock facial identity & build...');
+            const visionAnalysis = await puterAiService.chat(
+              `The user uploaded a reference photograph and requested this edit/generation: "${mediaIntent.prompt}".
+Carefully inspect the attached reference photograph:
+1. Identify the subject: exact gender, age, hairstyle, hair color, skin tone/complexion, facial features, facial hair (beard/stubble/clean-shaven), body build, and current posture.
+2. Incorporate the user's requested edit: "${mediaIntent.prompt}".
+3. Formulate an exact, photorealistic image-to-image prompt (1-2 sentences) instructing the diffusion model to preserve this EXACT same person, face, identity, and facial structure from the reference photo, but modified to satisfy "${mediaIntent.prompt}".
+Output ONLY the resulting prompt text, with no preamble or quotes.`,
+              { image: sentImage.url, temperature: 0.2 }
+            );
+
+            if (visionAnalysis?.text && visionAnalysis.text.trim()) {
+              targetPrompt = visionAnalysis.text.trim();
+              console.log('[Multimodal Identity Preserved Prompt]:', targetPrompt);
+            }
+          } catch (visionErr) {
+            console.warn('[Multimodal Vision Refinement Error]:', visionErr);
+          }
+        }
 
         try {
-          const imgRes = await puterAiService.generateImage(mediaIntent.prompt, {
+          const imgRes = await puterAiService.generateImage(targetPrompt, {
             aspect_ratio: '1:1',
+            input_image: sentImage?.url,
           });
           finalUrl = imgRes.imageUrl;
           finalModel = imgRes.model;
         } catch (puterErr) {
           console.warn('[Puter AI] Falling back to AI Horde Cloud GPU:', puterErr);
-          const hordeRes = await aiHordeService.generateImage(mediaIntent.prompt, {
+          const hordeRes = await aiHordeService.generateImage(targetPrompt, {
             aspectRatio: '1:1',
+            sourceImage: sentImage?.url,
           });
           finalUrl = hordeRes.url;
           finalModel = `AI Horde Cloud GPU (${hordeRes.model})`;
@@ -890,7 +948,9 @@ export function AIPage() {
                 m.id === assistantMsgId
                   ? {
                       ...m,
-                      content: `✨ Here is your generated image powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`,
+                      content: isImg2Img
+                        ? `✨ Transformed image with preserved subject identity, powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`
+                        : `✨ Here is your generated image powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`,
                       mediaAttachment: {
                         type: 'image' as const,
                         url: finalUrl,
@@ -905,7 +965,7 @@ export function AIPage() {
             return s;
           }),
         );
-        toast.success(`Image generated in chat via ${finalModel}!`);
+        toast.success(`Image ${isImg2Img ? 'transformed' : 'generated'} in chat via ${finalModel}!`);
       } catch (err: any) {
         toast.error(`Image generation failed: ${err?.message || err}`);
         setSessions((prev) =>
@@ -951,6 +1011,7 @@ export function AIPage() {
       try {
         const vidRes = await puterAiService.generateVideo(mediaIntent.prompt, {
           duration: 3,
+          input_image: sentImage?.url,
           onProgress: (status) => {
             setSessions((prev) =>
               prev.map((s) => {

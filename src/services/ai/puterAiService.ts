@@ -680,10 +680,20 @@ class PuterAiPlatformService {
     const cleanPrompt = prompt.trim();
     const aspectRatio = options.aspect_ratio || '1:1';
 
+    // Prioritize models that specialize in Image-to-Image when input_image is provided
+    const img2imgPrioritized = [
+      'gpt-image-2.6-flare',
+      'stabilityai/stable-diffusion-3-medium',
+      'black-forest-labs/FLUX.1-schnell',
+      ...IMAGE_WATERFALL_CHAIN,
+    ];
+
+    const baseChain = options.input_image ? img2imgPrioritized : IMAGE_WATERFALL_CHAIN;
+
     const candidates = Array.from(
       new Set([
         ...(options.model ? [options.model] : []),
-        ...IMAGE_WATERFALL_CHAIN,
+        ...baseChain,
       ]),
     );
 
@@ -702,6 +712,7 @@ class PuterAiPlatformService {
       }
       if (options.input_image) {
         opts.input_image = options.input_image;
+        opts.input_images = [options.input_image];
       }
       if (options.negative_prompt) {
         opts.negative_prompt = options.negative_prompt;

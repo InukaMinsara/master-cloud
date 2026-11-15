@@ -191,7 +191,7 @@ export function ContextMenu() {
     try {
       let excerpt = '';
       try {
-        excerpt = await api.getFileContentText(fileToRename.id);
+        excerpt = (await api.getFileContentText(fileToRename.id)) || '';
       } catch {}
 
       const prompt = `Suggest a clean, concise, human-readable file name for a file currently named "${fileToRename.name}" (${fileToRename.extension}). File content excerpt: "${(excerpt || '').slice(0, 300)}". Output ONLY the single proposed filename (e.g. "Project_Proposal.pdf" or "Sigiriya_Sunset_View.jpg") with no extra text or markdown quotes.`;

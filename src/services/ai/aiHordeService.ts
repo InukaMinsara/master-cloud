@@ -27,6 +27,7 @@ export interface HordeImageOptions {
   cfgScale?: number;
   model?: string;
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:2';
+  sourceImage?: string;
   onStatusUpdate?: (status: { state: string; waitTimeSeconds: number; queuePosition: number }) => void;
 }
 
@@ -189,6 +190,16 @@ class AIHordeService {
       censor_nsfw: true,
       r2: true, // Use Cloudflare R2 direct image links when possible
     };
+
+    if (options.sourceImage) {
+      let rawBase64 = options.sourceImage;
+      if (rawBase64.includes('base64,')) {
+        rawBase64 = rawBase64.split('base64,')[1];
+      }
+      (payload as any).source_image = rawBase64;
+      (payload as any).source_processing = 'img2img';
+      (payload.params as any).denoising_strength = 0.55;
+    }
 
     options.onStatusUpdate?.({ state: 'submitting', waitTimeSeconds: 5, queuePosition: 1 });
 
