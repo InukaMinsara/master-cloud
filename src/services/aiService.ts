@@ -76,7 +76,13 @@ export class AIService {
             id: 'msg-welcome',
             role: 'assistant',
             content:
-              '👋 Welcome to **Master AI Studio** powered directly by **Puter.js**!\n\nAll AI features (AI Chat, Image Studio, Video Studio, Voice & Speech) run on verified free models with zero developer cost ($0) and zero API keys.\n\nAttach a Drive file or ask questions in **English** or **සිංහල (Sinhala)**!',
+              '👋 Welcome to **Master AI** — 100% Free & Unlimited Conversational AI!\n\n' +
+              'Powered by Google Gemini 3.8 Flash, OpenAI GPT-4o Mini, and DeepSeek with zero daily limits, zero token caps, and zero paywalls.\n\n' +
+              '- **Autonomous Cascade**: Gemini 3.8 Flash ⚡ → GPT-4o Mini → DeepSeek (100% Free)\n' +
+              '- **Document & Code Intelligence**: Attach files from your PC or Master Cloud Drive\n' +
+              '- **Multimodal Vision**: Paste (Ctrl+V) or attach images to analyze diagrams, code, and photos\n' +
+              '- **Web Grounding**: Real-time live web citations and web browsing\n' +
+              '- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
             timestamp: new Date().toISOString(),
             tokensUsed: 32,
             modelTag: 'puter-verified-free',

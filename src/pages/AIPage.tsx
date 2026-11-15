@@ -14,158 +14,25 @@ import {
   ArrowRight,
   Globe,
   Search,
-  MessageSquare,
   Square,
-  RefreshCw,
   Image as ImageIcon,
-  Film,
   Mic,
-  MicOff,
   Volume2,
-  VolumeX,
-  PhoneCall,
-  PhoneOff,
   Download,
   Wand2,
   Code2,
   Share2,
-  Upload,
-  Camera,
-  Radio,
-  Brain,
-  FlipHorizontal,
   Laptop,
-  FileCode,
   UploadCloud,
-  Monitor,
-  MapPin,
-  Layers,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
-import {
-  puterAiService,
-  AiMemoryItem,
-  VERIFIED_FREE_CHAT_MODELS,
-  PUTER_STANDARD_MODELS,
-  PuterImageResult,
-  PuterVideoResult,
-  PuterTtsResult,
-} from '@/services/ai/puterAiService';
+import { puterAiService } from '@/services/ai/puterAiService';
 import { useFileStore } from '@/stores/fileStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
-import { aiHordeService } from '@/services/ai/aiHordeService';
-import { webGpuEngine } from '@/services/ai/webGpuEngine';
-
-/**
- * Detects whether the user is requesting in-chat image or video generation
- * Supports English, Sinhala, and Singlish trigger phrases.
- */
-function detectMediaIntent(text: string, hasAttachedImage: boolean = false): { type: 'image' | 'video' | 'none'; prompt: string; isImg2Img?: boolean } {
-  const clean = text.trim();
-  const lower = clean.toLowerCase();
-
-  // ─── 1. Video Patterns (English, Sinhala, Singlish) ───
-  const isVideoKeyword =
-    lower.includes('video') ||
-    lower.includes('වීඩියෝ') ||
-    lower.startsWith('animate') ||
-    lower.includes('animation');
-
-  const isVideoAction =
-    lower.includes('generate') ||
-    lower.includes('create') ||
-    lower.includes('make') ||
-    lower.includes('hadanna') ||
-    lower.includes('hadapan') ||
-    lower.includes('hadala') ||
-    lower.includes('render') ||
-    lower.startsWith('animate');
-
-  if (isVideoKeyword && isVideoAction) {
-    let promptPart = clean
-      .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|make|render|animate)\s+(?:an?\s+)?video\s+(?:of|about|showing)?\s*/i, '')
-      .replace(/^(?:video\s+ekak\s+(?:hadanna|hadapan|hadala\s+denna|generate\s+karanna))\s*/i, '')
-      .replace(/^(?:meke\s+video\s+ekak\s+hadanna|hadapan)\s*/i, '')
-      .replace(/video\s*ekak\s*(?:hadanna|hadapan|generate\s*karanna)/gi, '')
-      .trim();
-
-    if (!promptPart || promptPart.length < 3) promptPart = clean;
-    return { type: 'video', prompt: promptPart };
-  }
-
-  // ─── 2. Image Patterns (English, Sinhala, Singlish) ───
-  const isImageKeyword =
-    lower.includes('image') ||
-    lower.includes('photo') ||
-    lower.includes('picture') ||
-    lower.includes('wallpaper') ||
-    lower.includes('chithra') ||
-    lower.includes('පින්තූර') ||
-    lower.startsWith('draw') ||
-    lower.startsWith('paint') ||
-    lower.startsWith('sketch');
-
-  const isImageAction =
-    lower.includes('generate') ||
-    lower.includes('create') ||
-    lower.includes('make') ||
-    lower.includes('hadanna') ||
-    lower.includes('hadapan') ||
-    lower.includes('hadala') ||
-    lower.includes('andinna') ||
-    lower.includes('andala') ||
-    lower.startsWith('draw') ||
-    lower.startsWith('paint') ||
-    lower.startsWith('sketch');
-
-  if (isImageKeyword && isImageAction) {
-    let promptPart = clean
-      .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|make|render)\s+(?:an?\s+)?(?:image|photo|picture|wallpaper|art|drawing)\s+(?:of|about|showing)?\s*/i, '')
-      .replace(/^(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:image|photo|picture)?\s*(?:of)?\s*/i, '')
-      .replace(/^(?:photo\s+ekak|image\s+ekak|pic\s+ekak)\s+(?:hadanna|hadapan|hadala\s+denna|generate\s+karanna|andinna)\s*/i, '')
-      .replace(/^(?:chithrayak|chithra)\s+(?:andinna|andala\s+denna|hadanna)\s*/i, '')
-      .replace(/(?:photo|image)\s*ekak\s*(?:hadanna|hadapan|generate\s*karanna|andinna)/gi, '')
-      .trim();
-
-    if (!promptPart || promptPart.length < 3) promptPart = clean;
-    return { type: 'image', prompt: promptPart, isImg2Img: hasAttachedImage };
-  }
-
-  // ─── 3. Attached Image Transformation / Inpainting / Clothing / Face Modification Intent ───
-  if (hasAttachedImage) {
-    const isEditAction =
-      lower.includes('dress') ||
-      lower.includes('wear') ||
-      lower.includes('clothes') ||
-      lower.includes('outfit') ||
-      lower.includes('suit') ||
-      lower.includes('costume') ||
-      lower.includes('andanna') ||
-      lower.includes('andapan') ||
-      lower.includes('ඇඳුමක්') ||
-      lower.includes('අඳින්න') ||
-      lower.includes('change background') ||
-      lower.includes('replace background') ||
-      lower.includes('edit') ||
-      lower.includes('modify') ||
-      lower.includes('transform') ||
-      lower.includes('restyle') ||
-      lower.includes('make him') ||
-      lower.includes('make her') ||
-      lower.includes('put on') ||
-      lower.includes('swap');
-
-    if (isEditAction) {
-      return { type: 'image', prompt: clean, isImg2Img: true };
-    }
-  }
-
-  return { type: 'none', prompt: clean };
-}
 
 export interface LocalAttachedFile {
   name: string;
@@ -173,12 +40,6 @@ export interface LocalAttachedFile {
   type: string;
   content: string;
   rawFile?: File;
-}
-
-export interface AstraObjectEntry {
-  id: string;
-  time: string;
-  description: string;
 }
 
 export function AIPage() {
@@ -198,39 +59,18 @@ export function AIPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sessionSearchQuery, setSessionSearchQuery] = useState('');
 
-  // ─── UNIFIED IN-CHAT SUPER AI CAPABILITIES ───
+  // Conversational AI Features
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
-  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
 
   // Vision Image Attachment & Polishing & Export State
   const [attachedImage, setAttachedImage] = useState<{ url: string; file?: File; name: string } | null>(null);
   const [isPolishingPrompt, setIsPolishingPrompt] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState<string>('Joanna');
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
-  const [cameraResolution, setCameraResolution] = useState<string>('Full HD 1080p');
-  const [isCameraFilterEnhanced, setIsCameraFilterEnhanced] = useState(false);
-  const videoStreamRef = useRef<HTMLVideoElement | null>(null);
-  const cameraMediaStreamRef = useRef<MediaStream | null>(null);
+  const selectedVoice = 'Joanna';
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
-
-  // ─── LONG-TERM MEMORY & PROJECT ASTRA CONTINUOUS VISION ───
-  const [memories, setMemories] = useState<AiMemoryItem[]>(() => puterAiService.getMemories());
-  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
-  const [newMemoryInput, setNewMemoryInput] = useState('');
-
-  const [isAstraVisionActive, setIsAstraVisionActive] = useState(false);
-  const [isAstraScreenMode, setIsAstraScreenMode] = useState(false);
-  const [astraObjectLog, setAstraObjectLog] = useState<AstraObjectEntry[]>([]);
-  const [isAstraFinderOpen, setIsAstraFinderOpen] = useState(false);
-  const [finderSearchQuery, setFinderSearchQuery] = useState('');
-  const astraIntervalRef = useRef<any>(null);
-  const astraVideoRef = useRef<HTMLVideoElement | null>(null);
-  const astraStreamRef = useRef<MediaStream | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -275,7 +115,6 @@ export function AIPage() {
 
   // ─── IN-CHAT VOICE RECORDING (SPEECH-TO-TEXT) ───
   const handleToggleVoiceRecording = async () => {
-    // ─── FULL-DUPLEX REAL-TIME VOICE BARGE-IN ───
     // If AI is currently speaking, interrupt it immediately
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
@@ -345,7 +184,7 @@ export function AIPage() {
     }
 
     setSpeakingMsgId(msgId);
-    toast.info('Synthesizing speech via AWS Polly / OpenAI voices...');
+    toast.info('Synthesizing speech via Neural voice...');
     try {
       const cleanText = text
         .replace(/```[\s\S]*?```/g, 'Code block omitted.')
@@ -472,108 +311,6 @@ export function AIPage() {
     handleAttachLocalFile(file);
   };
 
-  // ─── HIGH QUALITY CAMERA STREAM BUILDER ───
-  const getCameraStreamWithQuality = async (facing: 'user' | 'environment') => {
-    try {
-      // 1st Priority: Full HD 1080p stream with 30fps
-      return await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          frameRate: { ideal: 30, min: 24 },
-        },
-        audio: false,
-      });
-    } catch {
-      try {
-        // 2nd Priority: Standard HD (720p)
-        return await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facing,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
-        // Fallback: Default browser camera
-        return await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing },
-          audio: false,
-        });
-      }
-    }
-  };
-
-  // ─── LIVE CAMERA SNAPSHOT FOR VISION AI ───
-  const handleStartCamera = async (targetFacing?: 'user' | 'environment') => {
-    try {
-      if (cameraMediaStreamRef.current) {
-        cameraMediaStreamRef.current.getTracks().forEach((t) => t.stop());
-        cameraMediaStreamRef.current = null;
-      }
-      setIsCameraOpen(true);
-      const facing = (targetFacing === 'user' || targetFacing === 'environment') ? targetFacing : cameraFacingMode;
-      const stream = await getCameraStreamWithQuality(facing);
-      cameraMediaStreamRef.current = stream;
-
-      setTimeout(() => {
-        if (videoStreamRef.current) {
-          videoStreamRef.current.srcObject = stream;
-          videoStreamRef.current.onloadedmetadata = () => {
-            if (videoStreamRef.current) {
-              const w = videoStreamRef.current.videoWidth;
-              const h = videoStreamRef.current.videoHeight;
-              setCameraResolution(w >= 1920 ? '1080p Full HD' : w >= 1280 ? '720p HD' : `${w}×${h}`);
-            }
-          };
-        }
-      }, 100);
-    } catch (err: any) {
-      toast.error(`Camera access error: ${err?.message || err}`);
-      setIsCameraOpen(false);
-    }
-  };
-
-  const handleToggleCameraFacing = async () => {
-    const nextFacing = cameraFacingMode === 'user' ? 'environment' : 'user';
-    setCameraFacingMode(nextFacing);
-    await handleStartCamera(nextFacing);
-    toast.info(`Switched to ${nextFacing === 'user' ? 'Front (Selfie)' : 'Back (World)'} camera`);
-  };
-
-  const handleCaptureSnap = () => {
-    if (!videoStreamRef.current) return;
-    const video = videoStreamRef.current;
-    const canvas = document.createElement('canvas');
-    // Native high-res sensor capture
-    canvas.width = video.videoWidth || 1920;
-    canvas.height = video.videoHeight || 1080;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      // Ultra-HD 0.95 quality JPEG for crystal clear Vision AI analysis
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-      setAttachedImage({
-        url: dataUrl,
-        name: `HD_Camera_Snap_${canvas.width}x${canvas.height}_${Date.now()}.jpg`,
-      });
-      toast.success(`📸 HD Photo snapped (${canvas.width}×${canvas.height}) & attached for Vision AI!`);
-    }
-    handleCloseCamera();
-  };
-
-  const handleCloseCamera = () => {
-    if (cameraMediaStreamRef.current) {
-      cameraMediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      cameraMediaStreamRef.current = null;
-    }
-    setIsCameraOpen(false);
-  };
-
   // ─── LIVE WEBPAGE URL SCRAPER ───
   const extractUrlFromText = (text: string): string | null => {
     const match = text.match(/https?:\/\/[^\s]+/i);
@@ -599,123 +336,6 @@ export function AIPage() {
     return null;
   };
 
-  // ─── PROJECT ASTRA CONTINUOUS LIVE VISION & SCREEN LENS ───
-  const startAstraVisionLoop = (isScreen: boolean) => {
-    if (astraIntervalRef.current) clearInterval(astraIntervalRef.current);
-    astraIntervalRef.current = setInterval(async () => {
-      if (!astraVideoRef.current || isStreaming) return;
-      const video = astraVideoRef.current;
-      if (video.videoWidth === 0) return;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.min(video.videoWidth, 1280);
-      canvas.height = Math.min(video.videoHeight, 720);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frameDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-      try {
-        const modePrompt = isScreen
-          ? 'You are Project Astra live screen-sharing AI. In 1 concise conversational sentence, describe what the user has open on their computer screen (code, document, website) and give 1 helpful insight or tip.'
-          : 'You are Project Astra continuous live vision AI. In 1 concise conversational sentence, describe any objects, text, or action you see through the camera right now to the user.';
-
-        const res = await puterAiService.chat(modePrompt, { image: frameDataUrl, temperature: 0.3 });
-        if (res?.text && res.text.trim()) {
-          const observation = res.text.trim();
-          // Log to Spatial Object Memory ("Astra Finder")
-          setAstraObjectLog((prev) => [
-            {
-              id: 'obj-' + Date.now(),
-              time: new Date().toLocaleTimeString(),
-              description: observation,
-            },
-            ...prev.slice(0, 49),
-          ]);
-
-          if (!speakingMsgId) {
-            handleReadAloud('astra-live', observation);
-          }
-        }
-      } catch {}
-    }, 4000);
-  };
-
-  const startAstraVision = async (mode: 'camera' | 'screen' = 'camera') => {
-    try {
-      if (mode === 'screen') {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: 'monitor' } as any,
-          audio: false,
-        });
-        if (astraStreamRef.current) {
-          astraStreamRef.current.getTracks().forEach((t) => t.stop());
-        }
-        astraStreamRef.current = stream;
-        setIsAstraVisionActive(true);
-        setIsAstraScreenMode(true);
-        setTimeout(() => {
-          if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
-        }, 100);
-
-        stream.getVideoTracks()[0].onended = () => {
-          stopAstraVision();
-          toast.info('Screen share ended.');
-        };
-
-        toast.success('🖥️ Project Astra Screen Lens ACTIVE! AI is observing your screen.');
-        startAstraVisionLoop(true);
-      } else {
-        const stream = await getCameraStreamWithQuality('environment');
-        if (astraStreamRef.current) {
-          astraStreamRef.current.getTracks().forEach((t) => t.stop());
-        }
-        astraStreamRef.current = stream;
-        setIsAstraVisionActive(true);
-        setIsAstraScreenMode(false);
-        setTimeout(() => {
-          if (astraVideoRef.current) astraVideoRef.current.srcObject = stream;
-        }, 100);
-
-        toast.info('🛰️ Project Astra Live Continuous Vision activated (Full HD)!');
-        startAstraVisionLoop(false);
-      }
-    } catch (err: any) {
-      toast.error(`Astra vision error: ${err?.message || err}`);
-      stopAstraVision();
-    }
-  };
-
-  const stopAstraVision = () => {
-    if (astraIntervalRef.current) {
-      clearInterval(astraIntervalRef.current);
-      astraIntervalRef.current = null;
-    }
-    if (astraStreamRef.current) {
-      astraStreamRef.current.getTracks().forEach((t) => t.stop());
-      astraStreamRef.current = null;
-    }
-    setIsAstraVisionActive(false);
-    setIsAstraScreenMode(false);
-  };
-
-  // ─── MEMORY HANDLERS ───
-  const handleAddManualMemory = () => {
-    if (!newMemoryInput.trim()) return;
-    const item = puterAiService.saveMemory(newMemoryInput.trim());
-    setMemories((prev) => [item, ...prev]);
-    setNewMemoryInput('');
-    toast.success('Saved to Long-Term Memory!');
-  };
-
-  const handleDeleteMemory = (id: string) => {
-    puterAiService.deleteMemory(id);
-    setMemories((prev) => prev.filter((m) => m.id !== id));
-    toast.info('Memory deleted.');
-  };
-
   // ─── PROMPT POLISHER / MAGIC WAND ───
   const handlePolishPrompt = async () => {
     if (!inputText.trim()) {
@@ -738,7 +358,7 @@ export function AIPage() {
   // ─── CHAT EXPORT (MARKDOWN & PRINT) ───
   const handleExportMarkdown = () => {
     if (!activeSession) return;
-    let md = `# ${activeSession.title}\n*Exported from Master AI Studio on ${new Date().toLocaleString()}*\n\n---\n\n`;
+    let md = `# ${activeSession.title}\n*Exported from Master AI on ${new Date().toLocaleString()}*\n\n---\n\n`;
     for (const msg of activeSession.messages) {
       const roleName = msg.role === 'user' ? '👤 User' : '🤖 Master AI';
       const time = new Date(msg.timestamp).toLocaleTimeString();
@@ -778,7 +398,13 @@ export function AIPage() {
           id: 'msg-' + Date.now(),
           role: 'assistant',
           content:
-            '👋 Welcome to **Master AI Studio** — Unified Multimodal Super AI!\n\nAll capabilities (Chat, Image Gen, Video Gen, Voice, Code Canvas & Web Search) are unified right here in one seamless window with zero API keys and 100% free models.\n\n- **Autonomous Waterfall**: Google Gemini 3.8 Flash ⚡ → OpenAI GPT-4o → DeepSeek Free Tier\n- **In-Chat Images**: Type *"photo ekak hadanna [prompt]"* for Google Imagen 3\n- **In-Chat Videos**: Type *"video ekak hadanna [prompt]"* for BytePlus Seedance Video\n- **Interactive Canvas**: Generate HTML/React/SVG widgets and preview them live\n- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
+            '👋 Welcome to **Master AI** — 100% Free & Unlimited Conversational Copilot!\n\n' +
+            'Powered by Google Gemini 3.8 Flash, OpenAI GPT-4o Mini, and DeepSeek with zero daily limits, zero token caps, and zero paywalls.\n\n' +
+            '- **Autonomous Cascade**: Gemini 3.8 Flash ⚡ → GPT-4o Mini → DeepSeek (100% Free)\n' +
+            '- **Document & Code Intelligence**: Attach files from your PC or Master Cloud Drive\n' +
+            '- **Multimodal Vision**: Paste (Ctrl+V) or attach images to analyze diagrams, code, and photos\n' +
+            '- **Web Grounding**: Real-time live web citations and web browsing\n' +
+            '- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
           timestamp: new Date().toISOString(),
           tokensUsed: 32,
         },
@@ -822,12 +448,10 @@ export function AIPage() {
     toast.info('Chat history cleared for this session.');
   };
 
-  // Send message with streaming + cancel support + in-chat media generation
+  // ─── SEND MESSAGE WITH STREAMING + CANCEL SUPPORT (PURE UNLIMITED CHATTING) ───
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputText;
     if (!textToSend.trim() || isStreaming) return;
-
-    const mediaIntent = detectMediaIntent(textToSend, Boolean(attachedImage));
 
     const sentFile = attachedFile;
     const sentImage = attachedImage;
@@ -875,221 +499,7 @@ export function AIPage() {
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
 
-    // ─── 1. IN-CHAT IMAGE GENERATION (GOOGLE IMAGEN 3 WATERFALL & MULTIMODAL IMG2IMG) ───
-    if (mediaIntent.type === 'image') {
-      const isImg2Img = Boolean(sentImage);
-      const initialAssistantMsg: AIMessage = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: isImg2Img
-          ? `🎨 Analyzing reference photo with **Gemini Multimodal Vision** to preserve facial identity & generating transformation...\n\n> Edit: *"${mediaIntent.prompt}"*`
-          : `🎨 Synthesizing photorealistic image with **Google Imagen 3** engine...\n\n> Prompt: *"${mediaIntent.prompt}"*`,
-        timestamp: new Date().toISOString(),
-      };
-
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === activeSession.id) {
-            return { ...s, messages: [...s.messages, initialAssistantMsg] };
-          }
-          return s;
-        }),
-      );
-
-      try {
-        let finalUrl = '';
-        let finalModel = '';
-        let targetPrompt = mediaIntent.prompt;
-
-        // ─── MULTIMODAL IDENTITY PRESERVATION PROMPT ENRICHMENT ───
-        if (sentImage) {
-          try {
-            toast.info('🔍 Vision AI analyzing reference photo to lock facial identity & build...');
-            const visionAnalysis = await puterAiService.chat(
-              `The user uploaded a reference photograph and requested this edit/generation: "${mediaIntent.prompt}".
-Carefully inspect the attached reference photograph:
-1. Identify the subject: exact gender, age, hairstyle, hair color, skin tone/complexion, facial features, facial hair (beard/stubble/clean-shaven), body build, and current posture.
-2. Incorporate the user's requested edit: "${mediaIntent.prompt}".
-3. Formulate an exact, photorealistic image-to-image prompt (1-2 sentences) instructing the diffusion model to preserve this EXACT same person, face, identity, and facial structure from the reference photo, but modified to satisfy "${mediaIntent.prompt}".
-Output ONLY the resulting prompt text, with no preamble or quotes.`,
-              { image: sentImage.url, temperature: 0.2 }
-            );
-
-            if (visionAnalysis?.text && visionAnalysis.text.trim()) {
-              targetPrompt = visionAnalysis.text.trim();
-              console.log('[Multimodal Identity Preserved Prompt]:', targetPrompt);
-            }
-          } catch (visionErr) {
-            console.warn('[Multimodal Vision Refinement Error]:', visionErr);
-          }
-        }
-
-        try {
-          const imgRes = await puterAiService.generateImage(targetPrompt, {
-            aspect_ratio: '1:1',
-            input_image: sentImage?.url,
-          });
-          finalUrl = imgRes.imageUrl;
-          finalModel = imgRes.model;
-        } catch (puterErr) {
-          console.warn('[Puter AI] Falling back to Zero-Limit Providers:', puterErr);
-          try {
-            const pollinationsRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
-              aspect_ratio: '1:1',
-              input_image: sentImage?.url,
-            });
-            finalUrl = pollinationsRes.imageUrl;
-            finalModel = pollinationsRes.model;
-          } catch (pollErr) {
-            console.warn('[Pollinations Fallback Failed, trying AI Horde]:', pollErr);
-            const hordeRes = await aiHordeService.generateImage(targetPrompt, {
-              aspectRatio: '1:1',
-              sourceImage: sentImage?.url,
-            });
-            finalUrl = hordeRes.url;
-            finalModel = `AI Horde Cloud GPU (${hordeRes.model})`;
-          }
-        }
-
-        setSessions((prev) =>
-          prev.map((s) => {
-            if (s.id === activeSession.id) {
-              const msgs = s.messages.map((m) =>
-                m.id === assistantMsgId
-                  ? {
-                      ...m,
-                      content: isImg2Img
-                        ? `✨ Transformed image with preserved subject identity, powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`
-                        : `✨ Here is your generated image powered by **${finalModel}**:\n\n> *"${mediaIntent.prompt}"*`,
-                      mediaAttachment: {
-                        type: 'image' as const,
-                        url: finalUrl,
-                        prompt: mediaIntent.prompt,
-                        modelUsed: finalModel,
-                      },
-                    }
-                  : m,
-              );
-              return { ...s, messages: msgs };
-            }
-            return s;
-          }),
-        );
-        toast.success(`Image ${isImg2Img ? 'transformed' : 'generated'} in chat via ${finalModel}!`);
-      } catch (err: any) {
-        toast.error(`Image generation failed: ${err?.message || err}`);
-        setSessions((prev) =>
-          prev.map((s) => {
-            if (s.id === activeSession.id) {
-              const msgs = s.messages.map((m) =>
-                m.id === assistantMsgId
-                  ? {
-                      ...m,
-                      content: `⚠️ Image generation could not be completed across waterfall candidates: ${err?.message || err}`,
-                    }
-                  : m,
-              );
-              return { ...s, messages: msgs };
-            }
-            return s;
-          }),
-        );
-      } finally {
-        setIsStreaming(false);
-      }
-      return;
-    }
-
-    // ─── 2. IN-CHAT VIDEO GENERATION (BYTEPLUS SEEDANCE WATERFALL & UNLIMITED MOTION ENGINE) ───
-    if (mediaIntent.type === 'video') {
-      const initialAssistantMsg: AIMessage = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: `🎬 Initializing **BytePlus Seedance Video** pipeline (Zero-Limit Cascade)...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Synthesizing video motion frames (this may take a few moments)...*`,
-        timestamp: new Date().toISOString(),
-      };
-
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === activeSession.id) {
-            return { ...s, messages: [...s.messages, initialAssistantMsg] };
-          }
-          return s;
-        }),
-      );
-
-      try {
-        const vidRes = await puterAiService.generateVideo(mediaIntent.prompt, {
-          duration: 3,
-          input_image: sentImage?.url,
-          onProgress: (status) => {
-            setSessions((prev) =>
-              prev.map((s) => {
-                if (s.id === activeSession.id) {
-                  const msgs = s.messages.map((m) =>
-                    m.id === assistantMsgId
-                      ? {
-                          ...m,
-                          content: `🎬 Initializing **BytePlus Seedance Video** pipeline...\n\n> Prompt: *"${mediaIntent.prompt}"*\n\n*Status: ${status}*`,
-                        }
-                      : m,
-                  );
-                  return { ...s, messages: msgs };
-                }
-                return s;
-              }),
-            );
-          },
-        });
-
-        setSessions((prev) =>
-          prev.map((s) => {
-            if (s.id === activeSession.id) {
-              const msgs = s.messages.map((m) =>
-                m.id === assistantMsgId
-                  ? {
-                      ...m,
-                      content: `🎬 Here is your rendered video clip powered by **${vidRes.model}**:\n\n> *"${mediaIntent.prompt}"*`,
-                      mediaAttachment: {
-                        type: 'video' as const,
-                        url: vidRes.videoUrl,
-                        prompt: mediaIntent.prompt,
-                        modelUsed: vidRes.model,
-                      },
-                    }
-                  : m,
-              );
-              return { ...s, messages: msgs };
-            }
-            return s;
-          }),
-        );
-        toast.success(`Video generated in chat via ${vidRes.model}!`);
-      } catch (err: any) {
-        toast.error(`Video generation failed: ${err?.message || err}`);
-        setSessions((prev) =>
-          prev.map((s) => {
-            if (s.id === activeSession.id) {
-              const msgs = s.messages.map((m) =>
-                m.id === assistantMsgId
-                  ? {
-                      ...m,
-                      content: `⚠️ Video generation could not be completed across waterfall candidates: ${err?.message || err}`,
-                    }
-                  : m,
-              );
-              return { ...s, messages: msgs };
-            }
-            return s;
-          }),
-        );
-      } finally {
-        setIsStreaming(false);
-      }
-      return;
-    }
-
-    // ─── 3. TEXT CHAT STREAMING (GEMINI -> OPENAI -> DEEPSEEK CASCADE) ───
+    // Initial empty assistant message for streaming
     const initialAssistantMsg: AIMessage = {
       id: assistantMsgId,
       role: 'assistant',
@@ -1113,7 +523,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
     try {
       let promptToSend = textToSend.trim();
 
-      // ─── LIVE WEBPAGE URL SCRAPING & GROUNDING ───
+      // Live Webpage URL Scraping & Grounding
       const foundUrl = extractUrlFromText(textToSend);
       if (foundUrl) {
         toast.info(`🌐 Reading & scraping webpage: ${foundUrl}...`);
@@ -1124,16 +534,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         }
       }
 
-      // ─── AUTO-SAVE TO LONG-TERM MEMORY ───
-      if (/remember that|mathaka thiyaganna|my name is|mage nama|i work as|i am a /i.test(textToSend)) {
-        const cleanFact = textToSend.replace(/^(please )?(remember that|mathaka thiyaganna)\s*/i, '').trim();
-        if (cleanFact.length > 5 && cleanFact.length < 200) {
-          const saved = puterAiService.saveMemory(cleanFact);
-          setMemories((prev) => [saved, ...prev]);
-          toast.success(`🧠 Saved to AI Long-Term Memory: "${cleanFact.slice(0, 36)}..."`);
-        }
-      }
-
+      // Cloud Drive File Excerpt Context
       if (sentFile) {
         try {
           const fileExcerpt = await api.getFileContentText(sentFile.id);
@@ -1145,11 +546,12 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         }
       }
 
+      // Local PC File Excerpt Context
       if (sentLocalFile) {
         promptToSend = `[Attached Local PC File: ${sentLocalFile.name} (${(sentLocalFile.size / 1024).toFixed(1)} KB)]\n\`\`\`\n${sentLocalFile.content.slice(0, 15000)}\n\`\`\`\n\n[User Prompt]:\n${promptToSend}`;
       }
 
-      // Stream directly through Puter.js with automatic waterfall cascade
+      // Stream directly through Puter.js with automatic waterfall cascade (Gemini 3.8 Flash -> GPT-4o -> DeepSeek)
       const historyForPuter = cleanedPriorMessages
         .filter((m) => m.id !== 'msg-welcome' && m.content && m.content.trim().length > 0)
         .map((m) => ({
@@ -1164,7 +566,6 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         messages: historyForPuter,
         signal: abortCtrl.signal,
         image: sentImage?.url,
-        memories,
       });
 
       for await (const chunk of puterStream) {
@@ -1240,10 +641,10 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
   };
 
   const promptSuggestions = [
-    { label: '🎨 AI Image Gen (In-Chat)', text: 'Photo ekak hadanna futuristic cybernetic supercar in Tokyo neon rain' },
-    { label: '🎬 AI Video Gen (In-Chat)', text: 'Video ekak hadanna cinematic drone flying through misty mountain valley at sunset' },
-    { label: '⚡ Extreme Fast Chat (Sinhala)', text: 'Master AI Puter.js Studio එක ගැන කෙටියෙන් සිංහලෙන් පහදන්න.' },
-    { label: '💻 Interactive Canvas Artifact', text: 'Write an interactive HTML & CSS modern calculator widget with working buttons.' },
+    { label: '⚡ Fast Chat (Sinhala)', text: 'Master Cloud එකේ Unlimited AI Chat එක ගැන කෙටියෙන් සිංහලෙන් කියන්න.' },
+    { label: '💻 Code Generation', text: 'Write a clean, responsive TypeScript and Tailwind CSS Dashboard component.' },
+    { label: '📑 File & Code Analysis', text: 'Analyze this code or document, extract key points, and suggest improvements.' },
+    { label: '🧠 Deep Reasoning', text: 'Compare Monolithic vs Microservices architecture with real-world trade-offs.' },
   ];
 
   const filteredSessions = sessions.filter(
@@ -1254,7 +655,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
 
   return (
     <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background text-foreground select-none">
-      {/* ─── MASTER AI CORE TOP NAVIGATION BAR ─── */}
+      {/* ─── MASTER AI CHAT TOP HEADER ─── */}
       <header className="h-14 border-b border-border/70 bg-card/40 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 gap-3">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
@@ -1263,913 +664,574 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                MASTER AI STUDIO
+                MASTER AI CHAT
               </h1>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Puter.js Unified
+                100% Free &amp; Unlimited
               </span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                WebGPU + AI Horde
+                Gemini 3.8 Flash + GPT-4o
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Unified Multimodal Platform: In-Chat Images · Videos · Voice · Code Canvas · 100% Free
+              Zero Token Caps · Zero Daily Message Limits · Deep Code &amp; Document Intelligence
             </p>
           </div>
         </div>
 
-        {/* ─── UNIFIED HEADER RIGHT ACTIONS ─── */}
+        {/* ─── HEADER STATUS BADGE ─── */}
         <div className="flex items-center gap-2">
-          {/* Autonomous Status Badge */}
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Cloud GPU: WebGPU ⚡ + AI Horde Swarm + Gemini</span>
+            <span>⚡ Cascade: Gemini 3.8 Flash → GPT-4o Mini → DeepSeek</span>
           </div>
-
-          {/* Live Voice Call Button */}
-          <button
-            type="button"
-            onClick={() => setIsLiveCallOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-            title="Start Live Conversational Voice Call"
-          >
-            <PhoneCall className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Live Voice Call</span>
-          </button>
         </div>
       </header>
 
-      {/* ─── UNIFIED MASTER AI STUDIO ─── */}
+      {/* ─── MAIN CHAT INTERFACE ─── */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar: Conversations, Persona, Model */}
-          <div className="w-64 sm:w-72 border-r border-border/60 bg-card/25 flex flex-col shrink-0">
-            {/* Header / New Chat */}
-            <div className="p-3 border-b border-border/50 flex items-center justify-between gap-2">
-              <span className="font-bold text-xs text-muted-foreground uppercase tracking-wider">
-                Conversations
-              </span>
-              <button
-                onClick={handleNewSession}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors"
-                title="Start a new conversation"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>New Chat</span>
-              </button>
-            </div>
+        <div className="w-64 sm:w-72 border-r border-border/60 bg-card/25 flex flex-col shrink-0">
+          {/* Header / New Chat */}
+          <div className="p-3 border-b border-border/50 flex items-center justify-between gap-2">
+            <span className="font-bold text-xs text-muted-foreground uppercase tracking-wider">
+              Conversations
+            </span>
+            <button
+              onClick={handleNewSession}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors cursor-pointer"
+              title="Start a new conversation"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Chat</span>
+            </button>
+          </div>
 
-            {/* Session Search */}
-            <div className="p-2 border-b border-border/50">
-              <div className="relative">
-                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  value={sessionSearchQuery}
-                  onChange={(e) => setSessionSearchQuery(e.target.value)}
-                  className="w-full bg-muted/50 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary border border-border/50"
-                />
-              </div>
-            </div>
-
-            {/* Persona & Model Selector Controls */}
-            <div className="p-3 border-b border-border/50 space-y-2.5 bg-muted/20">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Assistant Persona
-                </label>
-                <select
-                  value={activeSession.persona}
-                  onChange={(e) => {
-                    const updated = sessions.map((s) =>
-                      s.id === activeSession.id ? { ...s, persona: e.target.value as any } : s,
-                    );
-                    setSessions(updated);
-                  }}
-                  className="w-full bg-background text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-border/60 focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="general">General Copilot</option>
-                  <option value="analyst">Document Analyst</option>
-                  <option value="coder">Code Architect</option>
-                  <option value="writer">Executive Writer</option>
-                </select>
-              </div>
-
-              {/* Autonomous AI Waterfall Routing Engine (Models hidden from user, auto-switching) */}
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 via-purple-500/5 to-cyan-500/10 border border-primary/20 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">
-                      Autonomous AI Cascade
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">100% Free</span>
-                </div>
-
-                <div className="text-[11px] space-y-1 text-muted-foreground font-mono">
-                  <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
-                    <span className="text-[10px] text-zinc-500">1.</span>
-                    <span>⚡ Google Gemini 3.8 Flash</span>
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 ml-auto">Active</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-400">
-                    <span className="text-[10px] text-zinc-600">2.</span>
-                    <span>⚡ OpenAI GPT-4o Mini</span>
-                    <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 2</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-zinc-400">
-                    <span className="text-[10px] text-zinc-600">3.</span>
-                    <span>⚡ DeepSeek &amp; Open Weights</span>
-                    <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 3</span>
-                  </div>
-                </div>
-
-                <p className="text-[9px] text-muted-foreground/80 pt-0.5 leading-snug">
-                  Zero manual switches. If Google Gemini free tier is exhausted, it seamlessly routes to OpenAI, then DeepSeek.
-                </p>
-              </div>
-            </div>
-
-            {/* Sessions List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {filteredSessions.map((s) => {
-                const isSelected = activeSessionId === s.id;
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => setActiveSessionId(s.id)}
-                    className={`group px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                    }`}
-                  >
-                    <span className="truncate flex-1 pr-2">{s.title}</span>
-                    {sessions.length > 1 && (
-                      <button
-                        onClick={(e) => handleDeleteSession(s.id, e)}
-                        className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity p-0.5"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Bottom Status Badge */}
-            <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono gap-2">
-              <span className="flex items-center gap-1.5 text-cyan-400 font-semibold truncate">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
-                Puter.js Gateway: Connected
-              </span>
-              <span className="text-[10px] text-emerald-400 font-mono">
-                100% Free Models
-              </span>
+          {/* Session Search */}
+          <div className="p-2 border-b border-border/50">
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={sessionSearchQuery}
+                onChange={(e) => setSessionSearchQuery(e.target.value)}
+                className="w-full bg-muted/50 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary border border-border/50"
+              />
             </div>
           </div>
 
-          {/* Right Main Chat Thread & Input */}
-          <div className="flex-1 flex flex-col overflow-hidden bg-secondary/5">
-            {/* Thread Header */}
-            <div className="h-12 border-b border-border/60 px-4 sm:px-6 flex items-center justify-between bg-card/30 backdrop-blur-md shrink-0">
-              <div className="flex items-center gap-2 truncate">
-                <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div className="truncate">
-                  <h2 className="font-bold text-xs text-foreground truncate">{activeSession.title}</h2>
-                  <span className="text-[10px] text-muted-foreground capitalize">
-                    {activeSession.persona} Persona · Zero Key Leaks · Verified Free Gateway
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  ⚡ Extreme Fast Stream Active (~120 tok/s)
-                </span>
-
-                {/* Long-Term Memory Badge */}
-                <button
-                  type="button"
-                  onClick={() => setIsMemoryModalOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-[11px] font-semibold text-purple-300 transition-colors cursor-pointer"
-                  title="View and manage AI cross-session long-term memory"
-                >
-                  <Brain className="h-3 w-3 text-purple-400" />
-                  <span>Memory ({memories.length})</span>
-                </button>
-
-                {/* Astra Spatial Object Finder */}
-                <button
-                  type="button"
-                  onClick={() => setIsAstraFinderOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-[11px] font-semibold text-cyan-300 transition-colors cursor-pointer"
-                  title="Astra Spatial Object Memory (Lost item finder & visual observation log)"
-                >
-                  <MapPin className="h-3 w-3 text-cyan-400" />
-                  <span>Astra Finder {astraObjectLog.length > 0 && `(${astraObjectLog.length})`}</span>
-                </button>
-
-                {/* Chat Export Menu */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] font-semibold text-foreground transition-colors cursor-pointer"
-                    title="Export chat transcript"
-                  >
-                    <Share2 className="h-3 w-3 text-primary" />
-                    <span>Export</span>
-                  </button>
-
-                  {isExportMenuOpen && (
-                    <div className="absolute right-0 mt-1 w-52 rounded-xl bg-card border border-border/80 shadow-2xl z-30 py-1.5 text-xs animate-in fade-in zoom-in-95">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsExportMenuOpen(false);
-                          handleExportMarkdown();
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground"
-                      >
-                        <FileText className="h-4 w-4 text-purple-400" />
-                        <div>
-                          <div className="font-semibold">Markdown (.md)</div>
-                          <div className="text-[10px] text-muted-foreground">Download formatted text</div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsExportMenuOpen(false);
-                          handlePrintChat();
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground border-t border-border/40"
-                      >
-                        <Download className="h-4 w-4 text-cyan-400" />
-                        <div>
-                          <div className="font-semibold">Print / Save PDF</div>
-                          <div className="text-[10px] text-muted-foreground">Save as PDF document</div>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleClearCurrentSession}
-                  className="px-2 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                  title="Clear chat messages in this session"
-                >
-                  Clear Chat
-                </button>
-              </div>
+          {/* Persona & Model Selector Controls */}
+          <div className="p-3 border-b border-border/50 space-y-2.5 bg-muted/20">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Assistant Persona
+              </label>
+              <select
+                value={activeSession.persona}
+                onChange={(e) => {
+                  const updated = sessions.map((s) =>
+                    s.id === activeSession.id ? { ...s, persona: e.target.value as any } : s,
+                  );
+                  setSessions(updated);
+                }}
+                className="w-full bg-background text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-border/60 focus:outline-none focus:border-primary cursor-pointer"
+              >
+                <option value="general">General Copilot</option>
+                <option value="analyst">Document Analyst</option>
+                <option value="coder">Code Architect</option>
+                <option value="writer">Executive Writer</option>
+              </select>
             </div>
 
-            {/* Message Thread */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 relative"
-            >
-              {isDraggingOver && (
-                <div className="absolute inset-4 bg-primary/20 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl z-30 flex flex-col items-center justify-center gap-2 pointer-events-none">
-                  <UploadCloud className="h-12 w-12 text-cyan-400 animate-bounce" />
-                  <span className="text-sm font-bold text-foreground">Drop files from your PC to attach to Master AI</span>
-                  <span className="text-xs text-muted-foreground">Code, documents, data (.json, .csv, .py, .pdf) or images</span>
+            {/* Autonomous AI Waterfall Routing Engine */}
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 via-purple-500/5 to-cyan-500/10 border border-primary/20 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">
+                    Autonomous AI Cascade
+                  </span>
                 </div>
-              )}
+                <span className="text-[9px] text-emerald-400 font-bold font-mono">100% Free</span>
+              </div>
 
-              {activeSession.messages
-                .filter((msg) => msg.role === 'user' || Boolean(msg.content && msg.content.trim().length > 0) || isStreaming)
-                .map((msg) => (
+              <div className="text-[11px] space-y-1 text-muted-foreground font-mono">
+                <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
+                  <span className="text-[10px] text-zinc-500">1.</span>
+                  <span>⚡ Google Gemini 3.8 Flash</span>
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 ml-auto">Active</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <span className="text-[10px] text-zinc-600">2.</span>
+                  <span>⚡ OpenAI GPT-4o Mini</span>
+                  <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 2</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <span className="text-[10px] text-zinc-600">3.</span>
+                  <span>⚡ DeepSeek &amp; Open Weights</span>
+                  <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 3</span>
+                </div>
+              </div>
+
+              <p className="text-[9px] text-muted-foreground/80 pt-0.5 leading-snug">
+                Zero manual switches. If Google Gemini free tier is exhausted, it seamlessly routes to OpenAI, then DeepSeek.
+              </p>
+            </div>
+          </div>
+
+          {/* Sessions List */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {filteredSessions.map((s) => {
+              const isSelected = activeSessionId === s.id;
+              return (
                 <div
-                  key={msg.id}
-                  className={`flex gap-3 w-full ${
-                    msg.role === 'user'
-                      ? 'ml-auto flex-row-reverse justify-start'
-                      : 'mr-auto max-w-3xl lg:max-w-4xl'
+                  key={s.id}
+                  onClick={() => setActiveSessionId(s.id)}
+                  className={`group px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all flex items-center justify-between ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                 >
-                  <div
-                    className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white'
-                    }`}
-                  >
-                    {msg.role === 'user' ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                  </div>
-
-                  <div
-                    className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground font-medium max-w-xl'
-                        : 'bg-card border border-border/80 text-foreground w-full overflow-hidden'
-                    }`}
-                  >
-                    {msg.attachedFile && (
-                      <div className="mb-2.5 p-2 rounded-xl bg-background/50 border border-border/60 flex items-center gap-2 text-xs">
-                        <FileText className="h-4 w-4 text-primary shrink-0" />
-                        <span className="font-bold truncate">{msg.attachedFile.name}</span>
-                      </div>
-                    )}
-
-                    {msg.role === 'user' ? (
-                      <div className="space-y-2">
-                        {msg.imageAttachment && (
-                          <div className="max-w-sm rounded-xl overflow-hidden border border-white/20 shadow-md">
-                            <img
-                              src={msg.imageAttachment}
-                              alt="Vision attachment"
-                              className="max-h-60 w-auto object-contain rounded-lg"
-                            />
-                          </div>
-                        )}
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
-                      </div>
-                    ) : (
-                      <ChatMarkdownRenderer
-                        content={msg.content}
-                        mediaAttachment={msg.mediaAttachment}
-                        isStreaming={isStreaming && msg.id === activeSession.messages[activeSession.messages.length - 1]?.id}
-                      />
-                    )}
-
-                    {msg.role === 'assistant' && msg.content && (
-                      <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span className="font-mono text-cyan-400">Master AI Core v2.2 · Puter.js</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleReadAloud(msg.id, msg.content)}
-                            className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
-                              speakingMsgId === msg.id
-                                ? 'text-emerald-400 bg-emerald-500/10 font-bold'
-                                : 'hover:text-foreground'
-                            }`}
-                            title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen / Read aloud (AWS Polly)'}
-                          >
-                            {speakingMsgId === msg.id ? (
-                              <>
-                                <Square className="h-3 w-3 fill-current text-rose-400" />
-                                <span className="text-rose-400">Stop</span>
-                              </>
-                            ) : (
-                              <>
-                                <Volume2 className="h-3 w-3 text-cyan-400" />
-                                <span>Listen</span>
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            onClick={() => copyMessage(msg.id, msg.content)}
-                            className="hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
-                          >
-                            {copiedId === msg.id ? (
-                              <Check className="h-3 w-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                            <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {/* Starter Prompt Suggestions */}
-              {activeSession.messages.length <= 1 && (
-                <div className="max-w-2xl mx-auto pt-6 space-y-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block text-center">
-                    Quick Intelligence Prompts
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {promptSuggestions.map((suggestion, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSendMessage(suggestion.text)}
-                        className="p-3 rounded-xl bg-card border border-border/70 hover:border-primary text-left text-xs font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm flex items-center justify-between group cursor-pointer"
-                      >
-                        <div className="flex flex-col gap-0.5 pr-2">
-                          <span className="text-foreground font-bold">{suggestion.label}</span>
-                          <span className="line-clamp-1 text-[11px] text-muted-foreground">
-                            {suggestion.text}
-                          </span>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Bar */}
-            <div className="p-4 border-t border-border/60 bg-card/40 backdrop-blur-md">
-              <div className="max-w-3xl mx-auto space-y-2">
-                {/* Quick Multimodal Action Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
-                  <button
-                    type="button"
-                    onClick={() => setInputText((prev) => (prev ? `${prev} Photo ekak hadanna ` : 'Photo ekak hadanna '))}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors shrink-0 cursor-pointer"
-                  >
-                    <ImageIcon className="h-3 w-3 text-purple-400" />
-                    <span>🎨 Image</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setInputText((prev) => (prev ? `${prev} Video ekak hadanna ` : 'Video ekak hadanna '))}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 transition-colors shrink-0 cursor-pointer"
-                  >
-                    <Film className="h-3 w-3 text-cyan-400" />
-                    <span>🎬 Video</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsWebSearchEnabled((prev) => !prev)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
-                      isWebSearchEnabled
-                        ? 'bg-blue-600 text-white border border-blue-400 shadow-sm'
-                        : 'bg-muted/60 hover:bg-muted text-muted-foreground border border-border/60'
-                    }`}
-                  >
-                    <Globe className="h-3 w-3 text-blue-400" />
-                    <span>🌐 Web Search: {isWebSearchEnabled ? 'ON' : 'OFF'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setInputText((prev) => (prev ? `${prev} Write an interactive HTML & CSS ` : 'Write an interactive HTML & CSS '))}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors shrink-0 cursor-pointer"
-                  >
-                    <Code2 className="h-3 w-3 text-amber-400" />
-                    <span>💻 Code Canvas</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setInputText((prev) => (prev ? `${prev} Convert our discussion and notes into a 2-host conversational podcast script with Host A (Alex) and Host B (Sarah) discussing the key insights dynamically.` : 'Convert our discussion and notes into a 2-host conversational podcast script with Host A (Alex) and Host B (Sarah) discussing the key insights dynamically.'))}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-colors shrink-0 cursor-pointer"
-                  >
-                    <Radio className="h-3 w-3 text-rose-400" />
-                    <span>🎙️ AI Podcast</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsLiveCallOpen(true)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-colors shrink-0 cursor-pointer ml-auto"
-                  >
-                    <PhoneCall className="h-3 w-3 text-emerald-400" />
-                    <span>🎙️ Live Voice</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isPolishingPrompt || !inputText.trim()}
-                    onClick={handlePolishPrompt}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition-all shrink-0 cursor-pointer disabled:opacity-50"
-                    title="Polish and enrich prompt with AI Magic Wand"
-                  >
-                    <Wand2 className={`h-3 w-3 text-purple-400 ${isPolishingPrompt ? 'animate-spin' : ''}`} />
-                    <span>{isPolishingPrompt ? 'Polishing...' : '✨ Polish'}</span>
-                  </button>
-                </div>
-
-                {/* Attached File Pill (Cloud Drive) */}
-                {attachedFile && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold animate-in fade-in">
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-xs">{attachedFile.name} (Drive)</span>
+                  <span className="truncate flex-1 pr-2">{s.title}</span>
+                  {sessions.length > 1 && (
                     <button
-                      onClick={() => setAttachedFile(null)}
-                      className="hover:text-destructive ml-1 cursor-pointer"
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity p-0.5 cursor-pointer"
+                      title="Delete conversation"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Attached Local PC File Pill */}
-                {attachedLocalFile && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold animate-in fade-in">
-                    <Laptop className="h-3.5 w-3.5 text-cyan-400" />
-                    <span className="truncate max-w-xs">{attachedLocalFile.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      ({(attachedLocalFile.size / 1024).toFixed(1)} KB · PC)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAttachedLocalFile(null)}
-                      className="hover:text-destructive ml-1 cursor-pointer"
-                      title="Remove local file"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Attached Image Pill (Vision AI) */}
-                {attachedImage && (
-                  <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-semibold animate-in fade-in">
-                    <img src={attachedImage.url} alt="Attached Preview" className="h-7 w-7 object-cover rounded-md border border-purple-500/40" />
-                    <span className="truncate max-w-xs text-purple-300">{attachedImage.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setAttachedImage(null)}
-                      className="hover:text-destructive ml-1 cursor-pointer"
-                      title="Remove attached image"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 bg-background border border-border/70 rounded-2xl p-2 shadow-md focus-within:border-primary transition-colors">
-                  <button
-                    type="button"
-                    onClick={() => setIsFilePickerOpen(true)}
-                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Attach file from Local PC or Master Cloud Drive"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fileInputImageRef.current?.click()}
-                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Attach photo/screenshot for Vision AI analysis"
-                  >
-                    <ImageIcon className="h-4 w-4 text-purple-400" />
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputImageRef}
-                    accept="image/*"
-                    onChange={handleSelectImageFile}
-                    className="hidden"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => handleStartCamera()}
-                    className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title="Snap live photo with webcam/camera for Vision AI"
-                  >
-                    <Camera className="h-4 w-4 text-cyan-400" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsWebSearchEnabled((prev) => !prev)}
-                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                      isWebSearchEnabled ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                    }`}
-                    title={isWebSearchEnabled ? 'Real-Time Web Grounding Active' : 'Enable Real-Time Web Grounding'}
-                  >
-                    <Globe className="h-4 w-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleToggleVoiceRecording}
-                    className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                      isRecording ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                    }`}
-                    title={isRecording ? 'Stop Recording' : 'Voice Input (Microphone)'}
-                  >
-                    <Mic className="h-4 w-4" />
-                  </button>
-
-                  <textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onPaste={handlePaste}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    rows={1}
-                    placeholder={
-                      isRecording
-                        ? '🎙️ Listening... Speak naturally into your microphone'
-                        : isWebSearchEnabled
-                        ? '🌐 Web Search Active: Ask anything with real-time web citations...'
-                        : attachedImage
-                        ? 'Ask Master AI anything about this attached image/screenshot... [Enter to send]'
-                        : 'Ask Master AI, generate photos/videos, paste screenshots (Ctrl+V)... [Enter]'
-                    }
-                    className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
-                  />
-
-                  {isStreaming ? (
-                    <button
-                      onClick={handleStopGenerating}
-                      className="p-2.5 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm cursor-pointer"
-                      title="Stop generation"
-                    >
-                      <Square className="h-4 w-4 fill-current" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSendMessage()}
-                      disabled={!inputText.trim()}
-                      className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-sm cursor-pointer"
-                      title="Send prompt"
-                    >
-                      <Send className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   )}
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2">
-                  <span>Puter.js Direct Turbo Gateway</span>
-                  <span className="text-emerald-400 font-medium font-mono">⚡ Cascade: Gemini 3.8 Flash → OpenAI → DeepSeek (100% Free)</span>
-                </div>
-              </div>
-            </div>
+          {/* Bottom Status Badge */}
+          <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono gap-2">
+            <span className="flex items-center gap-1.5 text-cyan-400 font-semibold truncate">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
+              Puter.js Gateway: Connected
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono">
+              100% Free Models
+            </span>
           </div>
         </div>
 
-      {/* ─── CONVERSATIONAL LIVE VOICE CALL MODAL ─── */}
-      {isLiveCallOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-gradient-to-b from-card to-card/90 border border-primary/30 rounded-3xl w-full max-w-lg p-8 shadow-2xl flex flex-col items-center text-center space-y-6 relative overflow-hidden">
-            {/* Ambient background glow */}
-            <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Close button */}
-            <button
-              onClick={() => {
-                if (isRecording) handleToggleVoiceRecording();
-                if (activeAudioRef.current) activeAudioRef.current.pause();
-                setIsLiveCallOpen(false);
-              }}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-                Live Conversational Voice Mode
-              </span>
-              <h3 className="text-xl font-extrabold text-foreground tracking-tight pt-2">
-                Master AI Voice Call
-              </h3>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Real-time spoken dialogue powered by Google Gemini 3.8 Flash &amp; AWS Polly Neural voice.
-              </p>
+        {/* Right Main Chat Thread & Input */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-secondary/5">
+          {/* Thread Header */}
+          <div className="h-12 border-b border-border/60 px-4 sm:px-6 flex items-center justify-between bg-card/30 backdrop-blur-md shrink-0">
+            <div className="flex items-center gap-2 truncate">
+              <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Bot className="h-4 w-4" />
+              </div>
+              <div className="truncate">
+                <h2 className="font-bold text-xs text-foreground truncate">{activeSession.title}</h2>
+                <span className="text-[10px] text-muted-foreground capitalize">
+                  {activeSession.persona} Persona · Zero Limits · Autonomous Free Gateway
+                </span>
+              </div>
             </div>
 
-            {/* Project Astra Continuous Live Vision & Screen Lens Toggles */}
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isAstraVisionActive && !isAstraScreenMode) stopAstraVision();
-                  else startAstraVision('camera');
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  isAstraVisionActive && !isAstraScreenMode
-                    ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/30 animate-pulse'
-                    : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{isAstraVisionActive && !isAstraScreenMode ? '📷 Camera: ACTIVE' : '📷 Camera Lens'}</span>
-              </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                ⚡ Extreme Fast Stream (~120 tok/s)
+              </span>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (isAstraVisionActive && isAstraScreenMode) stopAstraVision();
-                  else startAstraVision('screen');
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  isAstraVisionActive && isAstraScreenMode
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 animate-pulse'
-                    : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                }`}
-              >
-                <Monitor className="w-3.5 h-3.5" />
-                <span>{isAstraVisionActive && isAstraScreenMode ? '🖥️ Screen: ACTIVE' : '🖥️ Screen Lens'}</span>
-              </button>
-
-              {isAstraVisionActive && (
+              {/* Chat Export Menu */}
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={stopAstraVision}
-                  className="px-2.5 py-1 rounded-full bg-destructive/20 hover:bg-destructive/30 text-destructive text-[11px] font-bold cursor-pointer"
+                  onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] font-semibold text-foreground transition-colors cursor-pointer"
+                  title="Export chat transcript"
                 >
-                  Stop Lens
+                  <Share2 className="h-3 w-3 text-primary" />
+                  <span>Export</span>
                 </button>
-              )}
-            </div>
 
-            {/* Video Viewfinder for Astra Continuous Vision */}
-            {isAstraVisionActive && (
-              <div className="relative w-full max-w-xs aspect-video rounded-2xl overflow-hidden border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 bg-black">
-                <video
-                  ref={astraVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                  <span>{isAstraScreenMode ? 'ASTRA SCREEN LENS' : 'ASTRA CAMERA LENS'}</span>
+                {isExportMenuOpen && (
+                  <div className="absolute right-0 mt-1 w-52 rounded-xl bg-card border border-border/80 shadow-2xl z-30 py-1.5 text-xs animate-in fade-in zoom-in-95">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        handleExportMarkdown();
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground"
+                    >
+                      <FileText className="h-4 w-4 text-purple-400" />
+                      <div>
+                        <div className="font-semibold">Markdown (.md)</div>
+                        <div className="text-[10px] text-muted-foreground">Download formatted text</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        handlePrintChat();
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground border-t border-border/40"
+                    >
+                      <Download className="h-4 w-4 text-cyan-400" />
+                      <div>
+                        <div className="font-semibold">Print / Save PDF</div>
+                        <div className="text-[10px] text-muted-foreground">Save as PDF document</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleClearCurrentSession}
+                className="px-2 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Clear chat messages in this session"
+              >
+                Clear Chat
+              </button>
+            </div>
+          </div>
+
+          {/* Message Thread */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 relative"
+          >
+            {isDraggingOver && (
+              <div className="absolute inset-4 bg-primary/20 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl z-30 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                <UploadCloud className="h-12 w-12 text-cyan-400 animate-bounce" />
+                <span className="text-sm font-bold text-foreground">Drop files from your PC to attach to Master AI</span>
+                <span className="text-xs text-muted-foreground">Code, documents, data (.json, .csv, .py, .pdf) or images</span>
+              </div>
+            )}
+
+            {activeSession.messages
+              .filter((msg) => msg.role === 'user' || Boolean(msg.content && msg.content.trim().length > 0) || isStreaming)
+              .map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 w-full ${
+                  msg.role === 'user'
+                    ? 'ml-auto flex-row-reverse justify-start'
+                    : 'mr-auto max-w-3xl lg:max-w-4xl'
+                }`}
+              >
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white'
+                  }`}
+                >
+                  {msg.role === 'user' ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                </div>
+
+                <div
+                  className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground font-medium max-w-xl'
+                      : 'bg-card border border-border/80 text-foreground w-full overflow-hidden'
+                  }`}
+                >
+                  {msg.attachedFile && (
+                    <div className="mb-2.5 p-2 rounded-xl bg-background/50 border border-border/60 flex items-center gap-2 text-xs">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <span className="font-bold truncate">{msg.attachedFile.name}</span>
+                    </div>
+                  )}
+
+                  {msg.role === 'user' ? (
+                    <div className="space-y-2">
+                      {msg.imageAttachment && (
+                        <div className="max-w-sm rounded-xl overflow-hidden border border-white/20 shadow-md">
+                          <img
+                            src={msg.imageAttachment}
+                            alt="Vision attachment"
+                            className="max-h-60 w-auto object-contain rounded-lg"
+                          />
+                        </div>
+                      )}
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    </div>
+                  ) : (
+                    <ChatMarkdownRenderer
+                      content={msg.content}
+                      mediaAttachment={msg.mediaAttachment}
+                      isStreaming={isStreaming && msg.id === activeSession.messages[activeSession.messages.length - 1]?.id}
+                    />
+                  )}
+
+                  {msg.role === 'assistant' && msg.content && (
+                    <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span className="font-mono text-cyan-400">Master AI · Autonomous Free Cascade</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleReadAloud(msg.id, msg.content)}
+                          className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
+                            speakingMsgId === msg.id
+                              ? 'text-emerald-400 bg-emerald-500/10 font-bold'
+                              : 'hover:text-foreground'
+                          }`}
+                          title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen / Read aloud'}
+                        >
+                          {speakingMsgId === msg.id ? (
+                            <>
+                              <Square className="h-3 w-3 fill-current text-rose-400" />
+                              <span className="text-rose-400">Stop</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="h-3 w-3 text-cyan-400" />
+                              <span>Listen</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => copyMessage(msg.id, msg.content)}
+                          className="hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          {copiedId === msg.id ? (
+                            <Check className="h-3 w-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                          <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Starter Prompt Suggestions */}
+            {activeSession.messages.length <= 1 && (
+              <div className="max-w-2xl mx-auto pt-6 space-y-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block text-center">
+                  Quick Intelligence Prompts
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {promptSuggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(suggestion.text)}
+                      className="p-3 rounded-xl bg-card border border-border/70 hover:border-primary text-left text-xs font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex flex-col gap-0.5 pr-2">
+                        <span className="text-foreground font-bold">{suggestion.label}</span>
+                        <span className="line-clamp-1 text-[11px] text-muted-foreground">
+                          {suggestion.text}
+                        </span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Glowing Pulsing Voice Orb */}
-            <div className="relative py-4">
-              <div
-                className={`w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl ${
-                  isRecording
-                    ? 'bg-gradient-to-tr from-rose-500 via-purple-600 to-indigo-600 animate-pulse shadow-rose-500/50 scale-105'
-                    : speakingMsgId
-                    ? 'bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 animate-pulse shadow-cyan-500/50 scale-105'
-                    : 'bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 shadow-purple-500/30'
-                }`}
-              >
-                <Mic className="w-14 h-14 text-white" />
-              </div>
-            </div>
+            <div ref={messagesEndRef} />
+          </div>
 
-            <div className="text-xs font-mono text-muted-foreground">
-              {isRecording
-                ? '🎙️ Listening to your voice... Speak naturally.'
-                : speakingMsgId
-                ? '🔊 Master AI is speaking...'
-                : 'Tap microphone to speak or end call.'}
-            </div>
-
-            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Full-Duplex Barge-in: Speak anytime to interrupt AI</span>
-            </div>
-
-            {/* Voice Personality Selector */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-background/50 border border-border/60 text-[11px] font-medium flex-wrap justify-center">
-              {[
-                { id: 'Joanna', label: '🌸 Joanna (Natural)' },
-                { id: 'Matthew', label: '🎙️ Matthew (Deep)' },
-                { id: 'alloy', label: '⚡ Alloy (OpenAI)' },
-                { id: 'nova', label: '🌟 Nova (Studio)' },
-              ].map((v) => (
+          {/* Input Bar */}
+          <div className="p-4 border-t border-border/60 bg-card/40 backdrop-blur-md">
+            <div className="max-w-3xl mx-auto space-y-2">
+              {/* Quick Action Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
                 <button
-                  key={v.id}
                   type="button"
-                  onClick={() => setSelectedVoice(v.id)}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    selectedVoice === v.id
-                      ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
+                  onClick={() => setIsWebSearchEnabled((prev) => !prev)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
+                    isWebSearchEnabled
+                      ? 'bg-blue-600 text-white border border-blue-400 shadow-sm'
+                      : 'bg-muted/60 hover:bg-muted text-muted-foreground border border-border/60'
                   }`}
                 >
-                  {v.label}
+                  <Globe className="h-3 w-3 text-blue-400" />
+                  <span>🌐 Web Search: {isWebSearchEnabled ? 'ON' : 'OFF'}</span>
                 </button>
-              ))}
-            </div>
 
-            {/* Call Controls */}
-            <div className="flex items-center gap-4 pt-2">
-              <button
-                type="button"
-                onClick={handleToggleVoiceRecording}
-                className={`p-4 rounded-full font-bold shadow-lg transition-all cursor-pointer ${
-                  isRecording
-                    ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
-                    : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30'
-                }`}
-                title={isRecording ? 'Stop speaking' : 'Start speaking'}
-              >
-                {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setInputText((prev) => (prev ? `${prev} Write an interactive HTML & CSS ` : 'Write an interactive HTML & CSS '))}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors shrink-0 cursor-pointer"
+                >
+                  <Code2 className="h-3 w-3 text-amber-400" />
+                  <span>💻 Code Canvas</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRecording) handleToggleVoiceRecording();
-                  if (activeAudioRef.current) activeAudioRef.current.pause();
-                  setIsLiveCallOpen(false);
-                }}
-                className="p-4 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/30 transition-all cursor-pointer"
-                title="End Call"
-              >
-                <PhoneOff className="w-6 h-6" />
-              </button>
+                <button
+                  type="button"
+                  disabled={isPolishingPrompt || !inputText.trim()}
+                  onClick={handlePolishPrompt}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition-all shrink-0 cursor-pointer disabled:opacity-50 ml-auto"
+                  title="Polish and enrich prompt with AI Magic Wand"
+                >
+                  <Wand2 className={`h-3 w-3 text-purple-400 ${isPolishingPrompt ? 'animate-spin' : ''}`} />
+                  <span>{isPolishingPrompt ? 'Polishing...' : '✨ Polish'}</span>
+                </button>
+              </div>
+
+              {/* Attached File Pill (Cloud Drive) */}
+              {attachedFile && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold animate-in fade-in">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-xs">{attachedFile.name} (Drive)</span>
+                  <button
+                    onClick={() => setAttachedFile(null)}
+                    className="hover:text-destructive ml-1 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Attached Local PC File Pill */}
+              {attachedLocalFile && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold animate-in fade-in">
+                  <Laptop className="h-3.5 w-3.5 text-cyan-400" />
+                  <span className="truncate max-w-xs">{attachedLocalFile.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    ({(attachedLocalFile.size / 1024).toFixed(1)} KB · PC)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedLocalFile(null)}
+                    className="hover:text-destructive ml-1 cursor-pointer"
+                    title="Remove local file"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Attached Image Pill (Vision AI) */}
+              {attachedImage && (
+                <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-semibold animate-in fade-in">
+                  <img src={attachedImage.url} alt="Attached Preview" className="h-7 w-7 object-cover rounded-md border border-purple-500/40" />
+                  <span className="truncate max-w-xs text-purple-300">{attachedImage.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedImage(null)}
+                    className="hover:text-destructive ml-1 cursor-pointer"
+                    title="Remove attached image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 bg-background border border-border/70 rounded-2xl p-2 shadow-md focus-within:border-primary transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setIsFilePickerOpen(true)}
+                  className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Attach file from Local PC or Master Cloud Drive"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputImageRef.current?.click()}
+                  className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Attach photo/screenshot for Vision AI analysis"
+                >
+                  <ImageIcon className="h-4 w-4 text-purple-400" />
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputImageRef}
+                  accept="image/*"
+                  onChange={handleSelectImageFile}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setIsWebSearchEnabled((prev) => !prev)}
+                  className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                    isWebSearchEnabled ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                  }`}
+                  title={isWebSearchEnabled ? 'Real-Time Web Grounding Active' : 'Enable Real-Time Web Grounding'}
+                >
+                  <Globe className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleVoiceRecording}
+                  className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                    isRecording ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                  }`}
+                  title={isRecording ? 'Stop Recording' : 'Voice Input (Microphone)'}
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
+
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  rows={1}
+                  placeholder={
+                    isRecording
+                      ? '🎙️ Listening... Speak naturally into your microphone'
+                      : isWebSearchEnabled
+                      ? '🌐 Web Search Active: Ask anything with real-time web citations...'
+                      : attachedImage
+                      ? 'Ask Master AI anything about this attached image/screenshot... [Enter]'
+                      : 'Ask Master AI anything, paste screenshots (Ctrl+V), attach files... [Enter]'
+                  }
+                  className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
+                />
+
+                {isStreaming ? (
+                  <button
+                    onClick={handleStopGenerating}
+                    className="p-2.5 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm cursor-pointer"
+                    title="Stop generation"
+                  >
+                    <Square className="h-4 w-4 fill-current" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputText.trim()}
+                    className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-sm cursor-pointer"
+                    title="Send prompt"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2">
+                <span>Autonomous AI Cascade · 100% Free &amp; Unlimited</span>
+                <span className="text-emerald-400 font-medium font-mono">⚡ Gemini 3.8 Flash → GPT-4o Mini → DeepSeek</span>
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* ─── LIVE WEBCAM SNAP MODAL ─── */}
-      {isCameraOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-card border border-primary/30 rounded-3xl w-full max-w-md p-6 shadow-2xl flex flex-col items-center text-center space-y-4 relative overflow-hidden">
-            <div className="flex items-center justify-between w-full pb-2 border-b border-border/50">
-              <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-cyan-400" />
-                <span className="font-bold text-sm text-foreground">HD Camera Snapshot</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {cameraResolution}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleToggleCameraFacing}
-                  className="p-1.5 rounded-lg hover:bg-muted text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
-                  title="Flip Camera (Front / Back)"
-                >
-                  <FlipHorizontal className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsCameraFilterEnhanced((p) => !p)}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                    isCameraFilterEnhanced ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  title="Toggle Contrast / Low-Light Boost"
-                >
-                  <Sparkles className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseCamera}
-                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-inner flex items-center justify-center">
-              <video
-                ref={videoStreamRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover transition-all ${
-                  isCameraFilterEnhanced ? 'contrast-125 brightness-105 saturate-110' : ''
-                }`}
-              />
-              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-cyan-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span>{cameraFacingMode === 'user' ? 'Front Lens' : 'World Lens'} • {cameraResolution}</span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-muted-foreground">
-              Ultra-clear sensor feed for OCR, document scan, diagrams, and object recognition.
-            </p>
-
-            <div className="flex items-center gap-3 w-full">
-              <button
-                type="button"
-                onClick={handleCloseCamera}
-                className="flex-1 py-2.5 rounded-xl border border-border/80 hover:bg-accent text-xs font-semibold text-foreground transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCaptureSnap}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Camera className="w-4 h-4" />
-                <span>Capture HD &amp; Attach</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* ─── UNIFIED FILE ATTACHMENT MODAL (LOCAL PC & CLOUD DRIVE) ─── */}
       {isFilePickerOpen && (
@@ -2283,96 +1345,6 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ─── ASTRA SPATIAL OBJECT FINDER & MEMORY LOG MODAL ─── */}
-      {isAstraFinderOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-card border border-cyan-500/30 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-cyan-400" />
-                <div>
-                  <h3 className="font-bold text-sm text-foreground">Project Astra Spatial Object Finder</h3>
-                  <p className="text-[10px] text-muted-foreground">Chronological log of items, text, and scenes observed via Astra Lens</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsAstraFinderOpen(false)}
-                className="hover:text-foreground text-muted-foreground p-1 rounded-lg hover:bg-muted cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Search Finder */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={finderSearchQuery}
-                onChange={(e) => setFinderSearchQuery(e.target.value)}
-                placeholder="Search lost items (e.g. keys, phone, invoice, book)..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-background border border-border/70 text-xs focus:outline-none focus:border-cyan-400 text-foreground"
-              />
-            </div>
-
-            {/* Observations Log */}
-            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
-              {astraObjectLog.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
-                  <Camera className="w-8 h-8 text-cyan-400/50 mx-auto" />
-                  <p>No visual observations logged yet.</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Activate <strong>Project Astra Live Lens</strong> in Live Voice Call or Camera to automatically record objects!
-                  </p>
-                </div>
-              ) : (
-                astraObjectLog
-                  .filter((entry) =>
-                    finderSearchQuery
-                      ? entry.description.toLowerCase().includes(finderSearchQuery.toLowerCase())
-                      : true
-                  )
-                  .map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="p-3 rounded-2xl bg-muted/40 border border-border/50 text-xs space-y-1 hover:border-cyan-500/40 transition-colors"
-                    >
-                      <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400">
-                        <span className="flex items-center gap-1 font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                          Observed at {entry.time}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInputText(`Where did you see my ${finderSearchQuery || 'items'}? Based on observation: "${entry.description}"`);
-                            setIsAstraFinderOpen(false);
-                          }}
-                          className="hover:underline text-[10px] text-primary cursor-pointer font-sans"
-                        >
-                          Ask about this ➔
-                        </button>
-                      </div>
-                      <p className="text-foreground leading-relaxed">{entry.description}</p>
-                    </div>
-                  ))
-              )}
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
-              <span>{astraObjectLog.length} Spatial Memories Cached</span>
-              <button
-                type="button"
-                onClick={() => setAstraObjectLog([])}
-                className="hover:text-destructive transition-colors cursor-pointer"
-              >
-                Clear Log
-              </button>
-            </div>
           </div>
         </div>
       )}
