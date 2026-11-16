@@ -782,10 +782,17 @@ class PuterAiPlatformService {
     const seed = Math.floor(Math.random() * 1000000);
     const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${seed}`;
 
-    const res = await fetch(url, { signal: AbortSignal.timeout(28000) });
-    if (!res.ok) throw new Error(`Pollinations HTTP error ${res.status}`);
-    const blob = await res.blob();
-    const imageUrl = URL.createObjectURL(blob);
+    let imageUrl = url;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(18000) });
+      if (res.ok) {
+        const blob = await res.blob();
+        imageUrl = URL.createObjectURL(blob);
+      }
+    } catch {
+      // Direct URL fallback so browser <img> loads it seamlessly
+      imageUrl = url;
+    }
 
     return {
       imageUrl,

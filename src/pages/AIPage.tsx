@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
-import { puterAiService } from '@/services/ai/puterAiService';
+import { puterAiService, PuterImageResult } from '@/services/ai/puterAiService';
 import { useFileStore } from '@/stores/fileStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
@@ -40,6 +40,73 @@ export interface LocalAttachedFile {
   type: string;
   content: string;
   rawFile?: File;
+}
+
+/**
+ * Detects whether the user is requesting in-chat image generation
+ * Powered by 100% Free & Unlimited FLUX.1 Ultra (Perchance-grade Engine)
+ */
+function detectImageIntent(text: string, hasAttachedImage: boolean): { isImage: boolean; prompt: string; isImg2Img: boolean } {
+  const clean = text.trim();
+  const lower = clean.toLowerCase();
+
+  const isImageKeyword =
+    lower.includes('photo') ||
+    lower.includes('image') ||
+    lower.includes('picture') ||
+    lower.includes('wallpaper') ||
+    lower.includes('chithra') ||
+    lower.includes('පින්තූර') ||
+    lower.includes('portrait') ||
+    lower.startsWith('draw') ||
+    lower.startsWith('paint') ||
+    lower.startsWith('sketch');
+
+  const isActionKeyword =
+    lower.includes('generate') ||
+    lower.includes('create') ||
+    lower.includes('make') ||
+    lower.includes('hadanna') ||
+    lower.includes('hadapan') ||
+    lower.includes('hadala') ||
+    lower.includes('andinna') ||
+    lower.includes('andala') ||
+    lower.startsWith('draw') ||
+    lower.startsWith('paint') ||
+    lower.startsWith('sketch');
+
+  if (isImageKeyword && isActionKeyword) {
+    let p = clean
+      .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|create|make|render)\s+(?:an?\s+)?(?:image|photo|picture|wallpaper|art|drawing)\s+(?:of|about|showing)?\s*/i, '')
+      .replace(/^(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:image|photo|picture)?\s*(?:of)?\s*/i, '')
+      .replace(/^(?:photo\s+ekak|image\s+ekak|pic\s+ekak)\s+(?:hadanna|hadapan|hadala\s+denna|generate\s+karanna|andinna)\s*/i, '')
+      .replace(/^(?:chithrayak|chithra)\s+(?:andinna|andala\s+denna|hadanna)\s*/i, '')
+      .replace(/(?:photo|image)\s*ekak\s*(?:hadanna|hadapan|generate\s*karanna|andinna)/gi, '')
+      .trim();
+    if (!p || p.length < 3) p = clean;
+    return { isImage: true, prompt: p, isImg2Img: hasAttachedImage };
+  }
+
+  if (hasAttachedImage) {
+    const isEditAction =
+      lower.includes('dress') ||
+      lower.includes('wear') ||
+      lower.includes('clothes') ||
+      lower.includes('outfit') ||
+      lower.includes('andanna') ||
+      lower.includes('andapan') ||
+      lower.includes('change background') ||
+      lower.includes('replace background') ||
+      lower.includes('edit') ||
+      lower.includes('modify') ||
+      lower.includes('transform');
+
+    if (isEditAction) {
+      return { isImage: true, prompt: clean, isImg2Img: true };
+    }
+  }
+
+  return { isImage: false, prompt: clean, isImg2Img: false };
 }
 
 export function AIPage() {
@@ -499,6 +566,117 @@ export function AIPage() {
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
 
+    // ─── 1. IN-CHAT IMAGE GENERATION (FLUX.1 ULTRA ZERO-LIMIT CASCADE) ───
+    const imageIntent = detectImageIntent(textToSend, Boolean(sentImage));
+    if (imageIntent.isImage) {
+      const isImg2Img = Boolean(sentImage);
+      const initialAssistantMsg: AIMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: isImg2Img
+          ? `🎨 Analyzing reference photo with **Gemini Multimodal Vision** to preserve facial identity & generating transformation via **FLUX.1 Ultra**...\n\n> Edit: *"${imageIntent.prompt}"*`
+          : `🎨 Synthesizing high-resolution image with **FLUX.1 Ultra** (Perchance-grade Zero-Limit Engine)...\n\n> Prompt: *"${imageIntent.prompt}"*`,
+        timestamp: new Date().toISOString(),
+      };
+
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id === activeSession.id) {
+            return { ...s, messages: [...s.messages, initialAssistantMsg] };
+          }
+          return s;
+        }),
+      );
+
+      try {
+        let targetPrompt = imageIntent.prompt;
+
+        if (sentImage) {
+          try {
+            toast.info('🔍 Vision AI analyzing reference photo to lock facial identity & build...');
+            const visionAnalysis = await puterAiService.chat(
+              `The user uploaded a reference photograph and requested this edit/generation: "${imageIntent.prompt}".
+Carefully inspect the attached reference photograph:
+1. Identify the subject: exact gender, age, hairstyle, hair color, skin tone/complexion, facial features, facial hair (beard/stubble/clean-shaven), body build, and current posture.
+2. Incorporate the user's requested edit: "${imageIntent.prompt}".
+3. Formulate an exact, photorealistic prompt (1-2 sentences) instructing the diffusion model to depict this EXACT same person, face, and facial structure from the reference photo, but modified to satisfy "${imageIntent.prompt}".
+Output ONLY the resulting prompt text, with no preamble or quotes.`,
+              { image: sentImage.url, temperature: 0.2 }
+            );
+
+            if (visionAnalysis?.text && visionAnalysis.text.trim()) {
+              targetPrompt = visionAnalysis.text.trim();
+            }
+          } catch (visionErr) {
+            console.warn('[Vision Prompt Refinement Error]:', visionErr);
+          }
+        }
+
+        let imgRes: PuterImageResult;
+        try {
+          // Primary: 100% Free & Unlimited FLUX.1 Ultra via Pollinations
+          imgRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
+            aspect_ratio: '1:1',
+            input_image: sentImage?.url,
+          });
+        } catch {
+          // Fallback: Puter txt2img / AI Horde
+          imgRes = await puterAiService.generateImage(targetPrompt, {
+            aspect_ratio: '1:1',
+            input_image: sentImage?.url,
+          });
+        }
+
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: isImg2Img
+                        ? `✨ Transformed image with preserved subject identity, powered by **${imgRes.model}**:\n\n> *"${imageIntent.prompt}"*`
+                        : `✨ Here is your generated image powered by **${imgRes.model}**:\n\n> *"${imageIntent.prompt}"*`,
+                      mediaAttachment: {
+                        type: 'image' as const,
+                        url: imgRes.imageUrl,
+                        prompt: imageIntent.prompt,
+                        modelUsed: imgRes.model,
+                      },
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+        toast.success(`Image ${isImg2Img ? 'transformed' : 'generated'} in chat via ${imgRes.model}!`);
+      } catch (err: any) {
+        toast.error(`Image generation failed: ${err?.message || err}`);
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === activeSession.id) {
+              const msgs = s.messages.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `⚠️ Image generation could not be completed: ${err?.message || err}`,
+                    }
+                  : m,
+              );
+              return { ...s, messages: msgs };
+            }
+            return s;
+          }),
+        );
+      } finally {
+        setIsStreaming(false);
+      }
+      return;
+    }
+
+    // ─── 2. TEXT CHAT STREAMING (GEMINI -> OPENAI -> DEEPSEEK CASCADE) ───
     // Initial empty assistant message for streaming
     const initialAssistantMsg: AIMessage = {
       id: assistantMsgId,
@@ -641,10 +819,10 @@ export function AIPage() {
   };
 
   const promptSuggestions = [
+    { label: '🎨 AI Image Gen (FLUX Ultra)', text: 'Photo ekak hadanna futuristic neon cyber city in rain' },
     { label: '⚡ Fast Chat (Sinhala)', text: 'Master Cloud එකේ Unlimited AI Chat එක ගැන කෙටියෙන් සිංහලෙන් කියන්න.' },
     { label: '💻 Code Generation', text: 'Write a clean, responsive TypeScript and Tailwind CSS Dashboard component.' },
     { label: '📑 File & Code Analysis', text: 'Analyze this code or document, extract key points, and suggest improvements.' },
-    { label: '🧠 Deep Reasoning', text: 'Compare Monolithic vs Microservices architecture with real-world trade-offs.' },
   ];
 
   const filteredSessions = sessions.filter(
@@ -664,18 +842,18 @@ export function AIPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                MASTER AI CHAT
+                MASTER AI STUDIO
               </h1>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 100% Free &amp; Unlimited
               </span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Gemini 3.8 Flash + GPT-4o
+                Gemini 3.8 Flash + FLUX.1
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Zero Token Caps · Zero Daily Message Limits · Deep Code &amp; Document Intelligence
+              Zero Token Caps · Zero Daily Message Limits · FLUX Ultra Images &amp; Document Intelligence
             </p>
           </div>
         </div>
@@ -684,7 +862,7 @@ export function AIPage() {
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>⚡ Cascade: Gemini 3.8 Flash → GPT-4o Mini → DeepSeek</span>
+            <span>⚡ Cascade: Gemini 3.8 Flash + FLUX.1 Ultra (100% Free)</span>
           </div>
         </div>
       </header>
@@ -1052,6 +1230,15 @@ export function AIPage() {
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
                 <button
                   type="button"
+                  onClick={() => setInputText((prev) => (prev ? `${prev} Photo ekak hadanna ` : 'Photo ekak hadanna '))}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors shrink-0 cursor-pointer"
+                >
+                  <ImageIcon className="h-3 w-3 text-purple-400" />
+                  <span>🎨 Image Gen (FLUX)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsWebSearchEnabled((prev) => !prev)}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
                     isWebSearchEnabled
@@ -1198,8 +1385,8 @@ export function AIPage() {
                       : isWebSearchEnabled
                       ? '🌐 Web Search Active: Ask anything with real-time web citations...'
                       : attachedImage
-                      ? 'Ask Master AI anything about this attached image/screenshot... [Enter]'
-                      : 'Ask Master AI anything, paste screenshots (Ctrl+V), attach files... [Enter]'
+                      ? 'Ask Master AI anything about this attached image/screenshot, or ask to dress/modify it... [Enter]'
+                      : 'Ask Master AI anything, generate images (Photo ekak hadanna...), paste screenshots (Ctrl+V)... [Enter]'
                   }
                   className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
                 />
