@@ -33,6 +33,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
+import { VirtualTryOnStudio } from '@/components/ai/VirtualTryOnStudio';
 
 export interface LocalAttachedFile {
   name: string;
@@ -1575,132 +1576,12 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         </div>
       )}
 
-      {/* ─── AI VIRTUAL TRY-ON STUDIO MODAL (CLOUD ZERO-GPU & LOCALHOST:7860) ─── */}
-      {isLocalVtonStudioOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in">
-          <div className="bg-card border border-purple-500/30 rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden relative">
-            {/* Modal Header */}
-            <div className="h-16 border-b border-border/70 px-4 sm:px-6 flex items-center justify-between bg-card/60 shrink-0 gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shrink-0">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-foreground">
-                      AI VIRTUAL TRY-ON STUDIO
-                    </h3>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 font-mono ${
-                      vtonMode === 'cloud'
-                        ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
-                        : isLocalHostActive
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    }`}>
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      {vtonMode === 'cloud'
-                        ? 'CLOUD ZERO-GPU · 0 MB DOWNLOAD'
-                        : isLocalHostActive
-                        ? 'RTX 3050 GPU ACTIVE'
-                        : 'LOCALHOST:7860 OFFLINE'}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {vtonMode === 'cloud'
-                      ? 'Powered by Hugging Face Cloud Spaces (NVIDIA A100 · 100% Free · Zero Model Storage)'
-                      : 'Powered by IDM-VTON & Local NVIDIA GeForce RTX 3050 Laptop GPU (100% Offline)'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Mode Switcher & Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Cloud vs Local Switcher */}
-                <div className="flex items-center rounded-xl bg-muted/60 p-1 border border-border/60">
-                  <button
-                    type="button"
-                    onClick={() => setVtonMode('cloud')}
-                    className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      vtonMode === 'cloud'
-                        ? 'bg-purple-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    ☁️ Cloud (0 MB Data)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVtonMode('local')}
-                    className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      vtonMode === 'local'
-                        ? 'bg-purple-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    💻 Local RTX 3050
-                  </button>
-                </div>
-
-                <a
-                  href={vtonMode === 'cloud' ? 'https://yisol-idm-vton.hf.space' : 'http://127.0.0.1:7860'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold cursor-pointer transition-colors"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span>Open in Tab</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setIsLocalVtonStudioOpen(false)}
-                  className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Frame / Status Container */}
-            <div className="flex-1 w-full h-full relative bg-background">
-              <iframe
-                key={vtonMode}
-                src={vtonMode === 'cloud' ? 'https://yisol-idm-vton.hf.space' : 'http://127.0.0.1:7860'}
-                title="IDM-VTON Studio"
-                className="w-full h-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                allow="camera; microphone; clipboard-write"
-              />
-
-              {vtonMode === 'local' && !isLocalHostActive && (
-                <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                    <Laptop className="h-8 w-8" />
-                  </div>
-                  <div className="space-y-1.5 max-w-md">
-                    <h4 className="text-base font-bold text-foreground">Local IDM-VTON Server Offline</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      To run locally on your RTX 3050 GPU, run the launcher batch file. Or switch to <strong>☁️ Cloud Mode</strong> above to use it instantly without downloading 12GB!
-                    </p>
-                    <div className="p-3 bg-muted/60 rounded-xl border border-border/70 text-left font-mono text-xs text-purple-300 select-all">
-                      F:\My Idea Secret\IDM-VTON\run_idm_vton.bat
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setVtonMode('cloud')}
-                      className="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-md hover:bg-purple-700 transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span>Switch to Cloud Mode (Instant &amp; 0 MB Data)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─── AI VIRTUAL TRY-ON STUDIO (NATIVE CLOUD GPU + MULTI-MODE) ─── */}
+      <VirtualTryOnStudio
+        isOpen={isLocalVtonStudioOpen}
+        onClose={() => setIsLocalVtonStudioOpen(false)}
+        isLocalHostActive={isLocalHostActive}
+      />
     </div>
   );
 }
