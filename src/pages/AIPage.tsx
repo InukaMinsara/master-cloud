@@ -136,6 +136,8 @@ export function AIPage() {
   const [isPolishingPrompt, setIsPolishingPrompt] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isLocalVtonStudioOpen, setIsLocalVtonStudioOpen] = useState(false);
+  const [isLocalHostActive, setIsLocalHostActive] = useState(false);
   const selectedVoice = 'Joanna';
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
 
@@ -147,6 +149,21 @@ export function AIPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Monitor Localhost IDM-VTON Server (port 7860) status
+  useEffect(() => {
+    const checkLocalhost = async () => {
+      try {
+        await fetch('http://127.0.0.1:7860/', { mode: 'no-cors', signal: AbortSignal.timeout(2000) });
+        setIsLocalHostActive(true);
+      } catch {
+        setIsLocalHostActive(false);
+      }
+    };
+    checkLocalhost();
+    const interval = setInterval(checkLocalhost, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -860,7 +877,18 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
 
         {/* ─── HEADER STATUS BADGE ─── */}
         <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+          {/* Localhost IDM-VTON Studio Button */}
+          <button
+            type="button"
+            onClick={() => setIsLocalVtonStudioOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold cursor-pointer shadow-sm transition-all"
+            title="Open Local IDM-VTON Studio (NVIDIA RTX 3050 · localhost:7860)"
+          >
+            <span className={`h-2 w-2 rounded-full ${isLocalHostActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span>👕 Localhost:7860 Studio</span>
+          </button>
+
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>⚡ Cascade: Gemini 3.8 Flash + FLUX.1 Ultra (100% Free)</span>
           </div>
@@ -1239,6 +1267,16 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
 
                 <button
                   type="button"
+                  onClick={() => setIsLocalVtonStudioOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors shrink-0 cursor-pointer"
+                  title="Open Localhost Virtual Try-On Studio (IDM-VTON)"
+                >
+                  <span className={`h-2 w-2 rounded-full ${isLocalHostActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <span>👕 Localhost Try-On (:7860)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsWebSearchEnabled((prev) => !prev)}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
                     isWebSearchEnabled
@@ -1532,6 +1570,101 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── LOCALHOST IDM-VTON STUDIO MODAL (PORT 7860) ─── */}
+      {isLocalVtonStudioOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in">
+          <div className="bg-card border border-purple-500/30 rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden relative">
+            {/* Modal Header */}
+            <div className="h-14 border-b border-border/70 px-4 sm:px-6 flex items-center justify-between bg-card/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-foreground">
+                      LOCAL AI VIRTUAL TRY-ON STUDIO
+                    </h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 font-mono ${
+                      isLocalHostActive
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    }`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${isLocalHostActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                      {isLocalHostActive ? 'RTX 3050 GPU ACTIVE' : 'LOCALHOST:7860'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Powered by IDM-VTON &amp; NVIDIA GeForce RTX 3050 Laptop GPU (100% Free &amp; Unlimited)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href="http://127.0.0.1:7860"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Open in New Tab</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsLocalVtonStudioOpen(false)}
+                  className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Frame / Status Container */}
+            <div className="flex-1 w-full h-full relative bg-background">
+              <iframe
+                src="http://127.0.0.1:7860"
+                title="IDM-VTON Localhost Studio"
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+              />
+
+              {!isLocalHostActive && (
+                <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                    <Laptop className="h-8 w-8" />
+                  </div>
+                  <div className="space-y-1.5 max-w-md">
+                    <h4 className="text-base font-bold text-foreground">Local IDM-VTON Server Offline or Starting</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      To start your 100% Unlimited Local Virtual Try-On Studio on your NVIDIA RTX 3050 GPU, double-click:
+                    </p>
+                    <div className="p-3 bg-muted/60 rounded-xl border border-border/70 text-left font-mono text-xs text-purple-300 select-all">
+                      F:\My Idea Secret\IDM-VTON\run_idm_vton.bat
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      (A shortcut has also been placed on your Desktop: <strong>Launch IDM-VTON Unlimited AI</strong>)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open('http://127.0.0.1:7860', '_blank');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      <span>Check localhost:7860</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
