@@ -80,6 +80,8 @@ export function VirtualTryOnStudio({
   // Execution states
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [hfToken, setHfToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('hf_access_token') || '' : ''));
   const [result, setResult] = useState<TryOnResult | null>(null);
   const [activeResultView, setActiveResultView] = useState<'output' | 'mask'>('output');
   const [showSettings, setShowSettings] = useState(false);
@@ -132,10 +134,12 @@ export function VirtualTryOnStudio({
       const personBlob = personImage.file || (await urlToBlob(personImage.preview));
       const garmentBlob = garmentImage.file || (await urlToBlob(garmentImage.preview));
 
+      setErrorNotice(null);
       const tryOnResult = await executeVirtualTryOn(personBlob, garmentBlob, {
         garmentDescription,
         autoCrop,
         denoiseSteps,
+        hfToken: hfToken || undefined,
         onStatusUpdate: (status) => setStatusMessage(status),
       });
 
@@ -143,7 +147,9 @@ export function VirtualTryOnStudio({
       toast.success(`Virtual Try-On completed in ${tryOnResult.durationSeconds}s! ✨`);
     } catch (err: any) {
       console.error('[VirtualTryOn] Error:', err);
-      toast.error(err.message || 'Virtual Try-on failed. Please try again.');
+      const msg = err.message || 'Virtual Try-on failed. Please try again.';
+      setErrorNotice(msg);
+      toast.error(msg);
     } finally {
       setIsProcessing(false);
       setStatusMessage('');
@@ -317,6 +323,33 @@ export function VirtualTryOnStudio({
                         <span>30 (Recommended)</span>
                         <span>40 (Ultra Detail)</span>
                       </div>
+                    </div>
+
+                    <div className="sm:col-span-2 pt-2 border-t border-border/60">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="font-semibold text-foreground">Hugging Face User Token (Optional · Gives dedicated ZeroGPU quota):</label>
+                        <a
+                          href="https://huggingface.co/settings/tokens"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-purple-400 hover:text-purple-300 underline font-medium"
+                        >
+                          Get 100% Free Token ↗
+                        </a>
+                      </div>
+                      <input
+                        type="password"
+                        value={hfToken}
+                        onChange={(e) => {
+                          setHfToken(e.target.value);
+                          localStorage.setItem('hf_access_token', e.target.value);
+                        }}
+                        placeholder="Paste your free Hugging Face token: hf_..."
+                        className="w-full px-3 py-2 rounded-xl bg-muted/60 border border-border focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs font-mono"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Free accounts on Hugging Face get personal ZeroGPU allocations. Adding your token prevents anonymous pool rate limits.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -514,6 +547,32 @@ export function VirtualTryOnStudio({
                 <p className="text-[11px] text-muted-foreground">
                   No local download required · Runs on volunteer high-speed NVIDIA A100 GPU
                 </p>
+
+                {/* Error Notice & 1-Click Fallback */}
+                {errorNotice && (
+                  <div className="w-full max-w-md p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-3 animate-in fade-in">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-bold text-amber-300">Cloud ZeroGPU Quota / Busy Notice</p>
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          {errorNotice}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('web-cloud');
+                        setErrorNotice(null);
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+                    >
+                      <Cloud className="h-4 w-4" />
+                      <span>Switch to "Space Webview" Tab (Instant &amp; Free)</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* ─── RESULT DISPLAY CARD ─── */}

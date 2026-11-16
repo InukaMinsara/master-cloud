@@ -14,13 +14,14 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { Client } from '@gradio/client';
+import { Client, handle_file } from '@gradio/client';
 
 export interface TryOnOptions {
   garmentDescription?: string;
   autoCrop?: boolean;
   denoiseSteps?: number;
   seed?: number;
+  hfToken?: string;
   onStatusUpdate?: (status: string) => void;
 }
 
@@ -31,17 +32,14 @@ export interface TryOnResult {
   source: 'cloud-zero-gpu';
 }
 
-// Hugging Face Space ID hosting the State-of-the-Art IDM-VTON model
 const SPACE_ID = 'yisol/IDM-VTON';
 
-let cachedClient: any = null;
-
-async function getClient(onStatus?: (status: string) => void) {
-  if (cachedClient) return cachedClient;
+async function getClient(hfToken?: string, onStatus?: (status: string) => void) {
+  const token = hfToken || (typeof window !== 'undefined' ? localStorage.getItem('hf_access_token') || undefined : undefined);
   onStatus?.('Connecting to Cloud Supercomputer (NVIDIA A100)...');
   try {
-    cachedClient = await Client.connect(SPACE_ID);
-    return cachedClient;
+    const client = await Client.connect(SPACE_ID, token ? { hf_token: token as any } : undefined);
+    return client;
   } catch (err: any) {
     console.error('[VirtualTryOnService] Client connect error:', err);
     throw new Error(`Cloud GPU connection failed: ${err.message || 'Network error'}`);
@@ -50,7 +48,6 @@ async function getClient(onStatus?: (status: string) => void) {
 
 /**
  * Executes a full virtual clothing try-on in the cloud.
- * Accepts either File objects, Blobs, or data URLs.
  */
 export async function executeVirtualTryOn(
   personImage: Blob | File,
@@ -63,26 +60,30 @@ export async function executeVirtualTryOn(
     autoCrop = false,
     denoiseSteps = 30,
     seed = Math.floor(Math.random() * 1000000),
+    hfToken,
     onStatusUpdate,
   } = options;
 
   onStatusUpdate?.('Initializing Cloud ZeroGPU worker...');
-  const client = await getClient(onStatusUpdate);
+  const client = await getClient(hfToken, onStatusUpdate);
 
-  onStatusUpdate?.('Uploading reference photos to Cloud GPU (~2 MB)...');
+  onStatusUpdate?.('Uploading reference photos to Cloud GPU (~1 MB)...');
 
   try {
     onStatusUpdate?.('AI Pose alignment and clothing synthesis in progress (~15s)...');
 
+    const hfPerson = handle_file(personImage);
+    const hfGarment = handle_file(garmentImage);
+
     const result = await client.predict('/tryon', {
       dict: {
-        background: personImage,
+        background: hfPerson,
         layers: [],
         composite: null,
       },
-      garm_img: garmentImage,
+      garm_img: hfGarment,
       garment_des: garmentDescription,
-      is_checked: true, // auto-masking enabled
+      is_checked: true,
       is_checked_crop: autoCrop,
       denoise_steps: denoiseSteps,
       seed: seed,
@@ -91,7 +92,6 @@ export async function executeVirtualTryOn(
     const elapsed = Math.round((Date.now() - startTime) / 1000);
     onStatusUpdate?.('Synthesis complete! Processing high-res output...');
 
-    // Extract return image URLs
     const data = result?.data;
     if (!data || !Array.isArray(data) || data.length === 0) {
       throw new Error('Cloud GPU returned an empty response. Please try again.');
@@ -126,6 +126,12 @@ export async function executeVirtualTryOn(
     };
   } catch (err: any) {
     console.error('[VirtualTryOnService] Try-on prediction error:', err);
-    throw new Error(err?.message || 'Virtual Try-On generation failed. Please try with another image.');
+    const msg = err?.message || '';
+    if (msg.includes('ZeroGPU') || msg.includes('quota') || msg.includes('An error occurred')) {
+      throw new Error(
+        'Hugging Face Free ZeroGPU anonymous pool is currently busy. Please switch to the "Space Webview" tab above for immediate free try-on, or add a free Hugging Face token in Options!'
+      );
+    }
+    throw new Error(msg || 'Virtual Try-On generation failed. Please try with another image.');
   }
 }
