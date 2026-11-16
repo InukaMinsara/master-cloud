@@ -105,6 +105,7 @@ export function App() {
         <Route path="/app" element={<DashboardPage />} />
         <Route path="/drive" element={<DrivePage />} />
         <Route path="/ai" element={<AIPage />} />
+        <Route path="/ai-space" element={<AIPage />} />
         <Route path="/shared" element={<SharedPage />} />
         <Route path="/recent" element={<RecentPage />} />
         <Route path="/starred" element={<StarredPage />} />

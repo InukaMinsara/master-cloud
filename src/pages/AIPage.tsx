@@ -482,7 +482,7 @@ export function AIPage() {
           id: 'msg-' + Date.now(),
           role: 'assistant',
           content:
-            '👋 Welcome to **Master AI** — 100% Free & Unlimited Conversational Copilot!\n\n' +
+            '👋 Welcome to **Master AI Space** — 100% Free & Unlimited Multimodal AI & Spaces Hub!\n\n' +
             'Powered by Google Gemini 3.8 Flash, OpenAI GPT-4o Mini, and DeepSeek with zero daily limits, zero token caps, and zero paywalls.\n\n' +
             '- **Autonomous Cascade**: Gemini 3.8 Flash ⚡ → GPT-4o Mini → DeepSeek (100% Free)\n' +
             '- **Document & Code Intelligence**: Attach files from your PC or Master Cloud Drive\n' +
@@ -859,7 +859,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                MASTER AI STUDIO
+                MASTER AI SPACE
               </h1>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 100% Free &amp; Unlimited
