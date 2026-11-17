@@ -5,9 +5,42 @@
  *
  * 100% Free & Unlimited Cloud Supercomputers (NVIDIA A100 ZeroGPU)
  * Zero MB Laptop Download · Zero Laptop Storage Bloat
- * Supports Method 2 (Custom Duplicated Hugging Face Spaces & Private URLs)
+ * Centralized Engine: inuka1 (minsara) on Hugging Face
  * ─────────────────────────────────────────────────────────────────────────────
  */
+
+export const MASTER_HF_OWNER = 'inuka1';
+export const MASTER_HF_PROFILE_URL = 'https://huggingface.co/inuka1';
+
+/**
+ * Returns the standardized Hugging Face space embed URL if duplicated into inuka1
+ * Example: 'yisol/IDM-VTON' -> 'https://inuka1-idm-vton.hf.space'
+ */
+export function getInukaSpaceUrl(spaceId: string): string {
+  const repoName = spaceId.includes('/') ? spaceId.split('/')[1] : spaceId;
+  const sanitized = repoName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+  return `https://${MASTER_HF_OWNER}-${sanitized}.hf.space`;
+}
+
+/**
+ * Resolves the active embed URL for any model:
+ * 1. Custom URL saved by admin/user in localStorage
+ * 2. inuka1 Dedicated Engine if active
+ * 3. Default official high-availability ZeroGPU space
+ */
+export function resolveModelEmbedUrl(model: AIModelItem): string {
+  if (typeof window !== 'undefined') {
+    if (model.customSpaceUrlKey) {
+      const custom = localStorage.getItem(model.customSpaceUrlKey);
+      if (custom && custom.trim()) return custom.trim();
+    }
+    const inukaActive = localStorage.getItem(`master_hf_engine_${model.id}`);
+    if (inukaActive === 'true') {
+      return getInukaSpaceUrl(model.spaceId);
+    }
+  }
+  return model.spaceUrl;
+}
 
 export interface AIModelItem {
   id: string;

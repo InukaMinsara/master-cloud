@@ -640,7 +640,13 @@ export function VirtualTryOnStudio({
           {activeTab === 'web-cloud' && (
             <div className="w-full h-full min-h-[700px] rounded-2xl overflow-hidden border border-border relative">
               <iframe
-                src="https://yisol-idm-vton.hf.space"
+                src={
+                  typeof window !== 'undefined'
+                    ? localStorage.getItem('master_hf_engine_virtual-try-on-1') === 'true'
+                      ? 'https://inuka1-idm-vton.hf.space'
+                      : localStorage.getItem('master_cloud_vton_url') || 'https://yisol-idm-vton.hf.space'
+                    : 'https://yisol-idm-vton.hf.space'
+                }
                 title="Hugging Face IDM-VTON Cloud Space"
                 className="w-full h-full min-h-[700px] border-0"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"

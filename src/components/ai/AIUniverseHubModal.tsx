@@ -20,6 +20,10 @@ import {
   AI_UNIVERSE_MODELS,
   AIModelItem,
   AICategoryItem,
+  MASTER_HF_OWNER,
+  MASTER_HF_PROFILE_URL,
+  getInukaSpaceUrl,
+  resolveModelEmbedUrl,
 } from '@/services/ai/aiUniverseData';
 import { toast } from 'sonner';
 
@@ -39,6 +43,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
   const [activeRunningModel, setActiveRunningModel] = useState<AIModelItem | null>(null);
   const [isMethod2DrawerOpen, setIsMethod2DrawerOpen] = useState<boolean>(false);
   const [customSpaceUrl, setCustomSpaceUrl] = useState<string>('');
+  const [routeThroughInukaAccount, setRouteThroughInukaAccount] = useState<boolean>(false);
 
   // Filter models by category and search query
   const filteredModels = useMemo(() => {
@@ -60,34 +65,50 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
     });
   }, [selectedCategory, searchQuery]);
 
-  // Load custom private space URL for Method 2 if set
+  // Load active space URL (Custom -> inuka1 dedicated -> Official cluster fallback)
   const getActiveModelSpaceUrl = (model: AIModelItem): string => {
-    if (typeof window !== 'undefined' && model.customSpaceUrlKey) {
-      const saved = localStorage.getItem(model.customSpaceUrlKey);
-      if (saved && saved.trim()) return saved.trim();
-    }
-    return model.spaceUrl;
+    return resolveModelEmbedUrl(model);
   };
 
   const handleLaunchModel = (model: AIModelItem) => {
     setActiveRunningModel(model);
-    if (model.customSpaceUrlKey && typeof window !== 'undefined') {
-      const saved = localStorage.getItem(model.customSpaceUrlKey) || '';
-      setCustomSpaceUrl(saved);
+    if (typeof window !== 'undefined') {
+      const savedCustom = model.customSpaceUrlKey ? localStorage.getItem(model.customSpaceUrlKey) || '' : '';
+      setCustomSpaceUrl(savedCustom);
+
+      const inukaKey = `master_hf_engine_${model.id}`;
+      const isInukaActive = localStorage.getItem(inukaKey) === 'true';
+      setRouteThroughInukaAccount(isInukaActive);
     } else {
       setCustomSpaceUrl('');
+      setRouteThroughInukaAccount(false);
     }
   };
 
-  const handleSaveCustomSpaceUrl = () => {
-    if (!activeRunningModel || !activeRunningModel.customSpaceUrlKey) return;
-    if (customSpaceUrl.trim()) {
-      localStorage.setItem(activeRunningModel.customSpaceUrlKey, customSpaceUrl.trim());
-      toast.success('Private Space URL saved! Master Cloud will now run your dedicated copy.');
-    } else {
-      localStorage.removeItem(activeRunningModel.customSpaceUrlKey);
-      toast.info('Reverted to public Cloud ZeroGPU cluster.');
+  const handleSaveEngineSettings = () => {
+    if (!activeRunningModel) return;
+
+    if (typeof window !== 'undefined') {
+      // 1. Custom URL
+      if (activeRunningModel.customSpaceUrlKey) {
+        if (customSpaceUrl.trim()) {
+          localStorage.setItem(activeRunningModel.customSpaceUrlKey, customSpaceUrl.trim());
+        } else {
+          localStorage.removeItem(activeRunningModel.customSpaceUrlKey);
+        }
+      }
+
+      // 2. inuka1 Dedicated Engine Toggle
+      const inukaKey = `master_hf_engine_${activeRunningModel.id}`;
+      if (routeThroughInukaAccount) {
+        localStorage.setItem(inukaKey, 'true');
+        toast.success(`Routed to @${MASTER_HF_OWNER} dedicated Space (${getInukaSpaceUrl(activeRunningModel.spaceId)})`);
+      } else {
+        localStorage.removeItem(inukaKey);
+        toast.info('Using high-availability verified ZeroGPU cluster.');
+      }
     }
+
     setIsMethod2DrawerOpen(false);
   };
 
@@ -123,12 +144,22 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                       MASTER AI UNIVERSE
                     </h2>
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                      34 Categories · 102 Models
+                      34 Domains · 102 Bots
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground hidden sm:block">
-                    100% Free NVIDIA A100 ZeroGPU Clusters · 0 MB Laptop Download · Zero VRAM Strain
-                  </p>
+                  <div className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1.5">
+                    <span>Central Cloud Engine:</span>
+                    <a
+                      href={MASTER_HF_PROFILE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 hover:text-cyan-200 font-mono font-bold flex items-center gap-1 hover:underline"
+                    >
+                      <span>@{MASTER_HF_OWNER} (minsara)</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <span>· 100% Free ZeroGPU A100 · 0 MB Laptop Download</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -148,15 +179,15 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                   </span>
                 </div>
 
-                {/* Method 2 Private Duplicate Settings Button */}
+                {/* Central inuka1 Cloud Engine Settings Button */}
                 <button
                   type="button"
                   onClick={() => setIsMethod2DrawerOpen((prev) => !prev)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all cursor-pointer"
-                  title="Configure Method 2: Custom Duplicated Space URL"
+                  title="Configure @inuka1 Dedicated Cloud Engine & Space Duplication"
                 >
                   <Settings className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Method 2 Private Settings</span>
+                  <span className="hidden sm:inline">@{MASTER_HF_OWNER} Engine</span>
                 </button>
 
                 <a
@@ -207,17 +238,24 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
         {activeRunningModel ? (
           /* RUNNER VIEW: EMBEDDED CLOUD STUDIO */
           <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
-            {/* Method 2 Drawer Overlay */}
+            {/* Central inuka1 Engine Drawer Overlay */}
             {isMethod2DrawerOpen && (
-              <div className="absolute top-0 right-0 w-full sm:w-96 bg-card border-l border-border/80 shadow-2xl z-40 p-5 space-y-4 animate-in slide-in-from-right duration-200">
-                <div className="flex items-center justify-between">
+              <div className="absolute top-0 right-0 w-full sm:w-[420px] bg-card/95 backdrop-blur-xl border-l border-border/80 shadow-2xl z-40 p-5 space-y-4 animate-in slide-in-from-right duration-200 overflow-y-auto max-h-full">
+                <div className="flex items-center justify-between pb-2 border-b border-border/60">
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-purple-400" />
-                    <h4 className="font-extrabold text-sm text-foreground">Method 2: Private Space</h4>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-foreground">
+                        @{MASTER_HF_OWNER} Central Cloud Engine
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground">
+                        Master Cloud Dedicated AI Infrastructure
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => setIsMethod2DrawerOpen(false)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -225,59 +263,95 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
 
                 <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
                   <p>
-                    By default, Master Cloud connects to the verified high-speed Cloud ZeroGPU cluster.
+                    All Master Cloud users can use this model instantly with <strong>zero setup</strong> via the verified high-speed ZeroGPU cluster.
                   </p>
                   <p>
-                    If you duplicated this Space into your personal Hugging Face account, paste your custom private URL below to run your dedicated instance:
+                    To run this model directly under your personal account (<strong>@{MASTER_HF_OWNER}</strong>) so all users bypass public queues:
                   </p>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-muted/40 border border-border/60 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    1-Click Duplicate Link:
-                  </span>
+                {/* 1-Click Duplicate to inuka1 */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/25 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">
+                      Step 1: 1-Click Space Duplicate
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">
+                      ZeroGPU A100
+                    </span>
+                  </div>
                   <a
                     href={`https://huggingface.co/spaces/${activeRunningModel.spaceId}?duplicate=true`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between text-xs font-bold text-purple-300 hover:text-purple-200 hover:underline"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition-all group"
                   >
-                    <span>Duplicate {activeRunningModel.name}</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>Duplicate to @{MASTER_HF_OWNER} Account</span>
+                    <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </a>
+                  <p className="text-[10px] text-muted-foreground">
+                    Opens Hugging Face pre-filling your @{MASTER_HF_OWNER} account. Choose ZeroGPU (Free).
+                  </p>
                 </div>
 
+                {/* Step 2: Route through inuka1 space */}
+                <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/70 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Step 2: Engine Routing
+                    </span>
+                  </div>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={routeThroughInukaAccount}
+                      onChange={(e) => setRouteThroughInukaAccount(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-border text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-foreground block">
+                        Route users to @{MASTER_HF_OWNER} Instance
+                      </span>
+                      <span className="text-[11px] text-muted-foreground font-mono block break-all">
+                        {getInukaSpaceUrl(activeRunningModel.spaceId)}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Optional Custom Space URL */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    Custom Space URL:
+                    Custom Space URL (Optional Override):
                   </label>
                   <input
                     type="url"
                     value={customSpaceUrl}
                     onChange={(e) => setCustomSpaceUrl(e.target.value)}
-                    placeholder="https://yourname-spacename.hf.space"
+                    placeholder={`https://${MASTER_HF_OWNER}-custom-name.hf.space`}
                     className="w-full bg-background rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 border border-border/80 focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Leave blank to use the official free ZeroGPU cluster.
+                    Only required if you renamed the space to something other than the default.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={handleSaveCustomSpaceUrl}
-                    className="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    onClick={handleSaveEngineSettings}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <Check className="h-3.5 w-3.5" />
-                    <span>Save &amp; Reload</span>
+                    <span>Apply Engine Route</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsMethod2DrawerOpen(false)}
-                    className="py-2 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold cursor-pointer"
+                    className="py-2.5 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold cursor-pointer"
                   >
-                    Cancel
+                    Close
                   </button>
                 </div>
               </div>
@@ -425,6 +499,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                           0 MB Download
                         </span>
+                        <span className="text-purple-300/90 font-semibold">Engine: @{MASTER_HF_OWNER}</span>
                         <span>{model.hardware}</span>
                       </div>
 
