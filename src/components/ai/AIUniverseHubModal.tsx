@@ -25,6 +25,7 @@ import {
   getInukaSpaceUrl,
   resolveModelEmbedUrl,
 } from '@/services/ai/aiUniverseData';
+import { MasterAiNativeStudio } from './MasterAiNativeStudio';
 import { toast } from 'sonner';
 
 interface AIUniverseHubModalProps {
@@ -41,6 +42,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryId);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeRunningModel, setActiveRunningModel] = useState<AIModelItem | null>(null);
+  const [studioViewMode, setStudioViewMode] = useState<'native' | 'cloud'>('native');
   const [isMethod2DrawerOpen, setIsMethod2DrawerOpen] = useState<boolean>(false);
   const [customSpaceUrl, setCustomSpaceUrl] = useState<string>('');
   const [routeThroughInukaAccount, setRouteThroughInukaAccount] = useState<boolean>(false);
@@ -72,6 +74,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
 
   const handleLaunchModel = (model: AIModelItem) => {
     setActiveRunningModel(model);
+    setStudioViewMode('native');
     if (typeof window !== 'undefined') {
       const savedCustom = model.customSpaceUrlKey ? localStorage.getItem(model.customSpaceUrlKey) || '' : '';
       setCustomSpaceUrl(savedCustom);
@@ -179,6 +182,36 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                   </span>
                 </div>
 
+                {/* UI View Mode Switcher (Native vs Cloud Canvas) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setStudioViewMode((prev) => (prev === 'native' ? 'cloud' : 'native'))
+                  }
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                    studioViewMode === 'native'
+                      ? 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20'
+                  }`}
+                  title={
+                    studioViewMode === 'native'
+                      ? 'Switch to Direct ZeroGPU Cloud Canvas'
+                      : 'Switch to 100% Native Custom Master Cloud Studio'
+                  }
+                >
+                  {studioViewMode === 'native' ? (
+                    <>
+                      <Sliders className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Cloud Canvas</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Native Master UI</span>
+                    </>
+                  )}
+                </button>
+
                 {/* Central inuka1 Cloud Engine Settings Button */}
                 <button
                   type="button"
@@ -236,8 +269,16 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
 
         {/* ─── MAIN CONTENT VIEW ─── */}
         {activeRunningModel ? (
-          /* RUNNER VIEW: EMBEDDED CLOUD STUDIO */
-          <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
+          studioViewMode === 'native' ? (
+            <MasterAiNativeStudio
+              model={activeRunningModel}
+              onBack={() => setActiveRunningModel(null)}
+              onOpenCloudCanvas={() => setStudioViewMode('cloud')}
+              cloudEmbedUrl={getActiveModelSpaceUrl(activeRunningModel)}
+            />
+          ) : (
+            /* RUNNER VIEW: EMBEDDED CLOUD STUDIO */
+            <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
             {/* Central inuka1 Engine Drawer Overlay */}
             {isMethod2DrawerOpen && (
               <div className="absolute top-0 right-0 w-full sm:w-[420px] bg-card/95 backdrop-blur-xl border-l border-border/80 shadow-2xl z-40 p-5 space-y-4 animate-in slide-in-from-right duration-200 overflow-y-auto max-h-full">
@@ -369,7 +410,8 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
               />
             </div>
           </div>
-        ) : (
+        )
+      ) : (
           /* HUB VIEW: CATEGORY BROWSER & 102 MODEL CARDS */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Left Category Navigation (34 Categories) */}
