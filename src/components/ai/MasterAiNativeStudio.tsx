@@ -205,15 +205,6 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
       {/* ─── STUDIO SUB-HEADER / ENGINE BAR ─── */}
       <div className="px-4 py-2.5 border-b border-border/70 bg-card/60 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 flex-wrap">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/60 hover:bg-muted text-xs font-bold text-foreground transition-all cursor-pointer"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">All 102 Models</span>
-          </button>
-
           <div className="flex items-center gap-2">
             <span className="text-xl">{model.categoryIcon}</span>
             <div>
