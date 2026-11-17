@@ -34,6 +34,7 @@ import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
 import { VirtualTryOnStudio } from '@/components/ai/VirtualTryOnStudio';
+import { AIUniverseHubModal } from '@/components/ai/AIUniverseHubModal';
 
 export interface LocalAttachedFile {
   name: string;
@@ -138,6 +139,7 @@ export function AIPage() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isLocalVtonStudioOpen, setIsLocalVtonStudioOpen] = useState(false);
+  const [isUniverseHubOpen, setIsUniverseHubOpen] = useState(false);
   const [isLocalHostActive, setIsLocalHostActive] = useState(false);
   const [vtonMode, setVtonMode] = useState<'cloud' | 'local'>('cloud');
   const selectedVoice = 'Joanna';
@@ -879,6 +881,17 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
 
         {/* ─── HEADER STATUS BADGE ─── */}
         <div className="flex items-center gap-2">
+          {/* Master AI Universe Hub Button (34 Categories · 102 Models) */}
+          <button
+            type="button"
+            onClick={() => setIsUniverseHubOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white shadow-md shadow-purple-500/20 text-xs font-extrabold cursor-pointer transition-all active:scale-[0.98]"
+            title="Open Master AI Universe (34 Categories · 102 World-Class Cloud Models · 0 MB Download)"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-cyan-200" />
+            <span>🌌 AI Universe (102 Models)</span>
+          </button>
+
           {/* Virtual Try-On Studio Button */}
           <button
             type="button"
@@ -887,7 +900,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
             title="Open AI Virtual Try-On Studio (Cloud ZeroGPU / Localhost RTX 3050)"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>👕 Virtual Try-On Studio</span>
+            <span>👕 Try-On Studio</span>
           </button>
 
           <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
@@ -1260,6 +1273,16 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
                 <button
                   type="button"
+                  onClick={() => setIsUniverseHubOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-cyan-500/15 hover:from-purple-500/25 hover:to-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold transition-all shrink-0 cursor-pointer shadow-sm"
+                  title="Explore all 102 AI Models across 34 Categories"
+                >
+                  <Sparkles className="h-3 w-3 text-cyan-400" />
+                  <span>🌌 AI Universe (102 Models)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setInputText((prev) => (prev ? `${prev} Photo ekak hadanna ` : 'Photo ekak hadanna '))}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors shrink-0 cursor-pointer"
                 >
@@ -1581,6 +1604,12 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         isOpen={isLocalVtonStudioOpen}
         onClose={() => setIsLocalVtonStudioOpen(false)}
         isLocalHostActive={isLocalHostActive}
+      />
+
+      {/* ─── MASTER AI UNIVERSE HUB (34 CATEGORIES · 102 WORLD-CLASS MODELS) ─── */}
+      <AIUniverseHubModal
+        isOpen={isUniverseHubOpen}
+        onClose={() => setIsUniverseHubOpen(false)}
       />
     </div>
   );
