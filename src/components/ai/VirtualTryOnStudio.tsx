@@ -67,8 +67,8 @@ export function VirtualTryOnStudio({
   onClose,
   isLocalHostActive = false,
 }: VirtualTryOnStudioProps) {
-  // Modes: 'native-cloud' | 'web-cloud' | 'local-gpu'
-  const [activeTab, setActiveTab] = useState<'native-cloud' | 'web-cloud' | 'local-gpu'>('native-cloud');
+  // Modes: 'web-cloud' (Default Space Studio) | 'native-cloud' | 'local-gpu'
+  const [activeTab, setActiveTab] = useState<'native-cloud' | 'web-cloud' | 'local-gpu'>('web-cloud');
 
   // Input states
   const [personImage, setPersonImage] = useState<{ file?: File; preview: string; name: string } | null>(null);

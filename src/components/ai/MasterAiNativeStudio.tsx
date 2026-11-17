@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   ArrowLeft,
@@ -38,6 +38,8 @@ import {
   Send,
   Loader2,
   CheckCircle2,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import { AIModelItem, MASTER_HF_OWNER, MASTER_HF_PROFILE_URL } from '@/services/ai/aiUniverseData';
 import {
@@ -84,14 +86,39 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const [generatedTextOutput, setGeneratedTextOutput] = useState<string>('');
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
-  // Virtual Try-on Specific States
+  // Virtual Try-on Specific States & File Upload Refs
+  const humanFileInputRef = useRef<HTMLInputElement>(null);
+  const garmentFileInputRef = useRef<HTMLInputElement>(null);
+
   const [humanImage, setHumanImage] = useState<string>(
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=768&q=80'
   );
   const [garmentImage, setGarmentImage] = useState<string>(
     'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=768&q=80'
   );
+  const [isCustomHuman, setIsCustomHuman] = useState<boolean>(false);
+  const [isCustomGarment, setIsCustomGarment] = useState<boolean>(false);
   const [garmentCategory, setGarmentCategory] = useState<'upper_body' | 'lower_body' | 'dresses'>('upper_body');
+
+  const handleHumanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setHumanImage(url);
+      setIsCustomHuman(true);
+      toast.success(`Uploaded model photo: ${file.name}`);
+    }
+  };
+
+  const handleGarmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setGarmentImage(url);
+      setIsCustomGarment(true);
+      toast.success(`Uploaded garment photo: ${file.name}`);
+    }
+  };
 
   useEffect(() => {
     // Set smart sample prompt per category
@@ -160,12 +187,11 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
         }
         toast.success('4K Image generated successfully!');
       } else if (model.categoryId === 'virtual-try-on') {
-        // Virtual Try-on: use high-speed preview or switch to dedicated cloud canvas
-        setProcessingStatus('Processing try-on warp via ZeroGPU A100...');
-        // Mock instant processing or route to dedicated workspace
-        await new Promise((r) => setTimeout(r, 1800));
-        setGeneratedImageUrl(humanImage); // Shows preview
-        toast.success('Cloth try-on processed! Open Direct Canvas for full custom pose synthesis.');
+        // Virtual Try-on: Open the dedicated live ZeroGPU workspace
+        setProcessingStatus('Connecting reference photos to Cloud ZeroGPU A100...');
+        toast.info('Switching to live interactive ZeroGPU Try-On Canvas...');
+        await new Promise((r) => setTimeout(r, 600));
+        onOpenCloudCanvas();
       } else {
         // Other heavy categories (Video, 3D, Audio)
         setProcessingStatus(`Initializing ${model.name} ZeroGPU container...`);
@@ -357,49 +383,125 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
             </div>
           )}
 
-          {/* Virtual Try-On Specific Inputs */}
+          {/* Virtual Try-On Specific Inputs & Real Custom Uploaders */}
           {model.categoryId === 'virtual-try-on' && (
             <div className="space-y-4">
-              <span className="text-xs font-bold text-foreground block">Try-On Photos</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground block">Try-On Photos</span>
+                <span className="text-[10px] text-cyan-400 font-mono">Real File Upload Active</span>
+              </div>
+
+              {/* Hidden file inputs */}
+              <input
+                ref={humanFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleHumanUpload}
+              />
+              <input
+                ref={garmentFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleGarmentUpload}
+              />
+
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-2xl border border-border/80 bg-card/30 space-y-2 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Human Model</span>
-                  <img
-                    src={humanImage}
-                    alt="Human Model"
-                    className="h-28 w-full object-cover rounded-xl"
-                  />
+                {/* 1. Human Model Photo */}
+                <div className="p-3 rounded-2xl border border-border/80 bg-card/40 space-y-2 text-center relative group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">1. Person Photo</span>
+                    {isCustomHuman && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">
+                        Custom
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative h-28 w-full rounded-xl overflow-hidden bg-black/40 border border-border/60">
+                    <img
+                      src={humanImage}
+                      alt="Human Model"
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => humanFileInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 cursor-pointer"
+                    >
+                      <Upload className="h-4 w-4 text-cyan-300" />
+                      <span className="text-[9px] font-bold">Pick From Computer</span>
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setHumanImage(
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=768&q=80'
-                      )
-                    }
-                    className="text-[10px] text-purple-300 hover:underline block mx-auto cursor-pointer"
+                    onClick={() => humanFileInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border border-purple-500/30 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
                   >
-                    Switch Model
+                    <Upload className="h-3 w-3" />
+                    <span>Upload Person</span>
                   </button>
                 </div>
 
-                <div className="p-3 rounded-2xl border border-border/80 bg-card/30 space-y-2 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Garment / Clothes</span>
-                  <img
-                    src={garmentImage}
-                    alt="Garment"
-                    className="h-28 w-full object-cover rounded-xl"
-                  />
+                {/* 2. Garment / Clothes Photo */}
+                <div className="p-3 rounded-2xl border border-border/80 bg-card/40 space-y-2 text-center relative group">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">2. Clothes Photo</span>
+                    {isCustomGarment && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">
+                        Custom
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative h-28 w-full rounded-xl overflow-hidden bg-black/40 border border-border/60">
+                    <img
+                      src={garmentImage}
+                      alt="Garment"
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => garmentFileInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 cursor-pointer"
+                    >
+                      <Upload className="h-4 w-4 text-cyan-300" />
+                      <span className="text-[9px] font-bold">Pick From Computer</span>
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      setGarmentImage(
-                        'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=768&q=80'
-                      )
-                    }
-                    className="text-[10px] text-purple-300 hover:underline block mx-auto cursor-pointer"
+                    onClick={() => garmentFileInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-200 border border-cyan-500/30 text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
                   >
-                    Switch Garment
+                    <Upload className="h-3 w-3" />
+                    <span>Upload Clothes</span>
                   </button>
+                </div>
+              </div>
+
+              {/* Sample Presets Quick Test */}
+              <div className="p-3 rounded-2xl bg-muted/20 border border-border/60 space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase block">
+                  Or Test with Instant Sample Models:
+                </span>
+                <div className="flex gap-2">
+                  {[
+                    { label: 'Casual', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=768&q=80' },
+                    { label: 'Studio', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=768&q=80' },
+                    { label: 'Fashion', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=768&q=80' },
+                  ].map((s) => (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => {
+                        setHumanImage(s.url);
+                        setIsCustomHuman(false);
+                      }}
+                      className="flex-1 py-1 px-1.5 rounded-lg bg-card/60 hover:bg-card border border-border/60 text-[10px] font-semibold text-muted-foreground hover:text-foreground text-center cursor-pointer transition-all"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -530,8 +632,32 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
             </div>
           )}
 
-          {/* Empty State / Initial Standby View */}
-          {!isProcessing && !generatedImageUrl && !generatedTextOutput && (
+          {/* SPECIAL VIEW: VIRTUAL TRY-ON LIVE ZERO-GPU A100 WORKSPACE */}
+          {model.categoryId === 'virtual-try-on' ? (
+            <div className="w-full h-full flex flex-col rounded-3xl overflow-hidden border border-border/80 bg-card shadow-2xl relative">
+              <div className="px-4 py-2.5 border-b border-border/70 bg-card/60 backdrop-blur-md flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Shirt className="h-4 w-4 text-purple-400" />
+                  <span className="font-extrabold text-foreground">
+                    Live Cloud ZeroGPU Try-On Studio ({model.name})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Drag &amp; Drop Custom Photos Below
+                  </span>
+                </div>
+              </div>
+              <iframe
+                src={cloudEmbedUrl}
+                title={model.name}
+                className="w-full flex-1 border-0 bg-background min-h-[580px]"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                allow="camera; microphone; clipboard-write; display-capture"
+              />
+            </div>
+          ) : !isProcessing && !generatedImageUrl && !generatedTextOutput ? (
             <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md">
               <div className="h-16 w-16 rounded-3xl bg-gradient-to-tr from-purple-500/20 via-indigo-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center text-3xl shadow-lg">
                 {model.categoryIcon}
@@ -551,7 +677,7 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
                 </span>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
