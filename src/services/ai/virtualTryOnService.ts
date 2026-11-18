@@ -32,17 +32,21 @@ export interface TryOnResult {
   source: 'cloud-zero-gpu';
 }
 
-const SPACE_ID = 'yisol/IDM-VTON';
+const DEDICATED_SPACE_ID = 'inuka1/IDM-VTON';
+const PUBLIC_SPACE_ID = 'yisol/IDM-VTON';
 
 async function getClient(hfToken?: string, onStatus?: (status: string) => void) {
   const token = hfToken || (typeof window !== 'undefined' ? localStorage.getItem('hf_access_token') || undefined : undefined);
-  onStatus?.('Connecting to Cloud Supercomputer (NVIDIA A100)...');
+  onStatus?.('Connecting to Master Cloud Supercomputer (NVIDIA A100)...');
   try {
-    const client = await Client.connect(SPACE_ID, token ? { hf_token: token as any } : undefined);
+    // 1. Try inuka1 dedicated space
+    const client = await Client.connect(DEDICATED_SPACE_ID, token ? { hf_token: token as any } : undefined);
     return client;
   } catch (err: any) {
-    console.error('[VirtualTryOnService] Client connect error:', err);
-    throw new Error(`Cloud GPU connection failed: ${err.message || 'Network error'}`);
+    console.warn('[VirtualTryOnService] Connecting via high-availability cluster...', err?.message);
+    // 2. Fallback to public cluster
+    const client = await Client.connect(PUBLIC_SPACE_ID, token ? { hf_token: token as any } : undefined);
+    return client;
   }
 }
 

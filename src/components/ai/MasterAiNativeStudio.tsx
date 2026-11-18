@@ -50,6 +50,7 @@ import {
   generateGroqChat,
   generateAiHordeImage,
 } from '@/services/ai/masterCloudAiEngines';
+import { executeVirtualTryOn } from '@/services/ai/virtualTryOnService';
 import { toast } from 'sonner';
 
 interface MasterAiNativeStudioProps {
@@ -91,6 +92,8 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const [garmentImage, setGarmentImage] = useState<string>(
     'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=768&q=80'
   );
+  const [humanFile, setHumanFile] = useState<File | null>(null);
+  const [garmentFile, setGarmentFile] = useState<File | null>(null);
   const [isCustomHuman, setIsCustomHuman] = useState<boolean>(false);
   const [isCustomGarment, setIsCustomGarment] = useState<boolean>(false);
   const [garmentCategory, setGarmentCategory] = useState<'upper_body' | 'lower_body' | 'dresses'>('upper_body');
@@ -98,6 +101,7 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const handleHumanUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setHumanFile(file);
       const url = URL.createObjectURL(file);
       setHumanImage(url);
       setIsCustomHuman(true);
@@ -108,6 +112,7 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const handleGarmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setGarmentFile(file);
       const url = URL.createObjectURL(file);
       setGarmentImage(url);
       setIsCustomGarment(true);
@@ -190,15 +195,21 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
         }
         toast.success('4K Image generated on Master Unified vGPU!');
       } else if (model.categoryId === 'virtual-try-on') {
-        // Virtual Try-on: Open the dedicated live ZeroGPU workspace
-        setProcessingStatus(
-          activeEngine === 'unified'
-            ? 'Master Unified vGPU: Connecting photos to NVIDIA A100 Supercomputer Core...'
-            : 'Connecting reference photos to Cloud ZeroGPU A100...'
-        );
-        toast.info('Switching to live interactive ZeroGPU Try-On Canvas...');
-        await new Promise((r) => setTimeout(r, 600));
-        onOpenCloudCanvas();
+        // Virtual Try-on: Run 100% headless on Master Cloud A100 Supercomputer
+        setProcessingStatus('Master Unified vGPU: Preparing reference photos for Try-On...');
+        try {
+          const personBlob = humanFile || (await (await fetch(humanImage)).blob());
+          const garmentBlob = garmentFile || (await (await fetch(garmentImage)).blob());
+          const result = await executeVirtualTryOn(personBlob, garmentBlob, {
+            onStatusUpdate: (st) => setProcessingStatus(st),
+          });
+          setGeneratedImageUrl(result.outputImageUrl);
+          toast.success('Virtual Try-On synthesized successfully on Master vGPU!');
+        } catch (err: any) {
+          console.warn('[Try-On Headless] Direct execution error, opening Canvas:', err);
+          toast.info('Switching to interactive cloud canvas...');
+          onOpenCloudCanvas();
+        }
       } else {
         // Other heavy categories (Video, 3D, Audio)
         setProcessingStatus(
@@ -650,30 +661,65 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
             </div>
           )}
 
-          {/* SPECIAL VIEW: VIRTUAL TRY-ON LIVE ZERO-GPU A100 WORKSPACE */}
-          {model.categoryId === 'virtual-try-on' ? (
-            <div className="w-full h-full flex flex-col rounded-3xl overflow-hidden border border-border/80 bg-card shadow-2xl relative">
-              <div className="px-4 py-2.5 border-b border-border/70 bg-card/60 backdrop-blur-md flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <Shirt className="h-4 w-4 text-purple-400" />
-                  <span className="font-extrabold text-foreground">
-                    Master Cloud Live Try-On Studio ({model.name})
+          {/* SPECIAL VIEW: VIRTUAL TRY-ON NATIVE STAGE WHEN NO RESULT YET */}
+          {model.categoryId === 'virtual-try-on' && !isProcessing && !generatedImageUrl ? (
+            <div className="w-full max-w-3xl flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in duration-200">
+              <div className="text-center space-y-1">
+                <h3 className="font-extrabold text-base text-foreground flex items-center justify-center gap-2">
+                  <Shirt className="h-5 w-5 text-purple-400" />
+                  <span>Master Cloud AI Try-On Studio</span>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Reference photos selected on the left will be synthesized using Master Quantum vGPU.
+                </p>
+              </div>
+
+              {/* Composition Preview: Human + Clothes */}
+              <div className="flex items-center justify-center gap-4 sm:gap-8 w-full max-w-lg">
+                {/* 1. Human Model Card */}
+                <div className="flex-1 flex flex-col items-center space-y-2 p-3 rounded-2xl bg-card border border-border/70 shadow-lg">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">1. Person Model</span>
+                  <div className="h-44 w-full rounded-xl overflow-hidden bg-black/40 border border-border/50">
+                    <img src={humanImage} alt="Person" className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Ready
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Drag &amp; Drop Custom Photos Below
+
+                {/* Animated Arrow / Combine */}
+                <div className="flex flex-col items-center justify-center text-purple-400">
+                  <div className="h-10 w-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shadow-md animate-pulse">
+                    <Sparkles className="h-5 w-5 text-cyan-300" />
+                  </div>
+                  <span className="text-[9px] font-mono text-muted-foreground mt-1">Combine</span>
+                </div>
+
+                {/* 2. Garment Card */}
+                <div className="flex-1 flex flex-col items-center space-y-2 p-3 rounded-2xl bg-card border border-border/70 shadow-lg">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">2. Garment</span>
+                  <div className="h-44 w-full rounded-xl overflow-hidden bg-black/40 border border-border/50">
+                    <img src={garmentImage} alt="Garment" className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-[10px] text-cyan-400 font-mono font-bold flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Ready
                   </span>
                 </div>
               </div>
-              <iframe
-                src={cloudEmbedUrl}
-                title={model.name}
-                className="w-full flex-1 border-0 bg-background min-h-[580px]"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                allow="camera; microphone; clipboard-write; display-capture"
-              />
+
+              {/* Action Banner */}
+              <button
+                type="button"
+                onClick={handleExecute}
+                className="py-3 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg shadow-purple-500/25 flex items-center gap-2 cursor-pointer active:scale-[0.99] transition-all"
+              >
+                <Sparkles className="h-4 w-4 text-cyan-200" />
+                <span>Execute Virtual Try-On on Master vGPU</span>
+              </button>
+
+              <span className="text-[10px] font-mono text-muted-foreground">
+                100% Free · 0 MB Local GPU Strain · Supercomputer Accelerated
+              </span>
             </div>
           ) : !isProcessing && !generatedImageUrl && !generatedTextOutput ? (
             <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md">

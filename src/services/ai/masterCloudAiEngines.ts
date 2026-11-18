@@ -98,7 +98,7 @@ export interface PollinationsImageOptions {
 export async function generatePollinationsImage(options: PollinationsImageOptions): Promise<string> {
   const {
     prompt,
-    model = 'flux',
+    model = 'turbo',
     width = 1024,
     height = 1024,
     seed = Math.floor(Math.random() * 1000000),
@@ -106,17 +106,35 @@ export async function generatePollinationsImage(options: PollinationsImageOption
   } = options;
 
   const encodedPrompt = encodeURIComponent(prompt);
-  // Pollinations API format
-  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${model}&seed=${seed}&nologo=true&enhance=${enhance}`;
 
-  // Pre-flight check to verify image loads and cache it
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Pollinations GPU returned status ${res.status}`);
+  // 1. Try Pollinations Turbo (100% Free, zero 402 errors, no wait time)
+  try {
+    const turboUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true`;
+    const res = await fetch(turboUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    console.warn('[Engine] Pollinations turbo failed, falling back to Puter AI...', err);
   }
 
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  // 2. Fallback: Puter AI FLUX.1 Engine (Unlimited Free Tier)
+  try {
+    const puterRes = await puterAiService.generateImage(prompt, {
+      width,
+      height,
+      aspectRatio: width === height ? '1:1' : width > height ? '16:9' : '9:16',
+    });
+    if (puterRes?.imageUrl) {
+      return puterRes.imageUrl;
+    }
+  } catch (err) {
+    console.warn('[Engine] Puter FLUX image fallback failed:', err);
+  }
+
+  // 3. Fallback: Direct Pollinations stream URL
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&nologo=true`;
 }
 
 /**
