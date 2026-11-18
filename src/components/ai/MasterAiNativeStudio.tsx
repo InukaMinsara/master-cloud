@@ -41,7 +41,7 @@ import {
   Upload,
   Trash2,
 } from 'lucide-react';
-import { AIModelItem, MASTER_HF_OWNER, MASTER_HF_PROFILE_URL } from '@/services/ai/aiUniverseData';
+import { AIModelItem } from '@/services/ai/aiUniverseData';
 import {
   MASTER_GPU_ENGINES,
   MasterGpuEngineId,
@@ -255,11 +255,11 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
                 </span>
               </div>
               <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1.5">
-                <span>Central Engine: @{MASTER_HF_OWNER}</span>
+                <span className="text-cyan-300 font-bold">Master Unified vGPU</span>
                 <span>•</span>
-                <span className="text-cyan-400">Drive I:\Models</span>
+                <span className="text-purple-300 font-medium">Drive I:\Models</span>
                 <span>•</span>
-                <span>0 MB Download</span>
+                <span>100% Master Cloud Native</span>
               </span>
             </div>
           </div>
@@ -657,7 +657,7 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
                 <div className="flex items-center gap-2">
                   <Shirt className="h-4 w-4 text-purple-400" />
                   <span className="font-extrabold text-foreground">
-                    Live Cloud ZeroGPU Try-On Studio ({model.name})
+                    Master Cloud Live Try-On Studio ({model.name})
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
