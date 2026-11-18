@@ -10,7 +10,6 @@
  */
 
 export const MASTER_HF_OWNER = 'inuka1';
-export const MASTER_HF_PROFILE_URL = 'https://huggingface.co/inuka1';
 
 /**
  * Returns the standardized Hugging Face space embed URL if duplicated into inuka1

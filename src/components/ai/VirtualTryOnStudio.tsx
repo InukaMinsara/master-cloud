@@ -17,9 +17,11 @@ import {
   Cloud,
   Wand2,
   AlertCircle,
+  Cpu,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { executeVirtualTryOn, TryOnResult } from '@/services/ai/virtualTryOnService';
+import { dedicatedGpuService } from '@/services/ai/dedicatedGpuBackend';
 import { useUploadStore } from '@/stores/uploadStore';
 
 interface VirtualTryOnStudioProps {
@@ -67,8 +69,12 @@ export function VirtualTryOnStudio({
   onClose,
   isLocalHostActive = false,
 }: VirtualTryOnStudioProps) {
-  // Modes: 'web-cloud' (Default Space Studio) | 'native-cloud' | 'local-gpu'
-  const [activeTab, setActiveTab] = useState<'native-cloud' | 'web-cloud' | 'local-gpu'>('web-cloud');
+  // Modes: 'native-cloud' (Default Native Studio) | 'dedicated-gpu' (Option A) | 'local-gpu'
+  const [activeTab, setActiveTab] = useState<'native-cloud' | 'dedicated-gpu' | 'local-gpu'>('native-cloud');
+
+  // Option A Dedicated Cloud GPU state
+  const [dedicatedUrl, setDedicatedUrl] = useState(() => dedicatedGpuService.getBackendUrl());
+  const [dedicatedStatusMsg, setDedicatedStatusMsg] = useState('');
 
   // Input states
   const [personImage, setPersonImage] = useState<{ file?: File; preview: string; name: string } | null>(null);
@@ -231,16 +237,16 @@ export function VirtualTryOnStudio({
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('web-cloud')}
+                onClick={() => setActiveTab('dedicated-gpu')}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'web-cloud'
+                  activeTab === 'dedicated-gpu'
                     ? 'bg-purple-600 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <Cloud className="h-3 w-3" />
-                <span className="hidden sm:inline">Space Webview</span>
-                <span className="sm:hidden">Web</span>
+                <Cpu className="h-3 w-3" />
+                <span className="hidden sm:inline">Dedicated GPU (Option A)</span>
+                <span className="sm:hidden">Option A</span>
               </button>
               <button
                 type="button"
@@ -327,15 +333,10 @@ export function VirtualTryOnStudio({
 
                     <div className="sm:col-span-2 pt-2 border-t border-border/60">
                       <div className="flex justify-between items-center mb-1.5">
-                        <label className="font-semibold text-foreground">Hugging Face User Token (Optional · Gives dedicated ZeroGPU quota):</label>
-                        <a
-                          href="https://huggingface.co/settings/tokens"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-purple-400 hover:text-purple-300 underline font-medium"
-                        >
-                          Get 100% Free Token ↗
-                        </a>
+                        <label className="font-semibold text-foreground">Dedicated GPU Key / Acceleration Token (Optional):</label>
+                        <span className="text-[11px] text-cyan-400 font-mono">
+                          Option A High-Priority Compute
+                        </span>
                       </div>
                       <input
                         type="password"
@@ -344,11 +345,11 @@ export function VirtualTryOnStudio({
                           setHfToken(e.target.value);
                           localStorage.setItem('hf_access_token', e.target.value);
                         }}
-                        placeholder="Paste your free Hugging Face token: hf_..."
+                        placeholder="Paste dedicated GPU authorization key or cluster token..."
                         className="w-full px-3 py-2 rounded-xl bg-muted/60 border border-border focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs font-mono"
                       />
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Free accounts on Hugging Face get personal ZeroGPU allocations. Adding your token prevents anonymous pool rate limits.
+                        Option A dedicated backend or priority token eliminates all queue times and runs clothing synthesis at peak performance.
                       </p>
                     </div>
                   </div>
@@ -636,22 +637,100 @@ export function VirtualTryOnStudio({
             </div>
           )}
 
-          {/* TAB 2: SPACE WEBVIEW (IFRAME) */}
-          {activeTab === 'web-cloud' && (
-            <div className="w-full h-full min-h-[700px] rounded-2xl overflow-hidden border border-border relative">
-              <iframe
-                src={
-                  typeof window !== 'undefined'
-                    ? localStorage.getItem('master_hf_engine_virtual-try-on-1') === 'true'
-                      ? 'https://inuka1-idm-vton.hf.space'
-                      : localStorage.getItem('master_cloud_vton_url') || 'https://yisol-idm-vton.hf.space'
-                    : 'https://yisol-idm-vton.hf.space'
-                }
-                title="Hugging Face IDM-VTON Cloud Space"
-                className="w-full h-full min-h-[700px] border-0"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                allow="camera; microphone; clipboard-write"
-              />
+          {/* TAB 2: OPTION A DEDICATED CLOUD GPU (GOOGLE COLAB / VPS) */}
+          {activeTab === 'dedicated-gpu' && (
+            <div className="max-w-3xl mx-auto space-y-6 py-4">
+              <div className="p-6 rounded-2xl bg-card border border-border/80 space-y-6 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                    <Cpu className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                      <span>Master Dedicated GPU Engine</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono">
+                        Option A
+                      </span>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Zero 3rd-party UI · Zero local storage download · Powered by private Google Colab T4/A100 Cloud GPU.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-foreground block">
+                    Public Dedicated GPU Tunnel URL:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={dedicatedUrl}
+                      onChange={(e) => setDedicatedUrl(e.target.value)}
+                      placeholder="https://xxxx.trycloudflare.com or http://127.0.0.1:8000"
+                      className="flex-1 px-3 py-2 rounded-xl bg-muted/60 border border-border text-xs font-mono focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        dedicatedGpuService.setBackendUrl(dedicatedUrl);
+                        if (!dedicatedUrl) {
+                          setDedicatedStatusMsg('Backend URL cleared. Using built-in cloud cascade.');
+                          toast.info('Dedicated GPU URL removed.');
+                          return;
+                        }
+                        setDedicatedStatusMsg('Testing connection...');
+                        const status = await dedicatedGpuService.checkHealth();
+                        if (status.online) {
+                          setDedicatedStatusMsg(
+                            `Online! GPU: ${status.gpuName} (${status.totalVramGb} GB VRAM, ${status.freeVramGb} GB Free)`
+                          );
+                          toast.success(`Connected to ${status.gpuName}!`);
+                        } else {
+                          setDedicatedStatusMsg(
+                            'Offline: Could not connect to this URL. Verify that Colab is running.'
+                          );
+                          toast.error('Could not reach dedicated server.');
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+                    >
+                      Connect & Test
+                    </button>
+                  </div>
+                  {dedicatedStatusMsg && (
+                    <p className="text-xs font-mono text-cyan-400 bg-cyan-500/10 p-2 rounded-lg border border-cyan-500/20">
+                      {dedicatedStatusMsg}
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-3 text-xs">
+                  <div className="font-bold text-foreground flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-400" />
+                    <span>How to Launch Free Private GPU (Google Colab):</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground leading-relaxed">
+                    <li>Open a free notebook at <span className="text-purple-300 font-mono">colab.research.google.com</span>.</li>
+                    <li>Set hardware accelerator: <span className="text-purple-300 font-mono">Runtime &gt; Change runtime type &gt; T4 GPU</span>.</li>
+                    <li>Copy and run the launcher from <span className="text-purple-300 font-mono">scripts/master_colab_launcher.py</span>.</li>
+                    <li>Copy the public <span className="text-cyan-300 font-mono">https://xxxx.trycloudflare.com</span> link generated and paste above.</li>
+                  </ol>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `!pip install fastapi uvicorn python-multipart pydantic pillow gradio_client pycloudflared\n\nimport urllib.request\nurllib.request.urlretrieve('https://raw.githubusercontent.com/InukaMinsara/master-cloud/master/scripts/master_colab_launcher.py', 'run.py')\n%run run.py`
+                      );
+                      toast.success('1-Click Colab launcher snippet copied!');
+                    }}
+                    className="mt-1 px-3 py-1.5 rounded-lg bg-card hover:bg-muted text-foreground font-semibold border border-border text-[11px] transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Download className="h-3 w-3 text-purple-400" />
+                    <span>Copy 1-Click Colab Snippet</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

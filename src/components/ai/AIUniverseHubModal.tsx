@@ -22,7 +22,6 @@ import {
   AIModelItem,
   AICategoryItem,
   MASTER_HF_OWNER,
-  MASTER_HF_PROFILE_URL,
   getInukaSpaceUrl,
   resolveModelEmbedUrl,
 } from '@/services/ai/aiUniverseData';
@@ -47,7 +46,6 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryId);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeRunningModel, setActiveRunningModel] = useState<AIModelItem | null>(null);
-  const [studioViewMode, setStudioViewMode] = useState<'native' | 'cloud'>('native');
   const [isMethod2DrawerOpen, setIsMethod2DrawerOpen] = useState<boolean>(false);
   const [customSpaceUrl, setCustomSpaceUrl] = useState<string>('');
   const [routeThroughInukaAccount, setRouteThroughInukaAccount] = useState<boolean>(false);
@@ -191,35 +189,11 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                 </span>
               </div>
 
-              {/* UI View Mode Switcher (Native vs Cloud Canvas) */}
-              <button
-                type="button"
-                onClick={() =>
-                  setStudioViewMode((prev) => (prev === 'native' ? 'cloud' : 'native'))
-                }
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                  studioViewMode === 'native'
-                    ? 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
-                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20'
-                }`}
-                title={
-                  studioViewMode === 'native'
-                    ? 'Switch to Direct ZeroGPU Cloud Canvas'
-                    : 'Switch to 100% Native Custom Master Cloud Studio'
-                }
-              >
-                {studioViewMode === 'native' ? (
-                  <>
-                    <Sliders className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Advanced Canvas</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Native Master UI</span>
-                  </>
-                )}
-              </button>
+              {/* Native Studio Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">100% Master Native UI</span>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -269,32 +243,13 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
         </div>
       </div>
 
-        {/* ─── MAIN CONTENT VIEW ─── */}
+        {/* ─── MAIN CONTENT VIEW (100% NATIVE STUDIO) ─── */}
         {activeRunningModel ? (
-          studioViewMode === 'native' ? (
-            <MasterAiNativeStudio
-              model={activeRunningModel}
-              onBack={() => setActiveRunningModel(null)}
-              onOpenCloudCanvas={() => setStudioViewMode('cloud')}
-              cloudEmbedUrl={getActiveModelSpaceUrl(activeRunningModel)}
-            />
-          ) : (
-            /* RUNNER VIEW: ADVANCED CLOUD CANVAS */
-            <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
-              {/* Embedded Cloud Canvas */}
-              <div className="flex-1 w-full h-full relative">
-                <iframe
-                  key={getActiveModelSpaceUrl(activeRunningModel)}
-                  src={getActiveModelSpaceUrl(activeRunningModel)}
-                  title={activeRunningModel.name}
-                  className="w-full h-full border-0 bg-background"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                  allow="camera; microphone; clipboard-write; display-capture"
-                />
-              </div>
-            </div>
-          )
-      ) : (
+          <MasterAiNativeStudio
+            model={activeRunningModel}
+            onBack={() => setActiveRunningModel(null)}
+          />
+        ) : (
           /* HUB VIEW: CATEGORY BROWSER & 102 MODEL CARDS */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Left Category Navigation (34 Categories) */}

@@ -68,6 +68,39 @@ export async function executeVirtualTryOn(
     onStatusUpdate,
   } = options;
 
+  // 1. Check if Dedicated Headless GPU Backend (Option A) is configured
+  const dedicatedUrl = typeof window !== 'undefined' ? localStorage.getItem('master_dedicated_gpu_url') : null;
+  if (dedicatedUrl) {
+    onStatusUpdate?.('Executing on Master Dedicated GPU (Option A)...');
+    try {
+      const formData = new FormData();
+      formData.append('person_image', personImage);
+      formData.append('garment_image', garmentImage);
+      formData.append('description', garmentDescription);
+      formData.append('denoise_steps', String(denoiseSteps));
+
+      const res = await fetch(`${dedicatedUrl}/api/v1/tryon`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.image_data) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          onStatusUpdate?.('Try-On successfully synthesized on Dedicated GPU!');
+          return {
+            outputImageUrl: json.image_data,
+            durationSeconds: elapsed,
+            source: 'cloud-zero-gpu',
+          };
+        }
+      }
+    } catch (dedErr) {
+      console.warn('[VirtualTryOn] Dedicated GPU error, falling back to ZeroGPU cluster:', dedErr);
+    }
+  }
+
   onStatusUpdate?.('Initializing Cloud ZeroGPU worker...');
   const client = await getClient(hfToken, onStatusUpdate);
 
