@@ -140,6 +140,7 @@ export function AIPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isLocalVtonStudioOpen, setIsLocalVtonStudioOpen] = useState(false);
   const [isUniverseHubOpen, setIsUniverseHubOpen] = useState(false);
+  const [pageViewMode, setPageViewMode] = useState<'space' | 'chat'>('space');
   const [isLocalHostActive, setIsLocalHostActive] = useState(false);
   const [vtonMode, setVtonMode] = useState<'cloud' | 'local'>('cloud');
   const selectedVoice = 'Joanna';
@@ -852,6 +853,26 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
       s.messages.some((m) => m.content.toLowerCase().includes(sessionSearchQuery.toLowerCase())),
   );
 
+  // ─── DEFAULT PRIMARY VIEW: AI SPACE (34 DOMAINS · 102 CLOUD BOTS · 10 TB VAULT) ───
+  if (pageViewMode === 'space') {
+    return (
+      <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background text-foreground select-none">
+        <AIUniverseHubModal
+          inline={true}
+          isOpen={true}
+          onSwitchToChat={() => setPageViewMode('chat')}
+        />
+
+        {/* AI Virtual Try-On Studio */}
+        <VirtualTryOnStudio
+          isOpen={isLocalVtonStudioOpen}
+          onClose={() => setIsLocalVtonStudioOpen(false)}
+          isLocalHostActive={isLocalHostActive}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background text-foreground select-none">
       {/* ─── MASTER AI CHAT TOP HEADER ─── */}
@@ -863,10 +884,10 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                MASTER AI SPACE
+                MASTER AI CHAT
               </h1>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                100% Free &amp; Unlimited
+                Assistant Mode
               </span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -874,22 +895,22 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Zero Token Caps · Zero Daily Message Limits · FLUX Ultra Images &amp; Document Intelligence
+              Conversational Assistant · File Intelligence · Document QA
             </p>
           </div>
         </div>
 
         {/* ─── HEADER STATUS BADGE ─── */}
         <div className="flex items-center gap-2">
-          {/* Master AI Universe Hub Button (34 Categories · 102 Models) */}
+          {/* Back to AI Space Button (34 Categories · 102 Models) */}
           <button
             type="button"
-            onClick={() => setIsUniverseHubOpen(true)}
+            onClick={() => setPageViewMode('space')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white shadow-md shadow-purple-500/20 text-xs font-extrabold cursor-pointer transition-all active:scale-[0.98]"
-            title="Open Master AI Universe (34 Categories · 102 World-Class Cloud Models · 0 MB Download)"
+            title="Open AI Space (34 Categories · 102 World-Class Cloud Models · 0 MB Download)"
           >
             <Sparkles className="h-3.5 w-3.5 text-cyan-200" />
-            <span>🌌 AI Universe (102 Models)</span>
+            <span>🚀 Back to AI Space (102 Models)</span>
           </button>
 
           {/* Virtual Try-On Studio Button */}

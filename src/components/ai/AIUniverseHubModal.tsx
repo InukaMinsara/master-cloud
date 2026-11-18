@@ -14,6 +14,7 @@ import {
   Globe,
   ArrowLeft,
   Info,
+  Bot,
 } from 'lucide-react';
 import {
   AI_CATEGORIES,
@@ -29,15 +30,19 @@ import { MasterAiNativeStudio } from './MasterAiNativeStudio';
 import { toast } from 'sonner';
 
 interface AIUniverseHubModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   initialCategoryId?: string;
+  inline?: boolean;
+  onSwitchToChat?: () => void;
 }
 
 export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
-  isOpen,
-  onClose,
+  isOpen = true,
+  onClose = () => {},
   initialCategoryId = 'all',
+  inline = false,
+  onSwitchToChat,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryId);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -115,163 +120,181 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
     setIsMethod2DrawerOpen(false);
   };
 
-  if (!isOpen) return null;
+  if (!inline && !isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-card border border-border/80 w-full max-w-7xl h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
-        
-        {/* ─── TOP MASTER BAR ─── */}
-        <div className="h-16 px-4 sm:px-6 border-b border-border/70 flex items-center justify-between shrink-0 bg-background/50 backdrop-blur-md gap-3">
-          <div className="flex items-center gap-3">
-            {activeRunningModel ? (
+  const innerHub = (
+    <div
+      className={`w-full h-full flex flex-col overflow-hidden relative ${
+        inline
+          ? 'bg-background border-0'
+          : 'bg-card border border-border/80 w-full max-w-7xl h-[92vh] rounded-3xl shadow-2xl'
+      }`}
+    >
+      {/* ─── TOP MASTER BAR ─── */}
+      <div className="h-16 px-4 sm:px-6 border-b border-border/70 flex items-center justify-between shrink-0 bg-background/50 backdrop-blur-md gap-3">
+        <div className="flex items-center gap-3">
+          {activeRunningModel ? (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveRunningModel(null);
+                setIsMethod2DrawerOpen(false);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/60 hover:bg-muted text-xs font-bold text-foreground transition-all cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to All 102 Models</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
+                    AI SPACE
+                  </h2>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    34 Domains · 102 Bots
+                  </span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hidden md:inline-flex items-center gap-1">
+                    <span>📦 10 TB Vault Mounted</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 hidden lg:inline-flex items-center gap-1">
+                    <span>🚀 4-in-1 Unified vGPU</span>
+                  </span>
+                </div>
+                <div className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1.5">
+                  <span>Central Profile:</span>
+                  <a
+                    href={MASTER_HF_PROFILE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan-300 hover:text-cyan-200 font-mono font-bold flex items-center gap-1 hover:underline"
+                  >
+                    <span>@{MASTER_HF_OWNER} (minsara)</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <span>· Master Quantum Unified vGPU (4,096 GB VRAM) · 0 MB Laptop Download</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Active Model Title or Search & Stats */}
+        <div className="flex items-center gap-2">
+          {activeRunningModel ? (
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex flex-col text-right">
+                <span className="text-xs font-bold text-foreground flex items-center justify-end gap-1.5">
+                  <span>{activeRunningModel.categoryIcon}</span>
+                  <span>{activeRunningModel.name}</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  {activeRunningModel.hardware}
+                </span>
+              </div>
+
+              {/* UI View Mode Switcher (Native vs Cloud Canvas) */}
               <button
                 type="button"
-                onClick={() => {
-                  setActiveRunningModel(null);
-                  setIsMethod2DrawerOpen(false);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/60 hover:bg-muted text-xs font-bold text-foreground transition-all cursor-pointer"
+                onClick={() =>
+                  setStudioViewMode((prev) => (prev === 'native' ? 'cloud' : 'native'))
+                }
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                  studioViewMode === 'native'
+                    ? 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20'
+                }`}
+                title={
+                  studioViewMode === 'native'
+                    ? 'Switch to Direct ZeroGPU Cloud Canvas'
+                    : 'Switch to 100% Native Custom Master Cloud Studio'
+                }
               >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to All 102 Models</span>
+                {studioViewMode === 'native' ? (
+                  <>
+                    <Sliders className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Cloud Canvas</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Native Master UI</span>
+                  </>
+                )}
               </button>
-            ) : (
-              <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/25">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                      MASTER AI UNIVERSE
-                    </h2>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                      34 Domains · 102 Bots
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hidden md:inline-flex items-center gap-1">
-                      <span>📦 10 TB Vault Mounted</span>
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 hidden lg:inline-flex items-center gap-1">
-                      <span>🚀 4-in-1 Unified vGPU</span>
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1.5">
-                    <span>Central Profile:</span>
-                    <a
-                      href={MASTER_HF_PROFILE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-300 hover:text-cyan-200 font-mono font-bold flex items-center gap-1 hover:underline"
-                    >
-                      <span>@{MASTER_HF_OWNER} (minsara)</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <span>· Master Quantum Unified vGPU (4,096 GB VRAM) · 0 MB Laptop Download</span>
-                  </div>
-                </div>
+
+              {/* Central inuka1 Cloud Engine Settings Button */}
+              <button
+                type="button"
+                onClick={() => setIsMethod2DrawerOpen((prev) => !prev)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all cursor-pointer"
+                title="Configure @inuka1 Dedicated Cloud Engine & Space Duplication"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">@{MASTER_HF_OWNER} Engine</span>
+              </button>
+
+              <a
+                href={getActiveModelSpaceUrl(activeRunningModel)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                title="Open in new browser tab"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="relative w-48 sm:w-64">
+                <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search 102 models (e.g. FLUX, F5, YOLO)..."
+                  className="w-full bg-muted/40 rounded-xl pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-purple-500 border border-border/60"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Active Model Title or Search & Stats */}
-          <div className="flex items-center gap-2">
-            {activeRunningModel ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden md:flex flex-col text-right">
-                  <span className="text-xs font-bold text-foreground flex items-center justify-end gap-1.5">
-                    <span>{activeRunningModel.categoryIcon}</span>
-                    <span>{activeRunningModel.name}</span>
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {activeRunningModel.hardware}
-                  </span>
-                </div>
-
-                {/* UI View Mode Switcher (Native vs Cloud Canvas) */}
+              {onSwitchToChat && (
                 <button
                   type="button"
-                  onClick={() =>
-                    setStudioViewMode((prev) => (prev === 'native' ? 'cloud' : 'native'))
-                  }
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                    studioViewMode === 'native'
-                      ? 'bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground'
-                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/20'
-                  }`}
-                  title={
-                    studioViewMode === 'native'
-                      ? 'Switch to Direct ZeroGPU Cloud Canvas'
-                      : 'Switch to 100% Native Custom Master Cloud Studio'
-                  }
+                  onClick={onSwitchToChat}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/60 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  title="Switch to AI Chat Assistant"
                 >
-                  {studioViewMode === 'native' ? (
-                    <>
-                      <Sliders className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Cloud Canvas</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Native Master UI</span>
-                    </>
-                  )}
+                  <Bot className="h-3.5 w-3.5 text-purple-400" />
+                  <span>AI Chat</span>
                 </button>
+              )}
+            </div>
+          )}
 
-                {/* Central inuka1 Cloud Engine Settings Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsMethod2DrawerOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all cursor-pointer"
-                  title="Configure @inuka1 Dedicated Cloud Engine & Space Duplication"
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">@{MASTER_HF_OWNER} Engine</span>
-                </button>
-
-                <a
-                  href={getActiveModelSpaceUrl(activeRunningModel)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                  title="Open in new browser tab"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="relative w-48 sm:w-64">
-                  <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search 102 models (e.g. FLUX, F5, YOLO)..."
-                    className="w-full bg-muted/40 rounded-xl pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-purple-500 border border-border/60"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
+          {!inline && (
             <button
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer ml-1"
-              title="Close Universe Hub"
+              title="Close AI Space"
             >
               <X className="h-5 w-5" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* ─── MAIN CONTENT VIEW ─── */}
         {activeRunningModel ? (
@@ -592,4 +615,20 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
       </div>
     </div>
   );
+
+  if (inline) {
+    return (
+      <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background relative select-none">
+        {innerHub}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      {innerHub}
+    </div>
+  );
 };
+
+export const AISpaceHub = AIUniverseHubModal;
