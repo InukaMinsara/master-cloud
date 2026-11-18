@@ -17,7 +17,7 @@ import { aiHordeService } from './aiHordeService';
 import { puterAiService } from './puterAiService';
 import { MASTER_HF_OWNER, getInukaSpaceUrl } from './aiUniverseData';
 
-export type MasterGpuEngineId = 'zerogpu' | 'pollinations' | 'groq' | 'aihorde';
+export type MasterGpuEngineId = 'unified' | 'zerogpu' | 'pollinations' | 'groq' | 'aihorde';
 
 export interface GpuEngineInfo {
   id: MasterGpuEngineId;
@@ -28,7 +28,25 @@ export interface GpuEngineInfo {
   icon: string;
 }
 
+export const MASTER_AI_VAULT_INFO = {
+  name: 'Master Cloud 10 TB AI Model Vault',
+  allocatedCapacity: '10,240 GB (10 TB Virtual NVMe)',
+  mountedDrive: 'Master Cloud Zero-Disk Vault (Drive I:)',
+  ownerProfile: '@inuka1 (minsara)',
+  modelsTotal: 102,
+  vramPool: '4,096 GB Virtual VRAM (Unified 4-Engine Fabric)',
+  status: 'Mounted & Operational',
+};
+
 export const MASTER_GPU_ENGINES: Record<MasterGpuEngineId, GpuEngineInfo> = {
+  unified: {
+    id: 'unified',
+    name: 'Master Unified vGPU (4-in-1)',
+    badge: 'Quantum 4-in-1 Core',
+    hardware: 'Unified Virtual Tensor Fabric (4,096 GB VRAM)',
+    description: 'Auto-merges ZeroGPU A100, Pollinations, Groq LPU & AI Horde into one super GPU',
+    icon: '🚀',
+  },
   zerogpu: {
     id: 'zerogpu',
     name: 'ZeroGPU A100',

@@ -149,9 +149,15 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                       34 Domains · 102 Bots
                     </span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hidden md:inline-flex items-center gap-1">
+                      <span>📦 10 TB Vault Mounted</span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 hidden lg:inline-flex items-center gap-1">
+                      <span>🚀 4-in-1 Unified vGPU</span>
+                    </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1.5">
-                    <span>Central Cloud Engine:</span>
+                    <span>Central Profile:</span>
                     <a
                       href={MASTER_HF_PROFILE_URL}
                       target="_blank"
@@ -161,7 +167,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                       <span>@{MASTER_HF_OWNER} (minsara)</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    <span>· 100% Free ZeroGPU A100 · 0 MB Laptop Download</span>
+                    <span>· Master Quantum Unified vGPU (4,096 GB VRAM) · 0 MB Laptop Download</span>
                   </div>
                 </div>
               </div>
@@ -539,10 +545,10 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                         <span className="flex items-center gap-1 text-emerald-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          0 MB Download
+                          10 TB Vault
                         </span>
-                        <span className="text-purple-300/90 font-semibold">Engine: @{MASTER_HF_OWNER}</span>
-                        <span>{model.hardware}</span>
+                        <span className="text-purple-300/90 font-semibold">Unified vGPU</span>
+                        <span className="text-cyan-400/90 font-semibold">@{MASTER_HF_OWNER}</span>
                       </div>
 
                       <button

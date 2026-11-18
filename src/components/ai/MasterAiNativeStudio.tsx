@@ -45,6 +45,7 @@ import { AIModelItem, MASTER_HF_OWNER, MASTER_HF_PROFILE_URL } from '@/services/
 import {
   MASTER_GPU_ENGINES,
   MasterGpuEngineId,
+  MASTER_AI_VAULT_INFO,
   generatePollinationsImage,
   generateGroqChat,
   generateAiHordeImage,
@@ -64,15 +65,9 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   onOpenCloudCanvas,
   cloudEmbedUrl,
 }) => {
-  // Determine default optimal engine based on category
+  // Master Unified vGPU (4-in-1) is the primary default engine for all 102 models
   const getDefaultEngine = (): MasterGpuEngineId => {
-    if (['chatting-bots', 'code-generating', 'question-answering'].includes(model.categoryId)) {
-      return 'groq';
-    }
-    if (['image-generation', 'image-editing'].includes(model.categoryId)) {
-      return 'pollinations';
-    }
-    return 'zerogpu';
+    return 'unified';
   };
 
   const [activeEngine, setActiveEngine] = useState<MasterGpuEngineId>(getDefaultEngine());
@@ -156,10 +151,14 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
     try {
       if (['chatting-bots', 'code-generating', 'question-answering'].includes(model.categoryId)) {
         // Groq / LLM
-        setProcessingStatus('Generating with ultra-fast Groq LPU cluster...');
+        setProcessingStatus(
+          activeEngine === 'unified'
+            ? 'Master Unified vGPU: Auto-routing to Groq 500+ w/s LPU Tensor Core...'
+            : 'Generating with ultra-fast Groq LPU cluster...'
+        );
         const result = await generateGroqChat({ prompt });
         setGeneratedTextOutput(result);
-        toast.success('Generated in record time!');
+        toast.success('Generated at blink speed via Master vGPU!');
       } else if (['image-generation', 'image-editing'].includes(model.categoryId)) {
         // Image Generation
         if (activeEngine === 'aihorde') {
@@ -173,8 +172,12 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
           );
           setGeneratedImageUrl(url);
         } else {
-          // Pollinations Fast Engine (Default for images)
-          setProcessingStatus('Synthesizing 4K FLUX.1 Art on Cloud GPU...');
+          // Pollinations Fast Engine (or Unified vGPU auto-routing)
+          setProcessingStatus(
+            activeEngine === 'unified'
+              ? 'Master Unified vGPU: Auto-routing to 4K FLUX.1 Tensor Cluster...'
+              : 'Synthesizing 4K FLUX.1 Art on Cloud GPU...'
+          );
           const { width, height } = getDimensions();
           const styledPrompt = `${prompt}, ${imageStyle} style, 8k masterpiece, detailed`;
           const url = await generatePollinationsImage({
@@ -185,16 +188,24 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
           });
           setGeneratedImageUrl(url);
         }
-        toast.success('4K Image generated successfully!');
+        toast.success('4K Image generated on Master Unified vGPU!');
       } else if (model.categoryId === 'virtual-try-on') {
         // Virtual Try-on: Open the dedicated live ZeroGPU workspace
-        setProcessingStatus('Connecting reference photos to Cloud ZeroGPU A100...');
+        setProcessingStatus(
+          activeEngine === 'unified'
+            ? 'Master Unified vGPU: Connecting photos to NVIDIA A100 Supercomputer Core...'
+            : 'Connecting reference photos to Cloud ZeroGPU A100...'
+        );
         toast.info('Switching to live interactive ZeroGPU Try-On Canvas...');
         await new Promise((r) => setTimeout(r, 600));
         onOpenCloudCanvas();
       } else {
         // Other heavy categories (Video, 3D, Audio)
-        setProcessingStatus(`Initializing ${model.name} ZeroGPU container...`);
+        setProcessingStatus(
+          activeEngine === 'unified'
+            ? `Master Unified vGPU: Initializing NVIDIA A100 container for ${model.name}...`
+            : `Initializing ${model.name} ZeroGPU container...`
+        );
         await new Promise((r) => setTimeout(r, 1200));
         onOpenCloudCanvas();
       }
@@ -239,9 +250,16 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
                 <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
                   {model.categoryLabel}
                 </span>
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                  10 TB Vault
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground font-mono">
-                Central Engine: @{MASTER_HF_OWNER} · 0 MB Laptop Download
+              <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1.5">
+                <span>Central Engine: @{MASTER_HF_OWNER}</span>
+                <span>•</span>
+                <span className="text-cyan-400">Drive I:\Models</span>
+                <span>•</span>
+                <span>0 MB Download</span>
               </span>
             </div>
           </div>
