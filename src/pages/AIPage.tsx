@@ -918,7 +918,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
             type="button"
             onClick={() => setIsLocalVtonStudioOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold cursor-pointer shadow-sm transition-all"
-            title="Open AI Virtual Try-On Studio (Cloud ZeroGPU / Localhost RTX 3050)"
+            title="Open AI Virtual Try-On Studio (Master vGPU / Dedicated GPU)"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>👕 Try-On Studio</span>
@@ -1315,7 +1315,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                   type="button"
                   onClick={() => setIsLocalVtonStudioOpen(true)}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors shrink-0 cursor-pointer"
-                  title="Open AI Virtual Try-On Studio (Cloud ZeroGPU / Localhost RTX 3050)"
+                  title="Open AI Virtual Try-On Studio (Master vGPU / Dedicated GPU)"
                 >
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>👕 Virtual Try-On (Cloud / Local)</span>

@@ -5,8 +5,8 @@
  *
  * Connects Master Cloud frontend to our private dedicated GPU backend:
  * - 100% Custom JSON API endpoints
- * - Zero Gradio UI
- * - Zero Hugging Face logos or watermarks
+ * - Zero 3rd-Party UI
+ * - Zero 3rd-party UI or watermarks
  * - Automatic graceful fallback to internal Cloud Cascade if backend is offline
  * ─────────────────────────────────────────────────────────────────────────────
  */

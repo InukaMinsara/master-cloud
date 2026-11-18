@@ -21,9 +21,6 @@ import {
   AI_UNIVERSE_MODELS,
   AIModelItem,
   AICategoryItem,
-  MASTER_HF_OWNER,
-  getInukaSpaceUrl,
-  resolveModelEmbedUrl,
 } from '@/services/ai/aiUniverseData';
 import { MasterAiNativeStudio } from './MasterAiNativeStudio';
 import { toast } from 'sonner';
@@ -46,9 +43,6 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategoryId);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeRunningModel, setActiveRunningModel] = useState<AIModelItem | null>(null);
-  const [isMethod2DrawerOpen, setIsMethod2DrawerOpen] = useState<boolean>(false);
-  const [customSpaceUrl, setCustomSpaceUrl] = useState<string>('');
-  const [routeThroughInukaAccount, setRouteThroughInukaAccount] = useState<boolean>(false);
 
   // Filter models by category and search query
   const filteredModels = useMemo(() => {
@@ -70,52 +64,8 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
     });
   }, [selectedCategory, searchQuery]);
 
-  // Load active space URL (Custom -> inuka1 dedicated -> Official cluster fallback)
-  const getActiveModelSpaceUrl = (model: AIModelItem): string => {
-    return resolveModelEmbedUrl(model);
-  };
-
   const handleLaunchModel = (model: AIModelItem) => {
     setActiveRunningModel(model);
-    setStudioViewMode('native');
-    if (typeof window !== 'undefined') {
-      const savedCustom = model.customSpaceUrlKey ? localStorage.getItem(model.customSpaceUrlKey) || '' : '';
-      setCustomSpaceUrl(savedCustom);
-
-      const inukaKey = `master_hf_engine_${model.id}`;
-      const isInukaActive = localStorage.getItem(inukaKey) === 'true';
-      setRouteThroughInukaAccount(isInukaActive);
-    } else {
-      setCustomSpaceUrl('');
-      setRouteThroughInukaAccount(false);
-    }
-  };
-
-  const handleSaveEngineSettings = () => {
-    if (!activeRunningModel) return;
-
-    if (typeof window !== 'undefined') {
-      // 1. Custom URL
-      if (activeRunningModel.customSpaceUrlKey) {
-        if (customSpaceUrl.trim()) {
-          localStorage.setItem(activeRunningModel.customSpaceUrlKey, customSpaceUrl.trim());
-        } else {
-          localStorage.removeItem(activeRunningModel.customSpaceUrlKey);
-        }
-      }
-
-      // 2. inuka1 Dedicated Engine Toggle
-      const inukaKey = `master_hf_engine_${activeRunningModel.id}`;
-      if (routeThroughInukaAccount) {
-        localStorage.setItem(inukaKey, 'true');
-        toast.success(`Routed to @${MASTER_HF_OWNER} dedicated Space (${getInukaSpaceUrl(activeRunningModel.spaceId)})`);
-      } else {
-        localStorage.removeItem(inukaKey);
-        toast.info('Using high-availability verified ZeroGPU cluster.');
-      }
-    }
-
-    setIsMethod2DrawerOpen(false);
   };
 
   if (!inline && !isOpen) return null;
@@ -306,7 +256,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {AI_CATEGORIES.find((c) => c.id === selectedCategory)?.description ||
-                      'Top verified models powered by Cloud ZeroGPU'}
+                      'Top verified models powered by Master Quantum vGPU'}
                   </p>
                 </div>
 

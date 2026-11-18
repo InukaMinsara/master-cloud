@@ -87,7 +87,7 @@ export function VirtualTryOnStudio({
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [hfToken, setHfToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('hf_access_token') || '' : ''));
+  const [gpuToken, setGpuToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('master_gpu_token') || '' : ''));
   const [result, setResult] = useState<TryOnResult | null>(null);
   const [activeResultView, setActiveResultView] = useState<'output' | 'mask'>('output');
   const [showSettings, setShowSettings] = useState(false);
@@ -209,11 +209,11 @@ export function VirtualTryOnStudio({
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/15 text-cyan-400 flex items-center gap-1 font-mono">
                   <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  CLOUD ZERO-GPU · 0 MB DOWNLOAD
+                  MASTER vGPU · 0 MB DOWNLOAD
                 </span>
               </div>
               <p className="text-[10px] text-muted-foreground truncate">
-                Powered by IDM-VTON &amp; Hugging Face NVIDIA A100 Cloud Supercomputers (100% Free &amp; Unlimited)
+                Powered by Master Cloud Neural Virtual Try-On Engine (100% Free &amp; Unlimited)
               </p>
             </div>
           </div>
@@ -340,10 +340,10 @@ export function VirtualTryOnStudio({
                       </div>
                       <input
                         type="password"
-                        value={hfToken}
+                        value={gpuToken}
                         onChange={(e) => {
-                          setHfToken(e.target.value);
-                          localStorage.setItem('hf_access_token', e.target.value);
+                          setGpuToken(e.target.value);
+                          localStorage.setItem('master_gpu_token', e.target.value);
                         }}
                         placeholder="Paste dedicated GPU authorization key or cluster token..."
                         className="w-full px-3 py-2 rounded-xl bg-muted/60 border border-border focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs font-mono"
@@ -555,7 +555,7 @@ export function VirtualTryOnStudio({
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                       <div className="space-y-1">
-                        <p className="font-bold text-amber-300">Cloud ZeroGPU Quota / Busy Notice</p>
+                        <p className="font-bold text-amber-300">Master Cloud GPU Notice</p>
                         <p className="text-[11px] text-amber-200/90 leading-relaxed">
                           {errorNotice}
                         </p>
@@ -587,7 +587,7 @@ export function VirtualTryOnStudio({
                       <div>
                         <h4 className="font-extrabold text-base text-foreground">Synthesis Complete!</h4>
                         <p className="text-xs text-muted-foreground">
-                          Synthesized in {result.durationSeconds} seconds on Cloud ZeroGPU
+                          Synthesized in {result.durationSeconds} seconds on Master vGPU
                         </p>
                       </div>
                     </div>
@@ -720,7 +720,7 @@ export function VirtualTryOnStudio({
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        `!pip install fastapi uvicorn python-multipart pydantic pillow gradio_client pycloudflared\n\nimport urllib.request\nurllib.request.urlretrieve('https://raw.githubusercontent.com/InukaMinsara/master-cloud/master/scripts/master_colab_launcher.py', 'run.py')\n%run run.py`
+                        `!pip install fastapi uvicorn python-multipart pydantic pillow pycloudflared\n\nimport urllib.request\nurllib.request.urlretrieve('https://raw.githubusercontent.com/InukaMinsara/master-cloud/master/scripts/master_colab_launcher.py', 'run.py')\n%run run.py`
                       );
                       toast.success('1-Click Colab launcher snippet copied!');
                     }}

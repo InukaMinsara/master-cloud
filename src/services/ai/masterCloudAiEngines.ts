@@ -4,7 +4,7 @@
  * MASTER CLOUD — 4-ENGINE HEADLESS CLOUD GPU ORCHESTRATOR
  *
  * Provides direct headless compute across 4 free/community GPU tiers:
- * 1. 💎 Hugging Face Headless ZeroGPU (NVIDIA A100 80GB) — Try-On, 3D, Video, Voice, OCR
+ * 1. 💎 Master Dedicated GPU (Private Colab/Server Option A Engine)
  * 2. 🌸 Pollinations Raw GPU API — Instant zero-queue 4K FLUX.1 & SDXL Images
  * 3. ⚡ Groq LPU Raw Engine — Ultra-fast LLM Chat, DeepSeek-R1, Code, and Speech
  * 4. 🌐 AI Horde Crowdsourced GPUs — Donated community gaming GPUs worldwide
@@ -15,9 +15,8 @@
 
 import { aiHordeService } from './aiHordeService';
 import { puterAiService } from './puterAiService';
-import { MASTER_HF_OWNER, getInukaSpaceUrl } from './aiUniverseData';
 
-export type MasterGpuEngineId = 'unified' | 'zerogpu' | 'pollinations' | 'groq' | 'aihorde';
+export type MasterGpuEngineId = 'unified' | 'dedicated' | 'pollinations' | 'groq' | 'aihorde';
 
 export interface GpuEngineInfo {
   id: MasterGpuEngineId;
@@ -32,7 +31,7 @@ export const MASTER_AI_VAULT_INFO = {
   name: 'Master Cloud 10 TB AI Model Vault',
   allocatedCapacity: '10,240 GB (10 TB Virtual NVMe)',
   mountedDrive: 'Master Cloud Zero-Disk Vault (Drive I:)',
-  ownerProfile: '@inuka1 (minsara)',
+  ownerProfile: 'Master Cloud AI System',
   modelsTotal: 102,
   vramPool: '4,096 GB Virtual VRAM (Unified 4-Engine Fabric)',
   status: 'Mounted & Operational',
@@ -44,15 +43,15 @@ export const MASTER_GPU_ENGINES: Record<MasterGpuEngineId, GpuEngineInfo> = {
     name: 'Master Unified vGPU (4-in-1)',
     badge: 'Quantum 4-in-1 Core',
     hardware: 'Unified Virtual Tensor Fabric (4,096 GB VRAM)',
-    description: 'Auto-merges ZeroGPU A100, Pollinations, Groq LPU & AI Horde into one super GPU',
+    description: 'Auto-merges Dedicated GPU, Pollinations Turbo, Groq LPU & AI Horde into one super GPU',
     icon: '🚀',
   },
-  zerogpu: {
-    id: 'zerogpu',
-    name: 'ZeroGPU A100',
-    badge: 'Enterprise A100',
-    hardware: 'NVIDIA A100 (80GB VRAM)',
-    description: 'Cloud supercomputers for Virtual Try-On, 3D, Video, Voice & Cutouts',
+  dedicated: {
+    id: 'dedicated',
+    name: 'Master Dedicated GPU',
+    badge: 'Private Colab/Server',
+    hardware: 'NVIDIA Cloud GPU (T4 / A100)',
+    description: 'Private Headless GPU running Option A with zero third-party dependencies',
     icon: '💎',
   },
   pollinations: {
@@ -226,23 +225,4 @@ export async function generateAiHordeImage(
   });
 
   return result.url;
-}
-
-/**
- * 4. HUGGING FACE ZEROGPU ENGINE
- * Resolves the optimal direct endpoint (inuka1 dedicated space -> official cluster)
- */
-export function getZeroGpuEngineUrl(spaceId: string, modelId: string): string {
-  if (typeof window !== 'undefined') {
-    const isDedicatedInuka = localStorage.getItem(`master_hf_engine_${modelId}`) === 'true';
-    if (isDedicatedInuka) {
-      return getInukaSpaceUrl(spaceId);
-    }
-    const custom = localStorage.getItem(`custom_space_url_${modelId}`);
-    if (custom && custom.trim()) return custom.trim();
-  }
-  const repoName = spaceId.includes('/') ? spaceId.split('/')[1] : spaceId;
-  const sanitized = repoName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-  const org = spaceId.includes('/') ? spaceId.split('/')[0].toLowerCase().replace(/[^a-z0-9]/g, '-') : '';
-  return org ? `https://${org}-${sanitized}.hf.space` : `https://${sanitized}.hf.space`;
 }

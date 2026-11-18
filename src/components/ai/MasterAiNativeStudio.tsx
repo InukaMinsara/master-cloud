@@ -4,9 +4,9 @@
  * MASTER CLOUD — UNIVERSAL NATIVE AI STUDIO
  *
  * 100% Custom Native Interface for all 102 models across 34 categories.
- * No external Gradio or third-party logos.
+ * 100% Master Cloud Native UI (Zero 3rd-Party UI).
  * Powered by 4 Free Headless Cloud GPU Engines:
- * 1. 💎 ZeroGPU A100 (Try-on, 3D, Video, Voice)
+ * 1. 💎 Master Dedicated GPU (Option A Colab/Server Private GPU)
  * 2. 🌸 Pollinations GPU (Instant 4K FLUX/SDXL Images)
  * 3. ⚡ Groq LPU Engine (Instant 500+ w/s LLMs & Code)
  * 4. 🌐 AI Horde (Crowdsourced volunteer GPUs)
