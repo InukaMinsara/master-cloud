@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   Upload,
   Trash2,
+  X,
 } from 'lucide-react';
 import { AIModelItem } from '@/services/ai/aiUniverseData';
 import {
@@ -51,6 +52,7 @@ import {
   generateAiHordeImage,
 } from '@/services/ai/masterCloudAiEngines';
 import { executeVirtualTryOn } from '@/services/ai/virtualTryOnService';
+import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
 import { toast } from 'sonner';
 
 interface MasterAiNativeStudioProps {
@@ -81,6 +83,27 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>('');
   const [generatedTextOutput, setGeneratedTextOutput] = useState<string>('');
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isGpuModalOpen, setIsGpuModalOpen] = useState<boolean>(false);
+  const [dedicatedUrlInput, setDedicatedUrlInput] = useState<string>(dedicatedGpuService.getBackendUrl());
+  const [dedicatedStatus, setDedicatedStatus] = useState<DedicatedGpuStatus>({ online: false, url: '' });
+
+  useEffect(() => {
+    dedicatedGpuService.checkHealth().then(setDedicatedStatus);
+  }, []);
+
+  const handleSaveDedicatedGpu = async () => {
+    dedicatedGpuService.setBackendUrl(dedicatedUrlInput);
+    const st = await dedicatedGpuService.checkHealth();
+    setDedicatedStatus(st);
+    if (st.online) {
+      toast.success(`Connected to Dedicated GPU: ${st.gpuName} (${st.totalVramGb}GB VRAM)`);
+    } else if (dedicatedUrlInput.trim()) {
+      toast.error('Could not reach backend at that URL. Check if Colab/Server is running.');
+    } else {
+      toast.info('Using Master Cloud internal cascade.');
+    }
+    setIsGpuModalOpen(false);
+  };
 
   // Virtual Try-on Specific States & File Upload Refs
   const humanFileInputRef = useRef<HTMLInputElement>(null);
@@ -195,15 +218,21 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
         }
         toast.success('4K Image generated on Master Unified vGPU!');
       } else if (model.categoryId === 'virtual-try-on') {
-        // Virtual Try-on: Run 100% headless on Master Cloud A100 Supercomputer
-        setProcessingStatus('Master Unified vGPU: Preparing reference photos for Try-On...');
+        // Virtual Try-on: Run 100% headless on Master Cloud Dedicated Engine (Option A)
+        setProcessingStatus(
+          dedicatedStatus.online
+            ? `Master Dedicated GPU (${dedicatedStatus.gpuName}): Synthesizing Try-On...`
+            : 'Master Cloud Supercomputer: Synthesizing clothing transfer...'
+        );
         try {
           const personBlob = humanFile || (await (await fetch(humanImage)).blob());
           const garmentBlob = garmentFile || (await (await fetch(garmentImage)).blob());
-          const result = await executeVirtualTryOn(personBlob, garmentBlob, {
-            onStatusUpdate: (st) => setProcessingStatus(st),
-          });
-          setGeneratedImageUrl(result.outputImageUrl);
+          const resultUrl = await dedicatedGpuService.virtualTryOn(
+            personBlob,
+            garmentBlob,
+            prompt || 'A stylish garment'
+          );
+          setGeneratedImageUrl(resultUrl);
           toast.success('Virtual Try-On synthesized successfully on Master vGPU!');
         } catch (err: any) {
           console.warn('[Try-On Headless] Direct execution error, opening Canvas:', err);
@@ -301,6 +330,23 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
               );
             })}
           </div>
+
+          {/* Dedicated GPU Server Status / Config Button (Option A) */}
+          <button
+            type="button"
+            onClick={() => setIsGpuModalOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              dedicatedStatus.online
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-muted/50 border-border/60 text-muted-foreground hover:text-foreground'
+            }`}
+            title="Configure Dedicated Cloud GPU Server (Google Colab / VPS / Local)"
+          >
+            <Cpu className="h-3.5 w-3.5 text-purple-400" />
+            <span className="hidden sm:inline">
+              {dedicatedStatus.online ? `GPU: ${dedicatedStatus.gpuName}` : 'Dedicated GPU Server'}
+            </span>
+          </button>
 
           {/* Switch to Direct Cloud Canvas */}
           <button
@@ -744,6 +790,104 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
           ) : null}
         </div>
       </div>
+
+      {/* ─── DEDICATED GPU BACKEND CONFIG MODAL (Option A) ─── */}
+      {isGpuModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card border border-border/80 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                  <Cpu className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-foreground">
+                    Master Cloud Dedicated GPU Server
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    Option A · 100% Private Headless Cloud Engine
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGpuModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Connection Status Badge */}
+            <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/60 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="font-bold text-foreground block">Server Status:</span>
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {dedicatedStatus.online
+                    ? `Hardware: ${dedicatedStatus.gpuName} (${dedicatedStatus.totalVramGb} GB VRAM)`
+                    : 'Not Connected (Using Master Cloud Cloud Cascade)'}
+                </span>
+              </div>
+              <span
+                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                  dedicatedStatus.online
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                }`}
+              >
+                {dedicatedStatus.online ? '● ONLINE' : '○ CLOUD CASCADE'}
+              </span>
+            </div>
+
+            {/* Backend URL Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground block">
+                Dedicated Backend URL:
+              </label>
+              <input
+                type="url"
+                value={dedicatedUrlInput}
+                onChange={(e) => setDedicatedUrlInput(e.target.value)}
+                placeholder="e.g. https://xxxx.trycloudflare.com or http://localhost:8000"
+                className="w-full bg-background rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 border border-border/80 focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Point Master Cloud to your private Colab GPU or Cloud VPS. Leave blank to use Master Cloud's built-in cloud cascade.
+              </p>
+            </div>
+
+            {/* Colab 1-Click Instructions */}
+            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs space-y-1.5">
+              <span className="font-bold text-purple-300 flex items-center gap-1.5 text-[11px]">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>How to run your free Dedicated GPU in Google Colab:</span>
+              </span>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Run <code className="text-cyan-300 font-mono">scripts/master_colab_launcher.py</code> in Google Colab (Free T4/A100 GPU). It will start your server and print a public Cloudflare URL. Paste it above!
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleSaveDedicatedGpu}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Save &amp; Connect</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsGpuModalOpen(false)}
+                className="py-2.5 px-4 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
