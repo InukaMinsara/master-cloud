@@ -613,8 +613,7 @@ export const AIUniverseHubModal: React.FC<AIUniverseHubModalProps> = ({
           </div>
         )}
       </div>
-    </div>
-  );
+    );
 
   if (inline) {
     return (
