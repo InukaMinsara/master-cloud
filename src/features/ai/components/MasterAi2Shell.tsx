@@ -35,6 +35,7 @@ export function MasterAi2Shell() {
 
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
+  const setSelectedModelId = useAiChatStore((s) => s.setSelectedModelId);
   const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
   const chatMode = useAiChatStore((s) => s.chatMode);
   const setChatMode = useAiChatStore((s) => s.setChatMode);
@@ -57,9 +58,23 @@ export function MasterAi2Shell() {
     aiVaultService.init().then(() => {
       refreshProviderStatus();
       pollinationsService.fetchModels().catch(() => {});
-      groqService.discoverActiveModels().catch(() => {});
+      groqService
+        .discoverActiveModels()
+        .then((models) => {
+          const chatModels = models.filter(
+            (m) => !m.id.includes('whisper') && !m.id.includes('guard') && m.isActive
+          );
+          if (chatModels.length > 0) {
+            const isCurrentValid = chatModels.some((m) => m.id === selectedModelId);
+            if (!isCurrentValid) {
+              const defaultModel = chatModels.find((m) => m.isDefault) || chatModels[0];
+              setSelectedModelId(defaultModel.id);
+            }
+          }
+        })
+        .catch(() => {});
     });
-  }, [refreshProviderStatus]);
+  }, [refreshProviderStatus, selectedModelId, setSelectedModelId]);
 
   // Global Keyboard Shortcuts (Ctrl+N for new chat)
   useEffect(() => {

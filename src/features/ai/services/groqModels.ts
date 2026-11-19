@@ -35,6 +35,39 @@ export const OFFICIAL_GROQ_FREE_REGISTRY: Record<string, {
   groqCategory: GroqCategory;
   rateLimits?: string;
 }> = {
+  'openai/gpt-oss-120b': {
+    isFree: true,
+    name: 'GPT-OSS 120B',
+    tag: 'Flagship Core',
+    description: 'High-capability open reasoning model with deep system architecture and analytical depth.',
+    contextWindow: 131072,
+    maxOutputTokens: 16384,
+    category: 'production',
+    groqCategory: 'coding',
+    rateLimits: '1k RPM · 6k RPD · 100k TPM',
+  },
+  'openai/gpt-oss-20b': {
+    isFree: true,
+    name: 'GPT-OSS 20B Instant',
+    tag: 'Ultra-Fast',
+    description: 'Sub-second conversational intelligence, snappy answers, code assistance, and fast chat.',
+    contextWindow: 65536,
+    maxOutputTokens: 8192,
+    category: 'fast',
+    groqCategory: 'general_chat',
+    rateLimits: '1k RPM · 14.4k RPD · 30k TPM',
+  },
+  'qwen/qwen3.8-27b': {
+    isFree: true,
+    name: 'Qwen 3.8 27B',
+    tag: 'Multi-Lingual Reasoning',
+    description: 'Advanced instruction following, mathematical reasoning, and versatile multi-lingual chat.',
+    contextWindow: 32768,
+    maxOutputTokens: 8192,
+    category: 'production',
+    groqCategory: 'reasoning',
+    rateLimits: '1k RPM · 6k RPD · 60k TPM',
+  },
   'llama-3.3-70b-versatile': {
     isFree: true,
     name: 'Meta Llama 3.3 70B',
@@ -172,7 +205,22 @@ export function isGroqModelSupported(modelId: string): boolean {
  */
 export function getGroqModelInfo(modelId: string): GroqModelInfo {
   const found = VERIFIED_GROQ_MODELS.find((m) => m.id === modelId);
-  return found || VERIFIED_GROQ_MODELS[0];
+  if (found) return found;
+
+  const displayName = modelId.split('/').pop() || modelId;
+  return {
+    id: modelId,
+    name: displayName,
+    tag: 'Live Model',
+    description: 'Active model detected on configured Groq API account.',
+    contextWindow: 16384,
+    maxOutputTokens: 8192,
+    category: 'other',
+    groqCategory: 'other',
+    isDefault: false,
+    isFreeTier: true,
+    isActive: true,
+  };
 }
 
 /**
@@ -214,6 +262,16 @@ export function reconcileLiveGroqModels(liveModels: Array<{ id: string; active?:
         isFreeTier: false, // Strict safety: never assume free!
         isActive: live.active !== false,
       });
+    }
+  }
+
+  // If the default model was not among the active account models, select the first active chat model
+  if (!results.some((m) => m.isDefault && m.isActive)) {
+    const firstChat = results.find(
+      (m) => !m.id.includes('whisper') && !m.id.includes('guard') && m.isActive
+    );
+    if (firstChat) {
+      firstChat.isDefault = true;
     }
   }
 
