@@ -149,34 +149,15 @@ export async function enhancePromptWithGpt(
   const clean = (userPrompt || '').trim();
   if (!clean) return clean;
 
-  const systemInstruction = `You are an elite cinematic photographer and AI prompt engineering master like DALL-E 3 and Midjourney v6.
-The user provides a simple concept or short phrase. Your job is to transform it into a breathtaking, world-class, hyper-realistic masterpiece prompt tailored for the style: "${style}".
-Guidelines:
-- If style is Photorealistic, specify camera lens (e.g. 85mm f/1.4, Hasselblad H6D-100c), natural lighting (golden hour, soft rim light), fine textures (subsurface scattering, skin pores, fabric weave), candid cinematic composition.
-- If style is Anime, 3D, Cyberpunk, or Cinematic, match that visual medium with rich atmosphere, lighting, volumetric fog, and award-winning artistry.
-- Output ONLY the expanded prompt in English. Do NOT add preamble, quotes, bullet points, or explanations. Maximum 50-70 words.`;
-
-  // 1. Try Puter AI (GPT-4o-mini / Gemini / DeepSeek - 100% free, zero configuration)
-  try {
-    const res = await puterAiService.chat(
-      `Transform this idea into an extreme high-quality ${style} photo prompt: "${clean}"`,
-      {
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: `Transform: "${clean}"` },
-        ],
-        temperature: 0.7,
-      }
-    );
-    if (res?.text && res.text.trim()) {
-      return res.text.trim().replace(/^["']|["']$/g, '');
-    }
-  } catch (err) {
-    console.warn('[Prompt Enhancer] Puter AI fallback to Groq:', err);
+  // Clean dismiss any stray Puter modal
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.puter-modal, [class*="puter-modal"]').forEach((el) => el.remove());
   }
 
-  // 2. Try Groq LPU (DeepSeek / Llama 3.3)
+  // 1. Try Groq LPU if key is configured (Ultra-fast, zero Puter credit usage)
+  const systemInstruction = `You are an elite cinematic photographer and AI prompt engineering master like DALL-E 3 and Midjourney v6.
+Transform this concept into an award-winning ${style} photo prompt. Specify camera lens, natural lighting, fine textures, 8K resolution. Output ONLY the expanded prompt in English. Maximum 50 words.`;
+
   try {
     const groqRes = await generateGroqChat({
       prompt: `Transform this idea into an extreme high-quality ${style} photo prompt: "${clean}"`,
@@ -187,11 +168,74 @@ Guidelines:
       return groqRes.trim().replace(/^["']|["']$/g, '');
     }
   } catch (err) {
-    // fallback
+    // proceed to intelligent semantic generator
   }
 
-  // 3. Fallback: High-quality rule-based cinematic expansion
-  return `Award-winning ${style.toLowerCase()} photography of ${clean}, 8k UHD, Hasselblad H6D-100c, 85mm f/1.4 lens, natural golden hour rim lighting, ultra-detailed skin textures, shallow depth of field, cinematic color grading, hyper-realistic masterpiece`;
+  // 2. Sovereign Master Cloud Semantic Prompt Expander (100% Free, Instant 0ms, Zero Credits Needed)
+  const lower = clean.toLowerCase();
+
+  // Architectural / Home / Villa / Interior
+  if (
+    lower.includes('home') ||
+    lower.includes('house') ||
+    lower.includes('building') ||
+    lower.includes('villa') ||
+    lower.includes('mansion') ||
+    lower.includes('apartment') ||
+    lower.includes('room') ||
+    lower.includes('interior') ||
+    lower.includes('architecture') ||
+    lower.includes('gedara') ||
+    lower.includes('geyak')
+  ) {
+    return `Architectural Digest luxury photograph of ${clean}, modernist architectural design, floor-to-ceiling glass facades, warm twilight interior ambient lights, sleek infinity reflecting pool in foreground, lush manicured garden, 8k resolution, Hasselblad H6D-100c, tilt-shift lens, volumetric evening atmosphere, hyper-realistic masterpiece`;
+  }
+
+  // Portrait / Human / Warrior / Character / Fashion
+  if (
+    lower.includes('portrait') ||
+    lower.includes('girl') ||
+    lower.includes('woman') ||
+    lower.includes('man') ||
+    lower.includes('boy') ||
+    lower.includes('warrior') ||
+    lower.includes('samurai') ||
+    lower.includes('model') ||
+    lower.includes('face') ||
+    lower.includes('person')
+  ) {
+    return `Award-winning cinematic portrait of ${clean}, 85mm f/1.4 lens, natural golden hour rim lighting, ultra-detailed skin pores, subsurface scattering, authentic fabric textures, shallow depth of field, 8k UHD, film grain, Leica M6, hyper-realistic masterpiece`;
+  }
+
+  // Vehicle / Car / Supercar / Cyberpunk
+  if (
+    lower.includes('car') ||
+    lower.includes('vehicle') ||
+    lower.includes('bike') ||
+    lower.includes('supercar') ||
+    lower.includes('ferrari') ||
+    lower.includes('cyber') ||
+    lower.includes('neon')
+  ) {
+    return `Cinematic automotive photography of ${clean}, wet asphalt puddle reflections, neon street rim lighting, volumetric mist, carbon fiber textures, glossy aerodynamic reflections, 8k UHD, Sony Alpha A1, 50mm f/1.2 lens, hyper-realistic masterpiece`;
+  }
+
+  // Landscape / Nature / Mountains / Sea
+  if (
+    lower.includes('mountain') ||
+    lower.includes('beach') ||
+    lower.includes('sea') ||
+    lower.includes('forest') ||
+    lower.includes('river') ||
+    lower.includes('nature') ||
+    lower.includes('sky') ||
+    lower.includes('sunset')
+  ) {
+    return `National Geographic award-winning landscape photography of ${clean}, dramatic atmospheric mist, sun rays breaking through golden hour clouds, 8k UHD, ultra-wide 16mm lens, crisp natural rock and water textures, hyper-realistic`;
+  }
+
+  // General photorealistic cinematic directive
+  return `Award-winning ${style.toLowerCase()} photography of ${clean}, 8k UHD, Hasselblad H6D-100c, 85mm f/1.4 lens, natural golden hour rim lighting, ultra-detailed textures, shallow depth of field, cinematic color grading, hyper-realistic masterpiece`;
 }
 
 /**

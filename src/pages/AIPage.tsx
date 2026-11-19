@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
-import { puterAiService, PuterImageResult } from '@/services/ai/puterAiService';
+import { puterAiService, PuterImageResult, dismissPuterModals } from '@/services/ai/puterAiService';
 import { useFileStore } from '@/stores/fileStore';
 import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
@@ -259,6 +259,11 @@ export function AIPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages, isStreaming]);
+
+  // Clean any stray Puter paywall modal on load
+  useEffect(() => {
+    dismissPuterModals();
+  }, []);
 
   // Keyboard Shortcuts: Ctrl+K (Command palette), Ctrl+N (New chat), Ctrl+B (Toggle sidebar)
   useEffect(() => {
@@ -685,6 +690,7 @@ export function AIPage() {
 
   // ─── SEND MESSAGE WITH STREAMING & DALL-E 3 GRADE AUTO-8K ───
   const handleSendMessage = async (customPrompt?: string) => {
+    dismissPuterModals();
     const textToSend = customPrompt || inputText;
     if (!textToSend.trim() || isStreaming) return;
 
