@@ -15,7 +15,7 @@ import {
 import { useVideoPlayerStore, SubtitleSettings } from '@/stores/videoPlayerStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { puterAiService } from '@/services/ai/puterAiService';
+import { groqService } from '@/features/ai/services/groqService';
 
 export function SubtitleStudioModal() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,9 +41,19 @@ export function SubtitleStudioModal() {
       return;
     }
     setIsGeneratingAiSubtitles(true);
-    toast.info('🎙️ Whisper AI is analyzing speech in this video...');
+    toast.info('🎙️ Groq Whisper is analyzing speech in this video...');
     try {
-      const res = await puterAiService.speechToText(mediaSource);
+      let audioBlob: Blob | File;
+      if (videoFile instanceof File) {
+        audioBlob = videoFile;
+      } else if (videoSrc) {
+        const fetchRes = await fetch(videoSrc);
+        audioBlob = await fetchRes.blob();
+      } else {
+        toast.error('No video source available for transcription.');
+        return;
+      }
+      const res = await groqService.transcribeAudio(audioBlob);
       if (!res?.text || !res.text.trim()) {
         toast.warning('No spoken speech detected in this audio/video stream.');
         return;

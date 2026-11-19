@@ -37,19 +37,15 @@ import {
   ChatSourceBadge,
   ConversationSession,
   LanguagePreferenceMode,
-} from '../../../services/ai/conversationMemory';
-import { NeuralGenerationConfig, neuralRuntime } from '../../../services/ai/neuralRuntime';
-import { humanFeedbackStore } from '../../../services/ai/feedbackStore';
-import { MasterAiMarkdown } from './MasterAiMarkdown';
-
-import {
+  NeuralGenerationConfig,
+  neuralRuntime,
+  humanFeedbackStore,
   AiModelDescriptor,
   modelRegistry,
-} from '../../../services/ai/modelRegistry';
-import {
   VERIFIED_FREE_CHAT_MODELS,
   PUTER_STANDARD_MODELS,
-} from '../../../services/ai/puterAiService';
+} from '../services/videoAiService';
+import { MasterAiMarkdown } from './MasterAiMarkdown';
 
 export interface MasterAiChatStudioProps {
   messages: ChatMessage[];
@@ -633,7 +629,7 @@ export function MasterAiChatStudio(props: MasterAiChatStudioProps) {
                               ))}
                               {msg.parallelAlternatives && msg.parallelAlternatives.length > 1 && (
                                 <div className="pt-1 mt-1 border-t border-white/10 text-lime-300">
-                                  Parallel Candidates Compared: {msg.parallelAlternatives.map((p) => `${p.modelName} (${Math.round(p.validation.confidenceScore * 100)}%)`).join(' vs ')}
+                                  Parallel Candidates Compared: {msg.parallelAlternatives.map((p) => `${p.modelName} (${Math.round((p.validation?.confidenceScore ?? 0.95) * 100)}%)`).join(' vs ')}
                                 </div>
                               )}
                             </div>

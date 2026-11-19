@@ -23,7 +23,7 @@ import {
   Sparkles,
   Wand2,
 } from 'lucide-react';
-import { puterAiService } from '@/services/ai/puterAiService';
+import { groqService } from '@/features/ai/services/groqService';
 import { useContextMenuStore } from '@/stores/contextMenuStore';
 import { useFileStore } from '@/stores/fileStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -195,8 +195,8 @@ export function ContextMenu() {
       } catch {}
 
       const prompt = `Suggest a clean, concise, human-readable file name for a file currently named "${fileToRename.name}" (${fileToRename.extension}). File content excerpt: "${(excerpt || '').slice(0, 300)}". Output ONLY the single proposed filename (e.g. "Project_Proposal.pdf" or "Sigiriya_Sunset_View.jpg") with no extra text or markdown quotes.`;
-      const res = await puterAiService.chat(prompt, { temperature: 0.2 });
-      let proposed = res.text.replace(/[`"'\n\r]/g, '').trim();
+      const resText = await groqService.completeChat(prompt, { model: 'llama-3.1-8b-instant', temperature: 0.2 });
+      let proposed = resText.replace(/[`"'\n\r]/g, '').trim();
       if (!proposed.endsWith(`.${fileToRename.extension}`)) {
         proposed = `${proposed}.${fileToRename.extension}`;
       }

@@ -50,15 +50,14 @@ import {
   ConversationSession,
   LanguagePreferenceMode,
   StoredChatMessage,
-} from '@/services/ai/conversationMemory';
-import {
   DEFAULT_NEURAL_GEN_CONFIG,
   NeuralGenerationConfig,
   neuralRuntime,
-} from '@/services/ai/neuralRuntime';
-import { humanFeedbackStore } from '@/services/ai/feedbackStore';
-import { AiModelDescriptor, modelRegistry } from '@/services/ai/modelRegistry';
-import { VERIFIED_FREE_CHAT_MODELS } from '@/services/ai/puterAiService';
+  humanFeedbackStore,
+  AiModelDescriptor,
+  modelRegistry,
+  VERIFIED_FREE_CHAT_MODELS,
+} from '../services/videoAiService';
 import { MasterAiChatStudio } from './MasterAiChatStudio';
 import { LongTermMemoryPanel } from './MasterAiV2Panels';
 import { Button } from '@/components/ui/button';
