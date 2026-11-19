@@ -46,8 +46,10 @@ import { MasterAiPromptInput } from '@/components/ai/MasterAiPromptInput';
 import { MasterAiCommandPalette } from '@/components/ai/MasterAiCommandPalette';
 import { VirtualTryOnStudio } from '@/components/ai/VirtualTryOnStudio';
 import { DedicatedGpuModal } from '@/components/ai/DedicatedGpuModal';
+import { AiKeyVaultModal } from '@/components/ai/AiKeyVaultModal';
 import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
 import { enhancePromptWithGpt } from '@/services/ai/masterCloudAiEngines';
+import { streamFrontierChat } from '@/services/ai/frontierAiRunner';
 
 export interface LocalAttachedFile {
   name: string;
@@ -190,6 +192,7 @@ export function AIPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isLocalVtonStudioOpen, setIsLocalVtonStudioOpen] = useState(false);
   const [isDedicatedGpuModalOpen, setIsDedicatedGpuModalOpen] = useState(false);
+  const [isKeyVaultOpen, setIsKeyVaultOpen] = useState(false);
   const [dedicatedGpuStatus, setDedicatedGpuStatus] = useState<DedicatedGpuStatus>({ online: false, url: '' });
   const [isLocalHostActive, setIsLocalHostActive] = useState(false);
   const selectedVoice = 'Joanna';
@@ -921,7 +924,7 @@ Output ONLY the resulting prompt text.`,
         promptToSend = `[Attached Local PC File: ${sentLocalFile.name} (${(sentLocalFile.size / 1024).toFixed(1)} KB)]\n\`\`\`\n${sentLocalFile.content.slice(0, 15000)}\n\`\`\`\n\n[User Prompt]:\n${promptToSend}`;
       }
 
-      const historyForPuter = cleanedPriorMessages
+      const historyForFrontier = cleanedPriorMessages
         .filter((m) => m.id !== 'msg-welcome' && m.content && m.content.trim().length > 0)
         .map((m) => ({
           role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
@@ -931,39 +934,38 @@ Output ONLY the resulting prompt text.`,
       let accumulated = '';
       let lastRenderTime = 0;
 
-      const puterStream = puterAiService.streamChat(promptToSend, {
-        messages: historyForPuter,
-        signal: abortCtrl.signal,
+      const result = await streamFrontierChat({
+        modelId: selectedModelId,
+        prompt: promptToSend,
+        messages: historyForFrontier,
         image: sentImage?.url,
+        signal: abortCtrl.signal,
+        onChunk: (_chunk, acc) => {
+          accumulated = acc;
+          const now = performance.now();
+          if (now - lastRenderTime > 16 || accumulated.length < 60) {
+            lastRenderTime = now;
+            setSessions((prev) =>
+              prev.map((s) => {
+                if (s.id === activeSession.id) {
+                  const msgs = s.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: accumulated } : m,
+                  );
+                  return { ...s, messages: msgs };
+                }
+                return s;
+              }),
+            );
+          }
+        },
       });
-
-      for await (const chunk of puterStream) {
-        if (abortCtrl.signal.aborted) break;
-        accumulated = chunk;
-
-        const now = performance.now();
-        if (now - lastRenderTime > 16 || accumulated.length < 60) {
-          lastRenderTime = now;
-          setSessions((prev) =>
-            prev.map((s) => {
-              if (s.id === activeSession.id) {
-                const msgs = s.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: accumulated } : m,
-                );
-                return { ...s, messages: msgs };
-              }
-              return s;
-            }),
-          );
-        }
-      }
 
       // Final complete flush
       setSessions((prev) =>
         prev.map((s) => {
           if (s.id === activeSession.id) {
             const msgs = s.messages.map((m) =>
-              m.id === assistantMsgId ? { ...m, content: accumulated } : m,
+              m.id === assistantMsgId ? { ...m, content: result.text || accumulated } : m,
             );
             return { ...s, messages: msgs };
           }
@@ -1054,6 +1056,7 @@ Output ONLY the resulting prompt text.`,
           onExportMarkdown={handleExportMarkdown}
           onPrintChat={handlePrintChat}
           onClearChat={handleClearCurrentSession}
+          onOpenKeyVault={() => setIsKeyVaultOpen(true)}
         />
 
         {/* CHAT THREAD / WELCOME SCREEN */}
@@ -1456,6 +1459,12 @@ Output ONLY the resulting prompt text.`,
         isOpen={isDedicatedGpuModalOpen}
         onClose={() => setIsDedicatedGpuModalOpen(false)}
         onStatusChange={setDedicatedGpuStatus}
+      />
+
+      {/* ─── AI PROVIDERS & KEY VAULT MODAL (Claude, GPT, Gemini, DeepSeek) ─── */}
+      <AiKeyVaultModal
+        isOpen={isKeyVaultOpen}
+        onClose={() => setIsKeyVaultOpen(false)}
       />
     </div>
   );

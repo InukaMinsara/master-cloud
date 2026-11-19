@@ -2,8 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Suppress Puter billing paywall modal if it ever pops up */
-.puter-modal-container, .puter-modal, [class*="puter-modal"], [id*="puter-modal"] {
+/* Suppress Puter billing paywall modal permanently */
+usage-limit-dialog,
+email-confirmation-dialog,
+.puter-modal-container,
+.puter-modal,
+[class*="puter-modal"],
+[id*="puter-modal"],
+.puter-dialog-content,
+[class*="usage-limit"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

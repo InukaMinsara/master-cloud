@@ -34,6 +34,7 @@ import {
   Image as ImageIcon,
   BrainCircuit,
   Bot,
+  Key,
 } from 'lucide-react';
 
 export interface AiModelOption {
@@ -48,12 +49,12 @@ export interface AiModelOption {
 
 export const MASTER_AI_MODELS: AiModelOption[] = [
   {
-    id: 'quantum-cascade',
-    name: 'Master Quantum vGPU',
-    tag: 'Auto Cascade',
+    id: 'gemini-2.0-flash',
+    name: 'Google Gemini 2.0 Flash',
+    tag: '1M Context',
     category: 'cascade',
-    description: 'Gemini 3.8 Flash → GPT-4o Mini → DeepSeek. Zero limits.',
-    speed: '~120 tok/s',
+    description: '1,000,000 tokens context, native Sinhala fluency & high-speed reasoning.',
+    speed: '~140 tok/s',
     isFree: true,
   },
   {
@@ -61,8 +62,35 @@ export const MASTER_AI_MODELS: AiModelOption[] = [
     name: 'DeepSeek R1 Distill',
     tag: 'Groq LPU',
     category: 'groq',
-    description: 'Ultra-fast reasoning model powered by Groq LPU engine.',
+    description: 'o1-grade reasoning chain & extreme math/logic via Groq LPU engine.',
     speed: '~480 tok/s',
+    isFree: true,
+  },
+  {
+    id: 'openai-gpt-4o',
+    name: 'OpenAI GPT-4o',
+    tag: 'Multimodal',
+    category: 'vision',
+    description: 'Industry-standard general intelligence, document analysis & vision.',
+    speed: '~110 tok/s',
+    isFree: true,
+  },
+  {
+    id: 'anthropic-claude-3.5',
+    name: 'Anthropic Claude 3.5 Sonnet',
+    tag: 'Architecture',
+    category: 'code',
+    description: 'World-class code architecture, creative writing & nuanced reasoning.',
+    speed: '~100 tok/s',
+    isFree: true,
+  },
+  {
+    id: 'quantum-cascade',
+    name: 'Master Quantum vGPU',
+    tag: 'Auto Cascade',
+    category: 'cascade',
+    description: 'Autonomous multi-engine cascade: Gemini → GPT → Claude → DeepSeek.',
+    speed: '~120 tok/s',
     isFree: true,
   },
   {
@@ -72,24 +100,6 @@ export const MASTER_AI_MODELS: AiModelOption[] = [
     category: 'image',
     description: '100% Watermark-free, zero-limit DALL-E 3 grade art.',
     speed: 'Instant (2s)',
-    isFree: true,
-  },
-  {
-    id: 'code-architect',
-    name: 'DeepSeek Coder V2',
-    tag: 'Full-Stack',
-    category: 'code',
-    description: 'Autonomous software architecture, debugging & refactoring.',
-    speed: '~350 tok/s',
-    isFree: true,
-  },
-  {
-    id: 'gemini-vision',
-    name: 'Gemini 1.5 Multimodal',
-    tag: 'Vision AI',
-    category: 'vision',
-    description: 'High-res diagram, photo, screenshot & layout analysis.',
-    speed: '~90 tok/s',
     isFree: true,
   },
 ];
@@ -109,6 +119,7 @@ interface MasterAiHeaderProps {
   onExportMarkdown: () => void;
   onPrintChat: () => void;
   onClearChat: () => void;
+  onOpenKeyVault?: () => void;
 }
 
 export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
@@ -126,6 +137,7 @@ export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
   onExportMarkdown,
   onPrintChat,
   onClearChat,
+  onOpenKeyVault,
 }) => {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
@@ -376,6 +388,19 @@ export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
             Web: {isWebSearchEnabled ? 'ON' : 'OFF'}
           </span>
         </button>
+
+        {/* PROVIDERS & KEYS VAULT TRIGGER */}
+        {onOpenKeyVault && (
+          <button
+            type="button"
+            onClick={onOpenKeyVault}
+            className="flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-muted-foreground hover:text-cyan-300 border border-white/[0.06] hover:border-cyan-500/40 text-xs font-semibold cursor-pointer transition-all"
+            title="Configure Claude, GPT, Gemini, and DeepSeek Provider Keys"
+          >
+            <Key className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline text-[11px] font-bold">Keys</span>
+          </button>
+        )}
 
         {/* EXPORT DROPDOWN */}
         <div className="relative" ref={exportDropdownRef}>

@@ -16,13 +16,23 @@
 let nodePuterModule: any = null;
 
 /**
- * Suppresses and removes any Puter paywall, billing, or "Low Balance" modal from the DOM.
+ * Suppresses and permanently removes any Puter paywall, billing, or "Low Balance" modal from the DOM.
  */
 export function dismissPuterModals() {
   if (typeof document === 'undefined') return;
   try {
+    // 1. Remove Puter custom element dialogs
+    const customDialogs = document.querySelectorAll('usage-limit-dialog, email-confirmation-dialog');
+    customDialogs.forEach((el) => {
+      try {
+        (el as any)?.close?.();
+      } catch {}
+      el.remove();
+    });
+
+    // 2. Remove standard modals
     const modals = document.querySelectorAll(
-      '.puter-modal, [class*="puter-modal"], .puter-modal-container, div[role="dialog"]'
+      '.puter-modal, [class*="puter-modal"], .puter-modal-container, div[role="dialog"], dialog'
     );
     modals.forEach((el) => {
       const text = el.textContent || '';
@@ -31,8 +41,12 @@ export function dismissPuterModals() {
         text.includes('puter-chat') ||
         text.includes('funding') ||
         text.includes('Upgrade Now') ||
-        text.includes('billing')
+        text.includes('billing') ||
+        text.includes('usage limit')
       ) {
+        try {
+          (el as any)?.close?.();
+        } catch {}
         el.remove();
       }
     });
@@ -41,16 +55,28 @@ export function dismissPuterModals() {
   } catch {}
 }
 
-if (typeof window !== 'undefined' && typeof MutationObserver !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    dismissPuterModals();
-  });
-  if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
-  } else {
-    window.addEventListener('DOMContentLoaded', () => {
-      observer.observe(document.body, { childList: true, subtree: true });
+if (typeof window !== 'undefined') {
+  // Monkey-patch usage-limit-dialog if already registered
+  try {
+    const dialogClass = customElements.get('usage-limit-dialog');
+    if (dialogClass && dialogClass.prototype) {
+      dialogClass.prototype.open = function () {
+        this.remove();
+      };
+    }
+  } catch {}
+
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(() => {
+      dismissPuterModals();
     });
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      window.addEventListener('DOMContentLoaded', () => {
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
   }
 }
 
