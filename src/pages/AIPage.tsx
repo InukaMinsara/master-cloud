@@ -9,6 +9,7 @@
  * Zero Local Model Downloads (10 TB Virtual Model Vault on Drive I:).
  * Autonomous Cascade: Gemini 3.8 Flash → GPT-4o Mini → DeepSeek (100% Free).
  * DALL-E 3 Grade GPT Auto-Enhancer [⚡ 8K Mode: ON].
+ * Command Palette (Ctrl + K) & Regenerate / Edit Capabilities.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -26,6 +27,9 @@ import {
   Square,
   Paperclip,
   Share2,
+  RefreshCw,
+  Edit2,
+  CheckCheck,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -39,6 +43,7 @@ import { MasterAiSidebar, MasterAiToolMode } from '@/components/ai/MasterAiSideb
 import { MasterAiHeader, MASTER_AI_MODELS } from '@/components/ai/MasterAiHeader';
 import { MasterAiWelcomeScreen } from '@/components/ai/MasterAiWelcomeScreen';
 import { MasterAiPromptInput } from '@/components/ai/MasterAiPromptInput';
+import { MasterAiCommandPalette } from '@/components/ai/MasterAiCommandPalette';
 import { VirtualTryOnStudio } from '@/components/ai/VirtualTryOnStudio';
 import { DedicatedGpuModal } from '@/components/ai/DedicatedGpuModal';
 import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
@@ -163,6 +168,13 @@ export function AIPage() {
   const fileInputLocalRef = useRef<HTMLInputElement | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Message Editing State
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingMsgText, setEditingMsgText] = useState('');
+
+  // Command Palette State
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
   // Conversational AI Features & Layout State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeToolMode, setActiveToolMode] = useState<MasterAiToolMode>('chat');
@@ -248,9 +260,13 @@ export function AIPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages, isStreaming]);
 
-  // Keyboard Shortcuts: Ctrl+N (New chat), Ctrl+B (Toggle sidebar)
+  // Keyboard Shortcuts: Ctrl+K (Command palette), Ctrl+N (New chat), Ctrl+B (Toggle sidebar)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         handleNewSession();
@@ -608,6 +624,63 @@ export function AIPage() {
     } else if (mode === 'file') {
       setIsFilePickerOpen(true);
     }
+  };
+
+  // ─── REGENERATE / RETRY LAST ASSISTANT RESPONSE ───
+  const handleRegenerateLastResponse = () => {
+    if (isStreaming || !activeSession || activeSession.messages.length === 0) return;
+
+    // Find the last user message
+    const msgs = [...activeSession.messages];
+    let lastUserIndex = -1;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') {
+        lastUserIndex = i;
+        break;
+      }
+    }
+
+    if (lastUserIndex === -1) {
+      toast.info('No user message to regenerate.');
+      return;
+    }
+
+    const lastUserPrompt = msgs[lastUserIndex].content;
+    // Trim conversation up to the last user message
+    const trimmed = msgs.slice(0, lastUserIndex);
+    setSessions((prev) =>
+      prev.map((s) => (s.id === activeSession.id ? { ...s, messages: trimmed } : s))
+    );
+
+    // Re-send with that prompt
+    handleSendMessage(lastUserPrompt);
+  };
+
+  // ─── EDIT USER MESSAGE ───
+  const handleSaveEditedMessage = (msgId: string) => {
+    if (!editingMsgText.trim()) {
+      setEditingMsgId(null);
+      return;
+    }
+
+    const msgs = [...activeSession.messages];
+    const targetIdx = msgs.findIndex((m) => m.id === msgId);
+    if (targetIdx === -1) {
+      setEditingMsgId(null);
+      return;
+    }
+
+    const newPrompt = editingMsgText.trim();
+    setEditingMsgId(null);
+    setEditingMsgText('');
+
+    // Slice history up to this message and re-run with edited text
+    const trimmed = msgs.slice(0, targetIdx);
+    setSessions((prev) =>
+      prev.map((s) => (s.id === activeSession.id ? { ...s, messages: trimmed } : s))
+    );
+
+    handleSendMessage(newPrompt);
   };
 
   // ─── SEND MESSAGE WITH STREAMING & DALL-E 3 GRADE AUTO-8K ───
@@ -1011,7 +1084,7 @@ Output ONLY the resulting prompt text.`,
             />
           ) : (
             <div className="flex-1 p-4 sm:p-6 sm:pb-8 max-w-4xl mx-auto w-full space-y-6">
-              {activeSession.messages.map((msg) => (
+              {activeSession.messages.map((msg, msgIdx) => (
                 <div
                   key={msg.id}
                   className={`flex gap-3 w-full ${
@@ -1037,7 +1110,7 @@ Output ONLY the resulting prompt text.`,
 
                   {/* Message Bubble */}
                   <div
-                    className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-lg ${
+                    className={`group/msg rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-lg relative ${
                       msg.role === 'user'
                         ? 'bg-zinc-900 border border-white/[0.1] text-foreground font-medium max-w-xl'
                         : 'bg-zinc-950/70 border border-white/[0.08] text-foreground w-full overflow-hidden backdrop-blur-xl'
@@ -1065,7 +1138,50 @@ Output ONLY the resulting prompt text.`,
                             />
                           </div>
                         )}
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
+
+                        {/* Inline editing mode for user message */}
+                        {editingMsgId === msg.id ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={editingMsgText}
+                              onChange={(e) => setEditingMsgText(e.target.value)}
+                              rows={2}
+                              className="w-full bg-zinc-950 border border-cyan-500/50 rounded-xl p-2.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-cyan-400 font-sans"
+                            />
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditingMsgId(null)}
+                                className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold text-zinc-300 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditedMessage(msg.id)}
+                                className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+                              >
+                                <CheckCheck className="h-3.5 w-3.5" />
+                                <span>Save & Run</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMsgId(msg.id);
+                                setEditingMsgText(msg.content);
+                              }}
+                              className="opacity-0 group-hover/msg:opacity-100 hover:text-cyan-300 text-muted-foreground p-1 rounded transition-opacity cursor-pointer shrink-0"
+                              title="Edit prompt and re-run"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <ChatMarkdownRenderer
@@ -1086,6 +1202,19 @@ Output ONLY the resulting prompt text.`,
                           Master AI · Quantum vGPU
                         </span>
                         <div className="flex items-center gap-2">
+                          {/* Regenerate Button (Only on last assistant message) */}
+                          {msgIdx === activeSession.messages.length - 1 && !isStreaming && (
+                            <button
+                              type="button"
+                              onClick={handleRegenerateLastResponse}
+                              className="hover:text-foreground flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-white/[0.05] cursor-pointer"
+                              title="Regenerate this response"
+                            >
+                              <RefreshCw className="h-3 w-3 text-cyan-400" />
+                              <span>Retry</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => handleReadAloud(msg.id, msg.content)}
@@ -1165,6 +1294,29 @@ Output ONLY the resulting prompt text.`,
         accept="image/*"
         onChange={handleSelectImageFile}
         className="hidden"
+      />
+
+      {/* ─── COMMAND PALETTE (Ctrl + K) ─── */}
+      <MasterAiCommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        sessions={sessions}
+        onSelectSession={(id) => {
+          setActiveSessionId(id);
+          setActiveToolMode('chat');
+        }}
+        onNewChat={handleNewSession}
+        onSelectModel={setSelectedModelId}
+        onSelectToolMode={handleSelectToolMode}
+        autoGptEnhance={autoGptEnhance}
+        onToggleAutoGptEnhance={() => setAutoGptEnhance((prev) => !prev)}
+        isWebSearchEnabled={isWebSearchEnabled}
+        onToggleWebSearch={() => setIsWebSearchEnabled((prev) => !prev)}
+        onExportMarkdown={handleExportMarkdown}
+        onOpenGpuModal={() => setIsDedicatedGpuModalOpen(true)}
+        onOpenTryOn={() => setIsLocalVtonStudioOpen(true)}
+        onOpenFilePicker={() => setIsFilePickerOpen(true)}
+        onClearChat={handleClearCurrentSession}
       />
 
       {/* ─── UNIFIED FILE ATTACHMENT MODAL (LOCAL PC & CLOUD DRIVE) ─── */}
