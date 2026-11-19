@@ -60,21 +60,21 @@ export function MobileBottomNav() {
           )}
         </NavLink>
 
-        {/* Tab 2: Master AI Space */}
+        {/* Tab 2: Master AI */}
         <NavLink
-          to="/ai-space"
+          to="/ai"
           className={({ isActive }) =>
             `flex flex-col items-center justify-center gap-1 min-w-[56px] py-1 transition-colors ${
-              isActive ? 'text-purple-400 font-semibold' : 'text-muted-foreground hover:text-foreground'
+              isActive ? 'text-cyan-400 font-semibold' : 'text-muted-foreground hover:text-foreground'
             }`
           }
         >
           {({ isActive }) => (
             <>
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-purple-500/20 text-purple-400' : ''}`}>
+              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-cyan-500/20 text-cyan-400' : ''}`}>
                 <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-[11px] tracking-tight">AI Space</span>
+              <span className="text-[11px] tracking-tight">Master AI</span>
             </>
           )}
         </NavLink>

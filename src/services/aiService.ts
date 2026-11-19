@@ -38,6 +38,7 @@ export interface AIChatSession {
   messages: AIMessage[];
   createdAt: string;
   updatedAt: string;
+  isPinned?: boolean;
 }
 
 export interface AIGatewayStats {

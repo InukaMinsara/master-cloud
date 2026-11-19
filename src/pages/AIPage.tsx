@@ -1,29 +1,31 @@
+/**
+ * src/pages/AIPage.tsx
+ * ─────────────────────────────────────────────────────────────────────────────
+ * MASTER AI — ULTIMATE INTERFACE REDESIGN
+ * Sovereign AI Operating Environment inside MASTER CLOUD.
+ *
+ * Windows 11 Fluent Design / Acrylic Glassmorphism / Mica aesthetic.
+ * 100% Sovereign & Independent (Zero Hugging Face, Zero @gradio/client).
+ * Zero Local Model Downloads (10 TB Virtual Model Vault on Drive I:).
+ * Autonomous Cascade: Gemini 3.8 Flash → GPT-4o Mini → DeepSeek (100% Free).
+ * DALL-E 3 Grade GPT Auto-Enhancer [⚡ 8K Mode: ON].
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
-  Send,
-  Paperclip,
-  Trash2,
-  Plus,
-  Copy,
-  Check,
-  Bot,
   User,
   FileText,
   X,
-  ArrowRight,
-  Globe,
-  Search,
-  Square,
-  Image as ImageIcon,
-  Mic,
-  Volume2,
-  Download,
-  Wand2,
-  Code2,
-  Share2,
   Laptop,
   UploadCloud,
+  Check,
+  Copy,
+  Volume2,
+  Square,
+  Paperclip,
+  Share2,
 } from 'lucide-react';
 import { AIService, AIMessage, AIChatSession } from '@/services/aiService';
 import { api } from '@/services/api';
@@ -33,8 +35,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { FileItem } from '@/types/file';
 import { toast } from 'sonner';
 import { ChatMarkdownRenderer } from '@/components/ai/ChatMarkdownRenderer';
+import { MasterAiSidebar, MasterAiToolMode } from '@/components/ai/MasterAiSidebar';
+import { MasterAiHeader, MASTER_AI_MODELS } from '@/components/ai/MasterAiHeader';
+import { MasterAiWelcomeScreen } from '@/components/ai/MasterAiWelcomeScreen';
+import { MasterAiPromptInput } from '@/components/ai/MasterAiPromptInput';
 import { VirtualTryOnStudio } from '@/components/ai/VirtualTryOnStudio';
-import { AIUniverseHubModal } from '@/components/ai/AIUniverseHubModal';
+import { DedicatedGpuModal } from '@/components/ai/DedicatedGpuModal';
+import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
+import { enhancePromptWithGpt } from '@/services/ai/masterCloudAiEngines';
 
 export interface LocalAttachedFile {
   name: string;
@@ -116,7 +124,35 @@ export function AIPage() {
   const { files, fetchItems } = useFileStore();
 
   // Chat State
-  const [sessions, setSessions] = useState<AIChatSession[]>(() => AIService.getSessions());
+  const [sessions, setSessions] = useState<AIChatSession[]>(() => {
+    const loaded = AIService.getSessions();
+    if (loaded && loaded.length > 0) return loaded;
+    return [
+      {
+        id: 'session-default',
+        title: 'Master AI Intelligence',
+        persona: 'general',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        messages: [
+          {
+            id: 'msg-welcome',
+            role: 'assistant',
+            content:
+              '👋 Welcome to **Master AI Operating System**!\n\n' +
+              'Powered by Google Gemini 3.8 Flash, OpenAI GPT-4o Mini, and DeepSeek R1 with zero limits, zero token caps, and zero local model downloads.\n\n' +
+              '- **Autonomous Cascade**: Gemini 3.8 Flash ⚡ → GPT-4o Mini → DeepSeek (100% Free)\n' +
+              '- **DALL-E 3 Grade Photorealism**: [⚡ 8K Mode: ON] with zero watermarks\n' +
+              '- **Document & Code Intelligence**: Drag & drop or attach files from your PC or Master Cloud Drive\n' +
+              '- **Multimodal Vision**: Paste (Ctrl+V) or upload screenshots to analyze diagrams & layouts\n' +
+              '- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
+            timestamp: new Date().toISOString(),
+            tokensUsed: 32,
+          },
+        ],
+      },
+    ];
+  });
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'session-default');
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -126,23 +162,24 @@ export function AIPage() {
   const [attachmentModalTab, setAttachmentModalTab] = useState<'local' | 'cloud'>('local');
   const fileInputLocalRef = useRef<HTMLInputElement | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [sessionSearchQuery, setSessionSearchQuery] = useState('');
 
-  // Conversational AI Features
+  // Conversational AI Features & Layout State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [activeToolMode, setActiveToolMode] = useState<MasterAiToolMode>('chat');
+  const [selectedModelId, setSelectedModelId] = useState<string>('quantum-cascade');
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [autoGptEnhance, setAutoGptEnhance] = useState<boolean>(true);
 
-  // Vision Image Attachment & Polishing & Export State
+  // Vision Image Attachment & Modals
   const [attachedImage, setAttachedImage] = useState<{ url: string; file?: File; name: string } | null>(null);
   const [isPolishingPrompt, setIsPolishingPrompt] = useState(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isLocalVtonStudioOpen, setIsLocalVtonStudioOpen] = useState(false);
-  const [isUniverseHubOpen, setIsUniverseHubOpen] = useState(false);
-  const [pageViewMode, setPageViewMode] = useState<'space' | 'chat'>('space');
+  const [isDedicatedGpuModalOpen, setIsDedicatedGpuModalOpen] = useState(false);
+  const [dedicatedGpuStatus, setDedicatedGpuStatus] = useState<DedicatedGpuStatus>({ online: false, url: '' });
   const [isLocalHostActive, setIsLocalHostActive] = useState(false);
-  const [vtonMode, setVtonMode] = useState<'cloud' | 'local'>('cloud');
   const selectedVoice = 'Joanna';
   const fileInputImageRef = useRef<HTMLInputElement | null>(null);
 
@@ -155,6 +192,15 @@ export function AIPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Dedicated GPU health check
+  useEffect(() => {
+    dedicatedGpuService.checkHealth().then(setDedicatedGpuStatus).catch(() => {});
+    const interval = setInterval(() => {
+      dedicatedGpuService.checkHealth().then(setDedicatedGpuStatus).catch(() => {});
+    }, 12000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Monitor Localhost IDM-VTON Server (port 7860) status
   useEffect(() => {
     const checkLocalhost = async () => {
@@ -166,7 +212,7 @@ export function AIPage() {
       }
     };
     checkLocalhost();
-    const interval = setInterval(checkLocalhost, 4000);
+    const interval = setInterval(checkLocalhost, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -202,9 +248,24 @@ export function AIPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages, isStreaming]);
 
-  // ─── IN-CHAT VOICE RECORDING (SPEECH-TO-TEXT) ───
+  // Keyboard Shortcuts: Ctrl+N (New chat), Ctrl+B (Toggle sidebar)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        handleNewSession();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarCollapsed((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // ─── IN-CHAT VOICE RECORDING (SPEECH-TO-TEXT VIA WHISPER) ───
   const handleToggleVoiceRecording = async () => {
-    // If AI is currently speaking, interrupt it immediately
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
       activeAudioRef.current = null;
@@ -250,7 +311,7 @@ export function AIPage() {
 
       mr.start();
       setIsRecording(true);
-      toast.info('🎙️ Listening... Speak into your microphone.');
+      toast.info('🎙️ Listening... Speak naturally.');
     } catch (err: any) {
       toast.error(`Microphone access error: ${err?.message || err}`);
     }
@@ -311,7 +372,7 @@ export function AIPage() {
               file,
               name: file.name || `Pasted_Screenshot_${Date.now()}.png`,
             });
-            toast.success('📸 Screenshot attached from clipboard for Vision AI!');
+            toast.success('📸 Screenshot attached for Vision AI!');
           };
           reader.readAsDataURL(file);
           e.preventDefault();
@@ -425,7 +486,7 @@ export function AIPage() {
     return null;
   };
 
-  // ─── PROMPT POLISHER / MAGIC WAND ───
+  // ─── PROMPT POLISHER / MAGIC WAND (GPT-4o ENHANCEMENT) ───
   const handlePolishPrompt = async () => {
     if (!inputText.trim()) {
       toast.info('Please enter a prompt first to polish.');
@@ -434,9 +495,15 @@ export function AIPage() {
     setIsPolishingPrompt(true);
     toast.info('✨ Enhancing prompt with AI Magic Wand...');
     try {
-      const polished = await puterAiService.polishPrompt(inputText.trim());
-      setInputText(polished);
-      toast.success('Prompt polished & enhanced!');
+      const polished = await enhancePromptWithGpt(inputText.trim(), 'Photorealistic');
+      if (polished && polished.length > 5) {
+        setInputText(polished);
+        toast.success('Prompt expanded to 8K cinematic directive!');
+      } else {
+        const fallback = await puterAiService.polishPrompt(inputText.trim());
+        setInputText(fallback);
+        toast.success('Prompt polished & enhanced!');
+      }
     } catch {
       toast.error('Could not polish prompt.');
     } finally {
@@ -474,7 +541,7 @@ export function AIPage() {
     window.print();
   };
 
-  // Session Management
+  // ─── SESSION MANAGEMENT ───
   const handleNewSession = () => {
     const newSession: AIChatSession = {
       id: 'session-' + Date.now(),
@@ -482,29 +549,14 @@ export function AIPage() {
       persona: 'general',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      messages: [
-        {
-          id: 'msg-' + Date.now(),
-          role: 'assistant',
-          content:
-            '👋 Welcome to **Master AI Space** — 100% Free & Unlimited Multimodal AI & Spaces Hub!\n\n' +
-            'Powered by Google Gemini 3.8 Flash, OpenAI GPT-4o Mini, and DeepSeek with zero daily limits, zero token caps, and zero paywalls.\n\n' +
-            '- **Autonomous Cascade**: Gemini 3.8 Flash ⚡ → GPT-4o Mini → DeepSeek (100% Free)\n' +
-            '- **Document & Code Intelligence**: Attach files from your PC or Master Cloud Drive\n' +
-            '- **Multimodal Vision**: Paste (Ctrl+V) or attach images to analyze diagrams, code, and photos\n' +
-            '- **Web Grounding**: Real-time live web citations and web browsing\n' +
-            '- **Bilingual**: Ask in **English** or **සිංහල (Sinhala)** anytime!',
-          timestamp: new Date().toISOString(),
-          tokensUsed: 32,
-        },
-      ],
+      messages: [],
     };
     setSessions([newSession, ...sessions]);
     setActiveSessionId(newSession.id);
+    setActiveToolMode('chat');
   };
 
-  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteSession = (id: string) => {
     if (sessions.length <= 1) {
       toast.warning('You must keep at least one chat session.');
       return;
@@ -514,30 +566,51 @@ export function AIPage() {
     if (activeSessionId === id) {
       setActiveSessionId(filtered[0].id);
     }
+    toast.info('Conversation deleted.');
+  };
+
+  const handleRenameSession = (id: string, newTitle: string) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle, updatedAt: new Date().toISOString() } : s))
+    );
+    toast.success('Conversation renamed.');
+  };
+
+  const handleTogglePinSession = (id: string) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned, updatedAt: new Date().toISOString() } : s))
+    );
   };
 
   const handleClearCurrentSession = () => {
     if (!activeSession) return;
-    const clearedMessages: AIMessage[] = [
-      {
-        id: 'msg-' + Date.now(),
-        role: 'assistant',
-        content: 'Conversation cleared. How can I assist you now?',
-        timestamp: new Date().toISOString(),
-        tokensUsed: 8,
-      },
-    ];
     setSessions((prev) =>
       prev.map((s) =>
         s.id === activeSession.id
-          ? { ...s, messages: clearedMessages, updatedAt: new Date().toISOString() }
+          ? { ...s, messages: [], updatedAt: new Date().toISOString() }
           : s,
       ),
     );
-    toast.info('Chat history cleared for this session.');
+    toast.info('Chat cleared for this session.');
   };
 
-  // ─── SEND MESSAGE WITH STREAMING + CANCEL SUPPORT (PURE UNLIMITED CHATTING) ───
+  // ─── TOOL MODE SWITCHER ───
+  const handleSelectToolMode = (mode: MasterAiToolMode) => {
+    setActiveToolMode(mode);
+    if (mode === 'tryon') {
+      setIsLocalVtonStudioOpen(true);
+    } else if (mode === 'image') {
+      setSelectedModelId('flux-ultra-image');
+      setInputText('Photo ekak hadanna ');
+    } else if (mode === 'code') {
+      setSelectedModelId('code-architect');
+      setInputText('Write an optimized code component: ');
+    } else if (mode === 'file') {
+      setIsFilePickerOpen(true);
+    }
+  };
+
+  // ─── SEND MESSAGE WITH STREAMING & DALL-E 3 GRADE AUTO-8K ───
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = customPrompt || inputText;
     if (!textToSend.trim() || isStreaming) return;
@@ -574,7 +647,7 @@ export function AIPage() {
       if (s.id === activeSession.id) {
         return {
           ...s,
-          title: s.messages.length <= 1 ? textToSend.slice(0, 32) : s.title,
+          title: s.messages.length === 0 ? textToSend.slice(0, 32) : s.title,
           messages: updatedMessages,
           updatedAt: new Date().toISOString(),
         };
@@ -588,16 +661,20 @@ export function AIPage() {
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
 
-    // ─── 1. IN-CHAT IMAGE GENERATION (FLUX.1 ULTRA ZERO-LIMIT CASCADE) ───
+    // ─── 1. IN-CHAT IMAGE GENERATION (FLUX.1 ULTRA + DALL-E 3 AUTO-8K EXPANSION) ───
     const imageIntent = detectImageIntent(textToSend, Boolean(sentImage));
-    if (imageIntent.isImage) {
+    if (imageIntent.isImage || selectedModelId === 'flux-ultra-image') {
       const isImg2Img = Boolean(sentImage);
+      const rawPrompt = imageIntent.prompt || textToSend;
+
       const initialAssistantMsg: AIMessage = {
         id: assistantMsgId,
         role: 'assistant',
         content: isImg2Img
-          ? `🎨 Analyzing reference photo with **Gemini Multimodal Vision** to preserve facial identity & generating transformation via **FLUX.1 Ultra**...\n\n> Edit: *"${imageIntent.prompt}"*`
-          : `🎨 Synthesizing high-resolution image with **FLUX.1 Ultra** (Perchance-grade Zero-Limit Engine)...\n\n> Prompt: *"${imageIntent.prompt}"*`,
+          ? `🎨 Analyzing reference photo with **Vision AI** to preserve identity & generating transformation with **FLUX.1 Ultra**...\n\n> Directive: *"${rawPrompt}"*`
+          : autoGptEnhance
+          ? `⚡ **[8K Mode: Active]** Expanding directive with GPT-4o-Mini into photorealistic master prompt...\n\n> Original: *"${rawPrompt}"*`
+          : `🎨 Synthesizing high-resolution image with **FLUX.1 Ultra** (Raw 4K · Zero Watermark)...\n\n> Prompt: *"${rawPrompt}"*`,
         timestamp: new Date().toISOString(),
       };
 
@@ -611,18 +688,31 @@ export function AIPage() {
       );
 
       try {
-        let targetPrompt = imageIntent.prompt;
+        let targetPrompt = rawPrompt;
 
+        // DALL-E 3 Grade GPT Auto-Enhancer
+        if (autoGptEnhance && !sentImage) {
+          try {
+            const enhanced = await enhancePromptWithGpt(rawPrompt, 'Photorealistic');
+            if (enhanced && enhanced.length > 5) {
+              targetPrompt = enhanced;
+            }
+          } catch (e) {
+            console.warn('[Auto GPT Enhance Warning]:', e);
+          }
+        }
+
+        // Vision image-to-image reference identity refinement
         if (sentImage) {
           try {
-            toast.info('🔍 Vision AI analyzing reference photo to lock facial identity & build...');
+            toast.info('🔍 Vision AI locking facial identity & features from photo...');
             const visionAnalysis = await puterAiService.chat(
-              `The user uploaded a reference photograph and requested this edit/generation: "${imageIntent.prompt}".
-Carefully inspect the attached reference photograph:
-1. Identify the subject: exact gender, age, hairstyle, hair color, skin tone/complexion, facial features, facial hair (beard/stubble/clean-shaven), body build, and current posture.
-2. Incorporate the user's requested edit: "${imageIntent.prompt}".
-3. Formulate an exact, photorealistic prompt (1-2 sentences) instructing the diffusion model to depict this EXACT same person, face, and facial structure from the reference photo, but modified to satisfy "${imageIntent.prompt}".
-Output ONLY the resulting prompt text, with no preamble or quotes.`,
+              `The user uploaded a reference photo and requested this edit: "${rawPrompt}".
+Carefully inspect the photo:
+1. Identify gender, age, hairstyle, skin tone, facial features, facial hair, posture.
+2. Incorportate user edit: "${rawPrompt}".
+3. Formulate an exact photorealistic prompt instructing the diffusion model to depict this EXACT same person with the edit.
+Output ONLY the resulting prompt text.`,
               { image: sentImage.url, temperature: 0.2 }
             );
 
@@ -636,13 +726,13 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
 
         let imgRes: PuterImageResult;
         try {
-          // Primary: 100% Free & Unlimited FLUX.1 Ultra via Pollinations
+          // Tier 1: 100% Free & Unlimited Raw FLUX.1 Ultra via Pollinations
           imgRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
             aspect_ratio: '1:1',
             input_image: sentImage?.url,
           });
         } catch {
-          // Fallback: Puter txt2img / AI Horde
+          // Tier 2 Fallback: Puter txt2img
           imgRes = await puterAiService.generateImage(targetPrompt, {
             aspect_ratio: '1:1',
             input_image: sentImage?.url,
@@ -657,12 +747,14 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                   ? {
                       ...m,
                       content: isImg2Img
-                        ? `✨ Transformed image with preserved subject identity, powered by **${imgRes.model}**:\n\n> *"${imageIntent.prompt}"*`
-                        : `✨ Here is your generated image powered by **${imgRes.model}**:\n\n> *"${imageIntent.prompt}"*`,
+                        ? `✨ Transformed image with preserved subject identity, powered by **${imgRes.model}**:\n\n> *"${rawPrompt}"*`
+                        : autoGptEnhance
+                        ? `✨ Masterpiece generated via **${imgRes.model}** with **[⚡ 8K Mode]**:\n\n> *"${rawPrompt}"*\n\n<details><summary className="text-[11px] text-zinc-400 font-mono cursor-pointer">View GPT Expanded Prompt</summary>\n\n\`\`\`\n${targetPrompt}\n\`\`\`\n</details>`
+                        : `✨ Here is your generated image powered by **${imgRes.model}**:\n\n> *"${rawPrompt}"*`,
                       mediaAttachment: {
                         type: 'image' as const,
                         url: imgRes.imageUrl,
-                        prompt: imageIntent.prompt,
+                        prompt: rawPrompt,
                         modelUsed: imgRes.model,
                       },
                     }
@@ -673,7 +765,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
             return s;
           }),
         );
-        toast.success(`Image ${isImg2Img ? 'transformed' : 'generated'} in chat via ${imgRes.model}!`);
+        toast.success(`Image generated via ${imgRes.model}!`);
       } catch (err: any) {
         toast.error(`Image generation failed: ${err?.message || err}`);
         setSessions((prev) =>
@@ -698,8 +790,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
       return;
     }
 
-    // ─── 2. TEXT CHAT STREAMING (GEMINI -> OPENAI -> DEEPSEEK CASCADE) ───
-    // Initial empty assistant message for streaming
+    // ─── 2. TEXT CHAT STREAMING (GEMINI 3.8 FLASH -> GPT-4O MINI -> DEEPSEEK CASCADE) ───
     const initialAssistantMsg: AIMessage = {
       id: assistantMsgId,
       role: 'assistant',
@@ -751,7 +842,6 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         promptToSend = `[Attached Local PC File: ${sentLocalFile.name} (${(sentLocalFile.size / 1024).toFixed(1)} KB)]\n\`\`\`\n${sentLocalFile.content.slice(0, 15000)}\n\`\`\`\n\n[User Prompt]:\n${promptToSend}`;
       }
 
-      // Stream directly through Puter.js with automatic waterfall cascade (Gemini 3.8 Flash -> GPT-4o -> DeepSeek)
       const historyForPuter = cleanedPriorMessages
         .filter((m) => m.id !== 'msg-welcome' && m.content && m.content.trim().length > 0)
         .map((m) => ({
@@ -773,7 +863,6 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         accumulated = chunk;
 
         const now = performance.now();
-        // Update immediately on first chunk (<60 chars) or throttle at 16ms (60fps) for extreme fast output
         if (now - lastRenderTime > 16 || accumulated.length < 60) {
           lastRenderTime = now;
           setSessions((prev) =>
@@ -805,7 +894,6 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
     } catch (err: any) {
       if (!abortCtrl.signal.aborted) {
         toast.error(`Generation error: ${err?.message || 'AI service interrupted'}`);
-        // Remove empty assistant message if it failed before generating any content
         setSessions((prev) =>
           prev.map((s) => {
             if (s.id === activeSession.id) {
@@ -840,695 +928,271 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const promptSuggestions = [
-    { label: '🎨 AI Image Gen (FLUX Ultra)', text: 'Photo ekak hadanna futuristic neon cyber city in rain' },
-    { label: '⚡ Fast Chat (Sinhala)', text: 'Master Cloud එකේ Unlimited AI Chat එක ගැන කෙටියෙන් සිංහලෙන් කියන්න.' },
-    { label: '💻 Code Generation', text: 'Write a clean, responsive TypeScript and Tailwind CSS Dashboard component.' },
-    { label: '📑 File & Code Analysis', text: 'Analyze this code or document, extract key points, and suggest improvements.' },
-  ];
-
-  const filteredSessions = sessions.filter(
-    (s) =>
-      s.title.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
-      s.messages.some((m) => m.content.toLowerCase().includes(sessionSearchQuery.toLowerCase())),
-  );
-
-  // ─── DEFAULT PRIMARY VIEW: AI SPACE (34 DOMAINS · 102 CLOUD BOTS · 10 TB VAULT) ───
-  if (pageViewMode === 'space') {
-    return (
-      <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background text-foreground select-none">
-        <AIUniverseHubModal
-          inline={true}
-          isOpen={true}
-          onSwitchToChat={() => setPageViewMode('chat')}
-        />
-
-        {/* AI Virtual Try-On Studio */}
-        <VirtualTryOnStudio
-          isOpen={isLocalVtonStudioOpen}
-          onClose={() => setIsLocalVtonStudioOpen(false)}
-          isLocalHostActive={isLocalHostActive}
-        />
-      </div>
-    );
-  }
+  const isConversationEmpty =
+    !activeSession ||
+    activeSession.messages.length === 0 ||
+    (activeSession.messages.length === 1 && activeSession.messages[0].id === 'msg-welcome');
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-background text-foreground select-none">
-      {/* ─── MASTER AI CHAT TOP HEADER ─── */}
-      <header className="h-14 border-b border-border/70 bg-card/40 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-extrabold text-sm sm:text-base tracking-tight bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                MASTER AI CHAT
-              </h1>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Assistant Mode
+    <div className="flex h-full w-full overflow-hidden bg-background text-foreground select-none font-sans">
+      {/* ─── 1. LEFT COLLAPSIBLE SIDEBAR ─── */}
+      <MasterAiSidebar
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSelectSession={(id) => {
+          setActiveSessionId(id);
+          setActiveToolMode('chat');
+        }}
+        onNewChat={handleNewSession}
+        onDeleteSession={handleDeleteSession}
+        onRenameSession={handleRenameSession}
+        onTogglePinSession={handleTogglePinSession}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        activeToolMode={activeToolMode}
+        onSelectToolMode={handleSelectToolMode}
+        isDedicatedGpuOnline={dedicatedGpuStatus.online}
+        dedicatedGpuName={dedicatedGpuStatus.gpuName}
+        onOpenGpuModal={() => setIsDedicatedGpuModalOpen(true)}
+        userName={user?.name || 'Inuka Minsara'}
+      />
+
+      {/* ─── 2. MAIN WORKSPACE AREA ─── */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative bg-gradient-to-b from-card/30 via-background to-background">
+        {/* TOP HEADER */}
+        <MasterAiHeader
+          activeSessionTitle={activeSession?.title || 'New Conversation'}
+          onRenameTitle={(newTitle) => handleRenameSession(activeSession.id, newTitle)}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+          selectedModelId={selectedModelId}
+          onSelectModel={setSelectedModelId}
+          isDedicatedGpuOnline={dedicatedGpuStatus.online}
+          dedicatedGpuName={dedicatedGpuStatus.gpuName}
+          onOpenGpuModal={() => setIsDedicatedGpuModalOpen(true)}
+          isWebSearchEnabled={isWebSearchEnabled}
+          onToggleWebSearch={() => setIsWebSearchEnabled((prev) => !prev)}
+          onExportMarkdown={handleExportMarkdown}
+          onPrintChat={handlePrintChat}
+          onClearChat={handleClearCurrentSession}
+        />
+
+        {/* CHAT THREAD / WELCOME SCREEN */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onPaste={handlePaste}
+          className="flex-1 overflow-y-auto relative flex flex-col"
+        >
+          {/* Drag Overlay */}
+          {isDraggingOver && (
+            <div className="absolute inset-4 bg-cyan-500/10 backdrop-blur-md border-2 border-dashed border-cyan-400 rounded-3xl z-40 flex flex-col items-center justify-center gap-2 pointer-events-none animate-in fade-in">
+              <UploadCloud className="h-12 w-12 text-cyan-400 animate-bounce" />
+              <span className="text-sm font-bold text-foreground">
+                Drop files from your PC to attach to Master AI
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Gemini 3.8 Flash + FLUX.1
+              <span className="text-xs text-muted-foreground font-mono">
+                Code, Documents (.pdf, .txt, .md), Data (.json, .csv) or Images for Vision AI
               </span>
             </div>
-            <p className="text-[10px] text-muted-foreground hidden sm:block">
-              Conversational Assistant · File Intelligence · Document QA
-            </p>
-          </div>
-        </div>
+          )}
 
-        {/* ─── HEADER STATUS BADGE ─── */}
-        <div className="flex items-center gap-2">
-          {/* Back to AI Space Button (34 Categories · 102 Models) */}
-          <button
-            type="button"
-            onClick={() => setPageViewMode('space')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white shadow-md shadow-purple-500/20 text-xs font-extrabold cursor-pointer transition-all active:scale-[0.98]"
-            title="Open AI Space (34 Categories · 102 World-Class Cloud Models · 0 MB Download)"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-cyan-200" />
-            <span>🚀 Back to AI Space (102 Models)</span>
-          </button>
-
-          {/* Virtual Try-On Studio Button */}
-          <button
-            type="button"
-            onClick={() => setIsLocalVtonStudioOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold cursor-pointer shadow-sm transition-all"
-            title="Open AI Virtual Try-On Studio (Master vGPU / Dedicated GPU)"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>👕 Try-On Studio</span>
-          </button>
-
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>⚡ Cascade: Gemini 3.8 Flash + FLUX.1 Ultra (100% Free)</span>
-          </div>
-        </div>
-      </header>
-
-      {/* ─── MAIN CHAT INTERFACE ─── */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar: Conversations, Persona, Model */}
-        <div className="w-64 sm:w-72 border-r border-border/60 bg-card/25 flex flex-col shrink-0">
-          {/* Header / New Chat */}
-          <div className="p-3 border-b border-border/50 flex items-center justify-between gap-2">
-            <span className="font-bold text-xs text-muted-foreground uppercase tracking-wider">
-              Conversations
-            </span>
-            <button
-              onClick={handleNewSession}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors cursor-pointer"
-              title="Start a new conversation"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Chat</span>
-            </button>
-          </div>
-
-          {/* Session Search */}
-          <div className="p-2 border-b border-border/50">
-            <div className="relative">
-              <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={sessionSearchQuery}
-                onChange={(e) => setSessionSearchQuery(e.target.value)}
-                className="w-full bg-muted/50 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary border border-border/50"
-              />
-            </div>
-          </div>
-
-          {/* Persona & Model Selector Controls */}
-          <div className="p-3 border-b border-border/50 space-y-2.5 bg-muted/20">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                Assistant Persona
-              </label>
-              <select
-                value={activeSession.persona}
-                onChange={(e) => {
-                  const updated = sessions.map((s) =>
-                    s.id === activeSession.id ? { ...s, persona: e.target.value as any } : s,
-                  );
-                  setSessions(updated);
-                }}
-                className="w-full bg-background text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-border/60 focus:outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="general">General Copilot</option>
-                <option value="analyst">Document Analyst</option>
-                <option value="coder">Code Architect</option>
-                <option value="writer">Executive Writer</option>
-              </select>
-            </div>
-
-            {/* Autonomous AI Waterfall Routing Engine */}
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/10 via-purple-500/5 to-cyan-500/10 border border-primary/20 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">
-                    Autonomous AI Cascade
-                  </span>
-                </div>
-                <span className="text-[9px] text-emerald-400 font-bold font-mono">100% Free</span>
-              </div>
-
-              <div className="text-[11px] space-y-1 text-muted-foreground font-mono">
-                <div className="flex items-center gap-1.5 text-cyan-300 font-semibold">
-                  <span className="text-[10px] text-zinc-500">1.</span>
-                  <span>⚡ Google Gemini 3.8 Flash</span>
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 ml-auto">Active</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <span className="text-[10px] text-zinc-600">2.</span>
-                  <span>⚡ OpenAI GPT-4o Mini</span>
-                  <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 2</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <span className="text-[10px] text-zinc-600">3.</span>
-                  <span>⚡ DeepSeek &amp; Open Weights</span>
-                  <span className="text-[9px] text-zinc-500 ml-auto">Auto-Tier 3</span>
-                </div>
-              </div>
-
-              <p className="text-[9px] text-muted-foreground/80 pt-0.5 leading-snug">
-                Zero manual switches. If Google Gemini free tier is exhausted, it seamlessly routes to OpenAI, then DeepSeek.
-              </p>
-            </div>
-          </div>
-
-          {/* Sessions List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {filteredSessions.map((s) => {
-              const isSelected = activeSessionId === s.id;
-              return (
+          {/* Show Welcome Screen if session has no real user interaction yet */}
+          {isConversationEmpty ? (
+            <MasterAiWelcomeScreen
+              userName={user?.name || 'Inuka Minsara'}
+              onSelectPrompt={(prompt, mode) => {
+                if (mode) handleSelectToolMode(mode);
+                handleSendMessage(prompt);
+              }}
+              onOpenTryOn={() => setIsLocalVtonStudioOpen(true)}
+              onOpenFilePicker={() => setIsFilePickerOpen(true)}
+            />
+          ) : (
+            <div className="flex-1 p-4 sm:p-6 sm:pb-8 max-w-4xl mx-auto w-full space-y-6">
+              {activeSession.messages.map((msg) => (
                 <div
-                  key={s.id}
-                  onClick={() => setActiveSessionId(s.id)}
-                  className={`group px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all flex items-center justify-between ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  key={msg.id}
+                  className={`flex gap-3 w-full ${
+                    msg.role === 'user'
+                      ? 'ml-auto flex-row-reverse justify-start'
+                      : 'mr-auto max-w-full'
                   }`}
                 >
-                  <span className="truncate flex-1 pr-2">{s.title}</span>
-                  {sessions.length > 1 && (
-                    <button
-                      onClick={(e) => handleDeleteSession(s.id, e)}
-                      className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity p-0.5 cursor-pointer"
-                      title="Delete conversation"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bottom Status Badge */}
-          <div className="p-3 border-t border-border/50 text-[10px] text-muted-foreground bg-card/40 flex items-center justify-between font-mono gap-2">
-            <span className="flex items-center gap-1.5 text-cyan-400 font-semibold truncate">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
-              Puter.js Gateway: Connected
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono">
-              100% Free Models
-            </span>
-          </div>
-        </div>
-
-        {/* Right Main Chat Thread & Input */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-secondary/5">
-          {/* Thread Header */}
-          <div className="h-12 border-b border-border/60 px-4 sm:px-6 flex items-center justify-between bg-card/30 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-2 truncate">
-              <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Bot className="h-4 w-4" />
-              </div>
-              <div className="truncate">
-                <h2 className="font-bold text-xs text-foreground truncate">{activeSession.title}</h2>
-                <span className="text-[10px] text-muted-foreground capitalize">
-                  {activeSession.persona} Persona · Zero Limits · Autonomous Free Gateway
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                ⚡ Extreme Fast Stream (~120 tok/s)
-              </span>
-
-              {/* Chat Export Menu */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] font-semibold text-foreground transition-colors cursor-pointer"
-                  title="Export chat transcript"
-                >
-                  <Share2 className="h-3 w-3 text-primary" />
-                  <span>Export</span>
-                </button>
-
-                {isExportMenuOpen && (
-                  <div className="absolute right-0 mt-1 w-52 rounded-xl bg-card border border-border/80 shadow-2xl z-30 py-1.5 text-xs animate-in fade-in zoom-in-95">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        handleExportMarkdown();
-                      }}
-                      className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground"
-                    >
-                      <FileText className="h-4 w-4 text-purple-400" />
-                      <div>
-                        <div className="font-semibold">Markdown (.md)</div>
-                        <div className="text-[10px] text-muted-foreground">Download formatted text</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        handlePrintChat();
-                      }}
-                      className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 cursor-pointer text-foreground border-t border-border/40"
-                    >
-                      <Download className="h-4 w-4 text-cyan-400" />
-                      <div>
-                        <div className="font-semibold">Print / Save PDF</div>
-                        <div className="text-[10px] text-muted-foreground">Save as PDF document</div>
-                      </div>
-                    </button>
+                  {/* Avatar */}
+                  <div
+                    className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-tr from-cyan-600 to-blue-600 text-white'
+                        : 'bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-500 text-white shadow-purple-500/20'
+                    }`}
+                  >
+                    {msg.role === 'user' ? (
+                      <User className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 text-cyan-200" />
+                    )}
                   </div>
-                )}
-              </div>
 
-              <button
-                onClick={handleClearCurrentSession}
-                className="px-2 py-1 rounded-lg border border-border/60 hover:bg-accent text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Clear chat messages in this session"
-              >
-                Clear Chat
-              </button>
-            </div>
-          </div>
-
-          {/* Message Thread */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 relative"
-          >
-            {isDraggingOver && (
-              <div className="absolute inset-4 bg-primary/20 backdrop-blur-sm border-2 border-dashed border-primary rounded-2xl z-30 flex flex-col items-center justify-center gap-2 pointer-events-none">
-                <UploadCloud className="h-12 w-12 text-cyan-400 animate-bounce" />
-                <span className="text-sm font-bold text-foreground">Drop files from your PC to attach to Master AI</span>
-                <span className="text-xs text-muted-foreground">Code, documents, data (.json, .csv, .py, .pdf) or images</span>
-              </div>
-            )}
-
-            {activeSession.messages
-              .filter((msg) => msg.role === 'user' || Boolean(msg.content && msg.content.trim().length > 0) || isStreaming)
-              .map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3 w-full ${
-                  msg.role === 'user'
-                    ? 'ml-auto flex-row-reverse justify-start'
-                    : 'mr-auto max-w-3xl lg:max-w-4xl'
-                }`}
-              >
-                <div
-                  className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white'
-                  }`}
-                >
-                  {msg.role === 'user' ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                </div>
-
-                <div
-                  className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-sm ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground font-medium max-w-xl'
-                      : 'bg-card border border-border/80 text-foreground w-full overflow-hidden'
-                  }`}
-                >
-                  {msg.attachedFile && (
-                    <div className="mb-2.5 p-2 rounded-xl bg-background/50 border border-border/60 flex items-center gap-2 text-xs">
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
-                      <span className="font-bold truncate">{msg.attachedFile.name}</span>
-                    </div>
-                  )}
-
-                  {msg.role === 'user' ? (
-                    <div className="space-y-2">
-                      {msg.imageAttachment && (
-                        <div className="max-w-sm rounded-xl overflow-hidden border border-white/20 shadow-md">
-                          <img
-                            src={msg.imageAttachment}
-                            alt="Vision attachment"
-                            className="max-h-60 w-auto object-contain rounded-lg"
-                          />
-                        </div>
-                      )}
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
-                    </div>
-                  ) : (
-                    <ChatMarkdownRenderer
-                      content={msg.content}
-                      mediaAttachment={msg.mediaAttachment}
-                      isStreaming={isStreaming && msg.id === activeSession.messages[activeSession.messages.length - 1]?.id}
-                    />
-                  )}
-
-                  {msg.role === 'assistant' && msg.content && (
-                    <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span className="font-mono text-cyan-400">Master AI · Autonomous Free Cascade</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleReadAloud(msg.id, msg.content)}
-                          className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
-                            speakingMsgId === msg.id
-                              ? 'text-emerald-400 bg-emerald-500/10 font-bold'
-                              : 'hover:text-foreground'
-                          }`}
-                          title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen / Read aloud'}
-                        >
-                          {speakingMsgId === msg.id ? (
-                            <>
-                              <Square className="h-3 w-3 fill-current text-rose-400" />
-                              <span className="text-rose-400">Stop</span>
-                            </>
-                          ) : (
-                            <>
-                              <Volume2 className="h-3 w-3 text-cyan-400" />
-                              <span>Listen</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => copyMessage(msg.id, msg.content)}
-                          className="hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
-                        >
-                          {copiedId === msg.id ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                          <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Starter Prompt Suggestions */}
-            {activeSession.messages.length <= 1 && (
-              <div className="max-w-2xl mx-auto pt-6 space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block text-center">
-                  Quick Intelligence Prompts
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {promptSuggestions.map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(suggestion.text)}
-                      className="p-3 rounded-xl bg-card border border-border/70 hover:border-primary text-left text-xs font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="flex flex-col gap-0.5 pr-2">
-                        <span className="text-foreground font-bold">{suggestion.label}</span>
-                        <span className="line-clamp-1 text-[11px] text-muted-foreground">
-                          {suggestion.text}
+                  {/* Message Bubble */}
+                  <div
+                    className={`rounded-2xl p-4 text-xs sm:text-sm leading-relaxed shadow-lg ${
+                      msg.role === 'user'
+                        ? 'bg-zinc-900 border border-white/[0.1] text-foreground font-medium max-w-xl'
+                        : 'bg-zinc-950/70 border border-white/[0.08] text-foreground w-full overflow-hidden backdrop-blur-xl'
+                    }`}
+                  >
+                    {/* Attached Drive File */}
+                    {msg.attachedFile && (
+                      <div className="mb-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 text-xs">
+                        <FileText className="h-4 w-4 text-cyan-400 shrink-0" />
+                        <span className="font-bold truncate">{msg.attachedFile.name}</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto font-mono">
+                          (Drive)
                         </span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </button>
-                  ))}
+                    )}
+
+                    {msg.role === 'user' ? (
+                      <div className="space-y-2">
+                        {msg.imageAttachment && (
+                          <div className="max-w-sm rounded-xl overflow-hidden border border-white/20 shadow-md">
+                            <img
+                              src={msg.imageAttachment}
+                              alt="Vision attachment"
+                              className="max-h-60 w-auto object-contain rounded-lg"
+                            />
+                          </div>
+                        )}
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
+                    ) : (
+                      <ChatMarkdownRenderer
+                        content={msg.content}
+                        mediaAttachment={msg.mediaAttachment}
+                        isStreaming={
+                          isStreaming &&
+                          msg.id === activeSession.messages[activeSession.messages.length - 1]?.id
+                        }
+                      />
+                    )}
+
+                    {/* Assistant Message Footer Actions */}
+                    {msg.role === 'assistant' && msg.content && (
+                      <div className="mt-3 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span className="font-mono text-cyan-400/90 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                          Master AI · Quantum vGPU
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleReadAloud(msg.id, msg.content)}
+                            className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
+                              speakingMsgId === msg.id
+                                ? 'text-emerald-400 bg-emerald-500/10 font-bold'
+                                : 'hover:text-foreground'
+                            }`}
+                            title={speakingMsgId === msg.id ? 'Stop audio' : 'Listen / Read aloud'}
+                          >
+                            {speakingMsgId === msg.id ? (
+                              <>
+                                <Square className="h-3 w-3 fill-current text-rose-400" />
+                                <span className="text-rose-400">Stop</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="h-3 w-3 text-cyan-400" />
+                                <span>Listen</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => copyMessage(msg.id, msg.content)}
+                            className="hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            {copiedId === msg.id ? (
+                              <Check className="h-3 w-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>{copiedId === msg.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Bar */}
-          <div className="p-4 border-t border-border/60 bg-card/40 backdrop-blur-md">
-            <div className="max-w-3xl mx-auto space-y-2">
-              {/* Quick Action Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] scrollbar-none">
-                <button
-                  type="button"
-                  onClick={() => setIsUniverseHubOpen(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-cyan-500/15 hover:from-purple-500/25 hover:to-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold transition-all shrink-0 cursor-pointer shadow-sm"
-                  title="Explore all 102 AI Models across 34 Categories"
-                >
-                  <Sparkles className="h-3 w-3 text-cyan-400" />
-                  <span>🌌 AI Universe (102 Models)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setInputText((prev) => (prev ? `${prev} Photo ekak hadanna ` : 'Photo ekak hadanna '))}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors shrink-0 cursor-pointer"
-                >
-                  <ImageIcon className="h-3 w-3 text-purple-400" />
-                  <span>🎨 Image Gen (FLUX)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsLocalVtonStudioOpen(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors shrink-0 cursor-pointer"
-                  title="Open AI Virtual Try-On Studio (Master vGPU / Dedicated GPU)"
-                >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>👕 Virtual Try-On (Cloud / Local)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsWebSearchEnabled((prev) => !prev)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors shrink-0 cursor-pointer ${
-                    isWebSearchEnabled
-                      ? 'bg-blue-600 text-white border border-blue-400 shadow-sm'
-                      : 'bg-muted/60 hover:bg-muted text-muted-foreground border border-border/60'
-                  }`}
-                >
-                  <Globe className="h-3 w-3 text-blue-400" />
-                  <span>🌐 Web Search: {isWebSearchEnabled ? 'ON' : 'OFF'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setInputText((prev) => (prev ? `${prev} Write an interactive HTML & CSS ` : 'Write an interactive HTML & CSS '))}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors shrink-0 cursor-pointer"
-                >
-                  <Code2 className="h-3 w-3 text-amber-400" />
-                  <span>💻 Code Canvas</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isPolishingPrompt || !inputText.trim()}
-                  onClick={handlePolishPrompt}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/15 to-indigo-500/15 hover:from-purple-500/25 hover:to-indigo-500/25 text-purple-300 border border-purple-500/30 transition-all shrink-0 cursor-pointer disabled:opacity-50 ml-auto"
-                  title="Polish and enrich prompt with AI Magic Wand"
-                >
-                  <Wand2 className={`h-3 w-3 text-purple-400 ${isPolishingPrompt ? 'animate-spin' : ''}`} />
-                  <span>{isPolishingPrompt ? 'Polishing...' : '✨ Polish'}</span>
-                </button>
-              </div>
-
-              {/* Attached File Pill (Cloud Drive) */}
-              {attachedFile && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold animate-in fade-in">
-                  <FileText className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-xs">{attachedFile.name} (Drive)</span>
-                  <button
-                    onClick={() => setAttachedFile(null)}
-                    className="hover:text-destructive ml-1 cursor-pointer"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-
-              {/* Attached Local PC File Pill */}
-              {attachedLocalFile && (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold animate-in fade-in">
-                  <Laptop className="h-3.5 w-3.5 text-cyan-400" />
-                  <span className="truncate max-w-xs">{attachedLocalFile.name}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    ({(attachedLocalFile.size / 1024).toFixed(1)} KB · PC)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setAttachedLocalFile(null)}
-                    className="hover:text-destructive ml-1 cursor-pointer"
-                    title="Remove local file"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-
-              {/* Attached Image Pill (Vision AI) */}
-              {attachedImage && (
-                <div className="inline-flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-semibold animate-in fade-in">
-                  <img src={attachedImage.url} alt="Attached Preview" className="h-7 w-7 object-cover rounded-md border border-purple-500/40" />
-                  <span className="truncate max-w-xs text-purple-300">{attachedImage.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setAttachedImage(null)}
-                    className="hover:text-destructive ml-1 cursor-pointer"
-                    title="Remove attached image"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 bg-background border border-border/70 rounded-2xl p-2 shadow-md focus-within:border-primary transition-colors">
-                <button
-                  type="button"
-                  onClick={() => setIsFilePickerOpen(true)}
-                  className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Attach file from Local PC or Master Cloud Drive"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputImageRef.current?.click()}
-                  className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  title="Attach photo/screenshot for Vision AI analysis"
-                >
-                  <ImageIcon className="h-4 w-4 text-purple-400" />
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputImageRef}
-                  accept="image/*"
-                  onChange={handleSelectImageFile}
-                  className="hidden"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setIsWebSearchEnabled((prev) => !prev)}
-                  className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                    isWebSearchEnabled ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                  }`}
-                  title={isWebSearchEnabled ? 'Real-Time Web Grounding Active' : 'Enable Real-Time Web Grounding'}
-                >
-                  <Globe className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleToggleVoiceRecording}
-                  className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                    isRecording ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                  }`}
-                  title={isRecording ? 'Stop Recording' : 'Voice Input (Microphone)'}
-                >
-                  <Mic className="h-4 w-4" />
-                </button>
-
-                <textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onPaste={handlePaste}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  rows={1}
-                  placeholder={
-                    isRecording
-                      ? '🎙️ Listening... Speak naturally into your microphone'
-                      : isWebSearchEnabled
-                      ? '🌐 Web Search Active: Ask anything with real-time web citations...'
-                      : attachedImage
-                      ? 'Ask Master AI anything about this attached image/screenshot, or ask to dress/modify it... [Enter]'
-                      : 'Ask Master AI anything, generate images (Photo ekak hadanna...), paste screenshots (Ctrl+V)... [Enter]'
-                  }
-                  className="flex-1 bg-transparent resize-none border-none outline-none text-xs sm:text-sm py-1.5 px-2 text-foreground placeholder:text-muted-foreground/50 max-h-32"
-                />
-
-                {isStreaming ? (
-                  <button
-                    onClick={handleStopGenerating}
-                    className="p-2.5 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-sm cursor-pointer"
-                    title="Stop generation"
-                  >
-                    <Square className="h-4 w-4 fill-current" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleSendMessage()}
-                    disabled={!inputText.trim()}
-                    className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors shadow-sm cursor-pointer"
-                    title="Send prompt"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2">
-                <span>Autonomous AI Cascade · 100% Free &amp; Unlimited</span>
-                <span className="text-emerald-400 font-medium font-mono">⚡ Gemini 3.8 Flash → GPT-4o Mini → DeepSeek</span>
-              </div>
+              ))}
+              <div ref={messagesEndRef} />
             </div>
-          </div>
+          )}
         </div>
+
+        {/* ─── 3. COMMAND DOCK (PROMPT INPUT) ─── */}
+        <MasterAiPromptInput
+          inputText={inputText}
+          setInputText={setInputText}
+          onSend={handleSendMessage}
+          isStreaming={isStreaming}
+          onStopStreaming={handleStopGenerating}
+          attachedImage={attachedImage}
+          onRemoveImage={() => setAttachedImage(null)}
+          attachedLocalFile={attachedLocalFile}
+          onRemoveLocalFile={() => setAttachedLocalFile(null)}
+          attachedCloudFile={attachedFile}
+          onRemoveCloudFile={() => setAttachedFile(null)}
+          onOpenFilePicker={() => setIsFilePickerOpen(true)}
+          onOpenImagePicker={() => fileInputImageRef.current?.click()}
+          isRecording={isRecording}
+          onToggleRecording={handleToggleVoiceRecording}
+          autoGptEnhance={autoGptEnhance}
+          onToggleAutoGptEnhance={() => setAutoGptEnhance((prev) => !prev)}
+          isPolishingPrompt={isPolishingPrompt}
+          onMagicPrompt={handlePolishPrompt}
+          isWebSearchEnabled={isWebSearchEnabled}
+          onToggleWebSearch={() => setIsWebSearchEnabled((prev) => !prev)}
+        />
       </div>
+
+      {/* Hidden image input for Vision */}
+      <input
+        type="file"
+        ref={fileInputImageRef}
+        accept="image/*"
+        onChange={handleSelectImageFile}
+        className="hidden"
+      />
 
       {/* ─── UNIFIED FILE ATTACHMENT MODAL (LOCAL PC & CLOUD DRIVE) ─── */}
       {isFilePickerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-card border border-border/80 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in select-none">
+          <div className="bg-zinc-950/95 border border-white/[0.1] rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
               <div className="flex items-center gap-2">
-                <Paperclip className="h-5 w-5 text-primary" />
+                <Paperclip className="h-5 w-5 text-cyan-400" />
                 <h3 className="font-bold text-sm text-foreground">Attach File to AI Context</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsFilePickerOpen(false)}
-                className="hover:text-foreground text-muted-foreground p-1 rounded-lg hover:bg-muted cursor-pointer"
+                className="hover:text-foreground text-muted-foreground p-1 rounded-lg hover:bg-white/[0.06] cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Source Switcher Tabs */}
-            <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50 border border-border/60">
+            <div className="flex items-center gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => setAttachmentModalTab('local')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   attachmentModalTab === 'local'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-cyan-600 text-white shadow-md'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1540,7 +1204,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                 onClick={() => setAttachmentModalTab('cloud')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   attachmentModalTab === 'cloud'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-cyan-600 text-white shadow-md'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -1549,19 +1213,21 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
               </button>
             </div>
 
-            {/* TAB 1: LOCAL PC FILE BROWSER & DRAG ZONE */}
+            {/* TAB 1: LOCAL PC FILE BROWSER */}
             {attachmentModalTab === 'local' && (
               <div className="space-y-4">
                 <div
                   onClick={() => fileInputLocalRef.current?.click()}
-                  className="border-2 border-dashed border-border/80 hover:border-primary/80 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:bg-accent/40 group bg-card/40"
+                  className="border-2 border-dashed border-white/[0.1] hover:border-cyan-500/60 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:bg-white/[0.02] group bg-white/[0.01]"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <UploadCloud className="h-7 w-7 text-primary" />
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <UploadCloud className="h-7 w-7 text-cyan-400" />
                   </div>
-                  <span className="font-bold text-sm text-foreground">Choose files from your Computer</span>
+                  <span className="font-bold text-sm text-foreground">
+                    Choose files from your Computer
+                  </span>
                   <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                    Click to browse or drop any file here. Supports Code (.ts, .py, .js), Documents (.pdf, .txt, .md), Data (.json, .csv), and Images for Vision AI.
+                    Code (.ts, .py, .js), Documents (.pdf, .txt, .md), Data (.json, .csv), and Images.
                   </p>
                   <button
                     type="button"
@@ -1569,7 +1235,7 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                       e.stopPropagation();
                       fileInputLocalRef.current?.click();
                     }}
-                    className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-2"
+                    className="mt-4 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-2"
                   >
                     <Laptop className="h-4 w-4" />
                     <span>Browse Local Disk</span>
@@ -1602,10 +1268,10 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
                           setIsFilePickerOpen(false);
                           toast.success(`Attached "${file.name}" to context`);
                         }}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-accent cursor-pointer transition-colors text-xs border border-border/40 hover:border-border"
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-colors text-xs border border-white/[0.04] hover:border-cyan-500/30"
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <FileText className="h-4 w-4 text-cyan-400 shrink-0" />
                           <span className="font-medium truncate">{file.name}</span>
                         </div>
                         <span className="text-[10px] text-muted-foreground shrink-0 ml-2 font-mono">
@@ -1620,18 +1286,20 @@ Output ONLY the resulting prompt text, with no preamble or quotes.`,
         </div>
       )}
 
-      {/* ─── AI VIRTUAL TRY-ON STUDIO (NATIVE CLOUD GPU + MULTI-MODE) ─── */}
+      {/* ─── VIRTUAL TRY-ON STUDIO MODAL ─── */}
       <VirtualTryOnStudio
         isOpen={isLocalVtonStudioOpen}
         onClose={() => setIsLocalVtonStudioOpen(false)}
         isLocalHostActive={isLocalHostActive}
       />
 
-      {/* ─── MASTER AI UNIVERSE HUB (34 CATEGORIES · 102 WORLD-CLASS MODELS) ─── */}
-      <AIUniverseHubModal
-        isOpen={isUniverseHubOpen}
-        onClose={() => setIsUniverseHubOpen(false)}
+      {/* ─── DEDICATED GPU (OPTION A) MODAL ─── */}
+      <DedicatedGpuModal
+        isOpen={isDedicatedGpuModalOpen}
+        onClose={() => setIsDedicatedGpuModalOpen(false)}
+        onStatusChange={setDedicatedGpuStatus}
       />
     </div>
   );
 }
+export default AIPage;
