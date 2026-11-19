@@ -201,22 +201,28 @@ export const AiKeyVaultModal: React.FC<AiKeyVaultModalProps> = ({ isOpen, onClos
             />
           </div>
 
-          {/* 3. OpenAI GPT-4o */}
+          {/* 3. OpenAI GPT-4o / GitHub Models */}
           <div className="space-y-1.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
             <div className="flex items-center justify-between text-xs font-bold text-foreground">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 text-emerald-400" />
-                <span>OpenAI GPT-4o / GPT-4o-mini</span>
+                <span>OpenAI GPT-4o / GitHub Models</span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500">
-                Optional Custom Key
-              </span>
+              <a
+                href="https://github.com/settings/tokens"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+              >
+                <span>GitHub Free Token</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
             <input
               type="password"
               value={openaiKey}
               onChange={(e) => setOpenaiKey(e.target.value)}
-              placeholder="Paste OpenAI Key (sk-...)"
+              placeholder="Paste OpenAI Key (sk-...) or GitHub Token (ghp_...)"
               className="w-full h-9 px-3 rounded-xl bg-black/40 border border-white/[0.08] focus:border-emerald-500/50 text-xs font-mono text-foreground placeholder:text-zinc-600 focus:outline-none"
             />
           </div>

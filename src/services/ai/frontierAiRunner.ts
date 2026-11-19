@@ -273,7 +273,11 @@ async function streamOpenAiChat(
   modelName: string = 'gpt-4o',
 ): Promise<FrontierChatResult> {
   const startTime = performance.now();
-  const url = 'https://api.openai.com/v1/chat/completions';
+  const isGitHubToken = apiKey.startsWith('ghp_') || apiKey.startsWith('github_pat_');
+  const url = isGitHubToken
+    ? 'https://models.github.ai/inference/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions';
+  const targetModel = isGitHubToken ? 'openai/gpt-4o' : modelName;
 
   const messages: any[] = [];
   const history = options.messages || [];
@@ -304,7 +308,7 @@ async function streamOpenAiChat(
     },
     signal: options.signal,
     body: JSON.stringify({
-      model: modelName,
+      model: targetModel,
       messages,
       stream: true,
       temperature: options.temperature ?? 0.7,
@@ -314,7 +318,7 @@ async function streamOpenAiChat(
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`OpenAI Error (${res.status}): ${errText.slice(0, 200)}`);
+    throw new Error(`${isGitHubToken ? 'GitHub Models' : 'OpenAI'} Error (${res.status}): ${errText.slice(0, 200)}`);
   }
 
   if (!res.body) {
