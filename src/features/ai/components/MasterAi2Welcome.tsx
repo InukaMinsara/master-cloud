@@ -1,13 +1,14 @@
 /**
  * src/features/ai/components/MasterAi2Welcome.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — WELCOME & DISCOVERY SCREEN
- * Clean Windows 11 Fluent layout with sample prompts and LPU speed indicators.
+ * MASTER AI — WELCOME & DISCOVERY SCREEN
+ * Clean Windows 11 Fluent layout with sample prompts for Groq coding,
+ * reasoning, and Pollinations generative image creation.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import React from 'react';
-import { Sparkles, Code2, Cpu, FileText, Zap, Key } from 'lucide-react';
+import { Sparkles, Code2, Cpu, ImageIcon, Zap, Key } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { groqService } from '../services/groqService';
 
@@ -20,9 +21,9 @@ const PROMPT_STARTERS = [
     borderColor: 'border-cyan-500/20 hover:border-cyan-500/40',
   },
   {
-    icon: Zap,
-    title: 'Ultra-Fast Code Refactor',
-    prompt: 'Write an optimized React virtualized list component supporting 100,000 items with zero jank.',
+    icon: ImageIcon,
+    title: 'Generative Image Art',
+    prompt: '/image Cinematic futuristic city at night in neon rain, volumetric lighting, photorealistic, 8k',
     color: 'text-orange-400',
     borderColor: 'border-orange-500/20 hover:border-orange-500/40',
   },
@@ -34,16 +35,16 @@ const PROMPT_STARTERS = [
     borderColor: 'border-purple-500/20 hover:border-purple-500/40',
   },
   {
-    icon: FileText,
-    title: 'Document & Bug Analysis',
-    prompt: 'Review this architecture for race conditions, memory leaks, and state synchronization pitfalls.',
+    icon: Zap,
+    title: 'Ultra-Fast Code Refactor',
+    prompt: 'Write an optimized React virtualized list component supporting 100,000 items with zero jank.',
     color: 'text-emerald-400',
     borderColor: 'border-emerald-500/20 hover:border-emerald-500/40',
   },
 ];
 
 export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: string) => void }) {
-  const setIsKeyModalOpen = useAiChatStore((s) => s.setIsKeyModalOpen);
+  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
   const hasKey = groqService.hasApiKey();
 
   return (
@@ -52,7 +53,7 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
       <div className="space-y-4 mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300 shadow-inner">
           <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-          <span>GROQ LPU ARCHITECTURE · REAL-TIME INFERENCE</span>
+          <span>GROQ LPU & POLLINATIONS MULTIMODAL PLATFORM</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white flex items-center justify-center gap-3">
@@ -63,14 +64,14 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
         </h1>
 
         <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto leading-relaxed">
-          Ultra-low latency intelligence powered by Groq LPUs. Advanced code architecture, deep multi-turn reasoning, and instant execution.
+          Ultra-low latency conversational intelligence powered by Groq LPUs, paired with in-chat image synthesis & editing via Pollinations AI.
         </p>
 
         {!hasKey && (
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => setIsKeyModalOpen(true)}
+              onClick={() => setIsVaultModalOpen(true, 'groq')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 text-xs font-semibold transition-all cursor-pointer shadow-lg shadow-orange-500/10"
             >
               <Key className="w-3.5 h-3.5" />

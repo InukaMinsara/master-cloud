@@ -1,8 +1,9 @@
 /**
  * src/features/ai/components/MasterAi2ChatArea.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — HIGH-PERFORMANCE CHAT TIMELINE
- * Auto-scrolling message list, streaming animation, and welcome screen.
+ * MASTER AI — MULTIMODAL CHAT TIMELINE
+ * Auto-scrolling message list, streaming animation, welcome screen,
+ * and support for text bubbles and image cards.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -10,17 +11,22 @@ import React, { useRef, useEffect } from 'react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { MasterAi2MessageBubble } from './MasterAi2MessageBubble';
 import { MasterAi2Welcome } from './MasterAi2Welcome';
+import { AiImageDetails } from '../types/aiTypes';
 
 interface ChatAreaProps {
   onSendMessage: (text: string) => void;
   onRegenerate: () => void;
   onEditMessage: (msgId: string, newText: string) => void;
+  onEditImage?: (imageUrl: string, prompt: string) => void;
+  onVariation?: (details: AiImageDetails) => void;
 }
 
 export function MasterAi2ChatArea({
   onSendMessage,
   onRegenerate,
   onEditMessage,
+  onEditImage,
+  onVariation,
 }: ChatAreaProps) {
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const isStreaming = useAiChatStore((s) => s.isStreaming);
@@ -30,12 +36,12 @@ export function MasterAi2ChatArea({
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Smooth auto-scroll to bottom during streaming
+  // Smooth auto-scroll to bottom during streaming or message update
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeConv?.messages.length, activeConv?.messages[activeConv.messages.length - 1]?.content]);
+  }, [activeConv?.messages.length, activeConv?.messages[activeConv.messages.length - 1]?.content, activeConv?.messages[activeConv.messages.length - 1]?.imageDetails]);
 
   if (!activeConv || activeConv.messages.length === 0) {
     return (
@@ -66,6 +72,8 @@ export function MasterAi2ChatArea({
                 ? (newText) => onEditMessage(msg.id, newText)
                 : undefined
             }
+            onEditImage={onEditImage}
+            onVariation={onVariation}
           />
         ))}
         <div ref={bottomRef} className="h-4" />

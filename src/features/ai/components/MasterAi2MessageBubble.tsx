@@ -1,16 +1,17 @@
 /**
  * src/features/ai/components/MasterAi2MessageBubble.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — CONVERSATIONAL MESSAGE BUBBLE
- * Supports user attachments, real-time streaming cursor, live LPU tok/s telemetry,
- * code copying, and prompt regeneration.
+ * MASTER AI — MULTIMODAL MESSAGE BUBBLE
+ * Supports user file & image attachments, real-time streaming cursor,
+ * live LPU tok/s telemetry, syntax-highlighted markdown, and in-chat image cards.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import React, { useState } from 'react';
-import { Bot, User, Copy, Check, RotateCcw, FileText, Sparkles, Zap, Edit2, AlertCircle } from 'lucide-react';
-import { AiMessage } from '../types/aiTypes';
+import { Bot, User, Copy, Check, RotateCcw, FileText, Sparkles, Zap, Edit2, AlertCircle, ImageIcon } from 'lucide-react';
+import { AiImageDetails, AiMessage } from '../types/aiTypes';
 import { MasterAi2Markdown } from './MasterAi2Markdown';
+import { MasterAi2ImageCard } from './MasterAi2ImageCard';
 import { toast } from 'sonner';
 
 interface MessageBubbleProps {
@@ -18,6 +19,8 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   onRegenerate?: () => void;
   onEdit?: (newText: string) => void;
+  onEditImage?: (imageUrl: string, prompt: string) => void;
+  onVariation?: (details: AiImageDetails) => void;
 }
 
 export function MasterAi2MessageBubble({
@@ -25,12 +28,15 @@ export function MasterAi2MessageBubble({
   isStreaming = false,
   onRegenerate,
   onEdit,
+  onEditImage,
+  onVariation,
 }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
 
   const isUser = message.role === 'user';
+  const isImageMessage = Boolean(message.imageDetails || message.isGeneratingImage);
 
   const handleCopy = () => {
     if (!navigator.clipboard) return;
@@ -53,7 +59,11 @@ export function MasterAi2MessageBubble({
       {!isUser && (
         <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-400 p-[1px] shadow-md shadow-orange-500/20">
           <div className="w-full h-full rounded-[11px] bg-zinc-950 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-orange-400" />
+            {isImageMessage ? (
+              <Sparkles className="w-4 h-4 text-orange-400" />
+            ) : (
+              <Bot className="w-4 h-4 text-orange-400" />
+            )}
           </div>
         </div>
       )}
@@ -63,14 +73,16 @@ export function MasterAi2MessageBubble({
         className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-4 py-3 ${
           isUser
             ? 'bg-zinc-800/90 text-white border border-white/[0.08] shadow-sm'
-            : 'bg-white/[0.02] text-zinc-100 border border-white/[0.06] shadow-sm'
+            : isImageMessage
+              ? 'bg-transparent border-0 p-0 shadow-none'
+              : 'bg-white/[0.02] text-zinc-100 border border-white/[0.06] shadow-sm'
         }`}
       >
-        {/* Assistant Header */}
-        {!isUser && (
+        {/* Assistant Header (for text messages) */}
+        {!isUser && !isImageMessage && (
           <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-white/[0.04] text-[11px] text-zinc-400 font-mono">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-white">Master AI 2.0</span>
+              <span className="font-bold text-white">Master AI</span>
               {message.modelUsed && (
                 <span className="text-orange-400/90 font-medium">· {message.modelUsed}</span>
               )}
@@ -90,17 +102,30 @@ export function MasterAi2MessageBubble({
           </div>
         )}
 
-        {/* User Attachments */}
+        {/* User Attachments (Files & Images) */}
         {isUser && message.attachments && message.attachments.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2.5">
+          <div className="flex flex-wrap gap-2 mb-2.5">
             {message.attachments.map((att) => (
               <div
                 key={att.id}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-zinc-200"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-mono text-zinc-200"
               >
-                <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="truncate max-w-[140px]">{att.name}</span>
-                <span className="text-[10px] text-zinc-400">({(att.sizeBytes / 1024).toFixed(0)}KB)</span>
+                {att.type === 'image' && att.url ? (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={att.url}
+                      alt={att.name}
+                      className="w-6 h-6 object-cover rounded-md border border-white/20"
+                    />
+                    <span className="truncate max-w-[140px]">{att.name}</span>
+                  </div>
+                ) : (
+                  <>
+                    <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="truncate max-w-[140px]">{att.name}</span>
+                    <span className="text-[10px] text-zinc-400">({(att.sizeBytes / 1024).toFixed(0)}KB)</span>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -153,51 +178,59 @@ export function MasterAi2MessageBubble({
               )}
             </div>
           </div>
+        ) : isImageMessage ? (
+          <MasterAi2ImageCard
+            details={message.imageDetails}
+            isGenerating={message.isGeneratingImage}
+            promptText={message.content}
+            onRegenerate={onRegenerate}
+            onEditImage={onEditImage}
+            onVariation={onVariation}
+          />
         ) : (
           <MasterAi2Markdown content={message.content} isStreaming={isStreaming} />
         )}
 
-        {/* Action Toolbar on Hover */}
-        <div className="flex items-center justify-end gap-2 mt-2 pt-1 border-t border-white/[0.04] text-zinc-400 text-xs opacity-70 hover:opacity-100 transition-opacity">
-          {isUser && onEdit && !isEditing && (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors"
-              title="Edit message"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+        {/* Action Toolbar on Hover (for text messages) */}
+        {!isImageMessage && (
+          <div className="flex items-center justify-end gap-2 mt-2 pt-1 border-t border-white/[0.04] text-zinc-400 text-xs opacity-70 hover:opacity-100 transition-opacity">
+            {isUser && onEdit && !isEditing && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors"
+                title="Edit message"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            )}
 
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors"
-            title="Copy message"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
+            {!isUser && !message.isError && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+                  title="Copy response"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
 
-          {!isUser && onRegenerate && !isStreaming && (
-            <button
-              type="button"
-              onClick={onRegenerate}
-              className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors"
-              title="Regenerate response"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+                {onRegenerate && (
+                  <button
+                    type="button"
+                    onClick={onRegenerate}
+                    className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+                    title="Regenerate response"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* User Avatar */}
-      {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-white/[0.08] border border-white/[0.1] flex items-center justify-center text-zinc-300">
-          <User className="w-4 h-4" />
-        </div>
-      )}
     </div>
   );
 }

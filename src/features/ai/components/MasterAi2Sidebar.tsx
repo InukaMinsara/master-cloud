@@ -33,7 +33,7 @@ export function MasterAi2Sidebar() {
   const deleteConversation = useAiChatStore((s) => s.deleteConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const togglePinConversation = useAiChatStore((s) => s.togglePinConversation);
-  const setIsKeyModalOpen = useAiChatStore((s) => s.setIsKeyModalOpen);
+  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
 
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -189,9 +189,9 @@ export function MasterAi2Sidebar() {
 
         <button
           type="button"
-          onClick={() => setIsKeyModalOpen(true)}
+          onClick={() => setIsVaultModalOpen(true)}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="Groq API Key Vault"
+          title="AI Provider Vault"
         >
           <Key className="w-4 h-4 text-orange-400" />
         </button>

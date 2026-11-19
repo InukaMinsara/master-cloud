@@ -8,6 +8,12 @@
 
 export type AiRole = 'user' | 'assistant' | 'system';
 
+export type AiProviderId = 'groq' | 'pollinations' | 'comfyui';
+
+export type ChatMode = 'auto' | 'chat' | 'image';
+
+export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3';
+
 export interface AiAttachment {
   id: string;
   name: string;
@@ -15,7 +21,9 @@ export interface AiAttachment {
   sizeBytes: number;
   mimeType?: string;
   content?: string; // Text content for document files
-  url?: string;     // Object URL or data URL
+  url?: string;     // Object URL, data URL, or remote URL
+  width?: number;
+  height?: number;
 }
 
 export interface AiTokenMetrics {
@@ -27,14 +35,34 @@ export interface AiTokenMetrics {
   firstTokenMs?: number;
 }
 
+export interface AiImageDetails {
+  url: string;
+  prompt: string;
+  revisedPrompt?: string;
+  provider: 'pollinations' | 'comfyui';
+  modelId: string;
+  modelTitle?: string;
+  width: number;
+  height: number;
+  seed?: number;
+  aspectRatio?: ImageAspectRatio;
+  isEdited?: boolean;
+  referenceImageId?: string;
+  savedToDriveId?: string;
+  generationTimeMs?: number;
+}
+
 export interface AiMessage {
   id: string;
   role: AiRole;
   content: string;
   timestamp: number;
+  providerUsed?: AiProviderId;
   modelUsed?: string;
   metrics?: AiTokenMetrics;
   attachments?: AiAttachment[];
+  imageDetails?: AiImageDetails;
+  isGeneratingImage?: boolean;
   isError?: boolean;
 }
 
@@ -48,6 +76,17 @@ export interface AiConversation {
   systemPrompt?: string;
 }
 
+// ── Groq Models & Capabilities ──────────────────────────────────────────────
+export type GroqCategory =
+  | 'all_free'
+  | 'general_chat'
+  | 'reasoning'
+  | 'coding'
+  | 'multimodal'
+  | 'audio'
+  | 'moderation'
+  | 'other';
+
 export interface GroqModelInfo {
   id: string;
   name: string;
@@ -55,8 +94,69 @@ export interface GroqModelInfo {
   description: string;
   contextWindow: number;
   maxOutputTokens: number;
-  category: 'production' | 'fast' | 'reasoning';
+  category: 'production' | 'fast' | 'reasoning' | 'audio' | 'moderation' | 'other';
+  groqCategory: GroqCategory;
   isDefault?: boolean;
+  isFreeTier: boolean;
+  isActive: boolean;
+  rateLimits?: string;
+}
+
+// ── Pollinations Models & Capabilities ──────────────────────────────────────
+export type PollinationsCategory =
+  | 'primary_gen'
+  | 'primary_edit'
+  | 'free_gen'
+  | 'fast_gen'
+  | 'experimental'
+  | 'all';
+
+export interface PollinationsModelInfo {
+  id: string;                    // Canonical identifier (e.g. black-forest-labs/flux.1-schnell)
+  name: string;                  // Short display name
+  title: string;
+  aliases: string[];
+  publisher?: string;
+  category: PollinationsCategory;
+  paidOnly: boolean;
+  freeStatus: 'free' | 'paid' | 'unverified';
+  supportsGeneration: boolean;
+  supportsEditing: boolean;
+  maxReferenceImages?: number;
+  pricing?: any;
+  healthStatus?: string;
+  isAvailable: boolean;
+  estimatedSpeed?: 'fast' | 'medium' | 'slow';
+  lastRefreshedAt?: number;
+}
+
+// ── Unified Provider Vault Configuration ────────────────────────────────────
+export interface ProviderVaultConfig {
+  // Groq
+  groqEndpoint: string;
+  groqApiKey: string;
+  groqEnabled: boolean;
+  groqLastConnected?: number;
+  groqLastError?: string;
+
+  // Pollinations
+  pollinationsEndpoint: string;
+  pollinationsApiKey: string;
+  pollinationsEnabled: boolean;
+  pollinationsLastConnected?: number;
+  pollinationsLastError?: string;
+
+  // ComfyUI Local
+  comfyUiEndpoint: string;
+  comfyUiApiKey: string;
+  comfyUiEnabled: boolean;
+  comfyUiLastConnected?: number;
+  comfyUiLastError?: string;
+
+  // Global Policies
+  freeOnly: boolean;
+  blockPaid: boolean;
+  autoPaidFallback: boolean;
 }
 
 export interface GroqChatOptions {

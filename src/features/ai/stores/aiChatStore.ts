@@ -1,15 +1,26 @@
 /**
  * src/features/ai/stores/aiChatStore.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — HIGH-SPEED REACTIVE CHAT STORE
- * Built with Zustand, supporting client-side encryption & IndexedDB/LocalStorage persistence.
- * Preserves user conversation history seamlessly across upgrades.
+ * MASTER AI — HIGH-SPEED MULTI-PROVIDER CHAT & IMAGE STORE
+ * Unified reactive state management for Groq LPU text/code, Pollinations AI
+ * image generation and editing, and local ComfyUI.
+ *
+ * Guarantees zero data loss across legacy sessions and multi-modal message formats.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { create } from 'zustand';
-import { AiAttachment, AiConversation, AiMessage, AiTokenMetrics } from '../types/aiTypes';
+import {
+  AiAttachment,
+  AiConversation,
+  AiImageDetails,
+  AiMessage,
+  AiTokenMetrics,
+  ChatMode,
+  ImageAspectRatio,
+} from '../types/aiTypes';
 import { DEFAULT_GROQ_MODEL } from '../services/groqModels';
+import { DEFAULT_IMAGE_MODEL } from '../services/pollinationsModels';
 
 const STORAGE_KEY = 'master_ai_conversations_v2';
 const ACTIVE_CONV_KEY = 'master_ai_active_conv_id';
@@ -78,10 +89,15 @@ interface AiChatState {
   conversations: AiConversation[];
   activeConversationId: string;
   selectedModelId: string;
+  activeImageModelId: string;
+  chatMode: ChatMode;
+  aspectRatio: ImageAspectRatio;
   isStreaming: boolean;
   streamingMessageId: string | null;
   activeMetrics: AiTokenMetrics | null;
-  isKeyModalOpen: boolean;
+  isVaultModalOpen: boolean;
+  activeVaultTab: 'groq' | 'pollinations' | 'comfyui';
+  lightboxImage: { url: string; prompt?: string; title?: string } | null;
   isSidebarOpen: boolean;
   searchQuery: string;
 
@@ -93,13 +109,20 @@ interface AiChatState {
   togglePinConversation: (id: string) => void;
   clearActiveConversation: () => void;
   setSelectedModelId: (modelId: string) => void;
+  setActiveImageModelId: (modelId: string) => void;
+  setChatMode: (mode: ChatMode) => void;
+  setAspectRatio: (ratio: ImageAspectRatio) => void;
   addUserMessage: (content: string, attachments?: AiAttachment[]) => string;
   createAssistantPlaceholder: () => string;
   updateAssistantContent: (msgId: string, chunk: string, metrics?: AiTokenMetrics) => void;
   finalizeAssistantMessage: (msgId: string, fullText: string, modelUsed: string, metrics?: AiTokenMetrics) => void;
   setAssistantError: (msgId: string, errorText: string) => void;
+  createImagePlaceholder: (prompt: string, modelId: string, provider: 'pollinations' | 'comfyui') => string;
+  finalizeImageMessage: (msgId: string, details: AiImageDetails) => void;
+  setImageError: (msgId: string, errorText: string) => void;
   setStreaming: (isStreaming: boolean, msgId?: string | null) => void;
-  setIsKeyModalOpen: (open: boolean) => void;
+  setIsVaultModalOpen: (open: boolean, tab?: 'groq' | 'pollinations' | 'comfyui') => void;
+  setLightboxImage: (img: { url: string; prompt?: string; title?: string } | null) => void;
   toggleSidebar: () => void;
   setSearchQuery: (query: string) => void;
   getActiveConversation: () => AiConversation | undefined;
@@ -121,10 +144,15 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     conversations: initialConvs,
     activeConversationId: initialActiveId,
     selectedModelId: DEFAULT_GROQ_MODEL,
+    activeImageModelId: DEFAULT_IMAGE_MODEL,
+    chatMode: 'auto',
+    aspectRatio: '1:1',
     isStreaming: false,
     streamingMessageId: null,
     activeMetrics: null,
-    isKeyModalOpen: false,
+    isVaultModalOpen: false,
+    activeVaultTab: 'groq',
+    lightboxImage: null,
     isSidebarOpen: true,
     searchQuery: '',
 
@@ -163,32 +191,26 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
 
     deleteConversation: (id: string) => {
       set((state) => {
-        const filtered = state.conversations.filter((c) => c.id !== id);
-        let nextConvs = filtered;
-        let nextActive = state.activeConversationId;
-
-        if (nextConvs.length === 0) {
-          const fresh = createInitialConversation();
-          nextConvs = [fresh];
-          nextActive = fresh.id;
-        } else if (state.activeConversationId === id) {
-          nextActive = nextConvs[0].id;
-        }
-
-        persist(nextConvs, nextActive);
+        const remaining = state.conversations.filter((c) => c.id !== id);
+        const next = remaining.length > 0 ? remaining : [createInitialConversation()];
+        const nextActive = state.activeConversationId === id ? next[0].id : state.activeConversationId;
+        persist(next, nextActive);
         return {
-          conversations: nextConvs,
+          conversations: next,
           activeConversationId: nextActive,
+          activeMetrics: null,
+          isStreaming: false,
+          streamingMessageId: null,
         };
       });
     },
 
     renameConversation: (id: string, newTitle: string) => {
-      const clean = newTitle.trim();
-      if (!clean) return;
+      const title = newTitle.trim();
+      if (!title) return;
       set((state) => {
         const next = state.conversations.map((c) =>
-          c.id === id ? { ...c, title: clean, updatedAt: Date.now() } : c
+          c.id === id ? { ...c, title, updatedAt: Date.now() } : c
         );
         persist(next, state.activeConversationId);
         return { conversations: next };
@@ -224,6 +246,18 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       set({ selectedModelId: modelId });
     },
 
+    setActiveImageModelId: (modelId: string) => {
+      set({ activeImageModelId: modelId });
+    },
+
+    setChatMode: (mode: ChatMode) => {
+      set({ chatMode: mode });
+    },
+
+    setAspectRatio: (ratio: ImageAspectRatio) => {
+      set({ aspectRatio: ratio });
+    },
+
     addUserMessage: (content: string, attachments?: AiAttachment[]) => {
       const msgId = `msg_user_${Date.now()}`;
       const userMsg: AiMessage = {
@@ -241,7 +275,6 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
               ...c,
               messages: [...c.messages, userMsg],
               updatedAt: Date.now(),
-              // Auto-name untitled conversations from first user message
               title: c.messages.length === 0 ? content.slice(0, 32) : c.title,
             };
           }
@@ -261,6 +294,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
         role: 'assistant',
         content: '',
         timestamp: Date.now(),
+        providerUsed: 'groq' as const,
       };
 
       set((state) => {
@@ -311,6 +345,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
                     ...m,
                     content: fullText,
                     modelUsed,
+                    providerUsed: 'groq' as const,
                     metrics,
                     timestamp: Date.now(),
                   }
@@ -338,7 +373,98 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
               m.id === msgId
                 ? {
                     ...m,
-                    content: `⚠️ **Groq Inference Error**: ${errorText}`,
+                    content: `⚠️ **Inference Error**: ${errorText}`,
+                    isError: true,
+                  }
+                : m
+            );
+            return { ...c, messages: updated, updatedAt: Date.now() };
+          }
+          return c;
+        });
+        persist(next, state.activeConversationId);
+        return {
+          conversations: next,
+          isStreaming: false,
+          streamingMessageId: null,
+        };
+      });
+    },
+
+    createImagePlaceholder: (prompt: string, modelId: string, provider: 'pollinations' | 'comfyui') => {
+      const msgId = `msg_img_${Date.now()}`;
+      const placeholder: AiMessage = {
+        id: msgId,
+        role: 'assistant',
+        content: prompt,
+        timestamp: Date.now(),
+        providerUsed: provider,
+        modelUsed: modelId,
+        isGeneratingImage: true,
+      };
+
+      set((state) => {
+        const next = state.conversations.map((c) => {
+          if (c.id === state.activeConversationId) {
+            return {
+              ...c,
+              messages: [...c.messages, placeholder],
+              updatedAt: Date.now(),
+            };
+          }
+          return c;
+        });
+        persist(next, state.activeConversationId);
+        return {
+          conversations: next,
+          isStreaming: true,
+          streamingMessageId: msgId,
+        };
+      });
+
+      return msgId;
+    },
+
+    finalizeImageMessage: (msgId: string, details: AiImageDetails) => {
+      set((state) => {
+        const next = state.conversations.map((c) => {
+          if (c.id === state.activeConversationId) {
+            const updated = c.messages.map((m) =>
+              m.id === msgId
+                ? {
+                    ...m,
+                    content: details.prompt,
+                    imageDetails: details,
+                    isGeneratingImage: false,
+                    providerUsed: details.provider,
+                    modelUsed: details.modelId,
+                    timestamp: Date.now(),
+                  }
+                : m
+            );
+            return { ...c, messages: updated, updatedAt: Date.now() };
+          }
+          return c;
+        });
+        persist(next, state.activeConversationId);
+        return {
+          conversations: next,
+          isStreaming: false,
+          streamingMessageId: null,
+        };
+      });
+    },
+
+    setImageError: (msgId: string, errorText: string) => {
+      set((state) => {
+        const next = state.conversations.map((c) => {
+          if (c.id === state.activeConversationId) {
+            const updated = c.messages.map((m) =>
+              m.id === msgId
+                ? {
+                    ...m,
+                    content: `⚠️ **Image Generation Error**: ${errorText}`,
+                    isGeneratingImage: false,
                     isError: true,
                   }
                 : m
@@ -360,8 +486,12 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       set({ isStreaming, streamingMessageId: msgId ?? null });
     },
 
-    setIsKeyModalOpen: (open: boolean) => {
-      set({ isKeyModalOpen: open });
+    setIsVaultModalOpen: (open: boolean, tab: 'groq' | 'pollinations' | 'comfyui' = 'groq') => {
+      set({ isVaultModalOpen: open, activeVaultTab: tab });
+    },
+
+    setLightboxImage: (img: { url: string; prompt?: string; title?: string } | null) => {
+      set({ lightboxImage: img });
     },
 
     toggleSidebar: () => {

@@ -1,9 +1,9 @@
 /**
  * src/features/ai/components/MasterAi2Header.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — APPLICATION HEADER
- * Windows 11 Fluent design header with model picker, title rename,
- * chat export, and Groq Key Vault indicator.
+ * MASTER AI — APPLICATION HEADER
+ * Windows 11 Fluent header with multi-provider model indicator, title inline editor,
+ * chat export, and Provider Vault status button.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,23 +16,32 @@ import {
   Check,
   Edit2,
   Zap,
+  Sparkles,
+  Shield,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { groqService } from '../services/groqService';
 import { getGroqModelInfo } from '../services/groqModels';
+import { PREFERRED_POLLINATIONS_MODELS } from '../services/pollinationsModels';
 import { toast } from 'sonner';
 
 export function MasterAi2Header() {
   const toggleSidebar = useAiChatStore((s) => s.toggleSidebar);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
-  const setIsKeyModalOpen = useAiChatStore((s) => s.setIsKeyModalOpen);
+  const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
+  const chatMode = useAiChatStore((s) => s.chatMode);
+  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
 
   const activeConv = getActiveConversation();
-  const activeModel = getGroqModelInfo(selectedModelId);
-  const hasKey = groqService.hasApiKey();
+  const activeGroqModel = getGroqModelInfo(selectedModelId);
+  const activeImageModel =
+    PREFERRED_POLLINATIONS_MODELS.find((m) => m.id === activeImageModelId) ||
+    PREFERRED_POLLINATIONS_MODELS[0];
+
+  const hasGroqKey = groqService.hasApiKey();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -55,11 +64,15 @@ export function MasterAi2Header() {
       return;
     }
 
-    let md = `# ${activeConv.title}\n*Exported from Master AI 2.0 on ${new Date().toLocaleString()}*\n\n---\n\n`;
+    let md = `# ${activeConv.title}\n*Exported from Master AI on ${new Date().toLocaleString()}*\n\n---\n\n`;
     for (const msg of activeConv.messages) {
-      const roleName = msg.role === 'user' ? '👤 User' : `🤖 Master AI 2.0 (${msg.modelUsed || 'Groq'})`;
+      const roleName = msg.role === 'user' ? '👤 User' : `🤖 Master AI (${msg.modelUsed || msg.providerUsed || 'Groq'})`;
       const time = new Date(msg.timestamp).toLocaleTimeString();
-      md += `### ${roleName} [${time}]\n\n${msg.content}\n\n---\n\n`;
+      md += `### ${roleName} [${time}]\n\n${msg.content}\n\n`;
+      if (msg.imageDetails) {
+        md += `![${msg.imageDetails.prompt}](${msg.imageDetails.url})\n\n`;
+      }
+      md += `---\n\n`;
     }
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -101,7 +114,7 @@ export function MasterAi2Header() {
             <button
               type="button"
               onClick={handleSaveRename}
-              className="p-1.5 rounded-lg bg-orange-500 text-white"
+              className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
             >
               <Check className="w-3.5 h-3.5" />
             </button>
@@ -109,57 +122,70 @@ export function MasterAi2Header() {
         ) : (
           <div
             onClick={handleStartRename}
-            className="group flex items-center gap-1.5 cursor-pointer max-w-[200px] sm:max-w-xs truncate"
+            className="group flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg hover:bg-white/[0.04] transition-colors min-w-0"
+            title="Click to rename"
           >
-            <span className="text-xs sm:text-sm font-bold text-white truncate">
+            <h1 className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">
               {activeConv?.title || 'New Conversation'}
-            </span>
-            <Edit2 className="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+            </h1>
+            <Edit2 className="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100" />
           </div>
         )}
       </div>
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-2">
-        {/* Active Model Pill */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
-          <Zap className="w-3.5 h-3.5 text-orange-400" />
-          <span className="font-semibold">{activeModel.name}</span>
+      {/* Right Controls: Model Badge & Vault Indicator & Actions */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Active Model Indicator Badge */}
+        <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
+          {chatMode === 'image' ? (
+            <>
+              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+              <span className="font-medium text-white">{activeImageModel.name}</span>
+            </>
+          ) : (
+            <>
+              <Zap className="w-3.5 h-3.5 text-orange-400" />
+              <span className="font-medium text-white">{activeGroqModel.name}</span>
+            </>
+          )}
         </div>
 
-        {/* Key Vault Trigger */}
+        {/* Unified Key Vault Button */}
         <button
           type="button"
-          onClick={() => setIsKeyModalOpen(true)}
-          className={`h-8 px-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-            hasKey
+          onClick={() => setIsVaultModalOpen(true, chatMode === 'image' ? 'pollinations' : 'groq')}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border transition-colors cursor-pointer ${
+            hasGroqKey
               ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
-              : 'bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20 animate-pulse'
+              : 'bg-orange-500/10 text-orange-300 border-orange-500/20 hover:bg-orange-500/20 animate-pulse'
           }`}
-          title={hasKey ? 'Groq Key Active' : 'Enter Groq Key'}
+          title="Open AI Provider Vault"
         >
-          <div className={`h-2 w-2 rounded-full ${hasKey ? 'bg-emerald-400' : 'bg-orange-400'}`} />
           <Key className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">{hasKey ? 'Groq Active' : 'Set Key'}</span>
+          <span className="hidden md:inline">
+            {hasGroqKey ? 'Vault Connected' : 'Connect Keys'}
+          </span>
         </button>
 
-        {/* Export Markdown */}
+        {/* Export Chat */}
         <button
           type="button"
           onClick={handleExportMarkdown}
           className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="Export chat as Markdown"
+          title="Export chat as Markdown (.md)"
         >
           <Download className="w-4 h-4" />
         </button>
 
-        {/* Clear Chat */}
+        {/* Clear Messages */}
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('Clear all messages in this conversation?')) {
-              clearActiveConversation();
-              toast.info('Conversation cleared.');
+            if (activeConv && activeConv.messages.length > 0) {
+              if (window.confirm('Clear all messages in this conversation?')) {
+                clearActiveConversation();
+                toast.info('Conversation messages cleared.');
+              }
             }
           }}
           className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"

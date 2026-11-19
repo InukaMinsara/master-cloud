@@ -156,6 +156,7 @@ assert(caughtError === 'Not enough storage available.', 'Exceeding 10 TB quota t
 import('child_process').then(({ execSync }) => {
   try {
     execSync('node scripts/testVideoPlayer.mjs', { stdio: 'inherit' });
+    execSync('node scripts/test_pollinations_groq_integration.mjs', { stdio: 'inherit' });
   } catch {
     failed++;
   }
