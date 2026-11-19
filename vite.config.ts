@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import { localDrivePlugin } from './vite-plugin-local-drive';
+import { aiProxyPlugin } from './vite-plugin-ai-proxy';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,7 +65,7 @@ function ortWasmPlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), localDrivePlugin(), ortWasmPlugin()],
+  plugins: [react(), localDrivePlugin(), ortWasmPlugin(), aiProxyPlugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

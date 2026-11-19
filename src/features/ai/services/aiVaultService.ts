@@ -1,174 +1,187 @@
 /**
  * src/features/ai/services/aiVaultService.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — UNIFIED PROVIDER VAULT SERVICE
- * Manages API keys, custom endpoints, connectivity telemetry, and the strict
- * Free-Only policy across Groq, Pollinations AI, and ComfyUI.
+ * MASTER AI — ENVIRONMENT CONFIGURATION & PROVIDER STATUS SERVICE
  *
- * NOTE ON CLIENT STORAGE SECURITY:
- * Pure browser client storage (localStorage / IndexedDB) is protected by the
- * browser's Same-Origin Policy against other websites, but any script running
- * inside the client application origin has access to runtime memory. Never claim
- * that localStorage alone constitutes a hardware security module (HSM).
+ * Strict Security Guarantees:
+ * - Pure environment-driven architecture: API keys reside ONLY in .env.local on the server
+ * - Zero API key storage in localStorage or IndexedDB
+ * - Zero secrets exposed in browser memory, bundles, or network headers
+ * - Automatically checks server-side provider readiness via /api/ai/status
+ * - Enforces the Master AI Free-Only model policy
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { ProviderVaultConfig } from '../types/aiTypes';
+export interface ProviderStatus {
+  groq: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  pollinations: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  comfyui: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+}
 
-const VAULT_STORAGE_KEY = 'master_ai_provider_vault_v1';
-
-export const DEFAULT_VAULT_CONFIG: ProviderVaultConfig = {
-  // Groq
-  groqEndpoint: 'https://api.groq.com/openai/v1',
-  groqApiKey: '',
-  groqEnabled: true,
-
-  // Pollinations AI
-  pollinationsEndpoint: 'https://gen.pollinations.ai',
-  pollinationsApiKey: '',
-  pollinationsEnabled: true,
-
-  // ComfyUI Local
-  comfyUiEndpoint: 'http://127.0.0.1:8188',
-  comfyUiApiKey: '',
-  comfyUiEnabled: false,
-
-  // Strict Free-Only System
-  freeOnly: true,
-  blockPaid: true,
-  autoPaidFallback: false,
+export const DEFAULT_PROVIDER_STATUS: ProviderStatus = {
+  groq: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.groq.com/openai/v1',
+  },
+  pollinations: {
+    available: true,
+    hasKey: false,
+    endpoint: 'https://gen.pollinations.ai',
+  },
+  comfyui: {
+    available: false,
+    hasKey: false,
+    endpoint: 'http://127.0.0.1:8188',
+  },
 };
 
-type VaultListener = (config: ProviderVaultConfig) => void;
+type StatusListener = (status: ProviderStatus) => void;
 
 class AiVaultService {
-  private config: ProviderVaultConfig;
-  private listeners: Set<VaultListener> = new Set();
+  private status: ProviderStatus = { ...DEFAULT_PROVIDER_STATUS };
+  private listeners: Set<StatusListener> = new Set();
+  private isInitialized = false;
 
   constructor() {
-    this.config = this.loadConfig();
+    this.purgeLegacyClientKeys();
   }
 
-  private loadConfig(): ProviderVaultConfig {
-    if (typeof window === 'undefined') return { ...DEFAULT_VAULT_CONFIG };
-
-    try {
-      const raw = localStorage.getItem(VAULT_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return {
-          ...DEFAULT_VAULT_CONFIG,
-          ...parsed,
-          // Preserve groq key if migrated from single-key legacy storage
-          groqApiKey: parsed.groqApiKey || localStorage.getItem('master_ai_groq_api_key') || '',
-        };
-      }
-    } catch (e) {
-      console.warn('[AiVaultService] Failed to parse vault config:', e);
-    }
-
-    // Check legacy groq key if fresh vault
-    const legacyKey = typeof window !== 'undefined' ? localStorage.getItem('master_ai_groq_api_key') : null;
-    return {
-      ...DEFAULT_VAULT_CONFIG,
-      groqApiKey: legacyKey || '',
-    };
-  }
-
-  private persist(): void {
+  /**
+   * Cleans any legacy client-side keys out of browser storage to guarantee zero-leakage.
+   */
+  private purgeLegacyClientKeys(): void {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(this.config));
-      // Keep legacy groq key synced for backwards compatibility
-      if (this.config.groqApiKey) {
-        localStorage.setItem('master_ai_groq_api_key', this.config.groqApiKey);
-      } else {
-        localStorage.removeItem('master_ai_groq_api_key');
-      }
-      this.notify();
-    } catch (e) {
-      console.warn('[AiVaultService] Failed to persist vault config:', e);
+      localStorage.removeItem('master_ai_groq_api_key');
+      localStorage.removeItem('master_ai_provider_vault_v1');
+      sessionStorage.removeItem('master_ai_groq_api_key');
+    } catch {
+      // Ignore browser storage restrictions
     }
+  }
+
+  /**
+   * Automatically initializes provider status by checking server-side proxy.
+   */
+  public async init(): Promise<ProviderStatus> {
+    if (typeof window === 'undefined') return this.status;
+
+    try {
+      const res = await fetch('/api/ai/status');
+      if (res.ok) {
+        const data = await res.json();
+        this.status = {
+          groq: {
+            available: Boolean(data?.groq?.available),
+            hasKey: Boolean(data?.groq?.hasKey),
+            endpoint: data?.groq?.endpoint || DEFAULT_PROVIDER_STATUS.groq.endpoint,
+          },
+          pollinations: {
+            available: data?.pollinations?.available !== false,
+            hasKey: Boolean(data?.pollinations?.hasKey),
+            endpoint: data?.pollinations?.endpoint || DEFAULT_PROVIDER_STATUS.pollinations.endpoint,
+          },
+          comfyui: {
+            available: Boolean(data?.comfyui?.available),
+            hasKey: Boolean(data?.comfyui?.hasKey),
+            endpoint: data?.comfyui?.endpoint || DEFAULT_PROVIDER_STATUS.comfyui.endpoint,
+          },
+        };
+        this.isInitialized = true;
+        this.notify();
+      }
+    } catch (err) {
+      console.warn('[AiVaultService] Server AI proxy status check failed:', err);
+    }
+
+    return this.status;
+  }
+
+  public async refreshStatus(): Promise<ProviderStatus> {
+    return this.init();
   }
 
   private notify(): void {
-    const snapshot = this.getConfig();
+    const snapshot = this.getStatus();
     this.listeners.forEach((fn) => fn(snapshot));
   }
 
-  public subscribe(fn: VaultListener): () => void {
+  public subscribe(fn: StatusListener): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
 
-  public getConfig(): ProviderVaultConfig {
-    return { ...this.config };
+  public getStatus(): ProviderStatus {
+    return { ...this.status };
   }
 
-  public updateConfig(partial: Partial<ProviderVaultConfig>): void {
-    this.config = { ...this.config, ...partial };
-    this.persist();
+  // ── Groq Provider Telemetry & Readiness ──
+  public hasGroqKey(): boolean {
+    return this.status.groq.hasKey;
   }
 
-  // ── Groq Getters / Setters ──
-  public getGroqApiKey(): string {
-    return this.config.groqApiKey?.trim() || '';
+  public isGroqAvailable(): boolean {
+    return this.status.groq.available;
   }
 
   public getGroqEndpoint(): string {
-    const ep = this.config.groqEndpoint?.trim();
-    return ep ? ep.replace(/\/+$/, '') : 'https://api.groq.com/openai/v1';
+    return this.status.groq.endpoint;
   }
 
-  public hasGroqKey(): boolean {
-    return Boolean(this.getGroqApiKey());
+  // ── Pollinations Provider Telemetry & Readiness ──
+  public hasPollinationsKey(): boolean {
+    return this.status.pollinations.hasKey;
   }
 
-  // ── Pollinations Getters / Setters ──
-  public getPollinationsApiKey(): string {
-    return this.config.pollinationsApiKey?.trim() || '';
+  public isPollinationsAvailable(): boolean {
+    return this.status.pollinations.available;
   }
 
   public getPollinationsEndpoint(): string {
-    const ep = this.config.pollinationsEndpoint?.trim();
-    return ep ? ep.replace(/\/+$/, '') : 'https://gen.pollinations.ai';
+    return this.status.pollinations.endpoint;
   }
 
-  public hasPollinationsKey(): boolean {
-    return Boolean(this.getPollinationsApiKey());
+  // ── ComfyUI Provider Telemetry & Readiness ──
+  public isComfyUiAvailable(): boolean {
+    return this.status.comfyui.available;
   }
 
-  // ── ComfyUI Local Getters / Setters ──
   public getComfyUiEndpoint(): string {
-    const ep = this.config.comfyUiEndpoint?.trim();
-    return ep ? ep.replace(/\/+$/, '') : 'http://127.0.0.1:8188';
+    return this.status.comfyui.endpoint;
   }
 
-  public getComfyUiApiKey(): string {
-    return this.config.comfyUiApiKey?.trim() || '';
-  }
-
-  // ── Free-Only Policies ──
+  // ── Strict Free-Tier Safety Policies ──
   public isFreeOnly(): boolean {
-    return Boolean(this.config.freeOnly);
+    return true;
   }
 
   public isBlockPaid(): boolean {
-    return Boolean(this.config.blockPaid);
+    return true;
   }
 
   public isAutoPaidFallbackAllowed(): boolean {
-    return Boolean(this.config.autoPaidFallback);
+    return false;
   }
 
+  /**
+   * Compatibility adapter: clears cache and scrubs legacy browser keys.
+   */
   public clearAllCredentials(): void {
-    this.config = {
-      ...this.config,
-      groqApiKey: '',
-      pollinationsApiKey: '',
-      comfyUiApiKey: '',
-    };
-    this.persist();
+    this.purgeLegacyClientKeys();
+    this.notify();
   }
 }
 

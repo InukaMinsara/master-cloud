@@ -14,7 +14,6 @@ import {
   Paperclip,
   X,
   FileText,
-  Key,
   ChevronDown,
   Sparkles,
   Zap,
@@ -26,7 +25,6 @@ import {
   Ratio,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { aiVaultService } from '../services/aiVaultService';
 import { groqService } from '../services/groqService';
 import { pollinationsService } from '../services/pollinationsService';
 import { ContextManager } from '../services/contextManager';
@@ -63,7 +61,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const setActiveImageModelId = useAiChatStore((s) => s.setActiveImageModelId);
   const aspectRatio = useAiChatStore((s) => s.aspectRatio);
   const setAspectRatio = useAiChatStore((s) => s.setAspectRatio);
-  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
 
   const hasGroqKey = groqService.hasApiKey();
   const activeGroqModel = getGroqModelInfo(selectedModelId);
@@ -103,8 +100,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
     // In chat mode, ensure key is present
     if (chatMode === 'chat' && !hasGroqKey) {
-      setIsVaultModalOpen(true, 'groq');
-      toast.warning('Please enter your free Groq API key to begin chatting.');
+      toast.warning('Groq is offline. Please configure GROQ_API_KEY in .env.local to enable text chat.');
       return;
     }
 
@@ -185,20 +181,11 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 pb-4 select-none">
-      {/* Missing Key Notification */}
+      {/* Groq Environment Offline Notification */}
       {!hasGroqKey && chatMode !== 'image' && (
-        <div className="mb-2 p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Key className="w-4 h-4 text-orange-400" />
-            <span>Connect your Free Groq API Key to enable instant LPU inference</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsVaultModalOpen(true, 'groq')}
-            className="px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-[11px] transition-colors cursor-pointer"
-          >
-            Enter Key
-          </button>
+        <div className="mb-2 p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-zinc-500 flex-shrink-0" />
+          <span>Groq text chat is offline (set <code className="text-zinc-300 font-mono">GROQ_API_KEY</code> in <code className="text-zinc-300 font-mono">.env.local</code> to enable). Image generation via Pollinations is fully available.</span>
         </div>
       )}
 

@@ -2,16 +2,15 @@
  * src/features/ai/services/groqService.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI — OFFICIAL GROQ PROVIDER LAYER
- * High-speed LPU inference engine connecting to official Groq API:
- * https://api.groq.com/openai/v1 (or user configured endpoint)
+ * High-speed LPU inference engine connecting through the server environment proxy.
  *
  * Guarantees:
- * - Real-time SSE streaming reader
+ * - Credentials reside exclusively in .env.local on the server
+ * - Real-time SSE streaming reader with zero token lag
  * - Dynamic token-per-second live telemetry calculation
- * - Dynamic Groq model discovery via GET /models
+ * - Dynamic Groq model discovery via /api/ai/groq/models
  * - Reconciliation with official Free-Tier Eligibility Registry
- * - Whisper Large v3 audio transcription for subtitles & voice
- * - Client-side credential management via unified aiVaultService
+ * - Whisper Large v3 audio transcription for subtitles & voice via /api/ai/groq/transcriptions
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -35,51 +34,41 @@ class GroqService {
   private lastDiscoveryTimestamp = 0;
 
   /**
-   * Retrieves the stored Groq API key from unified aiVaultService.
+   * Returns whether Groq is configured and active in the server environment (.env.local).
+   */
+  public hasApiKey(): boolean {
+    return aiVaultService.hasGroqKey();
+  }
+
+  /**
+   * Compatibility adapter: returns status string if key is configured in .env.local.
    */
   public getApiKey(): string {
-    return aiVaultService.getGroqApiKey();
+    return this.hasApiKey() ? 'env_configured' : '';
   }
 
   /**
-   * Securely saves the Groq API key.
+   * Compatibility adapter: under environment-only architecture, keys are in .env.local.
    */
-  public setApiKey(key: string): void {
-    aiVaultService.updateConfig({ groqApiKey: key.trim() });
+  public setApiKey(_key: string): void {
+    // Stored exclusively in server environment (.env.local)
   }
 
   /**
-   * Retrieves the active Groq endpoint.
+   * Retrieves the configured Groq endpoint.
    */
   public getEndpoint(): string {
     return aiVaultService.getGroqEndpoint();
   }
 
   /**
-   * Checks whether a valid Groq API key is present.
+   * Tests connectivity to Groq via the server-side environment proxy.
    */
-  public hasApiKey(): boolean {
-    return Boolean(this.getApiKey());
-  }
-
-  /**
-   * Tests API key connectivity and measures real network latency to Groq.
-   */
-  public async testConnection(
-    customKey?: string,
-    customEndpoint?: string
-  ): Promise<{ ok: boolean; latencyMs: number; error?: string; modelCount?: number }> {
-    const key = customKey !== undefined ? customKey.trim() : this.getApiKey();
-    const endpoint = (customEndpoint || this.getEndpoint()).replace(/\/+$/, '');
-
-    if (!key) {
-      return { ok: false, latencyMs: 0, error: 'No Groq API key provided.' };
-    }
-
+  public async testConnection(): Promise<{ ok: boolean; latencyMs: number; error?: string; modelCount?: number }> {
     const start = performance.now();
     try {
-      const res = await fetch(`${endpoint}/models`, {
-        headers: { Authorization: `Bearer ${key}` },
+      const res = await fetch('/api/ai/groq/models', {
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(7000),
       });
 
@@ -87,27 +76,23 @@ class GroqService {
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         const count = Array.isArray(data?.data) ? data.data.length : undefined;
-        aiVaultService.updateConfig({ groqLastConnected: Date.now(), groqLastError: undefined });
         return { ok: true, latencyMs: latency, modelCount: count };
       }
 
       const errData = await res.json().catch(() => ({}));
-      const msg = errData?.error?.message || `HTTP ${res.status}: Unauthorized or Invalid Key`;
-      aiVaultService.updateConfig({ groqLastError: msg });
+      const msg = errData?.error?.message || `HTTP ${res.status}: Groq unavailable in .env.local`;
       return { ok: false, latencyMs: latency, error: msg };
     } catch (err: any) {
-      const msg = err?.message || 'Network error connecting to Groq.';
-      aiVaultService.updateConfig({ groqLastError: msg });
       return {
         ok: false,
         latencyMs: Math.round(performance.now() - start),
-        error: msg,
+        error: err?.message || 'Server proxy connection failed.',
       };
     }
   }
 
   /**
-   * Dynamically discovers active Groq models for the connected account via GET /models.
+   * Dynamically discovers active Groq models for the connected account via /api/ai/groq/models.
    * Compares against the official Free-Tier Eligibility Registry.
    */
   public async discoverActiveModels(forceRefresh = false): Promise<GroqModelInfo[]> {
@@ -115,15 +100,9 @@ class GroqService {
       return this.discoveredModels;
     }
 
-    const key = this.getApiKey();
-    if (!key) {
-      return VERIFIED_GROQ_MODELS;
-    }
-
-    const endpoint = this.getEndpoint();
     try {
-      const res = await fetch(`${endpoint}/models`, {
-        headers: { Authorization: `Bearer ${key}` },
+      const res = await fetch('/api/ai/groq/models', {
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(8000),
       });
 
@@ -140,25 +119,17 @@ class GroqService {
         return reconciled;
       }
     } catch (e) {
-      console.warn('[GroqService] Dynamic model discovery failed, using baseline registry:', e);
+      console.warn('[GroqService] Dynamic model discovery via proxy failed, using baseline registry:', e);
     }
 
     return VERIFIED_GROQ_MODELS;
   }
 
   /**
-   * Streams chat completions from Groq via Server-Sent Events (SSE).
+   * Streams chat completions from Groq via Server-Sent Events (SSE) through the backend proxy.
    * Calculates live tokens/second telemetry on every chunk.
    */
   public async streamChat(options: GroqChatOptions): Promise<GroqChatResult> {
-    const key = this.getApiKey();
-    if (!key) {
-      throw new Error(
-        'Groq API Key missing. Please click the Key icon in the header to enter your free Groq API key (console.groq.com/keys).'
-      );
-    }
-
-    const endpoint = this.getEndpoint();
     const model = options.model || DEFAULT_GROQ_MODEL;
     const startTime = performance.now();
     let firstTokenTime: number | null = null;
@@ -168,11 +139,10 @@ class GroqService {
 
     const executeRequest = async (attempt: number): Promise<Response> => {
       try {
-        const res = await fetch(`${endpoint}/chat/completions`, {
+        const res = await fetch('/api/ai/groq/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${key}`,
           },
           signal: options.signal,
           body: JSON.stringify({
@@ -205,7 +175,7 @@ class GroqService {
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => null);
-      const errMsg = errJson?.error?.message || `Groq API Error (${res.status})`;
+      const errMsg = errJson?.error?.message || `Groq API Error (${res.status}): Please ensure GROQ_API_KEY is configured in .env.local`;
       throw new Error(errMsg);
     }
 
@@ -289,12 +259,6 @@ class GroqService {
       maxTokens?: number;
     } = {}
   ): Promise<string> {
-    const key = this.getApiKey();
-    if (!key) {
-      throw new Error('Groq API Key missing.');
-    }
-
-    const endpoint = this.getEndpoint();
     const model = options.model || 'llama-3.1-8b-instant';
     const messages: Array<{ role: string; content: string }> = [];
     if (options.systemPrompt) {
@@ -302,17 +266,17 @@ class GroqService {
     }
     messages.push({ role: 'user', content: prompt });
 
-    const res = await fetch(`${endpoint}/chat/completions`, {
+    const res = await fetch('/api/ai/groq/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         model,
         messages,
         temperature: options.temperature ?? 0.3,
         max_tokens: options.maxTokens ?? 1024,
+        stream: false,
       }),
     });
 
@@ -333,22 +297,13 @@ class GroqService {
     filename: string = 'recording.webm',
     model: string = GROQ_AUDIO_MODELS.whisperTurbo
   ): Promise<GroqTranscriptionResult> {
-    const key = this.getApiKey();
-    if (!key) {
-      throw new Error('Groq API Key required for audio transcription.');
-    }
-
-    const endpoint = this.getEndpoint();
     const formData = new FormData();
     formData.append('file', audioBlob, filename);
     formData.append('model', model);
     formData.append('response_format', 'verbose_json');
 
-    const res = await fetch(`${endpoint}/audio/transcriptions`, {
+    const res = await fetch('/api/ai/groq/transcriptions', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-      },
       body: formData,
     });
 

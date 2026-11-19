@@ -10,7 +10,6 @@
 import React, { useState } from 'react';
 import {
   Menu,
-  Key,
   Download,
   Trash2,
   Check,
@@ -30,7 +29,6 @@ export function MasterAi2Header() {
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
   const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
   const chatMode = useAiChatStore((s) => s.chatMode);
-  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
@@ -150,22 +148,20 @@ export function MasterAi2Header() {
           )}
         </div>
 
-        {/* Unified Key Vault Button */}
-        <button
-          type="button"
-          onClick={() => setIsVaultModalOpen(true, chatMode === 'image' ? 'pollinations' : 'groq')}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border transition-colors cursor-pointer ${
+        {/* Server Environment Provider Status Pill */}
+        <div
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border select-none ${
             hasGroqKey
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
-              : 'bg-orange-500/10 text-orange-300 border-orange-500/20 hover:bg-orange-500/20 animate-pulse'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+              : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/40'
           }`}
-          title="Open AI Provider Vault"
+          title={hasGroqKey ? 'Groq LPU active (via .env.local)' : 'Groq offline (configure GROQ_API_KEY in .env.local)'}
         >
-          <Key className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">
-            {hasGroqKey ? 'Vault Connected' : 'Connect Keys'}
+          <span className={`w-1.5 h-1.5 rounded-full ${hasGroqKey ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+          <span className="hidden sm:inline">
+            {hasGroqKey ? 'Groq Active' : 'Groq Offline'}
           </span>
-        </button>
+        </div>
 
         {/* Export Chat */}
         <button

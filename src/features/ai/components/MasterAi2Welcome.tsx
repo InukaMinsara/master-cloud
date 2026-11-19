@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Sparkles, Code2, Cpu, ImageIcon, Zap, Key } from 'lucide-react';
+import { Sparkles, Code2, Cpu, ImageIcon, Zap } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { groqService } from '../services/groqService';
 
@@ -44,7 +44,6 @@ const PROMPT_STARTERS = [
 ];
 
 export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: string) => void }) {
-  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
   const hasKey = groqService.hasApiKey();
 
   return (
@@ -67,18 +66,22 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
           Ultra-low latency conversational intelligence powered by Groq LPUs, paired with in-chat image synthesis & editing via Pollinations AI.
         </p>
 
-        {!hasKey && (
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setIsVaultModalOpen(true, 'groq')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 text-xs font-semibold transition-all cursor-pointer shadow-lg shadow-orange-500/10"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Connect Free Groq API Key to Start</span>
-            </button>
+        <div className="pt-2 flex items-center justify-center gap-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>Pollinations: Free Ready</span>
           </div>
-        )}
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono ${
+              hasKey
+                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                : 'bg-zinc-800/60 border border-zinc-700/40 text-zinc-400'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${hasKey ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+            <span>Groq: {hasKey ? 'Connected' : 'Offline (.env.local)'}</span>
+          </div>
+        </div>
       </div>
 
       {/* 4 Quick Prompt Cards */}

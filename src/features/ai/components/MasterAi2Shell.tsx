@@ -19,9 +19,9 @@ import { MasterAi2Sidebar } from './MasterAi2Sidebar';
 import { MasterAi2Header } from './MasterAi2Header';
 import { MasterAi2ChatArea } from './MasterAi2ChatArea';
 import { MasterAi2Composer } from './MasterAi2Composer';
-import { MasterAi2ProviderVaultModal } from './MasterAi2ProviderVaultModal';
 import { MasterAi2ImageLightbox } from './MasterAi2ImageLightbox';
 import { useAiChatStore } from '../stores/aiChatStore';
+import { aiVaultService } from '../services/aiVaultService';
 import { groqService } from '../services/groqService';
 import { pollinationsService } from '../services/pollinationsService';
 import { AiProviderRouter } from '../services/aiProviderRouter';
@@ -50,23 +50,28 @@ export function MasterAi2Shell() {
   const setStreaming = useAiChatStore((s) => s.setStreaming);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const newConversation = useAiChatStore((s) => s.newConversation);
-  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
+  const refreshProviderStatus = useAiChatStore((s) => s.refreshProviderStatus);
 
-  // Global Keyboard Shortcuts (Ctrl+N for new chat, Ctrl+K for Vault)
+  // Automatic Provider Initialization on mount
+  useEffect(() => {
+    aiVaultService.init().then(() => {
+      refreshProviderStatus();
+      pollinationsService.fetchModels().catch(() => {});
+      groqService.discoverActiveModels().catch(() => {});
+    });
+  }, [refreshProviderStatus]);
+
+  // Global Keyboard Shortcuts (Ctrl+N for new chat)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         newConversation();
       }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsVaultModalOpen(true);
-      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [newConversation, setIsVaultModalOpen]);
+  }, [newConversation]);
 
   // Context-action from Cloud Drive: auto-attach file if passed via sessionStorage
   useEffect(() => {
@@ -325,9 +330,6 @@ export function MasterAi2Shell() {
           onStopGenerating={handleStopGenerating}
         />
       </main>
-
-      {/* Unified Multi-Provider Vault Modal (Groq + Pollinations + ComfyUI) */}
-      <MasterAi2ProviderVaultModal />
 
       {/* Fullscreen Image Lightbox Modal */}
       <MasterAi2ImageLightbox />

@@ -20,77 +20,48 @@ export interface ComfyUiConnectionStatus {
 
 class ComfyUiService {
   /**
-   * Test connection to the local ComfyUI instance.
+   * Test connection to the local ComfyUI instance via server proxy /api/ai/comfyui/status.
    * Never fabricates connectivity: returns honest offline status if unreachable.
    */
-  public async testConnection(endpoint?: string, apiKey?: string): Promise<ComfyUiConnectionStatus> {
-    const targetEndpoint = (endpoint || aiVaultService.getComfyUiEndpoint()).replace(/\/+$/, '');
-    const targetKey = apiKey !== undefined ? apiKey : aiVaultService.getComfyUiApiKey();
+  public async testConnection(): Promise<ComfyUiConnectionStatus> {
+    const targetEndpoint = aiVaultService.getComfyUiEndpoint();
 
-    const t0 = performance.now();
     try {
-      const headers: Record<string, string> = { Accept: 'application/json' };
-      if (targetKey) {
-        headers['Authorization'] = `Bearer ${targetKey}`;
-      }
-
-      // Check system stats
-      const res = await fetch(`${targetEndpoint}/system_stats`, {
+      const res = await fetch('/api/ai/comfyui/status', {
         method: 'GET',
-        headers,
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(4000),
       });
 
-      const latencyMs = Math.round(performance.now() - t0);
+      if (res.ok) {
+        const json = await res.json();
+        const devices: string[] = [];
+        let vramFreeMb: number | undefined;
 
-      if (!res.ok) {
+        if (json?.data?.devices && Array.isArray(json.data.devices)) {
+          json.data.devices.forEach((d: any) => {
+            if (d.name) devices.push(d.name);
+            if (d.vram_free) vramFreeMb = Math.round(d.vram_free / (1024 * 1024));
+          });
+        }
+
         return {
-          online: false,
-          endpoint: targetEndpoint,
-          latencyMs,
-          error: `HTTP ${res.status}: ${res.statusText}`,
+          online: Boolean(json.online),
+          endpoint: json.endpoint || targetEndpoint,
+          latencyMs: json.latencyMs,
+          devices,
+          vramFreeMb,
         };
       }
-
-      const data = await res.json();
-      const devices: string[] = [];
-      let vramFreeMb: number | undefined;
-
-      if (data?.devices && Array.isArray(data.devices)) {
-        data.devices.forEach((d: any) => {
-          if (d.name) devices.push(d.name);
-          if (d.vram_free) vramFreeMb = Math.round(d.vram_free / (1024 * 1024));
-        });
-      }
-
-      return {
-        online: true,
-        endpoint: targetEndpoint,
-        latencyMs,
-        devices,
-        vramFreeMb,
-      };
-    } catch (err: any) {
-      return {
-        online: false,
-        endpoint: targetEndpoint,
-        latencyMs: Math.round(performance.now() - t0),
-        error: 'ComfyUI is offline or unreachable at 127.0.0.1:8188. Ensure ComfyUI is running locally.',
-      };
-    }
-  }
-
-  /**
-   * Dispatch local generation workflow.
-   */
-  public async generateImage(prompt: string): Promise<string> {
-    const status = await this.testConnection();
-    if (!status.online) {
-      throw new Error(status.error || 'Local ComfyUI is disconnected.');
+    } catch {
+      // Fallback
     }
 
-    // In a complete ComfyUI workflow, prompts are queued via POST /prompt.
-    throw new Error('ComfyUI workflow execution requires a configured local workflow JSON.');
+    return {
+      online: false,
+      endpoint: targetEndpoint,
+      error: 'ComfyUI is offline or unreachable.',
+    };
   }
 }
 

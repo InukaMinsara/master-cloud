@@ -16,7 +16,6 @@ import {
   Trash2,
   Edit2,
   MessageSquare,
-  Key,
   X,
   Zap,
 } from 'lucide-react';
@@ -33,7 +32,6 @@ export function MasterAi2Sidebar() {
   const deleteConversation = useAiChatStore((s) => s.deleteConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const togglePinConversation = useAiChatStore((s) => s.togglePinConversation);
-  const setIsVaultModalOpen = useAiChatStore((s) => s.setIsVaultModalOpen);
 
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -176,7 +174,7 @@ export function MasterAi2Sidebar() {
         </div>
       </div>
 
-      {/* Sidebar Footer: User Profile & Key Vault */}
+      {/* Sidebar Footer: User Profile */}
       <div className="p-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 bg-white/[0.02]">
         <div className="flex items-center gap-2 truncate">
           <div className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
@@ -187,14 +185,9 @@ export function MasterAi2Sidebar() {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsVaultModalOpen(true)}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="AI Provider Vault"
-        >
-          <Key className="w-4 h-4 text-orange-400" />
-        </button>
+        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.04]">
+          env
+        </span>
       </div>
     </aside>
   );

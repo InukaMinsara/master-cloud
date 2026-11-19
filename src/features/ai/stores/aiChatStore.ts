@@ -95,13 +95,17 @@ interface AiChatState {
   isStreaming: boolean;
   streamingMessageId: string | null;
   activeMetrics: AiTokenMetrics | null;
-  isVaultModalOpen: boolean;
-  activeVaultTab: 'groq' | 'pollinations' | 'comfyui';
+  providerStatus: {
+    groq: boolean;
+    pollinations: boolean;
+    comfyui: boolean;
+  };
   lightboxImage: { url: string; prompt?: string; title?: string } | null;
   isSidebarOpen: boolean;
   searchQuery: string;
 
   // Actions
+  refreshProviderStatus: () => Promise<void>;
   newConversation: () => void;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
@@ -121,7 +125,6 @@ interface AiChatState {
   finalizeImageMessage: (msgId: string, details: AiImageDetails) => void;
   setImageError: (msgId: string, errorText: string) => void;
   setStreaming: (isStreaming: boolean, msgId?: string | null) => void;
-  setIsVaultModalOpen: (open: boolean, tab?: 'groq' | 'pollinations' | 'comfyui') => void;
   setLightboxImage: (img: { url: string; prompt?: string; title?: string } | null) => void;
   toggleSidebar: () => void;
   setSearchQuery: (query: string) => void;
@@ -150,11 +153,32 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     isStreaming: false,
     streamingMessageId: null,
     activeMetrics: null,
-    isVaultModalOpen: false,
-    activeVaultTab: 'groq',
+    providerStatus: {
+      groq: false,
+      pollinations: true,
+      comfyui: false,
+    },
     lightboxImage: null,
     isSidebarOpen: true,
     searchQuery: '',
+
+    refreshProviderStatus: async () => {
+      try {
+        const res = await fetch('/api/ai/status');
+        if (res.ok) {
+          const data = await res.json();
+          set({
+            providerStatus: {
+              groq: Boolean(data?.groq?.available),
+              pollinations: Boolean(data?.pollinations?.available),
+              comfyui: Boolean(data?.comfyui?.available),
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('[Master AI Store] Failed to refresh provider status:', e);
+      }
+    },
 
     getActiveConversation: () => {
       const state = get();
@@ -484,10 +508,6 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
 
     setStreaming: (isStreaming: boolean, msgId?: string | null) => {
       set({ isStreaming, streamingMessageId: msgId ?? null });
-    },
-
-    setIsVaultModalOpen: (open: boolean, tab: 'groq' | 'pollinations' | 'comfyui' = 'groq') => {
-      set({ isVaultModalOpen: open, activeVaultTab: tab });
     },
 
     setLightboxImage: (img: { url: string; prompt?: string; title?: string } | null) => {

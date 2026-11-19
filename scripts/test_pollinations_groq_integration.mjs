@@ -123,6 +123,28 @@ it('API secrets are never exposed via VITE_ prefixed environment variables', () 
   }
 });
 
+it('.env.local is ignored in .gitignore', () => {
+  import('fs').then((fs) => {
+    const gitignore = fs.readFileSync('.gitignore', 'utf-8');
+    assert.ok(gitignore.includes('.env.local'), '.env.local must be in .gitignore');
+  });
+});
+
+it('Key connection modals are removed from codebase', () => {
+  import('fs').then((fs) => {
+    assert.strictEqual(
+      fs.existsSync('src/features/ai/components/MasterAi2ProviderVaultModal.tsx'),
+      false,
+      'MasterAi2ProviderVaultModal must be deleted'
+    );
+    assert.strictEqual(
+      fs.existsSync('src/features/ai/components/MasterAi2KeyModal.tsx'),
+      false,
+      'MasterAi2KeyModal must be deleted'
+    );
+  });
+});
+
 console.log('====================================================');
 console.log(`POLLINATIONS + GROQ TEST RESULTS: ${passed} passed, ${failed} failed`);
 console.log('====================================================');

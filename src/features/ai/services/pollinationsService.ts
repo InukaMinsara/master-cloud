@@ -4,6 +4,11 @@
  * MASTER AI — POLLINATIONS IMAGE AI INTEGRATION SERVICE
  * Official API client for image generation, in-chat image editing, live catalogue
  * discovery, capability detection, and strict Free-Only policy enforcement.
+ *
+ * Routing:
+ * - All outbound network traffic proxies through server-side /api/ai/pollinations/*
+ * - API keys remain on the server in .env.local
+ * - Zero client-side API key handling or storage
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -88,7 +93,7 @@ class PollinationsService {
   }
 
   /**
-   * Fetch live models catalogue from Pollinations GET /image/models.
+   * Fetch live models catalogue from /api/ai/pollinations/models.
    * Reconciles canonical IDs, aliases, capability support, and free/paid pricing.
    */
   public async fetchModels(forceRefresh = false): Promise<PollinationsModelInfo[]> {
@@ -96,18 +101,10 @@ class PollinationsService {
       return this.cachedModels;
     }
 
-    const endpoint = aiVaultService.getPollinationsEndpoint();
-    const apiKey = aiVaultService.getPollinationsApiKey();
-
     try {
-      const headers: Record<string, string> = { Accept: 'application/json' };
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-
-      const res = await fetch(`${endpoint}/image/models`, {
+      const res = await fetch('/api/ai/pollinations/models', {
         method: 'GET',
-        headers,
+        headers: { Accept: 'application/json' },
       });
 
       if (!res.ok) {
@@ -179,83 +176,50 @@ class PollinationsService {
   }
 
   /**
-   * Test connection to the Pollinations API endpoint.
+   * Test connection to the Pollinations API endpoint via proxy.
    */
-  public async testConnection(apiKey?: string, endpoint?: string): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
-    const targetEndpoint = (endpoint || aiVaultService.getPollinationsEndpoint()).replace(/\/+$/, '');
-    const targetKey = apiKey !== undefined ? apiKey : aiVaultService.getPollinationsApiKey();
-
+  public async testConnection(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
     const t0 = performance.now();
     try {
-      const headers: Record<string, string> = { Accept: 'application/json' };
-      if (targetKey) {
-        headers['Authorization'] = `Bearer ${targetKey}`;
-      }
-
-      const res = await fetch(`${targetEndpoint}/image/models`, {
+      const res = await fetch('/api/ai/pollinations/models', {
         method: 'GET',
-        headers,
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(8000),
       });
 
       const latencyMs = Math.round(performance.now() - t0);
-
-      if (res.status === 401) {
-        return {
-          ok: false,
-          latencyMs,
-          error: 'Unauthorized: A valid Pollinations API key is required. (Get one at enter.pollinations.ai)',
-        };
+      if (res.ok) {
+        return { ok: true, latencyMs };
       }
-
-      if (!res.ok) {
-        return {
-          ok: false,
-          latencyMs,
-          error: `HTTP ${res.status}: ${res.statusText}`,
-        };
-      }
-
-      return { ok: true, latencyMs };
+      return { ok: false, latencyMs, error: `HTTP ${res.status}: ${res.statusText}` };
     } catch (err: any) {
-      return {
-        ok: false,
-        latencyMs: Math.round(performance.now() - t0),
-        error: err?.message || 'Network connection failed',
-      };
+      return { ok: false, error: err?.message || 'Connection failed' };
     }
   }
 
   /**
-   * Generate an image using Pollinations AI.
-   * Enforces strict Free-Only policy and automatic safe fallback.
+   * Generates a new image via the server-side proxy POST /api/ai/pollinations/generate.
    */
   public async generateImage(options: GenerateImageOptions): Promise<ImageOperationResult> {
     const t0 = performance.now();
-    const endpoint = aiVaultService.getPollinationsEndpoint();
-    const apiKey = aiVaultService.getPollinationsApiKey();
     const isFreeOnly = aiVaultService.isFreeOnly();
 
-    // 1. Resolve requested model
+    // 1. Resolve target model ID
     let targetModelId = options.modelId || DEFAULT_IMAGE_MODEL;
+
+    // 2. Strict Free-Only enforcement
     const allModels = await this.fetchModels();
     let modelMeta = allModels.find((m) => m.id === targetModelId || m.aliases.includes(targetModelId));
 
-    // 2. Strict Free-Only Enforcement & Safe Fallback Chain
-    if (isFreeOnly && modelMeta && modelMeta.paidOnly) {
-      if (aiVaultService.isAutoPaidFallbackAllowed()) {
-        throw new Error(`Model "${modelMeta.name}" requires paid credits. Automatic paid fallback is disabled in Free-Only mode.`);
-      }
-      // Safe fallback to first verified free model
+    if (isFreeOnly && modelMeta?.paidOnly) {
       const fallback = allModels.find(
-        (m) => FREE_IMAGE_FALLBACK_SEQUENCE.includes(m.id) && !m.paidOnly && m.isAvailable
-      ) || allModels.find((m) => !m.paidOnly && m.isAvailable);
-
+        (m) => FREE_IMAGE_FALLBACK_SEQUENCE.includes(m.id) && !m.paidOnly
+      );
       if (fallback) {
         targetModelId = fallback.id;
         modelMeta = fallback;
       } else {
-        throw new Error('No verified free image generation model is currently available. Please connect a paid key or disable Free-Only mode.');
+        targetModelId = DEFAULT_IMAGE_MODEL;
       }
     }
 
@@ -263,30 +227,20 @@ class PollinationsService {
     const dims = this.resolveDimensions(options.aspectRatio, options.width, options.height);
     const seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 99999999);
 
-    // 4. Construct request
-    const encodedPrompt = encodeURIComponent(options.prompt.trim());
-    const queryParams = new URLSearchParams({
-      model: targetModelId,
-      width: dims.width.toString(),
-      height: dims.height.toString(),
-      seed: seed.toString(),
-      nologo: 'true',
-    });
-    if (options.enhance) {
-      queryParams.set('enhance', 'true');
-    }
-
-    const targetUrl = `${endpoint}/image/${encodedPrompt}?${queryParams.toString()}`;
-
-    // 5. Fetch image
-    const headers: Record<string, string> = { Accept: 'image/*' };
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
-    const res = await fetch(targetUrl, {
-      method: 'GET',
-      headers,
+    // 4. Send request to proxy
+    const res = await fetch('/api/ai/pollinations/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: options.prompt.trim(),
+        model: targetModelId,
+        width: dims.width,
+        height: dims.height,
+        seed,
+        enhance: options.enhance,
+      }),
       signal: options.signal,
     });
 
@@ -318,12 +272,10 @@ class PollinationsService {
   }
 
   /**
-   * Edit an existing or uploaded image using Pollinations AI POST /v1/images/edits.
+   * Edit an existing or uploaded image using Pollinations AI POST /api/ai/pollinations/edit.
    */
   public async editImage(options: EditImageOptions): Promise<ImageOperationResult> {
     const t0 = performance.now();
-    const endpoint = aiVaultService.getPollinationsEndpoint();
-    const apiKey = aiVaultService.getPollinationsApiKey();
     const isFreeOnly = aiVaultService.isFreeOnly();
 
     // 1. Resolve editing model
@@ -340,7 +292,7 @@ class PollinationsService {
         targetModelId = fallbackEdit.id;
         modelMeta = fallbackEdit;
       } else {
-        throw new Error(`Model "${modelMeta.name}" does not support image editing. Please select a compatible editing model like FLUX.1 Kontext Pro.`);
+        throw new Error(`Model "${modelMeta?.name || targetModelId}" does not support image editing. Please select a compatible editing model like FLUX.1 Kontext Pro.`);
       }
     }
 
@@ -353,20 +305,14 @@ class PollinationsService {
       imageBlob = options.imageBlobOrUrl;
     }
 
-    // 3. Prepare FormData for POST /v1/images/edits
+    // 3. Prepare FormData for proxy
     const formData = new FormData();
     formData.append('prompt', options.prompt.trim());
     formData.append('model', targetModelId);
     formData.append('image', imageBlob, 'input_image.png');
 
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
-    const res = await fetch(`${endpoint}/v1/images/edits`, {
+    const res = await fetch('/api/ai/pollinations/edit', {
       method: 'POST',
-      headers,
       body: formData,
       signal: options.signal,
     });
