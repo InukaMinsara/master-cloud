@@ -35,19 +35,48 @@ import {
   BrainCircuit,
   Bot,
   Key,
+  Server,
 } from 'lucide-react';
+import { g4fAiService } from '@/services/ai/g4fAiService';
 
 export interface AiModelOption {
   id: string;
   name: string;
   tag: string;
-  category: 'cascade' | 'groq' | 'image' | 'code' | 'vision';
+  category: 'cascade' | 'groq' | 'image' | 'code' | 'vision' | 'g4f';
   description: string;
   speed: string;
   isFree: boolean;
 }
 
 export const MASTER_AI_MODELS: AiModelOption[] = [
+  {
+    id: 'quantum-cascade',
+    name: 'Master Quantum vGPU',
+    tag: 'Auto Cascade',
+    category: 'cascade',
+    description: 'Autonomous multi-engine: Local G4F → Gemini → Groq → Sovereign.',
+    speed: '~140 tok/s',
+    isFree: true,
+  },
+  {
+    id: 'g4f-claude-3.5',
+    name: 'Anthropic Claude 3.5 Sonnet',
+    tag: 'G4F Sovereign',
+    category: 'g4f',
+    description: 'World-class code architecture & full-stack development via G4F.',
+    speed: '~90 tok/s',
+    isFree: true,
+  },
+  {
+    id: 'g4f-gpt-4o',
+    name: 'OpenAI GPT-4o',
+    tag: 'G4F Sovereign',
+    category: 'g4f',
+    description: 'Industry-standard multimodal reasoning & general intelligence via G4F.',
+    speed: '~100 tok/s',
+    isFree: true,
+  },
   {
     id: 'gemini-2.0-flash',
     name: 'Google Gemini 2.0 Flash',
@@ -67,30 +96,30 @@ export const MASTER_AI_MODELS: AiModelOption[] = [
     isFree: true,
   },
   {
+    id: 'g4f-deepseek',
+    name: 'DeepSeek R1 / V3',
+    tag: 'G4F Local',
+    category: 'g4f',
+    description: 'Full DeepSeek reasoning chain without external keys via G4F.',
+    speed: '~120 tok/s',
+    isFree: true,
+  },
+  {
     id: 'openai-gpt-4o',
-    name: 'OpenAI GPT-4o',
+    name: 'OpenAI GPT-4o (Direct/GitHub)',
     tag: 'Multimodal',
     category: 'vision',
-    description: 'Industry-standard general intelligence, document analysis & vision.',
+    description: 'Direct execution via OpenAI API or GitHub Models PAT Token.',
     speed: '~110 tok/s',
     isFree: true,
   },
   {
     id: 'anthropic-claude-3.5',
-    name: 'Anthropic Claude 3.5 Sonnet',
+    name: 'Anthropic Claude 3.5 (Direct)',
     tag: 'Architecture',
     category: 'code',
-    description: 'World-class code architecture, creative writing & nuanced reasoning.',
+    description: 'Direct execution via Anthropic API Key or OpenRouter.',
     speed: '~100 tok/s',
-    isFree: true,
-  },
-  {
-    id: 'quantum-cascade',
-    name: 'Master Quantum vGPU',
-    tag: 'Auto Cascade',
-    category: 'cascade',
-    description: 'Autonomous multi-engine cascade: Gemini → GPT → Claude → DeepSeek.',
-    speed: '~120 tok/s',
     isFree: true,
   },
   {
@@ -143,10 +172,31 @@ export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(activeSessionTitle);
+  const [g4fStatus, setG4fStatus] = useState<{ isAlive: boolean; modelCount: number }>({
+    isAlive: false,
+    modelCount: 0,
+  });
 
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkG4f = () => {
+      g4fAiService.checkHealth().then((st) => {
+        if (isMounted) {
+          setG4fStatus({ isAlive: st.isAlive, modelCount: st.modelCount });
+        }
+      });
+    };
+    checkG4f();
+    const interval = setInterval(checkG4f, 12000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     setTitleDraft(activeSessionTitle);
@@ -314,7 +364,8 @@ export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
                       }`}
                     >
                       {model.category === 'cascade' && <Sparkles className="h-4 w-4" />}
-                      {model.category === 'groq' && <Zap className="h-4 w-4" />}
+                      {model.category === 'groq' && <Zap className="h-4 w-4 text-amber-400" />}
+                      {model.category === 'g4f' && <Zap className="h-4 w-4 text-emerald-400" />}
                       {model.category === 'image' && <ImageIcon className="h-4 w-4" />}
                       {model.category === 'code' && <Code2 className="h-4 w-4" />}
                       {model.category === 'vision' && <BrainCircuit className="h-4 w-4" />}
@@ -369,6 +420,30 @@ export const MasterAiHeader: React.FC<MasterAiHeaderProps> = ({
             {isDedicatedGpuOnline ? 'Online' : '4,096 GB'}
           </span>
         </button>
+
+        {/* G4F LOCAL ENGINE STATUS PILL */}
+        <div
+          className={`hidden xl:flex items-center gap-1.5 h-9 px-2.5 rounded-xl border text-xs font-semibold select-none transition-all ${
+            g4fStatus.isAlive
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 shadow-sm shadow-emerald-500/10'
+              : 'bg-white/[0.02] text-zinc-500 border-white/[0.06]'
+          }`}
+          title={
+            g4fStatus.isAlive
+              ? `G4F Server Active: ${g4fStatus.modelCount} Sovereign Models on port 1337`
+              : 'G4F Server Standby'
+          }
+        >
+          <div
+            className={`h-2 w-2 rounded-full ${
+              g4fStatus.isAlive ? 'bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50' : 'bg-zinc-600'
+            }`}
+          />
+          <Server className="h-3 w-3" />
+          <span className="text-[10px] font-bold">
+            {g4fStatus.isAlive ? `G4F: ${g4fStatus.modelCount} Models` : 'G4F: Standby'}
+          </span>
+        </div>
 
         {/* REAL-TIME WEB SEARCH TOGGLE */}
         <button

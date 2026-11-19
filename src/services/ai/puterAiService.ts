@@ -896,7 +896,10 @@ class PuterAiPlatformService {
     }
 
     const seed = Math.floor(Math.random() * 1000000);
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${seed}`;
+    const inputImgParam = options.input_image && options.input_image.startsWith('http')
+      ? `&image=${encodeURIComponent(options.input_image)}`
+      : '';
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${seed}${inputImgParam}`;
 
     let imageUrl = url;
     try {

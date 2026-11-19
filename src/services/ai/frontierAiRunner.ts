@@ -19,6 +19,7 @@
  */
 
 import { puterAiService, generateAutonomousResponse, dismissPuterModals } from './puterAiService';
+import { g4fAiService } from './g4fAiService';
 
 export interface FrontierChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -473,6 +474,44 @@ export async function streamFrontierChat(
 
   const { modelId } = options;
 
+  // ─── 0. G4F DEDICATED MODELS (LOCAL SERVER INTEGRATION) ───
+  if (modelId.startsWith('g4f-')) {
+    const g4fTargetModel =
+      modelId === 'g4f-claude-3.5'
+        ? 'claude-3.5-sonnet'
+        : modelId === 'g4f-deepseek'
+        ? 'deepseek-r1'
+        : 'gpt-4o';
+
+    const historyForG4f = (options.messages || []).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    historyForG4f.push({ role: 'user', content: options.prompt.trim() });
+
+    try {
+      const g4fRes = await g4fAiService.streamChat({
+        model: g4fTargetModel,
+        messages: historyForG4f,
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+        signal: options.signal,
+        onChunk: options.onChunk,
+      });
+
+      if (g4fRes.text.trim()) {
+        return {
+          text: g4fRes.text,
+          modelUsed: `${g4fRes.modelUsed} (${g4fRes.providerUsed})`,
+          isDirectKey: false,
+          latencyMs: g4fRes.latencyMs,
+        };
+      }
+    } catch (g4fErr: any) {
+      console.warn('[Frontier Runner] G4F request failed, cascading:', g4fErr);
+    }
+  }
+
   // 1. GOOGLE GEMINI 2.0 FLASH
   if (modelId === 'gemini-2.0-flash') {
     if (geminiKey) {
@@ -498,6 +537,26 @@ export async function streamFrontierChat(
         console.warn('[Frontier Runner] Groq DeepSeek failed, cascading:', err);
       }
     } else {
+      // Try local G4F DeepSeek if active
+      try {
+        const historyForG4f = (options.messages || []).map((m) => ({ role: m.role, content: m.content }));
+        historyForG4f.push({ role: 'user', content: options.prompt.trim() });
+        const g4fRes = await g4fAiService.streamChat({
+          model: 'deepseek-r1',
+          messages: historyForG4f,
+          signal: options.signal,
+          onChunk: options.onChunk,
+        });
+        if (g4fRes.text.trim()) {
+          return {
+            text: g4fRes.text,
+            modelUsed: `${g4fRes.modelUsed} (${g4fRes.providerUsed})`,
+            isDirectKey: false,
+            latencyMs: g4fRes.latencyMs,
+          };
+        }
+      } catch {}
+
       const notice = `⚡ **DeepSeek R1 on Groq LPU (500+ Words/Sec)**\n\nTo unlock Groq's high-speed LPU engine (14,400 free queries/day):\n\n1. Grab your free API key at [Groq Console](https://console.groq.com/keys)\n2. Click the **Keys** button in the top header to save it.\n\n*Processing your query via Sovereign Cascade...*\n\n---\n\n`;
       let accumulated = notice;
       options.onChunk?.(notice, accumulated);
@@ -513,7 +572,27 @@ export async function streamFrontierChat(
         console.warn('[Frontier Runner] Direct OpenAI failed, cascading:', err);
       }
     } else {
-      const notice = `🤖 **OpenAI GPT-4o Intelligence**\n\nTo use direct GPT-4o with multimodal vision and document intelligence, paste your key in the **Keys Vault** (top header).\n\n*Fulfilling your prompt via Sovereign Gateway...*\n\n---\n\n`;
+      // Try local G4F GPT-4o if active
+      try {
+        const historyForG4f = (options.messages || []).map((m) => ({ role: m.role, content: m.content }));
+        historyForG4f.push({ role: 'user', content: options.prompt.trim() });
+        const g4fRes = await g4fAiService.streamChat({
+          model: 'gpt-4o',
+          messages: historyForG4f,
+          signal: options.signal,
+          onChunk: options.onChunk,
+        });
+        if (g4fRes.text.trim()) {
+          return {
+            text: g4fRes.text,
+            modelUsed: `${g4fRes.modelUsed} (${g4fRes.providerUsed})`,
+            isDirectKey: false,
+            latencyMs: g4fRes.latencyMs,
+          };
+        }
+      } catch {}
+
+      const notice = `🤖 **OpenAI GPT-4o Intelligence**\n\nTo use direct GPT-4o with multimodal vision and document intelligence, paste your key or GitHub Token in the **Keys Vault** (top header).\n\n*Fulfilling your prompt via Sovereign Gateway...*\n\n---\n\n`;
       let accumulated = notice;
       options.onChunk?.(notice, accumulated);
     }
@@ -528,13 +607,52 @@ export async function streamFrontierChat(
         console.warn('[Frontier Runner] Anthropic Claude failed, cascading:', err);
       }
     } else {
+      // Try local G4F Claude 3.5 Sonnet if active
+      try {
+        const historyForG4f = (options.messages || []).map((m) => ({ role: m.role, content: m.content }));
+        historyForG4f.push({ role: 'user', content: options.prompt.trim() });
+        const g4fRes = await g4fAiService.streamChat({
+          model: 'claude-3.5-sonnet',
+          messages: historyForG4f,
+          signal: options.signal,
+          onChunk: options.onChunk,
+        });
+        if (g4fRes.text.trim()) {
+          return {
+            text: g4fRes.text,
+            modelUsed: `${g4fRes.modelUsed} (${g4fRes.providerUsed})`,
+            isDirectKey: false,
+            latencyMs: g4fRes.latencyMs,
+          };
+        }
+      } catch {}
+
       const notice = `🎭 **Anthropic Claude 3.5 Sonnet Architecture**\n\nTo connect Claude 3.5 Sonnet for code architecture and synthesis, add your Anthropic key in the **Keys Vault**.\n\n*Running your query via Sovereign Gateway...*\n\n---\n\n`;
       let accumulated = notice;
       options.onChunk?.(notice, accumulated);
     }
   }
 
-  // 5. MASTER QUANTUM VGPU / AUTONOMOUS CASCADE (or fallback when direct keys fail)
+  // 5. MASTER QUANTUM VGPU / AUTONOMOUS CASCADE
+  // Try G4F Local Engine first (100% Free, Zero Key, 250 Models)
+  try {
+    const historyForG4f = (options.messages || []).map((m) => ({ role: m.role, content: m.content }));
+    historyForG4f.push({ role: 'user', content: options.prompt.trim() });
+    const g4fRes = await g4fAiService.streamChat({
+      model: 'gpt-4o-mini',
+      messages: historyForG4f,
+      signal: options.signal,
+      onChunk: options.onChunk,
+    });
+    if (g4fRes.text.trim()) {
+      return {
+        text: g4fRes.text,
+        modelUsed: `${g4fRes.modelUsed} (${g4fRes.providerUsed})`,
+        isDirectKey: false,
+        latencyMs: g4fRes.latencyMs,
+      };
+    }
+  } catch {}
   // Check if any key exists to use as backup
   if (geminiKey) {
     try {

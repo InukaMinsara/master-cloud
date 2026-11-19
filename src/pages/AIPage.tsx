@@ -50,6 +50,7 @@ import { AiKeyVaultModal } from '@/components/ai/AiKeyVaultModal';
 import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
 import { enhancePromptWithGpt } from '@/services/ai/masterCloudAiEngines';
 import { streamFrontierChat } from '@/services/ai/frontierAiRunner';
+import { g4fAiService } from '@/services/ai/g4fAiService';
 
 export interface LocalAttachedFile {
   name: string;
@@ -61,11 +62,86 @@ export interface LocalAttachedFile {
 
 /**
  * Detects whether the user is requesting in-chat image generation
- * Powered by 100% Free & Unlimited FLUX.1 Ultra (Perchance-grade Engine)
+ * Powered by 100% Free & Unlimited FLUX.1 Ultra and G4F Sovereign Diffusion
  */
-function detectImageIntent(text: string, hasAttachedImage: boolean): { isImage: boolean; prompt: string; isImg2Img: boolean } {
+export interface ImageIntentResult {
+  isImage: boolean;
+  prompt: string;
+  isImg2Img: boolean;
+  isContinuityRefinement?: boolean;
+  referenceImageUrl?: string;
+  previousPrompt?: string;
+}
+
+function detectImageIntent(
+  text: string,
+  hasAttachedImage: boolean,
+  lastImageAttachment?: { url: string; prompt?: string; modelUsed?: string } | null
+): ImageIntentResult {
   const clean = text.trim();
   const lower = clean.toLowerCase();
+
+  // 1. Conversational Image Continuity & Delta Refinement ("Make it nighttime", "change car to red", etc.)
+  if (lastImageAttachment?.url && !hasAttachedImage) {
+    const isContinuityPrefix =
+      lower.startsWith('make it') ||
+      lower.startsWith('now make') ||
+      lower.startsWith('can you make it') ||
+      lower.startsWith('please make it') ||
+      lower.startsWith('change it to') ||
+      lower.startsWith('change the') ||
+      lower.startsWith('change to') ||
+      lower.startsWith('change color') ||
+      lower.startsWith('turn it into') ||
+      lower.startsWith('convert to') ||
+      lower.startsWith('add ') ||
+      lower.startsWith('remove ') ||
+      lower.startsWith('switch to') ||
+      lower.startsWith('set at ') ||
+      lower.startsWith('set in ') ||
+      lower.startsWith('same but') ||
+      lower.startsWith('another one with') ||
+      lower.startsWith('another one but');
+
+    const isContinuityKeyword =
+      lower.includes('nighttime') ||
+      lower.includes('daytime') ||
+      lower.includes('at night') ||
+      lower.includes('sunset') ||
+      lower.includes('sunrise') ||
+      lower.includes('golden hour') ||
+      lower.includes('cyberpunk') ||
+      lower.includes('rainy') ||
+      lower.includes('in the rain') ||
+      lower.includes('snowing') ||
+      lower.includes('anime style') ||
+      lower.includes('cartoon') ||
+      lower.includes('oil painting') ||
+      lower.includes('watercolor') ||
+      lower.includes('sketch style') ||
+      lower.includes('realistic') ||
+      lower.includes('hyperrealistic') ||
+      lower.includes('dark mode') ||
+      lower.includes('neon lights') ||
+      lower.includes('re karanna') ||
+      lower.includes('rathu paata') ||
+      lower.includes('nil paata') ||
+      lower.includes('wessa danna') ||
+      lower.includes('wenas karanna');
+
+    if (isContinuityPrefix || (isContinuityKeyword && clean.length < 90)) {
+      const priorPrompt = lastImageAttachment.prompt || 'cinematic masterpiece';
+      const mergedPrompt = `${priorPrompt}, modified with: ${clean}`;
+      return {
+        isImage: true,
+        prompt: mergedPrompt,
+        isImg2Img: true,
+        isContinuityRefinement: true,
+        referenceImageUrl: lastImageAttachment.url,
+        previousPrompt: priorPrompt,
+      };
+    }
+  }
 
   const isImageKeyword =
     lower.includes('photo') ||
@@ -743,16 +819,30 @@ export function AIPage() {
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
 
-    // ─── 1. IN-CHAT IMAGE GENERATION (FLUX.1 ULTRA + DALL-E 3 AUTO-8K EXPANSION) ───
-    const imageIntent = detectImageIntent(textToSend, Boolean(sentImage));
+    // Inspect prior messages for conversational image continuity reference
+    let lastImageAttachment: { url: string; prompt?: string; modelUsed?: string } | null = null;
+    for (let i = cleanedPriorMessages.length - 1; i >= 0; i--) {
+      const m = cleanedPriorMessages[i];
+      if (m.role === 'assistant' && m.mediaAttachment?.type === 'image' && m.mediaAttachment.url) {
+        lastImageAttachment = m.mediaAttachment;
+        break;
+      }
+    }
+
+    // ─── 1. IN-CHAT IMAGE GENERATION (FLUX.1 ULTRA + G4F SOVEREIGN + CONTINUITY REFINEMENT) ───
+    const imageIntent = detectImageIntent(textToSend, Boolean(sentImage), lastImageAttachment);
     if (imageIntent.isImage || selectedModelId === 'flux-ultra-image') {
-      const isImg2Img = Boolean(sentImage);
+      const isContinuity = Boolean(imageIntent.isContinuityRefinement);
+      const isImg2Img = Boolean(sentImage) || isContinuity;
       const rawPrompt = imageIntent.prompt || textToSend;
+      const referenceImageUrl = sentImage?.url || (isContinuity ? imageIntent.referenceImageUrl : undefined);
 
       const initialAssistantMsg: AIMessage = {
         id: assistantMsgId,
         role: 'assistant',
-        content: isImg2Img
+        content: isContinuity
+          ? `🎨 Continuing image refinement based on previous creation...\n\n> Directive: *"${textToSend}"*\n> Baseline: *"${imageIntent.previousPrompt || 'Previous Scene'}"*`
+          : isImg2Img
           ? `🎨 Analyzing reference photo with **Vision AI** to preserve identity & generating transformation with **FLUX.1 Ultra**...\n\n> Directive: *"${rawPrompt}"*`
           : autoGptEnhance
           ? `⚡ **[8K Mode: Active]** Expanding directive with GPT-4o-Mini into photorealistic master prompt...\n\n> Original: *"${rawPrompt}"*`
@@ -773,7 +863,7 @@ export function AIPage() {
         let targetPrompt = rawPrompt;
 
         // DALL-E 3 Grade GPT Auto-Enhancer
-        if (autoGptEnhance && !sentImage) {
+        if (autoGptEnhance && !sentImage && !isContinuity) {
           try {
             const enhanced = await enhancePromptWithGpt(rawPrompt, 'Photorealistic');
             if (enhanced && enhanced.length > 5) {
@@ -807,18 +897,41 @@ Output ONLY the resulting prompt text.`,
         }
 
         let imgRes: PuterImageResult;
-        try {
-          // Tier 1: 100% Free & Unlimited Raw FLUX.1 Ultra via Pollinations
-          imgRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
-            aspect_ratio: '1:1',
-            input_image: sentImage?.url,
-          });
-        } catch {
-          // Tier 2 Fallback: Puter txt2img
-          imgRes = await puterAiService.generateImage(targetPrompt, {
-            aspect_ratio: '1:1',
-            input_image: sentImage?.url,
-          });
+        let g4fSuccess = false;
+
+        // Priority 0: If G4F local engine is active, try local sovereign generation
+        if (g4fAiService.isServerAlive()) {
+          try {
+            const g4fImg = await g4fAiService.generateImage(targetPrompt);
+            if (g4fImg?.imageUrl) {
+              imgRes = {
+                imageUrl: g4fImg.imageUrl,
+                prompt: targetPrompt,
+                model: g4fImg.model,
+                aspectRatio: '1:1',
+                source: 'g4f-local',
+              };
+              g4fSuccess = true;
+            }
+          } catch (g4fErr) {
+            console.warn('[G4F Image Fallback to Pollinations]:', g4fErr);
+          }
+        }
+
+        if (!g4fSuccess) {
+          try {
+            // Tier 1: 100% Free & Unlimited Raw FLUX.1 Ultra via Pollinations
+            imgRes = await puterAiService.generateImageViaPollinations(targetPrompt, {
+              aspect_ratio: '1:1',
+              input_image: referenceImageUrl,
+            });
+          } catch {
+            // Tier 2 Fallback: Puter txt2img
+            imgRes = await puterAiService.generateImage(targetPrompt, {
+              aspect_ratio: '1:1',
+              input_image: referenceImageUrl,
+            });
+          }
         }
 
         setSessions((prev) =>
@@ -828,7 +941,9 @@ Output ONLY the resulting prompt text.`,
                 m.id === assistantMsgId
                   ? {
                       ...m,
-                      content: isImg2Img
+                      content: isContinuity
+                        ? `✨ Contextual image refinement complete, powered by **${imgRes.model}**:\n\n> Directive: *"${textToSend}"*\n> Baseline: *"${imageIntent.previousPrompt || 'Previous Scene'}"*`
+                        : isImg2Img
                         ? `✨ Transformed image with preserved subject identity, powered by **${imgRes.model}**:\n\n> *"${rawPrompt}"*`
                         : autoGptEnhance
                         ? `✨ Masterpiece generated via **${imgRes.model}** with **[⚡ 8K Mode]**:\n\n> *"${rawPrompt}"*\n\n<details><summary className="text-[11px] text-zinc-400 font-mono cursor-pointer">View GPT Expanded Prompt</summary>\n\n\`\`\`\n${targetPrompt}\n\`\`\`\n</details>`
@@ -847,7 +962,7 @@ Output ONLY the resulting prompt text.`,
             return s;
           }),
         );
-        toast.success(`Image generated via ${imgRes.model}!`);
+        toast.success(isContinuity ? 'Refined image generated!' : `Image generated via ${imgRes.model}!`);
       } catch (err: any) {
         toast.error(`Image generation failed: ${err?.message || err}`);
         setSessions((prev) =>
