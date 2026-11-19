@@ -137,7 +137,65 @@ export async function generatePollinationsImage(options: PollinationsImageOption
 }
 
 /**
- * 2. GROQ LPU RAW ENGINE
+ * 2. GPT PROMPT EXPANDER & CREATIVE DIRECTOR (DALL-E 3 / MIDJOURNEY GRADE)
+ *
+ * Automatically expands simple prompts into award-winning, photorealistic,
+ * 8K master directives with lighting, lenses, and textures.
+ */
+export async function enhancePromptWithGpt(
+  userPrompt: string,
+  style: string = 'Photorealistic'
+): Promise<string> {
+  const clean = (userPrompt || '').trim();
+  if (!clean) return clean;
+
+  const systemInstruction = `You are an elite cinematic photographer and AI prompt engineering master like DALL-E 3 and Midjourney v6.
+The user provides a simple concept or short phrase. Your job is to transform it into a breathtaking, world-class, hyper-realistic masterpiece prompt tailored for the style: "${style}".
+Guidelines:
+- If style is Photorealistic, specify camera lens (e.g. 85mm f/1.4, Hasselblad H6D-100c), natural lighting (golden hour, soft rim light), fine textures (subsurface scattering, skin pores, fabric weave), candid cinematic composition.
+- If style is Anime, 3D, Cyberpunk, or Cinematic, match that visual medium with rich atmosphere, lighting, volumetric fog, and award-winning artistry.
+- Output ONLY the expanded prompt in English. Do NOT add preamble, quotes, bullet points, or explanations. Maximum 50-70 words.`;
+
+  // 1. Try Puter AI (GPT-4o-mini / Gemini / DeepSeek - 100% free, zero configuration)
+  try {
+    const res = await puterAiService.chat(
+      `Transform this idea into an extreme high-quality ${style} photo prompt: "${clean}"`,
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: `Transform: "${clean}"` },
+        ],
+        temperature: 0.7,
+      }
+    );
+    if (res?.text && res.text.trim()) {
+      return res.text.trim().replace(/^["']|["']$/g, '');
+    }
+  } catch (err) {
+    console.warn('[Prompt Enhancer] Puter AI fallback to Groq:', err);
+  }
+
+  // 2. Try Groq LPU (DeepSeek / Llama 3.3)
+  try {
+    const groqRes = await generateGroqChat({
+      prompt: `Transform this idea into an extreme high-quality ${style} photo prompt: "${clean}"`,
+      systemPrompt: systemInstruction,
+      maxTokens: 120,
+    });
+    if (groqRes && groqRes.trim() && !groqRes.includes('To unlock')) {
+      return groqRes.trim().replace(/^["']|["']$/g, '');
+    }
+  } catch (err) {
+    // fallback
+  }
+
+  // 3. Fallback: High-quality rule-based cinematic expansion
+  return `Award-winning ${style.toLowerCase()} photography of ${clean}, 8k UHD, Hasselblad H6D-100c, 85mm f/1.4 lens, natural golden hour rim lighting, ultra-detailed skin textures, shallow depth of field, cinematic color grading, hyper-realistic masterpiece`;
+}
+
+/**
+ * 3. GROQ LPU RAW ENGINE
  * Ultra-fast LLM execution
  */
 export interface GroqChatOptions {

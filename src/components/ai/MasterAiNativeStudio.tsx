@@ -50,6 +50,7 @@ import {
   generatePollinationsImage,
   generateGroqChat,
   generateAiHordeImage,
+  enhancePromptWithGpt,
 } from '@/services/ai/masterCloudAiEngines';
 import { executeVirtualTryOn } from '@/services/ai/virtualTryOnService';
 import { dedicatedGpuService, DedicatedGpuStatus } from '@/services/ai/dedicatedGpuBackend';
@@ -86,6 +87,23 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
   const [isGpuModalOpen, setIsGpuModalOpen] = useState<boolean>(false);
   const [dedicatedUrlInput, setDedicatedUrlInput] = useState<string>(dedicatedGpuService.getBackendUrl());
   const [dedicatedStatus, setDedicatedStatus] = useState<DedicatedGpuStatus>({ online: false, url: '' });
+  const [isExpandingPrompt, setIsExpandingPrompt] = useState<boolean>(false);
+  const [autoGptEnhance, setAutoGptEnhance] = useState<boolean>(true);
+
+  const handleMagicPrompt = async () => {
+    const textToExpand = prompt.trim() || 'A majestic cybernetic traveler in neon city at dawn, 8k resolution';
+    try {
+      setIsExpandingPrompt(true);
+      toast.info('🧠 Master GPT is expanding your prompt into an 8K Master Directive...');
+      const enhanced = await enhancePromptWithGpt(textToExpand, imageStyle);
+      setPrompt(enhanced);
+      toast.success('Prompt expanded to DALL-E 3 / Midjourney grade! ✨');
+    } catch (e) {
+      toast.error('Failed to enhance prompt, using raw input.');
+    } finally {
+      setIsExpandingPrompt(false);
+    }
+  };
 
   useEffect(() => {
     dedicatedGpuService.checkHealth().then(setDedicatedStatus);
@@ -188,11 +206,21 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
         setGeneratedTextOutput(result);
         toast.success('Generated at blink speed via Master vGPU!');
       } else if (['image-generation', 'image-editing'].includes(model.categoryId)) {
-        // Image Generation
+        // Image Generation with GPT Auto-Enhancer (DALL-E 3 Grade Photorealism)
+        let finalPrompt = prompt.trim();
+        if (autoGptEnhance || finalPrompt.split(/\s+/).length < 15) {
+          setProcessingStatus('Master GPT: Analyzing concept & composing 8K photorealistic scene...');
+          try {
+            finalPrompt = await enhancePromptWithGpt(finalPrompt, imageStyle);
+          } catch (e) {
+            finalPrompt = `${prompt}, ${imageStyle} style, 8k masterpiece, photorealistic`;
+          }
+        }
+
         if (activeEngine === 'aihorde') {
           setProcessingStatus('Queueing on decentralized volunteer GPUs...');
           const url = await generateAiHordeImage(
-            `${prompt}, ${imageStyle} style, highly detailed`,
+            `${finalPrompt}, ${imageStyle} style, highly detailed`,
             {
               aspectRatio,
               onStatus: (st) => setProcessingStatus(st),
@@ -207,10 +235,10 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
               : 'Synthesizing 4K FLUX.1 Art on Cloud GPU...'
           );
           const { width, height } = getDimensions();
-          const styledPrompt = `${prompt}, ${imageStyle} style, 8k masterpiece, detailed`;
+          const styledPrompt = `${finalPrompt}, ${imageStyle} style, 8k masterpiece, detailed`;
           const url = await generatePollinationsImage({
             prompt: styledPrompt,
-            model: 'flux',
+            model: 'turbo',
             width,
             height,
           });
@@ -397,24 +425,47 @@ export const MasterAiNativeStudio: React.FC<MasterAiNativeStudioProps> = ({
           {/* Prompt / Instruction Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-foreground">
-              <span>AI Prompt &amp; Directive</span>
+              <div className="flex items-center gap-2">
+                <span>AI Prompt &amp; Directive</span>
+                <button
+                  type="button"
+                  onClick={() => setAutoGptEnhance((prev) => !prev)}
+                  className={`text-[9px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer flex items-center gap-1 ${
+                    autoGptEnhance
+                      ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                      : 'bg-muted/40 border-border text-muted-foreground'
+                  }`}
+                  title="When ON, Master GPT automatically enhances short prompts into 8K DALL-E 3 grade prompts"
+                >
+                  <Sparkles className="h-2.5 w-2.5 text-cyan-400" />
+                  <span>GPT Mode: {autoGptEnhance ? 'Auto-8K ON' : 'Raw'}</span>
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() =>
-                  setPrompt(
-                    'Ultra detailed 8k cinematic masterpiece, volumetric lighting, photorealistic octane render'
-                  )
-                }
-                className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer font-normal"
+                onClick={handleMagicPrompt}
+                disabled={isExpandingPrompt}
+                className="text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 cursor-pointer font-medium disabled:opacity-50"
+                title="Use Master GPT to expand your short idea into an 8K Masterpiece prompt"
               >
-                <Wand2 className="h-3 w-3" />
-                <span>Magic Prompt</span>
+                {isExpandingPrompt ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-cyan-400" />
+                    <span>GPT Expanding...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-3 w-3" />
+                    <span>Magic Prompt</span>
+                  </>
+                )}
               </button>
             </div>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe what you want to create or ask..."
+              placeholder="Type any simple idea (e.g. 'girl in rain', 'sports car on mountain', 'cyberpunk warrior') — Master GPT will turn it into 8K masterpiece quality!"
               rows={4}
               className="w-full bg-card/60 rounded-2xl p-3.5 text-xs text-foreground placeholder:text-muted-foreground/60 border border-border/80 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none leading-relaxed"
             />
