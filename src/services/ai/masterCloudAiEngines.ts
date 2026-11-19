@@ -106,19 +106,7 @@ export async function generatePollinationsImage(options: PollinationsImageOption
 
   const encodedPrompt = encodeURIComponent(prompt);
 
-  // 1. Try Pollinations Turbo (100% Free, zero 402 errors, no wait time)
-  try {
-    const turboUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true`;
-    const res = await fetch(turboUrl);
-    if (res.ok) {
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    }
-  } catch (err) {
-    console.warn('[Engine] Pollinations turbo failed, falling back to Puter AI...', err);
-  }
-
-  // 2. Fallback: Puter AI FLUX.1 Engine (Unlimited Free Tier)
+  // 1. TIER 1: Puter AI FLUX.1 Cloud Engine (100% Clean, ZERO Watermarks, Native 4K)
   try {
     const puterRes = await puterAiService.generateImage(prompt, {
       width,
@@ -129,11 +117,23 @@ export async function generatePollinationsImage(options: PollinationsImageOption
       return puterRes.imageUrl;
     }
   } catch (err) {
-    console.warn('[Engine] Puter FLUX image fallback failed:', err);
+    console.warn('[Engine] Puter FLUX image fallback to Pollinations Turbo:', err);
   }
 
-  // 3. Fallback: Direct Pollinations stream URL
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&nologo=true`;
+  // 2. TIER 2: Pollinations Turbo with strict nologo=true (Clean Blob Object URL)
+  try {
+    const turboUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true&enhance=false`;
+    const res = await fetch(turboUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    console.warn('[Engine] Pollinations turbo failed:', err);
+  }
+
+  // 3. Fallback: Direct stream with nologo
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true&enhance=false`;
 }
 
 /**
