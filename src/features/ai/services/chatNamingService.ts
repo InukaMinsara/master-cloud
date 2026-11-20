@@ -125,18 +125,4 @@ export class ChatNamingService {
 
     return fallback;
   }
-
-  private static titleCase(str: string): string {
-    const minorWords = new Set(['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from', 'by', 'in', 'of']);
-    return str
-      .split(' ')
-      .map((word, index) => {
-        const lower = word.toLowerCase();
-        if (index > 0 && minorWords.has(lower)) {
-          return lower;
-        }
-        return lower.charAt(0).toUpperCase() + lower.slice(1);
-      })
-      .join(' ');
-  }
 }

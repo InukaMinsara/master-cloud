@@ -1,13 +1,15 @@
 /**
  * src/features/ai/components/MasterAi2Composer.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — UNIFIED CHAT & SENSENOVA IMAGE COMPOSER
- * Auto-expanding input, unified model engine selector with capability filtering
- * (All / Fast / Reasoning / Coding / General), aspect ratio controls,
- * seed controls, live web search grounding, prompt history navigation,
- * drag-and-drop file/image dropzone, and 1-click model discovery.
- *
- * Strict Compliance: Zero third-party provider branding in the user interface.
+ * MASTER AI — UNIFIED CHAT COMPOSER
+ * Single unified input interface for conversational AI and inline image requests.
+ * Features:
+ * - Auto-expanding textarea
+ * - Drag-and-drop file/image dropzone
+ * - Integrated Model Discovery & Selector with category filters (All / Fast / Reasoning / Coding / General)
+ * - Live Web Search Grounding toggle
+ * - Keyboard navigation (Enter to send, Shift+Enter for newline, Up/Down for prompt history)
+ * - Strict Compliance: Zero third-party provider branding in the user interface.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -19,23 +21,17 @@ import {
   X,
   FileText,
   ChevronDown,
-  Sparkles,
-  Zap,
   Search,
-  ImageIcon,
   Check,
   RotateCw,
   Star,
-  Dices,
-  Sliders,
   UploadCloud,
   Globe,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { ContextManager } from '../services/contextManager';
 import { appSettingsService } from '@/services/appSettingsService';
-import { AiAttachment, ImageAspectRatio, UnifiedChatModel } from '../types/aiTypes';
-import { SENSENOVA_MODEL_ID, SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
+import { AiAttachment, UnifiedChatModel } from '../types/aiTypes';
 import { toast } from 'sonner';
 
 interface ComposerProps {
@@ -53,7 +49,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isRefreshingModels, setIsRefreshingModels] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [showImageOptions, setShowImageOptions] = useState(false);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -61,20 +56,12 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   const isStreaming = useAiChatStore((s) => s.isStreaming);
-  const chatMode = useAiChatStore((s) => s.chatMode);
-  const setChatMode = useAiChatStore((s) => s.setChatMode);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
   const setSelectedModelId = useAiChatStore((s) => s.setSelectedModelId);
   const unifiedModels = useAiChatStore((s) => s.unifiedModels);
   const fetchUnifiedModels = useAiChatStore((s) => s.fetchUnifiedModels);
   const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
   const toggleWebSearch = useAiChatStore((s) => s.toggleWebSearch);
-  const aspectRatio = useAiChatStore((s) => s.aspectRatio);
-  const setAspectRatio = useAiChatStore((s) => s.setAspectRatio);
-  const imageResolution = useAiChatStore((s) => s.imageResolution);
-  const setImageResolution = useAiChatStore((s) => s.setImageResolution);
-  const imageSeed = useAiChatStore((s) => s.imageSeed);
-  const setImageSeed = useAiChatStore((s) => s.setImageSeed);
   const favoriteModels = useAiChatStore((s) => s.favoriteModels);
   const toggleFavoriteModel = useAiChatStore((s) => s.toggleFavoriteModel);
   const promptHistory = useAiChatStore((s) => s.promptHistory);
@@ -99,10 +86,10 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
     }
   }, [fetchUnifiedModels]);
 
-  // Active Model Clean Name
+  // Active Model Clean Display Name
   const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
   const activeModelDisplayName =
-    matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/-/g, ' ') || 'Master AI');
+    matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/[-_]/g, ' ') || 'Master AI');
 
   // Auto-resize textarea & save draft
   useEffect(() => {
@@ -255,8 +242,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
     return m.category.toLowerCase() === selectedCategory.toLowerCase();
   });
 
-  const allAspectRatios: ImageAspectRatio[] = ['1:1', '16:9', '9:16', '4:3', '3:2', '2:3', '21:9'];
-
   return (
     <div
       className="w-full max-w-4xl mx-auto px-4 pb-4 select-none relative"
@@ -275,133 +260,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
       {/* Main Composer Box */}
       <div className="rounded-2xl border border-white/[0.1] bg-zinc-900/80 backdrop-blur-xl shadow-2xl p-2.5 space-y-2 focus-within:border-orange-500/40 transition-colors">
-        {/* Mode Selector & Toolbar */}
-        <div className="flex items-center justify-between px-1 text-xs flex-wrap gap-2">
-          {/* Chat Mode Switcher */}
-          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-            <button
-              type="button"
-              onClick={() => setChatMode('auto')}
-              className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                chatMode === 'auto'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-              title="Automatically routes between conversation and image generation"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Auto</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setChatMode('chat')}
-              className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                chatMode === 'chat'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Zap className="w-3 h-3" />
-              <span>Chat</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setChatMode('image')}
-              className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                chatMode === 'image'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <ImageIcon className="w-3 h-3" />
-              <span>Image</span>
-            </button>
-          </div>
-
-          {/* Quick Image Controls (Aspect Ratio, Resolution, Seed) */}
-          {(chatMode === 'image' || chatMode === 'auto') && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Aspect Ratio Chips */}
-              <div className="flex items-center gap-1 bg-white/[0.02] p-0.5 rounded-lg border border-white/[0.04]">
-                {allAspectRatios.map((ratio) => (
-                  <button
-                    key={ratio}
-                    type="button"
-                    onClick={() => setAspectRatio(ratio)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium transition-all cursor-pointer ${
-                      aspectRatio === ratio
-                        ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title={`Set aspect ratio ${ratio}`}
-                  >
-                    {ratio}
-                  </button>
-                ))}
-              </div>
-
-              {/* Extra Parameters Button (Resolution / Seed) */}
-              <button
-                type="button"
-                onClick={() => setShowImageOptions(!showImageOptions)}
-                className={`p-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 text-[10px] font-mono ${
-                  showImageOptions
-                    ? 'bg-orange-500/20 border-orange-500/40 text-orange-300'
-                    : 'bg-white/[0.03] border-white/[0.06] text-zinc-400 hover:text-white'
-                }`}
-                title="Configure image resolution & seed"
-              >
-                <Sliders className="w-3 h-3" />
-                <span className="hidden sm:inline">{imageResolution}p</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Expandable Image Settings Bar (Resolution & Seed) */}
-        {showImageOptions && (
-          <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 text-xs flex-wrap animate-in fade-in duration-150">
-            {/* Resolution Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-zinc-400 uppercase">Resolution:</span>
-              {[720, 1024].map((res) => (
-                <button
-                  key={res}
-                  type="button"
-                  onClick={() => setImageResolution(res)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono cursor-pointer transition-all ${
-                    imageResolution === res
-                      ? 'bg-orange-500 text-white font-bold'
-                      : 'bg-white/[0.04] text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {res}p {res === 720 ? '(SD)' : '(HD)'}
-                </button>
-              ))}
-            </div>
-
-            {/* Seed Controller */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-zinc-400 uppercase">Seed:</span>
-              <button
-                type="button"
-                onClick={() => setImageSeed(imageSeed === null ? Math.floor(Math.random() * 999999) : null)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono cursor-pointer transition-all ${
-                  imageSeed !== null
-                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
-                    : 'bg-white/[0.04] text-zinc-400 hover:text-white'
-                }`}
-                title={imageSeed !== null ? `Fixed seed: ${imageSeed}. Click to randomize.` : 'Random seed. Click to fix.'}
-              >
-                <Dices className="w-3 h-3" />
-                <span>{imageSeed !== null ? imageSeed : 'Random'}</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Attachment Chips */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-1.5 px-1 pt-1">
@@ -432,17 +290,13 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
           </div>
         )}
 
-        {/* Textarea Input */}
+        {/* Textarea Input - Single Unified Input */}
         <textarea
           ref={textareaRef}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            chatMode === 'image'
-              ? 'Describe the image to synthesize with SenseNova (e.g. "Cyberpunk neon street at twilight, 8K hyper-detailed")...'
-              : 'Ask Master AI anything, or type "/image <prompt>" to create visual art...'
-          }
+          placeholder="Ask Master AI anything, or request an image (e.g. 'Generate an image of a futuristic skyline')..."
           rows={1}
           disabled={isStreaming}
           className="w-full bg-transparent px-2.5 py-1.5 text-sm font-sans text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-[180px] overflow-y-auto"
@@ -494,21 +348,10 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                 onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-xs font-mono text-zinc-300 border border-white/[0.08] transition-colors cursor-pointer"
               >
-                {chatMode === 'image' ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                    <span className="truncate max-w-[140px] font-medium">
-                      {SENSENOVA_MODEL_TITLE}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                    <span className="truncate max-w-[140px] font-medium">
-                      {activeModelDisplayName}
-                    </span>
-                  </>
-                )}
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                <span className="truncate max-w-[140px] font-medium">
+                  {activeModelDisplayName}
+                </span>
                 <ChevronDown className="w-3 h-3 text-zinc-400" />
               </button>
 

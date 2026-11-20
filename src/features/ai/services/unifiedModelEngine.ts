@@ -193,7 +193,7 @@ class UnifiedModelEngine {
       }
     }
 
-    const res = await fetch('/api/ai/chat', {
+    let res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: options.signal,
@@ -204,7 +204,44 @@ class UnifiedModelEngine {
       }),
     });
 
-    if (!res.ok) {
+    // 429 Rate Limit Intercept with Context-Compression Retry (Never silently switch models)
+    if (res.status === 429) {
+      const errPayload = await res.json().catch(() => ({}));
+      const errMsg = errPayload?.error?.message || '';
+
+      // Wait 2.5s for token bucket recovery
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      if (options.signal?.aborted) throw new Error('Request aborted');
+
+      // Re-compress context to only essential system instruction and latest user turn
+      const compressedMessages = [
+        options.messages.find((m) => m.role === 'system') || {
+          role: 'system' as const,
+          content: 'You are Master AI. Provide direct, concise, high-value assistance.',
+        },
+        ...options.messages.filter((m) => m.role === 'user').slice(-1),
+      ];
+
+      res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: options.signal,
+        body: JSON.stringify({
+          model: options.model,
+          messages: compressedMessages,
+          stream: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const retryErr = await res.json().catch(() => ({}));
+        throw new Error(
+          retryErr?.error?.message ||
+            errMsg ||
+            'Rate limit reached on free tier (8,000 TPM limit). Please wait a few seconds before retrying.'
+        );
+      }
+    } else if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.error?.message || `Inference request failed (HTTP ${res.status})`);
     }
@@ -282,19 +319,35 @@ class UnifiedModelEngine {
 
   /**
    * Detects whether user message expresses an intent to generate an image.
+   * Recognizes slash commands, direct draw/paint commands, and natural language prompts.
    */
   public detectImageIntent(text: string): { isImage: boolean; prompt: string } {
     const trimmed = text.trim();
 
-    // 1. Slash command
-    if (/^\/(image|img|draw|paint|gen)\b/i.test(trimmed)) {
-      const prompt = trimmed.replace(/^\/(image|img|draw|paint|gen)\s*/i, '').trim();
+    // 1. Slash commands: /image, /img, /draw, /paint, /gen, /create-image
+    if (/^\/(image|img|draw|paint|gen|create-image)\b/i.test(trimmed)) {
+      const prompt = trimmed.replace(/^\/(image|img|draw|paint|gen|create-image)\s*/i, '').trim();
       return { isImage: true, prompt: prompt || 'artistic asset' };
     }
 
-    // 2. Natural language image request
+    // 2. Direct drawing/painting command: "draw (me) (a/an) ...", "paint (me) (a/an) ..."
+    // Exclude programming contexts ("draw a diagram", "draw a flowchart", "draw a table")
+    const drawMatch = trimmed.match(
+      /^(?:please\s+)?(?:draw|paint|sketch)\s+(?:me\s+)?(?:an?\s+)?(.*)$/i
+    );
+    if (
+      drawMatch &&
+      drawMatch[1].trim() &&
+      !/^(diagram|chart|graph|flowchart|table|schema|architecture|code|function|component)/i.test(
+        drawMatch[1].trim()
+      )
+    ) {
+      return { isImage: true, prompt: drawMatch[1].trim() };
+    }
+
+    // 3. Natural language image request: "generate/create/make/render/produce/show me an image/picture/photo/illustration of ..."
     const nlMatch = trimmed.match(
-      /^(?:please\s+)?(?:generate|create|make|draw|paint|render|produce)\s+(?:an?\s+)?(?:image|picture|photo|painting|illustration|artwork|rendering|wallpaper)\s+(?:of|with|depicting|showing)\s+(.*)$/i
+      /^(?:please\s+)?(?:generate|create|make|render|produce|show(?:\s+me)?)\s+(?:an?\s+)?(?:image|picture|photo|photograph|painting|illustration|artwork|rendering|wallpaper|drawing)\s+(?:of|with|depicting|showing|for)\s+(.*)$/i
     );
     if (nlMatch && nlMatch[1].trim()) {
       return { isImage: true, prompt: nlMatch[1].trim() };

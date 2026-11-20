@@ -32,8 +32,6 @@ export function MasterAi2Shell() {
 
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
-  const chatMode = useAiChatStore((s) => s.chatMode);
-  const setChatMode = useAiChatStore((s) => s.setChatMode);
   const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
   const aspectRatio = useAiChatStore((s) => s.aspectRatio);
   const addUserMessage = useAiChatStore((s) => s.addUserMessage);
@@ -107,11 +105,11 @@ export function MasterAi2Shell() {
 
       // 3. Resolve Intent: Image generation vs Conversational Chat
       const imageIntent = unifiedModelEngine.detectImageIntent(text);
-      const isImageRequest = chatMode === 'image' || imageIntent.isImage;
+      const isImageRequest = imageIntent.isImage;
 
       // ── ROUTE A: SENSENOVA U1.5 LITE IMAGE SYNTHESIS ──
       if (isImageRequest) {
-        const prompt = chatMode === 'image' ? text.trim() : imageIntent.prompt;
+        const prompt = imageIntent.prompt;
         const msgId = createImagePlaceholder(prompt, SENSENOVA_MODEL_ID, 'xkiro');
 
         try {
@@ -192,7 +190,6 @@ export function MasterAi2Shell() {
     },
     [
       getActiveConversation,
-      chatMode,
       selectedModelId,
       aspectRatio,
       isWebSearchEnabled,
@@ -242,7 +239,6 @@ export function MasterAi2Shell() {
 
   const handleEditImageInChat = useCallback(
     (imageUrl: string, prompt: string) => {
-      setChatMode('image');
       const referenceAtt: AiAttachment = {
         id: `att_ref_${Date.now()}`,
         name: 'reference_image.png',
@@ -253,7 +249,7 @@ export function MasterAi2Shell() {
       toast.info('Loaded reference image for creative synthesis.');
       handleSendMessage(prompt, [referenceAtt]);
     },
-    [setChatMode, handleSendMessage]
+    [handleSendMessage]
   );
 
   const handleVariation = useCallback(

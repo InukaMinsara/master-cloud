@@ -669,6 +669,67 @@ export function createAiProxyMiddleware(rootDir: string) {
       return res.end(data);
     }
 
+    // CORS-safe Binary Image Proxy for Master Cloud Drive saving, canvas editing, and downloads
+    if (url.startsWith('/api/ai/image/proxy')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        return res.end();
+      }
+
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        res.statusCode = 405;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+      }
+
+      try {
+        const parsedUrl = new URL(url, 'http://localhost');
+        const targetUrl = parsedUrl.searchParams.get('url');
+
+        if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(JSON.stringify({ error: 'Valid target url parameter is required' }));
+        }
+
+        const fetchRes = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) MasterCloud/2.0',
+            Accept: 'image/*,*/*',
+          },
+          signal: AbortSignal.timeout(20000),
+        });
+
+        if (!fetchRes.ok) {
+          res.statusCode = fetchRes.status;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(JSON.stringify({ error: `Upstream image fetch failed: ${fetchRes.statusText}` }));
+        }
+
+        const contentType = fetchRes.headers.get('content-type') || 'image/png';
+        const contentLength = fetchRes.headers.get('content-length');
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+        if (contentLength) {
+          res.setHeader('Content-Length', contentLength);
+        }
+
+        const arrayBuffer = await fetchRes.arrayBuffer();
+        return res.end(Buffer.from(arrayBuffer));
+      } catch (err: any) {
+        console.error('[AI Image Proxy] Error fetching target image:', err);
+        res.statusCode = 502;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ error: err?.message || 'Proxy fetch failed' }));
+      }
+    }
+
     if (url.startsWith('/api/ai/pollinations/models') && req.method === 'GET') {
       const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/image/models`);
       const data = await polliRes.json();
