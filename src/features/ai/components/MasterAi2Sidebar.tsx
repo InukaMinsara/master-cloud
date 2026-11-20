@@ -123,6 +123,13 @@ export function MasterAi2Sidebar() {
     return res;
   }, [filteredConvs]);
 
+  const handleSelect = (id: string) => {
+    selectConversation(id);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      toggleSidebar();
+    }
+  };
+
   const handleStartRename = (e: React.MouseEvent, id: string, currentTitle: string) => {
     e.stopPropagation();
     setConfirmDeleteId(null);
@@ -265,7 +272,7 @@ export function MasterAi2Sidebar() {
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
-                onSelect={() => selectConversation(conv.id)}
+                onSelect={() => handleSelect(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
@@ -295,7 +302,7 @@ export function MasterAi2Sidebar() {
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
-                onSelect={() => selectConversation(conv.id)}
+                onSelect={() => handleSelect(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
@@ -325,7 +332,7 @@ export function MasterAi2Sidebar() {
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
-                onSelect={() => selectConversation(conv.id)}
+                onSelect={() => handleSelect(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
@@ -355,7 +362,7 @@ export function MasterAi2Sidebar() {
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
-                onSelect={() => selectConversation(conv.id)}
+                onSelect={() => handleSelect(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
@@ -385,7 +392,7 @@ export function MasterAi2Sidebar() {
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
-                onSelect={() => selectConversation(conv.id)}
+                onSelect={() => handleSelect(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
@@ -444,7 +451,7 @@ export function MasterAi2Sidebar() {
                 {grouped.archived.map((conv) => (
                   <div
                     key={conv.id}
-                    onClick={() => selectConversation(conv.id)}
+                    onClick={() => handleSelect(conv.id)}
                     className="group w-full px-2 py-1.5 rounded-lg text-xs flex items-center justify-between text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04] cursor-pointer"
                   >
                     <span className="truncate max-w-[150px]">{conv.title}</span>

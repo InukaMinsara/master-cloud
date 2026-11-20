@@ -32,20 +32,22 @@ export function MasterAi2ChatArea({
   onRemoveBackground,
   onUpscale,
 }: ChatAreaProps) {
-  const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
+  const activeConv = useAiChatStore(
+    (s) => s.conversations.find((c) => c.id === s.activeConversationId) || s.conversations[0]
+  );
   const isStreaming = useAiChatStore((s) => s.isStreaming);
   const streamingMessageId = useAiChatStore((s) => s.streamingMessageId);
 
-  const activeConv = getActiveConversation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Smooth auto-scroll to bottom during streaming or message update
+  // Smooth auto-scroll to bottom during streaming, message update, or conversation switch
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [
+    activeConv?.id,
     activeConv?.messages.length,
     activeConv?.messages[activeConv.messages.length - 1]?.content,
     activeConv?.messages[activeConv.messages.length - 1]?.imageDetails,

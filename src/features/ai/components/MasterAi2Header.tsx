@@ -38,10 +38,10 @@ export function MasterAi2Header() {
   const toggleWebSearch = useAiChatStore((s) => s.toggleWebSearch);
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
-  const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const exportConversation = useAiChatStore((s) => s.exportConversation);
-
-  const activeConv = getActiveConversation();
+  const activeConv = useAiChatStore(
+    (s) => s.conversations.find((c) => c.id === s.activeConversationId) || s.conversations[0]
+  );
   const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
   const activeModelDisplayName = matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/-/g, ' ') || 'Master AI');
 
