@@ -18,9 +18,18 @@ export class ChatNamingService {
 
     const clean = raw.replace(/\s+/g, ' ');
 
-    // Rule 1: "Explain / How does / What is"
+    // Rule 1A: Specific match for "Explain how X works/operates" -> "How X Works"
+    const explainHowMatch = clean.match(
+      /^(?:can you\s+)?(?:please\s+)?explain\s+(how\s+.*?)(?:\?|\.|$)/i
+    );
+    if (explainHowMatch && explainHowMatch[1].trim()) {
+      const phrase = explainHowMatch[1].trim();
+      return this.titleCase(this.truncateWords(phrase, 6));
+    }
+
+    // Rule 1B: "Explain / What is / Tell me about"
     const explainMatch = clean.match(
-      /^(?:can you\s+)?(?:please\s+)?(?:explain|describe|clarify|how does|what is|tell me about)\s+(?:the\s+|how\s+)?(.*?)(?:\s+works?|\s+operates?)?(?:\?|\.|$)/i
+      /^(?:can you\s+)?(?:please\s+)?(?:explain|describe|clarify|what is|tell me about)\s+(?:the\s+)?(.*?)(?:\s+works?|\s+operates?)?(?:\?|\.|$)/i
     );
     if (explainMatch && explainMatch[1].trim()) {
       const topic = this.titleCase(this.truncateWords(explainMatch[1].trim(), 5));

@@ -25,69 +25,10 @@ import { DEFAULT_GROQ_MODEL } from '../services/groqModels';
 import { SENSENOVA_MODEL_ID } from '../services/senseNovaImageService';
 import { unifiedModelEngine } from '../services/unifiedModelEngine';
 import { ChatNamingService } from '../services/chatNamingService';
+import { chatHistoryService, createInitialConversation } from '../services/chatHistoryService';
 
 const STORAGE_KEY = 'master_ai_conversations_v2';
 const ACTIVE_CONV_KEY = 'master_ai_active_conv_id';
-
-function createInitialConversation(): AiConversation {
-  return {
-    id: `conv_${Date.now()}`,
-    title: 'New Conversation',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    messages: [],
-  };
-}
-
-function loadPersistedConversations(): { conversations: AiConversation[]; activeId: string } {
-  if (typeof window === 'undefined') {
-    const init = createInitialConversation();
-    return { conversations: [init], activeId: init.id };
-  }
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed: AiConversation[] = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const storedActiveId = localStorage.getItem(ACTIVE_CONV_KEY) || parsed[0].id;
-        const validActive = parsed.some((c) => c.id === storedActiveId) ? storedActiveId : parsed[0].id;
-        return { conversations: parsed, activeId: validActive };
-      }
-    }
-
-    // Check legacy storage keys to ensure ZERO user history loss
-    const legacyRaw = localStorage.getItem('master_ai_chat_sessions') || localStorage.getItem('master_ai_sessions');
-    if (legacyRaw) {
-      const legacySessions = JSON.parse(legacyRaw);
-      if (Array.isArray(legacySessions) && legacySessions.length > 0) {
-        const migrated: AiConversation[] = legacySessions.map((s: any) => ({
-          id: s.id || `conv_${Date.now()}_${Math.random()}`,
-          title: s.title || 'Imported Conversation',
-          createdAt: s.createdAt ? new Date(s.createdAt).getTime() : Date.now(),
-          updatedAt: s.updatedAt ? new Date(s.updatedAt).getTime() : Date.now(),
-          isPinned: Boolean(s.isPinned),
-          messages: Array.isArray(s.messages)
-            ? s.messages.map((m: any) => ({
-                id: m.id || `msg_${Date.now()}_${Math.random()}`,
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.content || '',
-                timestamp: m.timestamp ? new Date(m.timestamp).getTime() : Date.now(),
-              }))
-            : [],
-        }));
-        const activeId = migrated[0].id;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-        return { conversations: migrated, activeId };
-      }
-    }
-  } catch (e) {
-    console.warn('[Master AI Store] Could not parse stored conversations:', e);
-  }
-
-  const initial = createInitialConversation();
-  return { conversations: [initial], activeId: initial.id };
-}
 
 interface AiChatState {
   conversations: AiConversation[];
@@ -116,15 +57,19 @@ interface AiChatState {
   batchCount: number;
   favoriteModels: string[];
   promptHistory: string[];
+  isHistoryLoading: boolean;
 
   // Actions
   refreshProviderStatus: () => Promise<void>;
   fetchUnifiedModels: (force?: boolean) => Promise<void>;
+  syncHistoryWithServer: () => Promise<void>;
   toggleWebSearch: () => void;
   setWebSearchEnabled: (enabled: boolean) => void;
   newConversation: () => void;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
+  archiveConversation: (id: string) => void;
+  restoreConversation: (id: string) => void;
   renameConversation: (id: string, newTitle: string) => void;
   togglePinConversation: (id: string) => void;
   clearActiveConversation: () => void;
@@ -162,15 +107,10 @@ interface AiChatState {
 }
 
 export const useAiChatStore = create<AiChatState>((set, get) => {
-  const { conversations: initialConvs, activeId: initialActiveId } = loadPersistedConversations();
+  const { conversations: initialConvs, activeId: initialActiveId } = chatHistoryService.loadCachedConversations();
 
   const persist = (convs: AiConversation[], activeId: string) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(convs));
-      localStorage.setItem(ACTIVE_CONV_KEY, activeId);
-    } catch (e) {
-      console.warn('[Master AI Store] Save error:', e);
-    }
+    chatHistoryService.save(convs, activeId);
   };
 
   return {
@@ -180,6 +120,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     activeImageModelId: SENSENOVA_MODEL_ID,
     unifiedModels: [],
     isModelsLoading: false,
+    isHistoryLoading: false,
     isWebSearchEnabled: false,
     chatMode: 'auto',
     aspectRatio: '1:1',
@@ -277,6 +218,39 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       });
     },
 
+    syncHistoryWithServer: async () => {
+      set({ isHistoryLoading: true });
+      try {
+        const serverConvs = await chatHistoryService.fetchServerConversations();
+        if (serverConvs && serverConvs.length > 0) {
+          set((state) => {
+            const map = new Map<string, AiConversation>();
+            for (const c of state.conversations) {
+              map.set(c.id, c);
+            }
+            for (const sc of serverConvs) {
+              const existing = map.get(sc.id);
+              if (!existing || (sc.updatedAt || 0) >= (existing.updatedAt || 0)) {
+                map.set(sc.id, sc);
+              }
+            }
+            const merged = Array.from(map.values()).sort(
+              (a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)
+            );
+            const validActive = merged.some((c) => c.id === state.activeConversationId)
+              ? state.activeConversationId
+              : merged[0].id;
+            persist(merged, validActive);
+            return { conversations: merged, activeConversationId: validActive };
+          });
+        }
+      } catch (err) {
+        console.warn('[Master AI Store] syncHistoryWithServer error:', err);
+      } finally {
+        set({ isHistoryLoading: false });
+      }
+    },
+
     selectConversation: (id: string) => {
       set((state) => {
         if (!state.conversations.some((c) => c.id === id)) return state;
@@ -291,6 +265,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     },
 
     deleteConversation: (id: string) => {
+      chatHistoryService.deleteOnServer(id);
       set((state) => {
         const remaining = state.conversations.filter((c) => c.id !== id);
         const next = remaining.length > 0 ? remaining : [createInitialConversation()];
@@ -303,6 +278,31 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
           isStreaming: false,
           streamingMessageId: null,
         };
+      });
+    },
+
+    archiveConversation: (id: string) => {
+      set((state) => {
+        const next = state.conversations.map((c) =>
+          c.id === id ? { ...c, isArchived: true, updatedAt: Date.now() } : c
+        );
+        let nextActive = state.activeConversationId;
+        if (state.activeConversationId === id) {
+          const firstUnarchived = next.find((c) => !c.isArchived);
+          nextActive = firstUnarchived ? firstUnarchived.id : next[0].id;
+        }
+        persist(next, nextActive);
+        return { conversations: next, activeConversationId: nextActive };
+      });
+    },
+
+    restoreConversation: (id: string) => {
+      set((state) => {
+        const next = state.conversations.map((c) =>
+          c.id === id ? { ...c, isArchived: false, updatedAt: Date.now() } : c
+        );
+        persist(next, id);
+        return { conversations: next, activeConversationId: id };
       });
     },
 

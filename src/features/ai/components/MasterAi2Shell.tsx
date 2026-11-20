@@ -46,13 +46,15 @@ export function MasterAi2Shell() {
   const newConversation = useAiChatStore((s) => s.newConversation);
   const refreshProviderStatus = useAiChatStore((s) => s.refreshProviderStatus);
   const fetchUnifiedModels = useAiChatStore((s) => s.fetchUnifiedModels);
+  const syncHistoryWithServer = useAiChatStore((s) => s.syncHistoryWithServer);
   const branchConversation = useAiChatStore((s) => s.branchConversation);
 
-  // Initialize service status and discover free models on mount
+  // Initialize service status, sync persistent history with server, and discover free models on mount
   useEffect(() => {
     refreshProviderStatus();
+    syncHistoryWithServer();
     fetchUnifiedModels(false);
-  }, [refreshProviderStatus, fetchUnifiedModels]);
+  }, [refreshProviderStatus, syncHistoryWithServer, fetchUnifiedModels]);
 
   // Global Keyboard Shortcuts (Ctrl+N for new chat)
   useEffect(() => {

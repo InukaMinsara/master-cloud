@@ -730,6 +730,98 @@ export function createAiProxyMiddleware(rootDir: string) {
       }
     }
 
+    // ── Persistent Multi-User Chat History API ──
+    if (url.startsWith('/api/ai/history')) {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        return res.end();
+      }
+
+      const historyBaseDir = path.resolve(rootDir, '.master_cloud_data', 'ai_history');
+      if (!fs.existsSync(historyBaseDir)) {
+        try {
+          fs.mkdirSync(historyBaseDir, { recursive: true });
+        } catch {}
+      }
+
+      const parsedUrl = new URL(url, 'http://localhost');
+      const getSafeUserKey = (rawKey?: string | null) => {
+        const clean = (rawKey || 'default_user').trim().toLowerCase();
+        return clean.replace(/[^a-zA-Z0-9_-]/g, '_');
+      };
+
+      if (req.method === 'GET') {
+        const userKey = getSafeUserKey(parsedUrl.searchParams.get('userId'));
+        const filePath = path.join(historyBaseDir, `${userKey}.json`);
+        if (fs.existsSync(filePath)) {
+          try {
+            const data = fs.readFileSync(filePath, 'utf-8');
+            const parsed = JSON.parse(data);
+            res.statusCode = 200;
+            return res.end(JSON.stringify({ success: true, conversations: parsed }));
+          } catch (err: any) {
+            console.warn('[AI History] Failed to read user history:', err);
+          }
+        }
+        res.statusCode = 200;
+        return res.end(JSON.stringify({ success: true, conversations: [] }));
+      }
+
+      if (req.method === 'POST') {
+        try {
+          const body = await parseJsonBody(req);
+          const userKey = getSafeUserKey(body.userId || parsedUrl.searchParams.get('userId'));
+          const conversations = Array.isArray(body.conversations) ? body.conversations : [];
+          const filePath = path.join(historyBaseDir, `${userKey}.json`);
+          const tempPath = `${filePath}.tmp.${Date.now()}`;
+
+          fs.writeFileSync(tempPath, JSON.stringify(conversations, null, 2), 'utf-8');
+          fs.renameSync(tempPath, filePath);
+
+          res.statusCode = 200;
+          return res.end(JSON.stringify({ success: true, count: conversations.length }));
+        } catch (err: any) {
+          console.error('[AI History] Failed to write user history:', err);
+          res.statusCode = 500;
+          return res.end(JSON.stringify({ error: err?.message || 'Failed to save chat history' }));
+        }
+      }
+
+      if (req.method === 'DELETE') {
+        try {
+          const userKey = getSafeUserKey(parsedUrl.searchParams.get('userId'));
+          const convId = parsedUrl.searchParams.get('conversationId');
+          const filePath = path.join(historyBaseDir, `${userKey}.json`);
+
+          if (fs.existsSync(filePath)) {
+            if (!convId || convId === 'all') {
+              fs.unlinkSync(filePath);
+            } else {
+              const data = fs.readFileSync(filePath, 'utf-8');
+              const parsed = JSON.parse(data);
+              if (Array.isArray(parsed)) {
+                const filtered = parsed.filter((c: any) => c.id !== convId);
+                fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), 'utf-8');
+              }
+            }
+          }
+          res.statusCode = 200;
+          return res.end(JSON.stringify({ success: true }));
+        } catch (err: any) {
+          res.statusCode = 500;
+          return res.end(JSON.stringify({ error: err?.message || 'Failed to delete chat history' }));
+        }
+      }
+
+      res.statusCode = 405;
+      return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+    }
+
     if (url.startsWith('/api/ai/pollinations/models') && req.method === 'GET') {
       const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/image/models`);
       const data = await polliRes.json();
