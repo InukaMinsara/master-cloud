@@ -66,13 +66,12 @@ export class ContextManager {
   public static isGroqRateLimitedModel(modelId?: string): boolean {
     if (!modelId) return true;
     const lower = modelId.toLowerCase();
+    if (lower.endsWith(':free')) return false;
     return (
-      lower.includes('groq') ||
+      lower.startsWith('groq/') ||
       lower.startsWith('openai/gpt-oss') ||
-      lower.startsWith('llama') ||
-      lower.includes('instant') ||
-      lower.includes('versatile') ||
-      lower.includes('compound')
+      (lower.startsWith('meta-llama/') && !lower.includes('muse')) ||
+      (lower.startsWith('llama-') && !lower.includes(':free'))
     );
   }
 
@@ -81,17 +80,18 @@ export class ContextManager {
    * promptTokens + max_tokens never exceeds the free tier 8000 TPM limit.
    */
   public static getSafeOutputTokens(modelId: string | undefined, promptTokens: number): number {
+    const isReasoning = /reason|r1|o1|o3|qwq|thought|kimi/i.test(modelId || '');
     if (!this.isGroqRateLimitedModel(modelId)) {
-      // High context models (xKiro, Pollinations, paid tiers)
-      return 4096;
+      // High context models (xKiro, Pollinations, OpenRouter, Abhibots)
+      return isReasoning ? 4096 : 2048;
     }
 
     // Strict Groq safety: 8000 TPM limit - 800 token safety margin = 7200 max requested
     const remainingForOutput = 7200 - promptTokens;
 
-    // Output must be at least 512, at most 2048, but strictly capped within budget
-    if (remainingForOutput <= 512) {
-      return 512;
+    // Output must be at least 1024 (so reasoning / code models don't exhaust limits), up to 2048
+    if (remainingForOutput <= 1024) {
+      return 1024;
     }
     return Math.min(2048, remainingForOutput);
   }

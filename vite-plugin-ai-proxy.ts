@@ -43,13 +43,13 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
     pollinationsApiKey: '',
     comfyUiEndpoint: 'http://127.0.0.1:8188',
     comfyUiApiKey: '',
-    experientialEndpoint: 'https://api.experientiallabs.com/v1',
+    experientialEndpoint: 'https://api.experientiallabs.ai/v1',
     experientialApiKey: '',
     unorouterEndpoint: 'https://api.unorouter.com/v1',
     unorouterApiKey: '',
-    abhibotsEndpoint: 'https://api.abhibots.com/v1',
+    abhibotsEndpoint: 'https://opus.abhibots.com/v1',
     abhibotsApiKey: '',
-    apmixEndpoint: 'https://api.apmix.net/v1',
+    apmixEndpoint: 'https://api.apmix.ai/v1',
     apmixApiKey: '',
     openrouterEndpoint: 'https://openrouter.ai/api/v1',
     openrouterApiKey: '',
@@ -202,16 +202,24 @@ function categorizeModel(id: string, name = ''): 'reasoning' | 'coding' | 'fast'
 function isNonChatModel(id: string, name = ''): boolean {
   const target = (id + ' ' + name).toLowerCase();
   return (
+    // Audio, speech, TTS
     target.includes('whisper') ||
     target.includes('audio') ||
     target.includes('tts') ||
     target.includes('voice') ||
     target.includes('speech') ||
+    target.includes('eleven') ||
+    target.includes('aura-') ||
+    // Embeddings, reranking, guards
     target.includes('embed') ||
     target.includes('embedding') ||
     target.includes('rerank') ||
     target.includes('guard') ||
     target.includes('moderation') ||
+    target.includes('prompt-guard') ||
+    // Terms-acceptance required models (e.g. CanopyLabs on Groq)
+    target.includes('canopylabs') ||
+    // Image generation & diffusion checkpoints
     target.includes('image-generation') ||
     target.includes('dall-e') ||
     target.includes('midjourney') ||
@@ -219,7 +227,24 @@ function isNonChatModel(id: string, name = ''): boolean {
     target.includes('sdxl') ||
     target.includes('stable-diffusion') ||
     target.includes('imagen') ||
-    target.includes('aihorde')
+    target.includes('aihorde') ||
+    target.includes('albedo') ||
+    target.includes('ampony') ||
+    target.includes('pony') ||
+    target.includes('reality') ||
+    target.includes('counterfeit') ||
+    target.includes('anything') ||
+    target.includes('diffusion') ||
+    target.includes('ckpt') ||
+    target.includes('lora') ||
+    target.includes('checkpoint') ||
+    target.includes('agnes-image') ||
+    // Video generation
+    target.includes('veo') ||
+    target.includes('sora') ||
+    // Broken / consent-locked models
+    target.includes('glm-4.5-flash:free') ||
+    target.includes('liquid/lfm-3-1.7b')
   );
 }
 
@@ -303,7 +328,7 @@ export function createAiProxyMiddleware(rootDir: string) {
       const unifiedModels: any[] = [];
       const seenIds = new Set<string>();
 
-      // Fetch models from all configured providers in parallel (4s timeout per provider)
+      // Fetch models from all configured providers in parallel (8s timeout per provider)
       await Promise.allSettled([
         // A. Groq Models (Fast conversational engines)
         (async () => {
@@ -311,7 +336,7 @@ export function createAiProxyMiddleware(rootDir: string) {
           try {
             const groqRes = await fetch(`${envConfig.groqEndpoint}/models`, {
               headers: { Authorization: `Bearer ${envConfig.groqApiKey}` },
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (groqRes.ok) {
               const data = await groqRes.json();
@@ -340,7 +365,25 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] Groq discovery failed:', err?.message || err);
+          }
+
+          // Verified resilient fallback for Groq chat models
+          if (unifiedModels.filter((m) => m.provider === 'groq').length === 0) {
+            const fallbackGroq = [
+              { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B High-Velocity', description: 'Flagship reasoning and synthesis model with sub-second response times', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'groq', isDefault: true },
+              { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B Fast Reasoning', description: 'Lightweight high-throughput reasoning engine', category: 'fast', contextLength: 131072, contextBadge: '131k context', provider: 'groq', isDefault: false },
+              { id: 'allam-2-7b', name: 'Allam 2 7B', description: 'Multilingual conversational intelligence and knowledge engine', category: 'general', contextLength: 131072, contextBadge: '131k context', provider: 'groq', isDefault: false },
+              { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B', description: 'Advanced conversational comprehension and coding', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'groq', isDefault: false },
+            ];
+            for (const fm of fallbackGroq) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
+          }
         })(),
 
         // B. xKiro Models (Free Tier Chat Models Only)
@@ -349,7 +392,7 @@ export function createAiProxyMiddleware(rootDir: string) {
           try {
             const xkiroRes = await fetch(`${envConfig.xkiroEndpoint}/models`, {
               headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (xkiroRes.ok) {
               const data = await xkiroRes.json();
@@ -380,7 +423,26 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] xKiro discovery failed:', err?.message || err);
+          }
+
+          // Verified resilient fallback for xKiro chat models
+          if (unifiedModels.filter((m) => m.provider === 'xkiro').length === 0) {
+            const fallbackXkiro = [
+              { id: 'mistralai/ministral-14b', name: 'Ministral 3 14B', description: 'High-speed edge-optimized reasoning and coding model', category: 'fast', contextLength: 256000, contextBadge: '256k context', provider: 'xkiro', isDefault: false },
+              { id: 'mistralai/mistral-large-2512', name: 'Mistral Large 2512', description: 'Advanced multilingual comprehension, mathematics, and systems programming', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'xkiro', isDefault: false },
+              { id: 'mistralai/codestral-2508', name: 'Codestral 2508', description: 'Specialized deep code generation, unit testing, and architectural refactoring', category: 'coding', contextLength: 256000, contextBadge: '256k context', provider: 'xkiro', isDefault: false },
+              { id: 'cohere/command-r-plus-08-2024', name: 'Command R+ 2024', description: 'High-precision research analysis, search synthesis, and citation grounding', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'xkiro', isDefault: false },
+              { id: 'sensenova/sensenova-6.8-flash-lite', name: 'SenseNova 6.8 Flash', description: 'High-context reasoning and structured data extraction', category: 'reasoning', contextLength: 262144, contextBadge: '262k context', provider: 'xkiro', isDefault: false },
+            ];
+            for (const fm of fallbackXkiro) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
+          }
         })(),
 
         // C. Pollinations Models (Free Text Models Only)
@@ -392,7 +454,7 @@ export function createAiProxyMiddleware(rootDir: string) {
             }
             const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/text/models`, {
               headers: polliHeaders,
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (polliRes.ok) {
               const data = await polliRes.json();
@@ -423,15 +485,17 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] Pollinations discovery failed:', err?.message || err);
+          }
 
-          // Verified fallback for Pollinations models if network timed out
+          // Verified resilient fallback for Pollinations models if network timed out
           if (unifiedModels.filter((m) => m.provider === 'pollinations').length === 0) {
             const fallbackPolli = [
               { id: 'openai/gpt-5.4-nano', name: 'GPT-5.4 Nano', description: 'Fast everyday conversational intelligence', category: 'fast', contextLength: 400000, contextBadge: '400k context', provider: 'pollinations', isDefault: false },
-              { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', description: 'Advanced general reasoning and coding', category: 'reasoning', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
-              { id: 'mistralai/mistral-small-3.2-24b', name: 'Mistral Small 24B', description: 'Lightweight instruction following and synthesis', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
-              { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', description: 'High context knowledge and instruction engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'openai/gpt-6.1-terra', name: 'GPT-6.1 Terra', description: 'Advanced general reasoning and coding', category: 'reasoning', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'minimax/minimax-m3.1-flash', name: 'MiniMax M3.1 Flash', description: 'Lightweight instruction following and synthesis', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'moonshotai/kimi-k3.1-pro', name: 'Kimi K3.1 Pro', description: 'High context knowledge and multi-step reasoning', category: 'reasoning', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
             ];
             for (const fm of fallbackPolli) {
               if (!seenIds.has(fm.id)) {
@@ -442,13 +506,13 @@ export function createAiProxyMiddleware(rootDir: string) {
           }
         })(),
 
-        // D. Experiential Labs (Free Chat Models; Exclude Decisions-only models)
+        // D. Experiential Labs (Free Chat Models; Exclude Decisions-only & Paid models)
         (async () => {
           if (!envConfig.experientialApiKey) return;
           try {
             const expRes = await fetch(`${envConfig.experientialEndpoint}/models`, {
               headers: { Authorization: `Bearer ${envConfig.experientialApiKey}` },
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (expRes.ok) {
               const data = await expRes.json();
@@ -459,10 +523,13 @@ export function createAiProxyMiddleware(rootDir: string) {
                 if (isNonChatModel(id, m.name || m.description)) continue;
                 // Exclude Decisions-only models
                 if (/decision|classifier|rule-engine|orchestrat/i.test(id) || /decision/i.test(m.type || '') || /decision/i.test(m.capabilities || '')) continue;
-                // Verify free pricing or account eligibility
-                const isFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free';
+                // Strictly exclude paid models requiring credits or purchase
+                const nanoPrice = m.pricing?.input_nano_usd_per_million_tokens;
+                if (nanoPrice && nanoPrice > 0) continue;
                 if (m.pricing && m.pricing.prompt && m.pricing.prompt !== '0' && m.pricing.prompt !== 0) continue;
-                if (isFree && !seenIds.has(id)) {
+                const isFree = m.is_free === true || m.free === true || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free';
+                if (!isFree) continue;
+                if (!seenIds.has(id)) {
                   seenIds.add(id);
                   const cleanName = cleanModelDisplayName(id, m.display_name || m.name);
                   const cat = categorizeModel(id, cleanName);
@@ -482,7 +549,9 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] Experiential Labs discovery failed:', err?.message || err);
+          }
         })(),
 
         // E. UnoRouter (Dynamic Free Models Discovery; Respect :free or zero pricing)
@@ -540,7 +609,7 @@ export function createAiProxyMiddleware(rootDir: string) {
             const fallbackUno = [
               { id: 'qwen2.5-vl-72b-instruct:free', name: 'Qwen 2.5 VL 72B Instruct', description: 'Multimodal vision and conversational reasoning engine', category: 'vision', contextLength: 32000, contextBadge: '32k context', provider: 'unorouter', isDefault: false },
               { id: 'codestral-latest:free', name: 'Codestral Latest', description: 'State-of-the-art coding and refactoring intelligence', category: 'coding', contextLength: 256000, contextBadge: '256k context', provider: 'unorouter', isDefault: false },
-              { id: 'glm-4.5-flash:free', name: 'GLM 4.5 Flash', description: 'Ultra-fast low-latency multi-turn dialogue model', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'unorouter', isDefault: false },
+              { id: 'allam-2-7b:free', name: 'Allam 2 7B', description: 'High-efficiency conversational reasoning engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'unorouter', isDefault: false },
             ];
             for (const fm of fallbackUno) {
               if (!seenIds.has(fm.id)) {
@@ -551,13 +620,13 @@ export function createAiProxyMiddleware(rootDir: string) {
           }
         })(),
 
-        // F. Opus Proxy / Abhibots (Free Tier Quota Verification; Exclude Paid Image Models)
+        // F. Opus Proxy / Abhibots (Free Tier: Claude Models & abhibots-model; Exclude 403 GPT models)
         (async () => {
           if (!envConfig.abhibotsApiKey) return;
           try {
             const abhiRes = await fetch(`${envConfig.abhibotsEndpoint}/models`, {
               headers: { Authorization: `Bearer ${envConfig.abhibotsApiKey}` },
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (abhiRes.ok) {
               const data = await abhiRes.json();
@@ -565,8 +634,10 @@ export function createAiProxyMiddleware(rootDir: string) {
               for (const m of list) {
                 const id = m.id || m.name;
                 if (!id) continue;
+                // Abhibots free plan strictly allows Claude models and abhibots-model; gpt- models fail with 403
+                if (!id.startsWith('claude-') && id !== 'abhibots-model') continue;
                 if (isNonChatModel(id, m.name || m.description)) continue;
-                const isFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free';
+                const isFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free' || id.startsWith('claude-') || id === 'abhibots-model';
                 if (m.pricing && m.pricing.prompt && m.pricing.prompt !== '0' && m.pricing.prompt !== 0) continue;
                 if (isFree && !seenIds.has(id)) {
                   seenIds.add(id);
@@ -588,7 +659,26 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] Abhibots discovery failed:', err?.message || err);
+          }
+
+          // Verified resilient fallback for Abhibots free Claude models
+          if (unifiedModels.filter((m) => m.provider === 'abhibots').length === 0) {
+            const fallbackAbhi = [
+              { id: 'claude-fable-5-1', name: 'Claude Fable 5.1', description: 'High-intelligence reasoning and narrative synthesis engine', category: 'reasoning', contextLength: 200000, contextBadge: '200k context', provider: 'abhibots', isDefault: false },
+              { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', description: 'Flagship deep reasoning and comprehensive problem solver', category: 'reasoning', contextLength: 200000, contextBadge: '200k context', provider: 'abhibots', isDefault: false },
+              { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', description: 'Balanced high-velocity intelligence for analysis and creation', category: 'general', contextLength: 200000, contextBadge: '200k context', provider: 'abhibots', isDefault: false },
+              { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', description: 'Ultra-fast lightweight conversational assistant', category: 'fast', contextLength: 200000, contextBadge: '200k context', provider: 'abhibots', isDefault: false },
+              { id: 'abhibots-model', name: 'Abhibots Core', description: 'Versatile low-latency assistant engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'abhibots', isDefault: false },
+            ];
+            for (const fm of fallbackAbhi) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
+          }
         })(),
 
         // G. APmix (Verified Zero-Cost Models Only)
@@ -597,7 +687,7 @@ export function createAiProxyMiddleware(rootDir: string) {
           try {
             const apmixRes = await fetch(`${envConfig.apmixEndpoint}/models`, {
               headers: { Authorization: `Bearer ${envConfig.apmixApiKey}` },
-              signal: AbortSignal.timeout(4000),
+              signal: AbortSignal.timeout(8000),
             });
             if (apmixRes.ok) {
               const data = await apmixRes.json();
@@ -628,7 +718,9 @@ export function createAiProxyMiddleware(rootDir: string) {
                 }
               }
             }
-          } catch {}
+          } catch (err: any) {
+            console.warn('[AI Proxy] APmix discovery failed:', err?.message || err);
+          }
         })(),
 
         // H. OpenRouter (Only Genuinely Free Models e.g. :free or 0 prompt/completion pricing)
@@ -689,9 +781,9 @@ export function createAiProxyMiddleware(rootDir: string) {
           // Verified resilient fallback for OpenRouter models
           if (unifiedModels.filter((m) => m.provider === 'openrouter').length === 0) {
             const fallbackOr = [
-              { id: 'inclusionai/ling-3.2-flash:free', name: 'Ling 3.2 Flash', description: 'Massive 1M-context hybrid reasoning model', category: 'reasoning', contextLength: 1048576, contextBadge: '1M context', provider: 'openrouter', isDefault: false },
               { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ERNIE 5.5 Flash Preview', description: 'Advanced conversational synthesis and knowledge engine', category: 'general', contextLength: 1024000, contextBadge: '1M context', provider: 'openrouter', isDefault: false },
-              { id: 'liquid/lfm-3-1.7b:free', name: 'LFM3 1.7B', description: 'Ultra-lightweight edge-optimized reasoning model', category: 'fast', contextLength: 262144, contextBadge: '262k context', provider: 'openrouter', isDefault: false },
+              { id: 'recursive/flint-v1.0:free', name: 'Flint V1.0', description: 'Recursive reasoning and conversational synthesis model', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
+              { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'Nemotron 3.5 Super VL', description: 'High-speed multimodal vision and chat model', category: 'vision', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
             ];
             for (const fm of fallbackOr) {
               if (!seenIds.has(fm.id)) {
@@ -933,7 +1025,7 @@ export function createAiProxyMiddleware(rootDir: string) {
                 promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
               }
             }
-            const safeMax = Math.max(512, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
+            const safeMax = Math.max(1024, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
             body.max_tokens = safeMax;
             break;
         }
@@ -942,10 +1034,17 @@ export function createAiProxyMiddleware(rootDir: string) {
         const upstreamBody = { ...body };
         delete upstreamBody.provider;
 
+        // Ensure sufficient token budget for reasoning and multi-step models (e.g. Kimi, DeepSeek, R1, QwQ)
+        const isReasoning = /reason|r1|o1|o3|qwq|thought|kimi/i.test(modelId);
+        if (isReasoning && (!upstreamBody.max_tokens || upstreamBody.max_tokens < 1536)) {
+          upstreamBody.max_tokens = 1536;
+        }
+
         const upstreamRes = await fetch(targetEndpoint, {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
+          signal: AbortSignal.timeout(30000),
         });
 
         // Gracefully support 429 rate limit backoff by forwarding Retry-After

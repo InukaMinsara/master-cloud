@@ -268,7 +268,7 @@ class UnifiedModelEngine {
           model: options.model,
           provider: targetProvider,
           messages: compressedMessages,
-          max_tokens: Math.min(1024, retrySafeMaxTokens),
+          max_tokens: Math.max(1024, retrySafeMaxTokens),
           stream: true,
         }),
       });
