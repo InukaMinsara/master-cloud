@@ -63,8 +63,8 @@ export function SubtitleStudioModal() {
       const rawSentences = res.text
         .replace(/([.?!])\s+/g, '$1|')
         .split('|')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
 
       const totalDuration = duration > 0 ? duration : 60;
       const step = totalDuration / (rawSentences.length || 1);
@@ -74,7 +74,7 @@ export function SubtitleStudioModal() {
         id: trackId,
         label: `Whisper AI Subtitles (${rawSentences.length} lines)`,
         language: 'en',
-        cues: rawSentences.map((text, idx) => ({
+        cues: rawSentences.map((text: string, idx: number) => ({
           id: `cue_${trackId}_${idx}`,
           start: idx * step,
           end: Math.min((idx + 1) * step, totalDuration),

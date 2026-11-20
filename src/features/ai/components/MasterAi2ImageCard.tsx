@@ -80,9 +80,9 @@ export function MasterAi2ImageCard({
           </div>
           <div>
             <div className="text-sm font-bold text-white flex items-center gap-2">
-              <span>Generating Image...</span>
+              <span>Synthesizing Visual Art...</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300">
-                Pollinations AI
+                SenseNova U1.5 Lite
               </span>
             </div>
             <p className="text-xs text-zinc-400 line-clamp-1 italic mt-0.5">
@@ -189,8 +189,8 @@ export function MasterAi2ImageCard({
             <Sparkles className="w-3.5 h-3.5 text-orange-400" />
             {details.isEdited ? 'Edited Image' : 'Generated Image'}
           </span>
-          <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[140px]">
-            · {details.modelTitle || details.modelId}
+          <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[160px]">
+            · SenseNova U1.5 Lite
           </span>
         </div>
 
@@ -251,8 +251,8 @@ export function MasterAi2ImageCard({
           <div><span className="text-zinc-500">Dimensions:</span> {details.width} × {details.height}</div>
           <div><span className="text-zinc-500">Seed:</span> {details.seed}</div>
           <div><span className="text-zinc-500">Aspect Ratio:</span> {details.aspectRatio || '1:1'}</div>
-          <div><span className="text-zinc-500">Provider:</span> {details.provider}</div>
-          <div className="col-span-2 truncate"><span className="text-zinc-500">Model ID:</span> {details.modelId}</div>
+          <div><span className="text-zinc-500">Engine:</span> SenseNova Neural Canvas</div>
+          <div className="col-span-2 truncate"><span className="text-zinc-500">Model:</span> SenseNova U1.5 Lite</div>
         </div>
       )}
 

@@ -1,10 +1,15 @@
 /**
  * src/features/ai/components/MasterAi2Shell.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — TOP-LEVEL MULTI-PROVIDER APPLICATION SHELL
- * Seamlessly routes between Groq conversational LPU streaming, Pollinations AI
- * image generation, editing, variations, upscaling, background removal,
- * batch generation (1-4x), and conversation branching.
+ * MASTER AI INFINITY — UNIFIED APPLICATION SHELL
+ * Direct, single-pane AI assistant uniting Groq, xKiro, and Pollinations free chat models
+ * with official SenseNova U1.5 Lite image synthesis and live web intelligence.
+ *
+ * Strict Compliance:
+ * - One unified chat interface (no separate tabs, no separate apps)
+ * - Zero third-party provider branding in UI
+ * - Instant semantic chat naming on turn 1
+ * - Exclusively SenseNova U1.5 Lite for visual asset generation
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -15,12 +20,10 @@ import { MasterAi2ChatArea } from './MasterAi2ChatArea';
 import { MasterAi2Composer } from './MasterAi2Composer';
 import { MasterAi2ImageLightbox } from './MasterAi2ImageLightbox';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { aiVaultService } from '../services/aiVaultService';
-import { groqService } from '../services/groqService';
-import { pollinationsService } from '../services/pollinationsService';
-import { AiProviderRouter } from '../services/aiProviderRouter';
+import { unifiedModelEngine } from '../services/unifiedModelEngine';
+import { senseNovaImageService, SENSENOVA_MODEL_ID, SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
 import { ContextManager } from '../services/contextManager';
-import { AiAttachment, AiImageDetails } from '../types/aiTypes';
+import { AiAttachment, AiImageDetails, WebSearchResult } from '../types/aiTypes';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -29,14 +32,10 @@ export function MasterAi2Shell() {
 
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
-  const setSelectedModelId = useAiChatStore((s) => s.setSelectedModelId);
-  const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
   const chatMode = useAiChatStore((s) => s.chatMode);
   const setChatMode = useAiChatStore((s) => s.setChatMode);
+  const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
   const aspectRatio = useAiChatStore((s) => s.aspectRatio);
-  const batchCount = useAiChatStore((s) => s.batchCount);
-  const imageSeed = useAiChatStore((s) => s.imageSeed);
-  const imageResolution = useAiChatStore((s) => s.imageResolution);
   const addUserMessage = useAiChatStore((s) => s.addUserMessage);
   const createAssistantPlaceholder = useAiChatStore((s) => s.createAssistantPlaceholder);
   const updateAssistantContent = useAiChatStore((s) => s.updateAssistantContent);
@@ -46,33 +45,16 @@ export function MasterAi2Shell() {
   const finalizeImageMessage = useAiChatStore((s) => s.finalizeImageMessage);
   const setImageError = useAiChatStore((s) => s.setImageError);
   const setStreaming = useAiChatStore((s) => s.setStreaming);
-  const renameConversation = useAiChatStore((s) => s.renameConversation);
   const newConversation = useAiChatStore((s) => s.newConversation);
   const refreshProviderStatus = useAiChatStore((s) => s.refreshProviderStatus);
+  const fetchUnifiedModels = useAiChatStore((s) => s.fetchUnifiedModels);
   const branchConversation = useAiChatStore((s) => s.branchConversation);
 
-  // Automatic Provider Initialization on mount
+  // Initialize service status and discover free models on mount
   useEffect(() => {
-    aiVaultService.init().then(() => {
-      refreshProviderStatus();
-      pollinationsService.fetchModels().catch(() => {});
-      groqService
-        .discoverActiveModels()
-        .then((models) => {
-          const chatModels = models.filter(
-            (m) => !m.id.includes('whisper') && !m.id.includes('guard') && m.isActive
-          );
-          if (chatModels.length > 0) {
-            const isCurrentValid = chatModels.some((m) => m.id === selectedModelId);
-            if (!isCurrentValid) {
-              const defaultModel = chatModels.find((m) => m.isDefault) || chatModels[0];
-              setSelectedModelId(defaultModel.id);
-            }
-          }
-        })
-        .catch(() => {});
-    });
-  }, [refreshProviderStatus, selectedModelId, setSelectedModelId]);
+    refreshProviderStatus();
+    fetchUnifiedModels(false);
+  }, [refreshProviderStatus, fetchUnifiedModels]);
 
   // Global Keyboard Shortcuts (Ctrl+N for new chat)
   useEffect(() => {
@@ -116,109 +98,44 @@ export function MasterAi2Shell() {
       const activeConv = getActiveConversation();
       if (!activeConv || !text.trim()) return;
 
-      // 1. Resolve Provider Route (Groq Text vs Pollinations Gen vs Pollinations Edit)
-      const route = AiProviderRouter.resolveRoute(text, chatMode, attachments);
-
-      // 2. Add user message
+      // 1. Add user message (triggers automatic smart naming on turn 1)
       addUserMessage(text, attachments);
 
-      // 3. Create AbortController
+      // 2. Create AbortController
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
 
-      // ── ROUTE A: IMAGE GENERATION (Pollinations) ──
-      if (route.intent === 'image_generation') {
-        const count = Math.max(1, Math.min(4, batchCount));
+      // 3. Resolve Intent: Image generation vs Conversational Chat
+      const imageIntent = unifiedModelEngine.detectImageIntent(text);
+      const isImageRequest = chatMode === 'image' || imageIntent.isImage;
 
-        if (count > 1) {
-          // Batch Generation (2x or 4x)
-          const msgIds: string[] = [];
-          for (let i = 0; i < count; i++) {
-            msgIds.push(
-              createImagePlaceholder(
-                `${route.cleanedPrompt} (${i + 1}/${count})`,
-                activeImageModelId,
-                'pollinations'
-              )
-            );
-          }
+      // ── ROUTE A: SENSENOVA U1.5 LITE IMAGE SYNTHESIS ──
+      if (isImageRequest) {
+        const prompt = chatMode === 'image' ? text.trim() : imageIntent.prompt;
+        const msgId = createImagePlaceholder(prompt, SENSENOVA_MODEL_ID, 'xkiro');
 
-          try {
-            const results = await pollinationsService.generateBatchImages(
-              {
-                prompt: route.cleanedPrompt,
-                modelId: activeImageModelId,
-                aspectRatio,
-                seed: imageSeed ?? undefined,
-                baseResolution: imageResolution,
-                signal: abortCtrl.signal,
-              },
-              count
-            );
-
-            results.forEach((res, idx) => {
-              finalizeImageMessage(msgIds[idx], {
-                url: res.imageUrl,
-                prompt: route.cleanedPrompt,
-                provider: 'pollinations',
-                modelId: res.modelUsed,
-                modelTitle: res.modelTitle,
-                width: res.width,
-                height: res.height,
-                seed: res.seed,
-                aspectRatio,
-                generationTimeMs: res.generationTimeMs,
-              });
-            });
-
-            if (activeConv.messages.length <= 1) {
-              renameConversation(activeConv.id, `Art: ${route.cleanedPrompt.slice(0, 24)}`);
-            }
-          } catch (err: any) {
-            if (!abortCtrl.signal.aborted) {
-              msgIds.forEach((id) =>
-                setImageError(id, err?.message || 'Batch generation error')
-              );
-            }
-          } finally {
-            setStreaming(false);
-            abortControllerRef.current = null;
-          }
-          return;
-        }
-
-        // Single Image Generation
-        const msgId = createImagePlaceholder(route.cleanedPrompt, activeImageModelId, 'pollinations');
         try {
-          const result = await pollinationsService.generateImage({
-            prompt: route.cleanedPrompt,
-            modelId: activeImageModelId,
+          const result = await senseNovaImageService.generateImage({
+            prompt,
             aspectRatio,
-            seed: imageSeed ?? undefined,
-            baseResolution: imageResolution,
             signal: abortCtrl.signal,
           });
 
           finalizeImageMessage(msgId, {
             url: result.imageUrl,
-            prompt: route.cleanedPrompt,
-            provider: 'pollinations',
+            prompt,
+            provider: 'xkiro',
             modelId: result.modelUsed,
-            modelTitle: result.modelTitle,
+            modelTitle: SENSENOVA_MODEL_TITLE,
             width: result.width,
             height: result.height,
             seed: result.seed,
             aspectRatio,
             generationTimeMs: result.generationTimeMs,
           });
-
-          // Auto-title conversation from prompt if first turn
-          if (activeConv.messages.length <= 1) {
-            renameConversation(activeConv.id, `Art: ${route.cleanedPrompt.slice(0, 24)}`);
-          }
         } catch (err: any) {
           if (!abortCtrl.signal.aborted) {
-            setImageError(msgId, err?.message || 'Image generation error');
+            setImageError(msgId, err?.message || 'SenseNova image synthesis error');
           }
         } finally {
           setStreaming(false);
@@ -227,42 +144,7 @@ export function MasterAi2Shell() {
         return;
       }
 
-      // ── ROUTE B: IMAGE EDITING (Pollinations) ──
-      if (route.intent === 'image_edit' && route.referenceImageAttachment?.url) {
-        const msgId = createImagePlaceholder(route.cleanedPrompt, activeImageModelId, 'pollinations');
-        try {
-          const result = await pollinationsService.editImage({
-            prompt: route.cleanedPrompt,
-            imageBlobOrUrl: route.referenceImageAttachment.url,
-            modelId: activeImageModelId,
-            signal: abortCtrl.signal,
-          });
-
-          finalizeImageMessage(msgId, {
-            url: result.imageUrl,
-            prompt: route.cleanedPrompt,
-            provider: 'pollinations',
-            modelId: result.modelUsed,
-            modelTitle: result.modelTitle,
-            width: result.width,
-            height: result.height,
-            seed: result.seed,
-            isEdited: true,
-            referenceImageId: route.referenceImageAttachment.id,
-            generationTimeMs: result.generationTimeMs,
-          });
-        } catch (err: any) {
-          if (!abortCtrl.signal.aborted) {
-            setImageError(msgId, err?.message || 'Image editing error');
-          }
-        } finally {
-          setStreaming(false);
-          abortControllerRef.current = null;
-        }
-        return;
-      }
-
-      // ── ROUTE C: CONVERSATIONAL GROQ LPU TEXT / REASONING ──
+      // ── ROUTE B: CONVERSATIONAL STREAMING CHAT (Groq / xKiro / Pollinations) ──
       const history = activeConv.messages;
       const inferenceMessages = ContextManager.buildMessagesForInference(
         history,
@@ -272,18 +154,23 @@ export function MasterAi2Shell() {
       );
 
       const assistantMsgId = createAssistantPlaceholder();
+      let webSourcesReported: WebSearchResult[] = [];
 
       try {
         let accumulatedText = '';
-        const result = await groqService.streamChat({
+        const result = await unifiedModelEngine.streamChat({
           model: selectedModelId,
           messages: inferenceMessages,
           signal: abortCtrl.signal,
+          webSearch: isWebSearchEnabled,
           onChunk: (_chunk, fullText) => {
             accumulatedText = fullText;
           },
           onMetrics: (metrics) => {
             updateAssistantContent(assistantMsgId, accumulatedText, metrics);
+          },
+          onWebSources: (sources) => {
+            webSourcesReported = sources;
           },
         });
 
@@ -291,19 +178,9 @@ export function MasterAi2Shell() {
           assistantMsgId,
           result.text || accumulatedText,
           result.modelUsed,
-          result.metrics
+          result.metrics,
+          result.webSearchResults || (webSourcesReported.length > 0 ? webSourcesReported : undefined)
         );
-
-        // Generate smart title if this is the first turn
-        if (activeConv.messages.length <= 1) {
-          ContextManager.generateTitle(text)
-            .then((smartTitle) => {
-              if (smartTitle) {
-                renameConversation(activeConv.id, smartTitle);
-              }
-            })
-            .catch(() => {});
-        }
       } catch (err: any) {
         if (!abortCtrl.signal.aborted) {
           setAssistantError(assistantMsgId, err?.message || 'Inference error');
@@ -317,11 +194,8 @@ export function MasterAi2Shell() {
       getActiveConversation,
       chatMode,
       selectedModelId,
-      activeImageModelId,
       aspectRatio,
-      batchCount,
-      imageSeed,
-      imageResolution,
+      isWebSearchEnabled,
       addUserMessage,
       createAssistantPlaceholder,
       updateAssistantContent,
@@ -331,7 +205,6 @@ export function MasterAi2Shell() {
       finalizeImageMessage,
       setImageError,
       setStreaming,
-      renameConversation,
     ]
   );
 
@@ -377,32 +250,32 @@ export function MasterAi2Shell() {
         sizeBytes: 1024,
         url: imageUrl,
       };
-      toast.info('Loaded reference image for editing in chat.');
-      handleSendMessage(`Edit this image: ${prompt}`, [referenceAtt]);
+      toast.info('Loaded reference image for creative synthesis.');
+      handleSendMessage(prompt, [referenceAtt]);
     },
     [setChatMode, handleSendMessage]
   );
 
   const handleVariation = useCallback(
     async (details: AiImageDetails) => {
-      toast.info('Generating creative variation...');
+      toast.info('Synthesizing creative variation with SenseNova...');
       const msgId = createImagePlaceholder(
         `${details.prompt} (Variation)`,
-        activeImageModelId,
-        'pollinations'
+        SENSENOVA_MODEL_ID,
+        'xkiro'
       );
       try {
-        const result = await pollinationsService.generateVariation(
-          details.prompt,
-          details.seed,
-          details.modelId
-        );
+        const result = await senseNovaImageService.generateImage({
+          prompt: details.prompt,
+          aspectRatio: details.aspectRatio,
+        });
+
         finalizeImageMessage(msgId, {
           url: result.imageUrl,
           prompt: `${details.prompt} (Variation)`,
-          provider: 'pollinations',
+          provider: 'xkiro',
           modelId: result.modelUsed,
-          modelTitle: result.modelTitle,
+          modelTitle: SENSENOVA_MODEL_TITLE,
           width: result.width,
           height: result.height,
           seed: result.seed,
@@ -414,59 +287,7 @@ export function MasterAi2Shell() {
         setImageError(msgId, err?.message || 'Variation failed');
       }
     },
-    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
-  );
-
-  const handleRemoveBackground = useCallback(
-    async (imageUrl: string) => {
-      toast.info('Extracting subject and removing background...');
-      const msgId = createImagePlaceholder('Cutout: Isolated Subject', activeImageModelId, 'pollinations');
-      try {
-        const result = await pollinationsService.removeBackground(imageUrl);
-        finalizeImageMessage(msgId, {
-          url: result.imageUrl,
-          prompt: 'Cutout: Isolated Subject',
-          provider: 'pollinations',
-          modelId: result.modelUsed,
-          modelTitle: result.modelTitle,
-          width: result.width,
-          height: result.height,
-          seed: result.seed,
-          isEdited: true,
-          generationTimeMs: result.generationTimeMs,
-        });
-        toast.success('Background removed successfully!');
-      } catch (err: any) {
-        setImageError(msgId, err?.message || 'Background removal failed');
-      }
-    },
-    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
-  );
-
-  const handleUpscale = useCallback(
-    async (imageUrl: string) => {
-      toast.info('Enhancing and upscaling to 2x resolution...');
-      const msgId = createImagePlaceholder('Upscaled 2x Image', activeImageModelId, 'pollinations');
-      try {
-        const result = await pollinationsService.upscaleImage(imageUrl, 2);
-        finalizeImageMessage(msgId, {
-          url: result.imageUrl,
-          prompt: 'Upscaled 2x Ultra-High Fidelity',
-          provider: 'pollinations',
-          modelId: result.modelUsed,
-          modelTitle: result.modelTitle,
-          width: result.width,
-          height: result.height,
-          seed: result.seed,
-          isEdited: true,
-          generationTimeMs: result.generationTimeMs,
-        });
-        toast.success('Image upscaled to 2x resolution!');
-      } catch (err: any) {
-        setImageError(msgId, err?.message || 'Upscaling failed');
-      }
-    },
-    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
+    [createImagePlaceholder, finalizeImageMessage, setImageError]
   );
 
   return (
@@ -486,8 +307,6 @@ export function MasterAi2Shell() {
           onEditMessage={handleEditMessage}
           onEditImage={handleEditImageInChat}
           onVariation={handleVariation}
-          onRemoveBackground={handleRemoveBackground}
-          onUpscale={handleUpscale}
         />
 
         {/* Unified Multimodal Composer */}

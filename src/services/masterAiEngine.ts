@@ -305,7 +305,7 @@ export class MasterAiEngine {
             { role: 'user', content: prompt },
           ],
           signal: options.signal,
-          onChunk: (_chunk, acc) => {
+          onChunk: (_chunk: string, acc: string) => {
             replyText = acc;
             options.onProgress?.(acc);
           },

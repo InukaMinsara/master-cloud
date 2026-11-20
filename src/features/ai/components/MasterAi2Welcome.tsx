@@ -52,34 +52,28 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
       <div className="space-y-4 mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300 shadow-inner">
           <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-          <span>GROQ LPU & POLLINATIONS MULTIMODAL PLATFORM</span>
+          <span>HIGH-VELOCITY CONVERSATIONAL INTELLIGENCE & VISUAL STUDIO</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white flex items-center justify-center gap-3">
           <span>MASTER AI</span>
           <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent">
-            2.0
+            INFINITY
           </span>
         </h1>
 
         <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto leading-relaxed">
-          Ultra-low latency conversational intelligence powered by Groq LPUs, paired with in-chat image synthesis & editing via Pollinations AI.
+          Ultra-low latency conversational intelligence, coding, deep reasoning, and live web search, paired with native in-chat SenseNova image synthesis.
         </p>
 
         <div className="pt-2 flex items-center justify-center gap-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>Pollinations: Free Ready</span>
+            <span>Master AI Engine · Online</span>
           </div>
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono ${
-              hasKey
-                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
-                : 'bg-zinc-800/60 border border-zinc-700/40 text-zinc-400'
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${hasKey ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
-            <span>Groq: {hasKey ? 'Connected' : 'Offline (.env.local)'}</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-mono text-orange-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+            <span>SenseNova Visual Studio · Ready</span>
           </div>
         </div>
       </div>

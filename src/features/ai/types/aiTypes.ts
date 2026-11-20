@@ -1,18 +1,32 @@
 /**
  * src/features/ai/types/aiTypes.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — CORE TYPE DEFINITIONS
- * Modern, clean, decoupled interfaces for the Groq-powered AI engine.
+ * MASTER AI INFINITY — CORE UNIFIED TYPE DEFINITIONS
+ * Unified multi-provider chat models, SenseNova image details,
+ * token telemetry, and web intelligence types.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 export type AiRole = 'user' | 'assistant' | 'system';
 
-export type AiProviderId = 'groq' | 'pollinations' | 'comfyui';
+export type AiProviderId = 'groq' | 'xkiro' | 'pollinations' | 'comfyui';
 
 export type ChatMode = 'auto' | 'chat' | 'image';
 
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3' | '21:9';
+
+export type ModelCategory = 'all' | 'reasoning' | 'coding' | 'fast' | 'general' | 'vision';
+
+export interface UnifiedChatModel {
+  id: string;
+  name: string; // Clean display name with ZERO provider branding
+  description: string;
+  category: ModelCategory;
+  contextLength?: number;
+  contextBadge?: string;
+  isDefault?: boolean;
+  provider: 'groq' | 'xkiro' | 'pollinations'; // Internal routing only
+}
 
 export interface AiAttachment {
   id: string;
@@ -35,11 +49,17 @@ export interface AiTokenMetrics {
   firstTokenMs?: number;
 }
 
+export interface WebSearchResult {
+  title: string;
+  snippet: string;
+  url?: string;
+}
+
 export interface AiImageDetails {
   url: string;
   prompt: string;
   revisedPrompt?: string;
-  provider: 'pollinations' | 'comfyui';
+  provider: 'xkiro' | 'pollinations' | 'comfyui';
   modelId: string;
   modelTitle?: string;
   width: number;
@@ -62,6 +82,7 @@ export interface AiMessage {
   metrics?: AiTokenMetrics;
   attachments?: AiAttachment[];
   imageDetails?: AiImageDetails;
+  webSearchResults?: WebSearchResult[];
   isGeneratingImage?: boolean;
   isError?: boolean;
 }
@@ -72,100 +93,22 @@ export interface AiConversation {
   createdAt: number;
   updatedAt: number;
   isPinned?: boolean;
+  isArchived?: boolean;
   messages: AiMessage[];
   systemPrompt?: string;
+  modelUsed?: string;
 }
 
-// ── Groq Models & Capabilities ──────────────────────────────────────────────
-export type GroqCategory =
-  | 'all_free'
-  | 'general_chat'
-  | 'reasoning'
-  | 'coding'
-  | 'multimodal'
-  | 'audio'
-  | 'moderation'
-  | 'other';
-
-export interface GroqModelInfo {
-  id: string;
-  name: string;
-  tag: string;
-  description: string;
-  contextWindow: number;
-  maxOutputTokens: number;
-  category: 'production' | 'fast' | 'reasoning' | 'audio' | 'moderation' | 'other';
-  groqCategory: GroqCategory;
-  isDefault?: boolean;
-  isFreeTier: boolean;
-  isActive: boolean;
-  rateLimits?: string;
-}
-
-// ── Pollinations Models & Capabilities ──────────────────────────────────────
-export type PollinationsCategory =
-  | 'primary_gen'
-  | 'primary_edit'
-  | 'free_gen'
-  | 'fast_gen'
-  | 'experimental'
-  | 'all';
-
-export interface PollinationsModelInfo {
-  id: string;                    // Canonical identifier (e.g. black-forest-labs/flux.1-schnell)
-  name: string;                  // Short display name
-  title: string;
-  aliases: string[];
-  publisher?: string;
-  category: PollinationsCategory;
-  paidOnly: boolean;
-  freeStatus: 'free' | 'paid' | 'unverified';
-  supportsGeneration: boolean;
-  supportsEditing: boolean;
-  maxReferenceImages?: number;
-  pricing?: any;
-  healthStatus?: string;
-  isAvailable: boolean;
-  estimatedSpeed?: 'fast' | 'medium' | 'slow';
-  lastRefreshedAt?: number;
-}
-
-// ── Unified Provider Vault Configuration ────────────────────────────────────
-export interface ProviderVaultConfig {
-  // Groq
-  groqEndpoint: string;
-  groqApiKey: string;
-  groqEnabled: boolean;
-  groqLastConnected?: number;
-  groqLastError?: string;
-
-  // Pollinations
-  pollinationsEndpoint: string;
-  pollinationsApiKey: string;
-  pollinationsEnabled: boolean;
-  pollinationsLastConnected?: number;
-  pollinationsLastError?: string;
-
-  // ComfyUI Local
-  comfyUiEndpoint: string;
-  comfyUiApiKey: string;
-  comfyUiEnabled: boolean;
-  comfyUiLastConnected?: number;
-  comfyUiLastError?: string;
-
-  // Global Policies
-  freeOnly: boolean;
-  blockPaid: boolean;
-  autoPaidFallback: boolean;
-}
+export type GroqCategory = string;
+export type PollinationsCategory = string;
 
 export interface GroqChatOptions {
-  model?: string;
-  messages: Array<{ role: AiRole; content: string }>;
+  model: string;
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  signal?: AbortSignal;
   temperature?: number;
   maxTokens?: number;
-  signal?: AbortSignal;
-  onChunk?: (chunk: string, fullText: string) => void;
+  onChunk?: (chunk: string, accumulated: string) => void;
   onMetrics?: (metrics: AiTokenMetrics) => void;
 }
 
@@ -177,6 +120,43 @@ export interface GroqChatResult {
 
 export interface GroqTranscriptionResult {
   text: string;
-  language?: string;
   duration?: number;
+  language?: string;
+}
+
+// Backward-compatible Groq & Pollinations Model interfaces for legacy tests
+export interface GroqModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tag: string;
+  maxTokens?: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  groqCategory?: any;
+  isFreeTier?: boolean;
+  isActive?: boolean;
+  rateLimits?: string;
+  isFreeEligible?: boolean;
+  isDefault?: boolean;
+}
+
+export interface PollinationsModelInfo {
+  id: string;
+  name: string;
+  title: string;
+  description?: string;
+  aliases: string[];
+  paidOnly: boolean;
+  supportsEditing: boolean;
+  category: string;
+  publisher?: string;
+  freeStatus?: string;
+  supportsGeneration?: boolean;
+  maxReferenceImages?: number;
+  lastRefreshedAt?: number;
+  isPreferred?: boolean;
+  isAvailable?: boolean;
+  estimatedSpeed?: string;
 }

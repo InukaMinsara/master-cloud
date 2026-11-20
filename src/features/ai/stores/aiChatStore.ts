@@ -18,9 +18,13 @@ import {
   AiTokenMetrics,
   ChatMode,
   ImageAspectRatio,
+  UnifiedChatModel,
+  WebSearchResult,
 } from '../types/aiTypes';
 import { DEFAULT_GROQ_MODEL } from '../services/groqModels';
-import { DEFAULT_IMAGE_MODEL } from '../services/pollinationsModels';
+import { SENSENOVA_MODEL_ID } from '../services/senseNovaImageService';
+import { unifiedModelEngine } from '../services/unifiedModelEngine';
+import { ChatNamingService } from '../services/chatNamingService';
 
 const STORAGE_KEY = 'master_ai_conversations_v2';
 const ACTIVE_CONV_KEY = 'master_ai_active_conv_id';
@@ -90,6 +94,9 @@ interface AiChatState {
   activeConversationId: string;
   selectedModelId: string;
   activeImageModelId: string;
+  unifiedModels: UnifiedChatModel[];
+  isModelsLoading: boolean;
+  isWebSearchEnabled: boolean;
   chatMode: ChatMode;
   aspectRatio: ImageAspectRatio;
   isStreaming: boolean;
@@ -97,6 +104,7 @@ interface AiChatState {
   activeMetrics: AiTokenMetrics | null;
   providerStatus: {
     groq: boolean;
+    xkiro: boolean;
     pollinations: boolean;
     comfyui: boolean;
   };
@@ -111,6 +119,9 @@ interface AiChatState {
 
   // Actions
   refreshProviderStatus: () => Promise<void>;
+  fetchUnifiedModels: (force?: boolean) => Promise<void>;
+  toggleWebSearch: () => void;
+  setWebSearchEnabled: (enabled: boolean) => void;
   newConversation: () => void;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
@@ -132,9 +143,15 @@ interface AiChatState {
   addUserMessage: (content: string, attachments?: AiAttachment[]) => string;
   createAssistantPlaceholder: () => string;
   updateAssistantContent: (msgId: string, chunk: string, metrics?: AiTokenMetrics) => void;
-  finalizeAssistantMessage: (msgId: string, fullText: string, modelUsed: string, metrics?: AiTokenMetrics) => void;
+  finalizeAssistantMessage: (
+    msgId: string,
+    fullText: string,
+    modelUsed: string,
+    metrics?: AiTokenMetrics,
+    webSearchResults?: WebSearchResult[]
+  ) => void;
   setAssistantError: (msgId: string, errorText: string) => void;
-  createImagePlaceholder: (prompt: string, modelId: string, provider: 'pollinations' | 'comfyui') => string;
+  createImagePlaceholder: (prompt: string, modelId?: string, provider?: 'xkiro' | 'pollinations' | 'comfyui') => string;
   finalizeImageMessage: (msgId: string, details: AiImageDetails) => void;
   setImageError: (msgId: string, errorText: string) => void;
   setStreaming: (isStreaming: boolean, msgId?: string | null) => void;
@@ -160,7 +177,10 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     conversations: initialConvs,
     activeConversationId: initialActiveId,
     selectedModelId: DEFAULT_GROQ_MODEL,
-    activeImageModelId: DEFAULT_IMAGE_MODEL,
+    activeImageModelId: SENSENOVA_MODEL_ID,
+    unifiedModels: [],
+    isModelsLoading: false,
+    isWebSearchEnabled: false,
     chatMode: 'auto',
     aspectRatio: '1:1',
     isStreaming: false,
@@ -168,6 +188,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     activeMetrics: null,
     providerStatus: {
       groq: false,
+      xkiro: false,
       pollinations: true,
       comfyui: false,
     },
@@ -179,10 +200,11 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     batchCount: 1,
     favoriteModels: [
       'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b',
-      'qwen/qwen3.8-27b',
-      'black-forest-labs/flux.1-schnell',
-      'black-forest-labs/flux.1-kontext-pro',
+      'mistralai/mistral-large-2512',
+      'openai/gpt-5.4-nano',
+      'mistralai/codestral-2508',
+      'sensenova/sensenova-6.8-flash-lite',
+      'sensenova/sensenova-u1.5-lite',
     ],
     promptHistory: [],
 
@@ -194,6 +216,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
           set({
             providerStatus: {
               groq: Boolean(data?.groq?.available),
+              xkiro: Boolean(data?.xkiro?.available),
               pollinations: Boolean(data?.pollinations?.available),
               comfyui: Boolean(data?.comfyui?.available),
             },
@@ -202,6 +225,36 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       } catch (e) {
         console.warn('[Master AI Store] Failed to refresh provider status:', e);
       }
+    },
+
+    fetchUnifiedModels: async (force = false) => {
+      set({ isModelsLoading: true });
+      try {
+        const models = await unifiedModelEngine.discoverModels(force);
+        if (models && models.length > 0) {
+          set({ unifiedModels: models });
+          const current = get().selectedModelId;
+          const exists = models.some((m) => m.id === current);
+          if (!exists) {
+            const def = models.find((m) => m.isDefault) || models[0];
+            if (def) {
+              set({ selectedModelId: def.id });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Master AI Store] fetchUnifiedModels failed:', e);
+      } finally {
+        set({ isModelsLoading: false });
+      }
+    },
+
+    toggleWebSearch: () => {
+      set((state) => ({ isWebSearchEnabled: !state.isWebSearchEnabled }));
+    },
+
+    setWebSearchEnabled: (enabled: boolean) => {
+      set({ isWebSearchEnabled: enabled });
     },
 
     getActiveConversation: () => {
@@ -435,14 +488,24 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
       };
 
+      let needsTitleRefine = false;
+      let convIdToRefine = '';
+
       set((state) => {
         const next = state.conversations.map((c) => {
           if (c.id === state.activeConversationId) {
+            const isFirstTurn = c.messages.length === 0 || c.title === 'New Conversation' || c.title.startsWith('New Chat');
+            if (isFirstTurn) {
+              needsTitleRefine = true;
+              convIdToRefine = c.id;
+            }
+            const smartTitle = isFirstTurn ? ChatNamingService.generateImmediateTitle(content) : c.title;
+
             return {
               ...c,
               messages: [...c.messages, userMsg],
               updatedAt: Date.now(),
-              title: c.messages.length === 0 ? content.slice(0, 32) : c.title,
+              title: smartTitle,
             };
           }
           return c;
@@ -450,6 +513,20 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
         persist(next, state.activeConversationId);
         return { conversations: next };
       });
+
+      // Background asynchronous title refinement
+      if (needsTitleRefine && convIdToRefine) {
+        const selectedModel = get().selectedModelId;
+        setTimeout(() => {
+          ChatNamingService.refineTitleAsync(content, selectedModel)
+            .then((refinedTitle) => {
+              if (refinedTitle && refinedTitle !== 'New Conversation') {
+                get().renameConversation(convIdToRefine, refinedTitle);
+              }
+            })
+            .catch(() => {});
+        }, 150);
+      }
 
       return msgId;
     },
@@ -461,7 +538,6 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
         role: 'assistant',
         content: '',
         timestamp: Date.now(),
-        providerUsed: 'groq' as const,
       };
 
       set((state) => {
@@ -502,7 +578,13 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       });
     },
 
-    finalizeAssistantMessage: (msgId: string, fullText: string, modelUsed: string, metrics?: AiTokenMetrics) => {
+    finalizeAssistantMessage: (
+      msgId: string,
+      fullText: string,
+      modelUsed: string,
+      metrics?: AiTokenMetrics,
+      webSearchResults?: WebSearchResult[]
+    ) => {
       set((state) => {
         const next = state.conversations.map((c) => {
           if (c.id === state.activeConversationId) {
@@ -512,8 +594,8 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
                     ...m,
                     content: fullText,
                     modelUsed,
-                    providerUsed: 'groq' as const,
                     metrics,
+                    webSearchResults: webSearchResults && webSearchResults.length > 0 ? webSearchResults : undefined,
                     timestamp: Date.now(),
                   }
                 : m
@@ -558,7 +640,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       });
     },
 
-    createImagePlaceholder: (prompt: string, modelId: string, provider: 'pollinations' | 'comfyui') => {
+    createImagePlaceholder: (prompt: string, modelId: string = SENSENOVA_MODEL_ID, provider: 'xkiro' | 'pollinations' | 'comfyui' = 'xkiro') => {
       const msgId = `msg_img_${Date.now()}`;
       const placeholder: AiMessage = {
         id: msgId,

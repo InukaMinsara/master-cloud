@@ -23,11 +23,10 @@ import {
   FileText,
   Copy,
   Activity,
+  Globe,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { groqService } from '../services/groqService';
-import { getGroqModelInfo } from '../services/groqModels';
-import { PREFERRED_POLLINATIONS_MODELS } from '../services/pollinationsModels';
+import { SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
 import { healthMonitor } from '@/services/healthMonitor';
 import { MasterAi2KeyboardShortcutsModal } from './MasterAi2KeyboardShortcutsModal';
 import { toast } from 'sonner';
@@ -35,7 +34,9 @@ import { toast } from 'sonner';
 export function MasterAi2Header() {
   const toggleSidebar = useAiChatStore((s) => s.toggleSidebar);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
-  const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
+  const unifiedModels = useAiChatStore((s) => s.unifiedModels);
+  const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
+  const toggleWebSearch = useAiChatStore((s) => s.toggleWebSearch);
   const chatMode = useAiChatStore((s) => s.chatMode);
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
@@ -43,12 +44,8 @@ export function MasterAi2Header() {
   const exportConversation = useAiChatStore((s) => s.exportConversation);
 
   const activeConv = getActiveConversation();
-  const activeGroqModel = getGroqModelInfo(selectedModelId);
-  const activeImageModel =
-    PREFERRED_POLLINATIONS_MODELS.find((m) => m.id === activeImageModelId) ||
-    PREFERRED_POLLINATIONS_MODELS[0];
-
-  const hasGroqKey = groqService.hasApiKey();
+  const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
+  const activeModelDisplayName = matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/-/g, ' ') || 'Master AI');
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -197,17 +194,34 @@ export function MasterAi2Header() {
             {chatMode === 'image' ? (
               <>
                 <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                <span className="font-medium text-white">{activeImageModel.name}</span>
+                <span className="font-medium text-white">{SENSENOVA_MODEL_TITLE}</span>
               </>
             ) : (
               <>
                 <Zap className="w-3.5 h-3.5 text-orange-400" />
-                <span className="font-medium text-white">{activeGroqModel.name}</span>
+                <span className="font-medium text-white">{activeModelDisplayName}</span>
               </>
             )}
           </div>
 
-          {/* Service Health Indicator Pill */}
+          {/* Web Search Grounding Toggle */}
+          <button
+            type="button"
+            onClick={toggleWebSearch}
+            className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1 text-xs font-mono ${
+              isWebSearchEnabled
+                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                : 'text-zinc-400 hover:text-white bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08]'
+            }`}
+            title={isWebSearchEnabled ? 'Live Web Intelligence: Enabled' : 'Enable Live Web Search Grounding'}
+          >
+            <Globe className={`w-4 h-4 ${isWebSearchEnabled ? 'text-cyan-400 animate-pulse' : 'text-zinc-400'}`} />
+            <span className="hidden md:inline text-[11px] font-sans">
+              {isWebSearchEnabled ? 'Web Active' : 'Web'}
+            </span>
+          </button>
+
+          {/* Master AI Service Health Indicator Pill */}
           <div
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border select-none cursor-pointer ${
               serviceHealth === 'healthy'
@@ -216,8 +230,8 @@ export function MasterAi2Header() {
                 ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
                 : 'bg-red-500/10 text-red-400 border-red-500/20'
             }`}
-            title={`System Health: ${serviceHealth.toUpperCase()} (Groq + Pollinations + Local AI)`}
-            onClick={() => toast.info(`System Status: ${serviceHealth.toUpperCase()}. Groq LPU: ${hasGroqKey ? 'Connected' : 'Offline'}, Pollinations AI: Online.`)}
+            title="Master AI Neural Engine Status"
+            onClick={() => toast.info('Master AI: Fully operational with unified multi-engine intelligence.')}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
@@ -228,7 +242,7 @@ export function MasterAi2Header() {
                   : 'bg-red-500'
               }`}
             />
-            <span className="hidden md:inline capitalize">{serviceHealth}</span>
+            <span className="hidden md:inline capitalize">{serviceHealth === 'healthy' ? 'Online' : serviceHealth}</span>
           </div>
 
           {/* Keyboard Shortcuts Trigger */}

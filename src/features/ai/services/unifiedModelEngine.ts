@@ -1,0 +1,317 @@
+/**
+ * src/features/ai/services/unifiedModelEngine.ts
+ * ─────────────────────────────────────────────────────────────────────────────
+ * MASTER AI INFINITY — UNIFIED INTELLIGENT MODEL ENGINE
+ * Dynamic multi-provider discovery, intelligent routing across Groq, xKiro,
+ * and Pollinations, SSE streaming, real-time token metrics, web intelligence,
+ * and SenseNova U1.5 Lite image synthesis.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
+import { senseNovaImageService, SenseNovaImageResult } from './senseNovaImageService';
+
+export interface UnifiedStreamOptions {
+  model: string;
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  signal?: AbortSignal;
+  webSearch?: boolean;
+  onChunk?: (chunk: string, accumulated: string) => void;
+  onMetrics?: (metrics: AiTokenMetrics) => void;
+  onWebSources?: (sources: WebSearchResult[]) => void;
+}
+
+export interface UnifiedStreamResult {
+  text: string;
+  modelUsed: string;
+  metrics: AiTokenMetrics;
+  webSearchResults?: WebSearchResult[];
+}
+
+const MODELS_CACHE_KEY = 'master_ai_unified_models_cache_v2';
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+class UnifiedModelEngine {
+  private cachedModels: UnifiedChatModel[] = [];
+  private lastFetchTime = 0;
+
+  /**
+   * Dynamically discovers and caches all eligible free chat models from Groq, xKiro, and Pollinations.
+   * Strips all provider branding, ensuring clean presentation.
+   */
+  public async discoverModels(forceRefresh = false): Promise<UnifiedChatModel[]> {
+    const now = Date.now();
+    if (!forceRefresh && this.cachedModels.length > 0 && now - this.lastFetchTime < CACHE_TTL_MS) {
+      return this.cachedModels;
+    }
+
+    try {
+      const res = await fetch('/api/ai/models', {
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.models) && data.models.length > 0) {
+          this.cachedModels = data.models;
+          this.lastFetchTime = now;
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify(data.models));
+            } catch {}
+          }
+          return this.cachedModels;
+        }
+      }
+    } catch (e) {
+      console.warn('[UnifiedModelEngine] Discovery failed, attempting local cache fallback:', e);
+    }
+
+    // Attempt localStorage restore
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(MODELS_CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.cachedModels = parsed;
+            return this.cachedModels;
+          }
+        }
+      } catch {}
+    }
+
+    // Built-in default verified chat models
+    this.cachedModels = [
+      {
+        id: 'openai/gpt-oss-120b',
+        name: 'GPT-OSS 120B High-Velocity',
+        description: 'Flagship reasoning and synthesis model with sub-second response times',
+        category: 'reasoning',
+        contextLength: 131072,
+        contextBadge: '131k context',
+        provider: 'groq',
+        isDefault: true,
+      },
+      {
+        id: 'mistralai/mistral-large-2512',
+        name: 'Mistral Large 2512',
+        description: 'Advanced multilingual comprehension, mathematics, and systems programming',
+        category: 'general',
+        contextLength: 128000,
+        contextBadge: '128k context',
+        provider: 'xkiro',
+        isDefault: false,
+      },
+      {
+        id: 'openai/gpt-5.4-nano',
+        name: 'GPT-5.4 Nano',
+        description: 'Ultra-fast daily conversational assistance and document analysis',
+        category: 'fast',
+        contextLength: 400000,
+        contextBadge: '400k context',
+        provider: 'pollinations',
+        isDefault: false,
+      },
+      {
+        id: 'mistralai/codestral-2508',
+        name: 'Codestral 2508',
+        description: 'Specialized deep code generation, unit testing, and architectural refactoring',
+        category: 'coding',
+        contextLength: 256000,
+        contextBadge: '256k context',
+        provider: 'xkiro',
+        isDefault: false,
+      },
+      {
+        id: 'sensenova/sensenova-6.8-flash-lite',
+        name: 'SenseNova 6.8 Flash',
+        description: 'High-context reasoning and structured data extraction',
+        category: 'reasoning',
+        contextLength: 262144,
+        contextBadge: '262k context',
+        provider: 'xkiro',
+        isDefault: false,
+      },
+      {
+        id: 'cohere/command-r-plus-08-2024',
+        name: 'Command R+ 2024',
+        description: 'High-precision research analysis, search synthesis, and citation grounding',
+        category: 'general',
+        contextLength: 128000,
+        contextBadge: '128k context',
+        provider: 'xkiro',
+        isDefault: false,
+      },
+    ];
+
+    return this.cachedModels;
+  }
+
+  /**
+   * Performs real-time web search to augment conversation context.
+   */
+  public async searchWeb(query: string): Promise<WebSearchResult[]> {
+    try {
+      const res = await fetch(`/api/ai/search?q=${encodeURIComponent(query.trim())}`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data?.results) ? data.results : [];
+      }
+    } catch {}
+    return [];
+  }
+
+  /**
+   * Unified streaming chat pipeline with SSE parser and live tok/s telemetry.
+   */
+  public async streamChat(options: UnifiedStreamOptions): Promise<UnifiedStreamResult> {
+    const startTime = performance.now();
+    let firstTokenTime: number | null = null;
+    let accumulated = '';
+    let estimatedTokens = 0;
+    let webSources: WebSearchResult[] = [];
+
+    // Optional Web Search Grounding
+    if (options.webSearch) {
+      const lastUserMsg = [...options.messages].reverse().find((m) => m.role === 'user');
+      if (lastUserMsg) {
+        webSources = await this.searchWeb(lastUserMsg.content);
+        if (webSources.length > 0) {
+          options.onWebSources?.(webSources);
+          const searchContext = webSources
+            .map((s, idx) => `[Source ${idx + 1}]: ${s.title}\n${s.snippet}`)
+            .join('\n\n');
+
+          options.messages.push({
+            role: 'system',
+            content: `Real-time web search intelligence context:\n${searchContext}\n\nUse these fresh findings when responding.`,
+          });
+        }
+      }
+    }
+
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: options.signal,
+      body: JSON.stringify({
+        model: options.model,
+        messages: options.messages,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Inference request failed (HTTP ${res.status})`);
+    }
+
+    if (!res.body) {
+      throw new Error('Response body stream is empty');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done || options.signal?.aborted) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.replace(/^data:\s*/, '').trim();
+        if (!payload || payload === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(payload);
+          const chunk = parsed?.choices?.[0]?.delta?.content || '';
+          if (chunk) {
+            if (firstTokenTime === null) {
+              firstTokenTime = performance.now();
+            }
+            accumulated += chunk;
+            estimatedTokens += Math.max(1, Math.ceil(chunk.length / 3.8));
+
+            const elapsedSec = (performance.now() - (firstTokenTime || startTime)) / 1000;
+            const currentTokSec = elapsedSec > 0.05 ? Math.round(estimatedTokens / elapsedSec) : 0;
+
+            const liveMetrics: AiTokenMetrics = {
+              completionTokens: estimatedTokens,
+              totalTokens: estimatedTokens,
+              tokensPerSec: currentTokSec,
+              latencyMs: Math.round(performance.now() - startTime),
+              firstTokenMs: firstTokenTime ? Math.round(firstTokenTime - startTime) : undefined,
+            };
+
+            options.onChunk?.(chunk, accumulated);
+            options.onMetrics?.(liveMetrics);
+          }
+        } catch {
+          // Ignore partial SSE JSON
+        }
+      }
+    }
+
+    const totalElapsedSec = (performance.now() - (firstTokenTime || startTime)) / 1000;
+    const finalTokSec = totalElapsedSec > 0.1 ? Math.round(estimatedTokens / totalElapsedSec) : 0;
+
+    const finalMetrics: AiTokenMetrics = {
+      completionTokens: estimatedTokens,
+      totalTokens: estimatedTokens,
+      tokensPerSec: finalTokSec,
+      latencyMs: Math.round(performance.now() - startTime),
+      firstTokenMs: firstTokenTime ? Math.round(firstTokenTime - startTime) : undefined,
+    };
+
+    return {
+      text: accumulated,
+      modelUsed: options.model,
+      metrics: finalMetrics,
+      webSearchResults: webSources.length > 0 ? webSources : undefined,
+    };
+  }
+
+  /**
+   * Detects whether user message expresses an intent to generate an image.
+   */
+  public detectImageIntent(text: string): { isImage: boolean; prompt: string } {
+    const trimmed = text.trim();
+
+    // 1. Slash command
+    if (/^\/(image|img|draw|paint|gen)\b/i.test(trimmed)) {
+      const prompt = trimmed.replace(/^\/(image|img|draw|paint|gen)\s*/i, '').trim();
+      return { isImage: true, prompt: prompt || 'artistic asset' };
+    }
+
+    // 2. Natural language image request
+    const nlMatch = trimmed.match(
+      /^(?:please\s+)?(?:generate|create|make|draw|paint|render|produce)\s+(?:an?\s+)?(?:image|picture|photo|painting|illustration|artwork|rendering|wallpaper)\s+(?:of|with|depicting|showing)\s+(.*)$/i
+    );
+    if (nlMatch && nlMatch[1].trim()) {
+      return { isImage: true, prompt: nlMatch[1].trim() };
+    }
+
+    return { isImage: false, prompt: trimmed };
+  }
+
+  /**
+   * Generates visual art using SenseNova U1.5 Lite.
+   */
+  public async generateSenseNovaImage(prompt: string, signal?: AbortSignal): Promise<SenseNovaImageResult> {
+    return senseNovaImageService.generateImage({
+      prompt,
+      signal,
+    });
+  }
+}
+
+export const unifiedModelEngine = new UnifiedModelEngine();

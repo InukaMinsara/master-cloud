@@ -8,7 +8,20 @@
  */
 
 import React, { useState } from 'react';
-import { Bot, Copy, Check, RotateCcw, FileText, Sparkles, Zap, Edit2, AlertCircle } from 'lucide-react';
+import {
+  Bot,
+  Copy,
+  Check,
+  RotateCcw,
+  FileText,
+  Sparkles,
+  Zap,
+  Edit2,
+  AlertCircle,
+  Globe,
+  ChevronDown,
+  ExternalLink,
+} from 'lucide-react';
 import { AiImageDetails, AiMessage } from '../types/aiTypes';
 import { MasterAi2Markdown } from './MasterAi2Markdown';
 import { MasterAi2ImageCard } from './MasterAi2ImageCard';
@@ -88,7 +101,9 @@ export function MasterAi2MessageBubble({
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-white">Master AI</span>
               {message.modelUsed && (
-                <span className="text-orange-400/90 font-medium">· {message.modelUsed}</span>
+                <span className="text-orange-400/90 font-medium">
+                  · {message.modelUsed.split('/').pop()?.replace(/[-_]/g, ' ') || message.modelUsed}
+                </span>
               )}
             </div>
 
@@ -103,6 +118,39 @@ export function MasterAi2MessageBubble({
                 </span>
               </div>
             ) : null}
+          </div>
+        )}
+
+        {/* Web Search Sources Grounding */}
+        {!isUser && message.webSearchResults && message.webSearchResults.length > 0 && (
+          <div className="mb-2.5">
+            <details className="group/sources text-xs font-mono">
+              <summary className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 cursor-pointer hover:bg-cyan-500/15 transition-colors select-none">
+                <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-semibold">{message.webSearchResults.length} Web Sources Grounded</span>
+                <ChevronDown className="w-3 h-3 text-cyan-400 transition-transform group-open/sources:rotate-180" />
+              </summary>
+              <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-cyan-500/30">
+                {message.webSearchResults.map((source, sIdx) => (
+                  <div key={sIdx} className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs">
+                    {source.url ? (
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-cyan-300 hover:underline flex items-center gap-1"
+                      >
+                        <span>[{sIdx + 1}] {source.title}</span>
+                        <ExternalLink className="w-3 h-3 text-cyan-400 shrink-0" />
+                      </a>
+                    ) : (
+                      <div className="font-bold text-cyan-300">[{sIdx + 1}] {source.title}</div>
+                    )}
+                    <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">{source.snippet}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
           </div>
         )}
 

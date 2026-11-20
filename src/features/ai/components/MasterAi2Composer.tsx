@@ -1,11 +1,13 @@
 /**
  * src/features/ai/components/MasterAi2Composer.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — MULTI-PROVIDER CHAT & IMAGE COMPOSER
- * Auto-expanding input, multi-mode selector (Chat Groq / Image Pollinations / Auto),
- * aspect ratio controls, multi-tier resolution matrix (512p/1024p/1536p),
- * seed controls, batch generation (1-4x), prompt history navigation,
- * drag-and-drop file/image dropzone, favorite models, and 1-click catalogue refresh.
+ * MASTER AI — UNIFIED CHAT & SENSENOVA IMAGE COMPOSER
+ * Auto-expanding input, unified model engine selector with capability filtering
+ * (All / Fast / Reasoning / Coding / General), aspect ratio controls,
+ * seed controls, live web search grounding, prompt history navigation,
+ * drag-and-drop file/image dropzone, and 1-click model discovery.
+ *
+ * Strict Compliance: Zero third-party provider branding in the user interface.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,18 +29,13 @@ import {
   Dices,
   Sliders,
   UploadCloud,
+  Globe,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { groqService } from '../services/groqService';
-import { pollinationsService } from '../services/pollinationsService';
 import { ContextManager } from '../services/contextManager';
 import { appSettingsService } from '@/services/appSettingsService';
-import { AiAttachment, ChatMode, ImageAspectRatio } from '../types/aiTypes';
-import { VERIFIED_GROQ_MODELS, getGroqModelInfo, GROQ_CATEGORIES } from '../services/groqModels';
-import {
-  PREFERRED_POLLINATIONS_MODELS,
-  POLLINATIONS_CATEGORIES,
-} from '../services/pollinationsModels';
+import { AiAttachment, ImageAspectRatio, UnifiedChatModel } from '../types/aiTypes';
+import { SENSENOVA_MODEL_ID, SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
 import { toast } from 'sonner';
 
 interface ComposerProps {
@@ -46,12 +43,13 @@ interface ComposerProps {
   onStopGenerating: () => void;
 }
 
+const CATEGORIES = ['All', 'Fast', 'Reasoning', 'Coding', 'General'] as const;
+
 export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerProps) {
   const [inputText, setInputText] = useState(() => appSettingsService.getDraft('master_ai_composer'));
   const [attachments, setAttachments] = useState<AiAttachment[]>([]);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState('');
-  const [activeModelTab, setActiveModelTab] = useState<'groq' | 'pollinations'>('groq');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isRefreshingModels, setIsRefreshingModels] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -67,52 +65,44 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const setChatMode = useAiChatStore((s) => s.setChatMode);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
   const setSelectedModelId = useAiChatStore((s) => s.setSelectedModelId);
-  const activeImageModelId = useAiChatStore((s) => s.activeImageModelId);
-  const setActiveImageModelId = useAiChatStore((s) => s.setActiveImageModelId);
+  const unifiedModels = useAiChatStore((s) => s.unifiedModels);
+  const fetchUnifiedModels = useAiChatStore((s) => s.fetchUnifiedModels);
+  const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
+  const toggleWebSearch = useAiChatStore((s) => s.toggleWebSearch);
   const aspectRatio = useAiChatStore((s) => s.aspectRatio);
   const setAspectRatio = useAiChatStore((s) => s.setAspectRatio);
   const imageResolution = useAiChatStore((s) => s.imageResolution);
   const setImageResolution = useAiChatStore((s) => s.setImageResolution);
   const imageSeed = useAiChatStore((s) => s.imageSeed);
   const setImageSeed = useAiChatStore((s) => s.setImageSeed);
-  const batchCount = useAiChatStore((s) => s.batchCount);
-  const setBatchCount = useAiChatStore((s) => s.setBatchCount);
   const favoriteModels = useAiChatStore((s) => s.favoriteModels);
   const toggleFavoriteModel = useAiChatStore((s) => s.toggleFavoriteModel);
   const promptHistory = useAiChatStore((s) => s.promptHistory);
   const addPromptToHistory = useAiChatStore((s) => s.addPromptToHistory);
 
-  const hasGroqKey = groqService.hasApiKey();
-  const activeGroqModel = getGroqModelInfo(selectedModelId);
+  // Discover and refresh model catalogue on mount
+  useEffect(() => {
+    if (unifiedModels.length === 0) {
+      fetchUnifiedModels(false);
+    }
+  }, [fetchUnifiedModels, unifiedModels.length]);
 
-  // Pollinations models state
-  const [pollinationsModels, setPollinationsModels] = useState(PREFERRED_POLLINATIONS_MODELS);
-
-  const refreshCatalogues = useCallback(async (isManual = false) => {
+  const handleRefreshCatalogue = useCallback(async () => {
     setIsRefreshingModels(true);
     try {
-      const models = await pollinationsService.fetchModels(true);
-      if (models && models.length > 0) {
-        setPollinationsModels(models);
-      }
-      await groqService.discoverActiveModels();
-      if (isManual) {
-        toast.success(`Catalogue updated: ${models.length} image models discovered.`);
-      }
+      await fetchUnifiedModels(true);
+      toast.success('Discovered latest available free models.');
     } catch {
-      if (isManual) toast.error('Catalogue refresh failed.');
+      toast.error('Could not refresh model catalogue.');
     } finally {
       setIsRefreshingModels(false);
     }
-  }, []);
+  }, [fetchUnifiedModels]);
 
-  useEffect(() => {
-    refreshCatalogues(false);
-  }, [refreshCatalogues]);
-
-  const activeImageModel =
-    pollinationsModels.find((m) => m.id === activeImageModelId || m.aliases.includes(activeImageModelId)) ||
-    PREFERRED_POLLINATIONS_MODELS[0];
+  // Active Model Clean Name
+  const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
+  const activeModelDisplayName =
+    matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/-/g, ' ') || 'Master AI');
 
   // Auto-resize textarea & save draft
   useEffect(() => {
@@ -137,11 +127,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
   const handleSend = () => {
     if (!inputText.trim() || isStreaming) return;
-
-    if (chatMode === 'chat' && !hasGroqKey) {
-      toast.warning('Groq is offline. Please configure GROQ_API_KEY in .env.local to enable text chat.');
-      return;
-    }
 
     const text = inputText.trim();
     const currentAttachments = [...attachments];
@@ -260,31 +245,14 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   };
 
   // Filtered models for dropdown
-  const filteredGroqModels = VERIFIED_GROQ_MODELS.filter((m) => {
+  const filteredModels = unifiedModels.filter((m) => {
     const matchesSearch =
       m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
-      m.id.toLowerCase().includes(modelSearch.toLowerCase()) ||
       m.description.toLowerCase().includes(modelSearch.toLowerCase());
 
     if (!matchesSearch) return false;
     if (selectedCategory === 'All') return true;
-    if (selectedCategory === 'Coding') return m.tag.includes('Code') || m.id.includes('code');
-    if (selectedCategory === 'Reasoning') return m.tag.includes('Reasoning') || m.id.includes('r1');
-    if (selectedCategory === 'Fast') return m.tag.includes('Fast') || m.tag.includes('Instant');
-    return true;
-  });
-
-  const filteredImageModels = pollinationsModels.filter((m) => {
-    const matchesSearch =
-      m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
-      m.id.toLowerCase().includes(modelSearch.toLowerCase()) ||
-      m.title.toLowerCase().includes(modelSearch.toLowerCase());
-
-    if (!matchesSearch) return false;
-    if (selectedCategory === 'All') return true;
-    if (selectedCategory === 'Editing') return m.supportsEditing;
-    if (selectedCategory === 'Fast') return m.name.toLowerCase().includes('schnell') || m.id.includes('schnell');
-    return true;
+    return m.category.toLowerCase() === selectedCategory.toLowerCase();
   });
 
   const allAspectRatios: ImageAspectRatio[] = ['1:1', '16:9', '9:16', '4:3', '3:2', '2:3', '21:9'];
@@ -305,14 +273,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
         </div>
       )}
 
-      {/* Groq Environment Offline Notification */}
-      {!hasGroqKey && chatMode !== 'image' && (
-        <div className="mb-2 p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-500 flex-shrink-0" />
-          <span>Groq text chat is offline (set <code className="text-zinc-300 font-mono">GROQ_API_KEY</code> in <code className="text-zinc-300 font-mono">.env.local</code> to enable). Image generation via Pollinations is fully available.</span>
-        </div>
-      )}
-
       {/* Main Composer Box */}
       <div className="rounded-2xl border border-white/[0.1] bg-zinc-900/80 backdrop-blur-xl shadow-2xl p-2.5 space-y-2 focus-within:border-orange-500/40 transition-colors">
         {/* Mode Selector & Toolbar */}
@@ -327,7 +287,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                   ? 'bg-orange-500 text-white shadow-sm'
                   : 'text-zinc-400 hover:text-white'
               }`}
-              title="Automatically routes between Groq chat and Pollinations image generation"
+              title="Automatically routes between conversation and image generation"
             >
               <Sparkles className="w-3 h-3" />
               <span>Auto</span>
@@ -360,7 +320,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
             </button>
           </div>
 
-          {/* Quick Image Controls (Aspect Ratio, Resolution, Seed, Batch) */}
+          {/* Quick Image Controls (Aspect Ratio, Resolution, Seed) */}
           {(chatMode === 'image' || chatMode === 'auto') && (
             <div className="flex items-center gap-1.5 flex-wrap">
               {/* Aspect Ratio Chips */}
@@ -382,7 +342,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                 ))}
               </div>
 
-              {/* Extra Parameters Button (Resolution / Seed / Batch) */}
+              {/* Extra Parameters Button (Resolution / Seed) */}
               <button
                 type="button"
                 onClick={() => setShowImageOptions(!showImageOptions)}
@@ -391,23 +351,22 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                     ? 'bg-orange-500/20 border-orange-500/40 text-orange-300'
                     : 'bg-white/[0.03] border-white/[0.06] text-zinc-400 hover:text-white'
                 }`}
-                title="Configure resolution, seed & batch generation"
+                title="Configure image resolution & seed"
               >
                 <Sliders className="w-3 h-3" />
                 <span className="hidden sm:inline">{imageResolution}p</span>
-                {batchCount > 1 && <span className="text-orange-400">({batchCount}x)</span>}
               </button>
             </div>
           )}
         </div>
 
-        {/* Expandable Image Settings Bar (Resolution, Seed, Batch) */}
+        {/* Expandable Image Settings Bar (Resolution & Seed) */}
         {showImageOptions && (
           <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 text-xs flex-wrap animate-in fade-in duration-150">
             {/* Resolution Selector */}
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-mono text-zinc-400 uppercase">Resolution:</span>
-              {[512, 1024, 1536].map((res) => (
+              {[720, 1024].map((res) => (
                 <button
                   key={res}
                   type="button"
@@ -418,26 +377,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                       : 'bg-white/[0.04] text-zinc-400 hover:text-white'
                   }`}
                 >
-                  {res}p {res === 512 ? '(SD)' : res === 1024 ? '(HD)' : '(UHD)'}
-                </button>
-              ))}
-            </div>
-
-            {/* Batch Count Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono text-zinc-400 uppercase">Batch:</span>
-              {[1, 2, 4].map((cnt) => (
-                <button
-                  key={cnt}
-                  type="button"
-                  onClick={() => setBatchCount(cnt)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono cursor-pointer transition-all ${
-                    batchCount === cnt
-                      ? 'bg-orange-500 text-white font-bold'
-                      : 'bg-white/[0.04] text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {cnt}x
+                  {res}p {res === 720 ? '(SD)' : '(HD)'}
                 </button>
               ))}
             </div>
@@ -500,7 +440,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
           onKeyDown={handleKeyDown}
           placeholder={
             chatMode === 'image'
-              ? 'Describe the image to generate or edit (e.g. "Cyberpunk neon street at twilight, 8K ultra-detailed")...'
+              ? 'Describe the image to synthesize with SenseNova (e.g. "Cyberpunk neon street at twilight, 8K hyper-detailed")...'
               : 'Ask Master AI anything, or type "/image <prompt>" to create visual art...'
           }
           rows={1}
@@ -532,6 +472,21 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
               <Paperclip className="w-4 h-4" />
             </button>
 
+            {/* Web Search Grounding Toggle Chip */}
+            <button
+              type="button"
+              onClick={toggleWebSearch}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono border transition-all cursor-pointer ${
+                isWebSearchEnabled
+                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                  : 'bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:text-white'
+              }`}
+              title={isWebSearchEnabled ? 'Live Web Intelligence: Enabled' : 'Enable Live Web Search Grounding'}
+            >
+              <Globe className={`w-3.5 h-3.5 ${isWebSearchEnabled ? 'text-cyan-400 animate-pulse' : 'text-zinc-500'}`} />
+              <span className="hidden sm:inline font-sans">Search</span>
+            </button>
+
             {/* Model Selector Dropdown Trigger */}
             <div className="relative" ref={modelDropdownRef}>
               <button
@@ -542,58 +497,24 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                 {chatMode === 'image' ? (
                   <>
                     <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                    <span className="truncate max-w-[130px] font-medium">
-                      {activeImageModel.name}
+                    <span className="truncate max-w-[140px] font-medium">
+                      {SENSENOVA_MODEL_TITLE}
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                    <span className="truncate max-w-[130px] font-medium">
-                      {activeGroqModel.name}
+                    <span className="truncate max-w-[140px] font-medium">
+                      {activeModelDisplayName}
                     </span>
                   </>
                 )}
                 <ChevronDown className="w-3 h-3 text-zinc-400" />
               </button>
 
-              {/* Enhanced Model Dropdown Menu */}
+              {/* Unified Model Dropdown Menu (Zero Provider Branding) */}
               {isModelDropdownOpen && (
                 <div className="absolute bottom-full mb-2 left-0 w-84 sm:w-96 rounded-2xl bg-zinc-950/95 backdrop-blur-2xl border border-white/[0.1] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-2">
-                  {/* Selector Tabs (Groq vs Pollinations) */}
-                  <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveModelTab('groq');
-                        setSelectedCategory('All');
-                      }}
-                      className={`flex-1 py-1 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        activeModelTab === 'groq'
-                          ? 'bg-orange-500 text-white'
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      <Zap className="w-3 h-3" />
-                      <span>Groq Models</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveModelTab('pollinations');
-                        setSelectedCategory('All');
-                      }}
-                      className={`flex-1 py-1 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        activeModelTab === 'pollinations'
-                          ? 'bg-orange-500 text-white'
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Pollinations Models</span>
-                    </button>
-                  </div>
-
                   {/* Search and Refresh Bar */}
                   <div className="flex items-center gap-1.5">
                     <div className="relative flex-1">
@@ -606,24 +527,21 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                         className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none"
                       />
                     </div>
-                    {/* 1-Click Catalogue Refresh */}
+                    {/* 1-Click Refresh */}
                     <button
                       type="button"
-                      onClick={() => refreshCatalogues(true)}
+                      onClick={handleRefreshCatalogue}
                       disabled={isRefreshingModels}
                       className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
-                      title="1-Click Refresh Catalogue from Live API"
+                      title="1-Click Refresh Catalogue from Live Models API"
                     >
                       <RotateCw className={`w-3.5 h-3.5 ${isRefreshingModels ? 'animate-spin text-orange-400' : ''}`} />
                     </button>
                   </div>
 
-                  {/* Category Filter Chips */}
+                  {/* Capability Category Chips */}
                   <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] scrollbar-none">
-                    {(activeModelTab === 'groq'
-                      ? ['All', 'Coding', 'Reasoning', 'Fast']
-                      : ['All', 'General', 'Editing', 'Fast']
-                    ).map((cat) => (
+                    {CATEGORIES.map((cat) => (
                       <button
                         key={cat}
                         type="button"
@@ -639,124 +557,64 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                     ))}
                   </div>
 
-                  {/* Models List */}
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
-                    {activeModelTab === 'groq' ? (
-                      filteredGroqModels.map((m) => {
-                        const isFav = favoriteModels.includes(m.id) || appSettingsService.isFavorite(m.id);
-                        return (
-                          <div
-                            key={m.id}
-                            className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
-                              selectedModelId === m.id
-                                ? 'bg-orange-500/15 border border-orange-500/30 text-white'
-                                : 'hover:bg-white/[0.04] text-zinc-300'
-                            }`}
-                            onClick={() => {
-                              setSelectedModelId(m.id);
-                              setIsModelDropdownOpen(false);
-                              toast.info(`Switched to Groq: ${m.name}`);
-                            }}
-                          >
-                            <div className="flex-1 min-w-0 pr-2">
-                              <div className="font-semibold text-xs flex items-center gap-1.5">
-                                <span className="truncate">{m.name}</span>
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-300 shrink-0">
-                                  {m.tag}
+                  {/* Unified Models List */}
+                  <div className="max-h-64 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                    {filteredModels.map((m: UnifiedChatModel) => {
+                      const isFav = favoriteModels.includes(m.id) || appSettingsService.isFavorite(m.id);
+                      return (
+                        <div
+                          key={m.id}
+                          className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
+                            selectedModelId === m.id
+                              ? 'bg-orange-500/15 border border-orange-500/30 text-white'
+                              : 'hover:bg-white/[0.04] text-zinc-300'
+                          }`}
+                          onClick={() => {
+                            setSelectedModelId(m.id);
+                            setIsModelDropdownOpen(false);
+                            toast.info(`Switched to: ${m.name}`);
+                          }}
+                        >
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="font-semibold text-xs flex items-center gap-1.5 flex-wrap">
+                              <span className="truncate">{m.name}</span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-300 shrink-0 capitalize">
+                                {m.category}
+                              </span>
+                              {m.contextBadge && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0">
+                                  {m.contextBadge}
                                 </span>
-                              </div>
-                              <div className="text-[10px] text-zinc-400 mt-0.5 line-clamp-1">
-                                {m.description}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleFavoriteModel(m.id);
-                                  appSettingsService.toggleFavorite(m.id);
-                                }}
-                                className={`p-1 rounded transition-colors ${
-                                  isFav
-                                    ? 'text-amber-400'
-                                    : 'text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100'
-                                }`}
-                                title={isFav ? 'Remove from favorites' : 'Pin to favorites'}
-                              >
-                                <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400' : ''}`} />
-                              </button>
-                              {selectedModelId === m.id && (
-                                <Check className="w-3.5 h-3.5 text-orange-400 shrink-0" />
                               )}
                             </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      filteredImageModels.map((m) => {
-                        const isFav = favoriteModels.includes(m.id) || appSettingsService.isFavorite(m.id);
-                        return (
-                          <div
-                            key={m.id}
-                            className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
-                              activeImageModelId === m.id
-                                ? 'bg-orange-500/15 border border-orange-500/30 text-white'
-                                : 'hover:bg-white/[0.04] text-zinc-300'
-                            }`}
-                            onClick={() => {
-                              setActiveImageModelId(m.id);
-                              setIsModelDropdownOpen(false);
-                              toast.info(`Switched to Image Model: ${m.name}`);
-                            }}
-                          >
-                            <div className="flex-1 min-w-0 pr-2">
-                              <div className="font-semibold text-xs flex items-center gap-1.5 flex-wrap">
-                                <span className="truncate">{m.name}</span>
-                                <span
-                                  className={`text-[9px] font-mono px-1.5 py-0.2 rounded shrink-0 ${
-                                    m.paidOnly
-                                      ? 'bg-amber-500/20 text-amber-300'
-                                      : 'bg-emerald-500/20 text-emerald-300'
-                                  }`}
-                                >
-                                  {m.paidOnly ? 'Paid Tier' : 'Free Tier'}
-                                </span>
-                                {m.supportsEditing && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 shrink-0">
-                                    Editing
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[10px] text-zinc-400 mt-0.5 font-mono truncate max-w-[220px]">
-                                {m.id}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleFavoriteModel(m.id);
-                                  appSettingsService.toggleFavorite(m.id);
-                                }}
-                                className={`p-1 rounded transition-colors ${
-                                  isFav
-                                    ? 'text-amber-400'
-                                    : 'text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100'
-                                }`}
-                                title={isFav ? 'Remove from favorites' : 'Pin to favorites'}
-                              >
-                                <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400' : ''}`} />
-                              </button>
-                              {activeImageModelId === m.id && (
-                                <Check className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-                              )}
+                            <div className="text-[10px] text-zinc-400 mt-0.5 line-clamp-1">
+                              {m.description}
                             </div>
                           </div>
-                        );
-                      })
-                    )}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavoriteModel(m.id);
+                                appSettingsService.toggleFavorite(m.id);
+                              }}
+                              className={`p-1 rounded transition-colors ${
+                                isFav
+                                  ? 'text-amber-400'
+                                  : 'text-zinc-600 hover:text-zinc-400 opacity-0 group-hover:opacity-100'
+                              }`}
+                              title={isFav ? 'Remove from favorites' : 'Pin to favorites'}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400' : ''}`} />
+                            </button>
+                            {selectedModelId === m.id && (
+                              <Check className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
