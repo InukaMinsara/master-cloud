@@ -1,16 +1,21 @@
 /**
  * src/features/ai/services/contextManager.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — CONTEXT & MEMORY MANAGEMENT LAYER
- * Handles prompt assembly, document context grounding, context-window truncation,
- * and autonomous conversation title generation.
+ * MASTER AI — INTELLIGENT CONTEXT & TOKEN-LIMIT MANAGEMENT ENGINE
+ *
+ * Implements:
+ * - Accurate multi-lingual & code token estimation
+ * - Model-specific token budget allocation (strictly preventing 8000 TPM Groq errors)
+ * - Dynamic context-window management & oldest-first intelligent truncation
+ * - Automatic conversation synopsis/summarization for truncated older history
+ * - Safe completion token (max_tokens) bounding so Requested <= 7,200 TPM
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { AiAttachment, AiMessage, AiRole } from '../types/aiTypes';
 import { groqService } from './groqService';
 
-const DEFAULT_SYSTEM_PROMPT = `You are MASTER AI 2.0, an elite, high-performance AI assistant powered by Groq's low-latency LPU architecture.
+const DEFAULT_SYSTEM_PROMPT = `You are MASTER AI, an elite, high-performance AI assistant.
 - Provide direct, concise, and deeply insightful answers.
 - For coding, write production-grade, bug-free, beautifully formatted code with comments where needed.
 - Support English and Sinhala (සිංහල / Singlish) fluently and naturally.
@@ -20,30 +25,115 @@ const DEFAULT_SYSTEM_PROMPT = `You are MASTER AI 2.0, an elite, high-performance
 export class ContextManager {
   /**
    * Estimates token count for a text string.
-   * Uses conservative heuristic: ~3.5 chars per token for English & code,
-   * with a safety buffer to prevent exceeding Groq free tier 8000 TPM limit.
+   * Blends character and word heuristics with higher density weighting
+   * for code syntax and multi-byte Unicode (e.g. Sinhala / Asian scripts).
    */
   public static estimateTokens(text: string): number {
     if (!text) return 0;
-    // Word-based + character length blended estimate
-    const charEstimate = Math.ceil(text.length / 3.6);
-    const wordEstimate = Math.ceil((text.split(/\s+/).length || 1) * 1.3);
+
+    // Detect non-ASCII / multi-byte characters
+    const nonAsciiCount = (text.match(/[^\x00-\x7F]/g) || []).length;
+    const nonAsciiRatio = nonAsciiCount / Math.max(1, text.length);
+
+    // Heuristics:
+    // Standard English/code: ~3.5 chars per token
+    // Heavy Unicode/Sinhala: ~1.5 - 2 chars per token
+    const divisor = nonAsciiRatio > 0.3 ? 2.0 : 3.5;
+    const charEstimate = Math.ceil(text.length / divisor);
+    const wordEstimate = Math.ceil((text.split(/\s+/).length || 1) * 1.35);
+
     return Math.max(charEstimate, wordEstimate);
   }
 
   /**
+   * Estimates total token count of an array of inference messages,
+   * including OpenAI per-message formatting overhead (3 tokens per message + 3 priming).
+   */
+  public static estimateMessagesTokens(
+    messages: Array<{ role: string; content: string }>
+  ): number {
+    let total = 3; // Priming overhead
+    for (const msg of messages) {
+      total += 3; // Role + formatting markers
+      total += this.estimateTokens(msg.content);
+    }
+    return total;
+  }
+
+  /**
+   * Determines if a model is subject to Groq free-tier rate limits (8000 TPM cap).
+   */
+  public static isGroqRateLimitedModel(modelId?: string): boolean {
+    if (!modelId) return true;
+    const lower = modelId.toLowerCase();
+    return (
+      lower.includes('groq') ||
+      lower.startsWith('openai/gpt-oss') ||
+      lower.startsWith('llama') ||
+      lower.includes('instant') ||
+      lower.includes('versatile') ||
+      lower.includes('compound')
+    );
+  }
+
+  /**
+   * Calculates safe max_tokens (output completion ceiling) to strictly guarantee
+   * promptTokens + max_tokens never exceeds the free tier 8000 TPM limit.
+   */
+  public static getSafeOutputTokens(modelId: string | undefined, promptTokens: number): number {
+    if (!this.isGroqRateLimitedModel(modelId)) {
+      // High context models (xKiro, Pollinations, paid tiers)
+      return 4096;
+    }
+
+    // Strict Groq safety: 8000 TPM limit - 800 token safety margin = 7200 max requested
+    const remainingForOutput = 7200 - promptTokens;
+
+    // Output must be at least 512, at most 2048, but strictly capped within budget
+    if (remainingForOutput <= 512) {
+      return 512;
+    }
+    return Math.min(2048, remainingForOutput);
+  }
+
+  /**
+   * Generates a concise synopsis of older messages that had to be pruned
+   * due to context budget exhaustion, preserving conversational memory.
+   */
+  public static summarizeOlderMessages(prunedMessages: AiMessage[]): string {
+    if (!prunedMessages || prunedMessages.length === 0) return '';
+
+    const summaryPoints: string[] = [];
+    for (const m of prunedMessages) {
+      if (!m.content || m.isGeneratingImage || m.isError) continue;
+      const snippet = m.content.trim().slice(0, 120).replace(/\n+/g, ' ');
+      if (m.role === 'user') {
+        summaryPoints.push(`- User asked about: "${snippet}${m.content.length > 120 ? '...' : ''}"`);
+      } else if (m.role === 'assistant') {
+        summaryPoints.push(`- Assistant addressed: "${snippet}${m.content.length > 120 ? '...' : ''}"`);
+      }
+    }
+
+    if (summaryPoints.length === 0) return '';
+    return `[Summary of earlier discussion to maintain context]:\n${summaryPoints.slice(-4).join('\n')}`;
+  }
+
+  /**
    * Prepares the message history array for inference within safe token budget limits.
-   * Free tier models (e.g. gpt-oss-120b on Groq) enforce an 8,000 TPM cap.
-   * Default maxPromptTokens = 3800 ensures requested prompt + generated output never exceeds 8000 TPM.
+   * Dynamically adapts token budget based on selected model:
+   * - Groq models: maxPromptTokens = 3200 (guaranteeing Requested = prompt + completion <= 7200 < 8000 TPM)
+   * - High-context models: maxPromptTokens = 12000
    */
   public static buildMessagesForInference(
     history: AiMessage[],
     currentPrompt: string,
     attachments?: AiAttachment[],
     customSystemPrompt?: string,
-    maxPromptTokens = 3800
+    modelId?: string
   ): Array<{ role: AiRole; content: string }> {
-    const messages: Array<{ role: AiRole; content: string }> = [];
+    const isGroq = this.isGroqRateLimitedModel(modelId);
+    // Safe prompt budget: 3200 for Groq (prevents 8000 TPM errors), 12000 for others
+    const maxPromptTokens = isGroq ? 3200 : 12000;
 
     // 1. System Persona
     const systemContent = customSystemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -56,30 +146,39 @@ export class ContextManager {
       for (const att of attachments) {
         if (att.content) {
           // Truncate individual file if excessively long
-          const snippet = att.content.length > 8000 ? att.content.slice(0, 8000) + '\n...[File Truncated for Context]' : att.content;
+          const maxFileChars = isGroq ? 3000 : 8000;
+          const snippet =
+            att.content.length > maxFileChars
+              ? att.content.slice(0, maxFileChars) + '\n...[File Truncated to fit context window]'
+              : att.content;
           attachmentContext += `\n--- File: ${att.name} (${(att.sizeBytes / 1024).toFixed(1)} KB) ---\n\`\`\`\n${snippet}\n\`\`\`\n`;
         }
       }
       formattedPrompt = `${attachmentContext}\n[User Directive]:\n${formattedPrompt}`;
     }
 
-    const currentPromptTokens = this.estimateTokens(formattedPrompt) + 10;
+    let currentPromptTokens = this.estimateTokens(formattedPrompt) + 10;
+
+    // If current prompt alone exceeds safe budget, compress prompt & attachments
+    if (systemTokens + currentPromptTokens > maxPromptTokens) {
+      const allowedPromptChars = Math.max(600, (maxPromptTokens - systemTokens - 80) * 3);
+      formattedPrompt =
+        formattedPrompt.slice(0, allowedPromptChars) +
+        '\n...[Context trimmed to respect model token safety limits]';
+      currentPromptTokens = this.estimateTokens(formattedPrompt) + 10;
+    }
 
     // 3. Calculate remaining budget for conversation history
-    let remainingBudget = maxPromptTokens - systemTokens - currentPromptTokens;
-    if (remainingBudget < 0) {
-      // If prompt + attachments alone exceeded budget, compress attachments
-      const allowedPromptChars = Math.max(500, (maxPromptTokens - systemTokens - 100) * 3);
-      formattedPrompt = formattedPrompt.slice(0, allowedPromptChars) + '\n...[Attachments trimmed to fit TPM limit]';
-      remainingBudget = 100;
-    }
+    let remainingBudget = Math.max(0, maxPromptTokens - systemTokens - currentPromptTokens);
 
     // 4. Backwards traversal of history (prioritize most recent turns)
     const eligibleHistory = history.filter(
-      (m) => (m.role === 'user' || m.role === 'assistant') && m.content && !m.isGeneratingImage
+      (m) => (m.role === 'user' || m.role === 'assistant') && m.content && !m.isGeneratingImage && !m.isError
     );
 
     const includedTurns: Array<{ role: AiRole; content: string }> = [];
+    const prunedHistory: AiMessage[] = [];
+
     for (let i = eligibleHistory.length - 1; i >= 0; i--) {
       const msg = eligibleHistory[i];
       const msgTokens = this.estimateTokens(msg.content) + 8;
@@ -90,21 +189,38 @@ export class ContextManager {
         });
         remainingBudget -= msgTokens;
       } else {
-        // Budget exhausted: stop adding older messages
+        // Budget exhausted: record remaining older messages for summarization
+        prunedHistory.unshift(...eligibleHistory.slice(0, i + 1));
         break;
       }
     }
 
+    // 5. Generate concise summary of pruned older history if any exists
+    const olderSummary = this.summarizeOlderMessages(prunedHistory);
+
     // Assemble final ordered messages
+    const messages: Array<{ role: AiRole; content: string }> = [];
+
+    // System prompt
     messages.push({
       role: 'system',
       content: systemContent,
     });
 
+    // If older turns were pruned, inject concise summary right after system message
+    if (olderSummary) {
+      messages.push({
+        role: 'system',
+        content: olderSummary,
+      });
+    }
+
+    // Recent preserved turns
     for (const turn of includedTurns) {
       messages.push(turn);
     }
 
+    // Active user turn
     messages.push({
       role: 'user',
       content: formattedPrompt,

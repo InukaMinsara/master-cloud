@@ -26,7 +26,6 @@ import {
   Globe,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
 import { healthMonitor } from '@/services/healthMonitor';
 import { MasterAi2KeyboardShortcutsModal } from './MasterAi2KeyboardShortcutsModal';
 import { toast } from 'sonner';
@@ -37,7 +36,6 @@ export function MasterAi2Header() {
   const unifiedModels = useAiChatStore((s) => s.unifiedModels);
   const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
   const toggleWebSearch = useAiChatStore((s) => s.toggleWebSearch);
-  const chatMode = useAiChatStore((s) => s.chatMode);
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
@@ -191,17 +189,8 @@ export function MasterAi2Header() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Active Model Indicator Badge */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
-            {chatMode === 'image' ? (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                <span className="font-medium text-white">{SENSENOVA_MODEL_TITLE}</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-3.5 h-3.5 text-orange-400" />
-                <span className="font-medium text-white">{activeModelDisplayName}</span>
-              </>
-            )}
+            <Zap className="w-3.5 h-3.5 text-orange-400" />
+            <span className="font-medium text-white">{activeModelDisplayName}</span>
           </div>
 
           {/* Web Search Grounding Toggle */}

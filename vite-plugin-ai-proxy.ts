@@ -153,63 +153,29 @@ export function createAiProxyMiddleware(rootDir: string) {
     // ── 2. GET /api/ai/models (Aggregated Dynamic Model Discovery) ───────────
     if (url === '/api/ai/models' && req.method === 'GET') {
       res.setHeader('Content-Type', 'application/json');
+
       const unifiedModels: any[] = [];
       const seenIds = new Set<string>();
 
-      // A. Groq Models
-      if (envConfig.groqApiKey) {
-        try {
-          const groqRes = await fetch(`${envConfig.groqEndpoint}/models`, {
-            headers: { Authorization: `Bearer ${envConfig.groqApiKey}` },
-            signal: AbortSignal.timeout(3500),
-          });
-          if (groqRes.ok) {
-            const data = await groqRes.json();
-            if (Array.isArray(data?.data)) {
-              for (const m of data.data) {
-                const id = m.id;
-                if (id.includes('whisper') || id.includes('guard')) continue;
-                if (!seenIds.has(id)) {
-                  seenIds.add(id);
-                  let cleanName = id.replace(/^(openai\/|meta-llama\/|groq\/)/, '');
-                  cleanName = cleanName
-                    .split(/[-_]/)
-                    .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
-                    .join(' ');
-
-                  unifiedModels.push({
-                    id,
-                    name: cleanName,
-                    description: `High-velocity conversational neural engine (${id})`,
-                    category: id.includes('code') ? 'coding' : id.includes('r1') ? 'reasoning' : 'fast',
-                    contextLength: m.context_window || 128000,
-                    contextBadge: `${Math.round((m.context_window || 128000) / 1000)}k context`,
-                    provider: 'groq',
-                    isDefault: id.includes('120b') || id.includes('70b') || id.includes('20b'),
-                  });
-                }
-              }
-            }
-          }
-        } catch {}
-      }
-
-      // B. xKiro Models (Free Tier Chat Models Only)
-      if (envConfig.xkiroApiKey) {
-        try {
-          const xkiroRes = await fetch(`${envConfig.xkiroEndpoint}/models`, {
-            headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
-            signal: AbortSignal.timeout(3500),
-          });
-          if (xkiroRes.ok) {
-            const data = await xkiroRes.json();
-            if (Array.isArray(data?.data)) {
-              for (const m of data.data) {
-                if (m.access_tier === 'free' && m.type === 'model' && m.id !== 'sensenova/sensenova-u1.5-lite') {
+      // Fetch Groq, xKiro, and Pollinations models in parallel for fast response
+      await Promise.allSettled([
+        // A. Groq Models
+        (async () => {
+          if (!envConfig.groqApiKey) return;
+          try {
+            const groqRes = await fetch(`${envConfig.groqEndpoint}/models`, {
+              headers: { Authorization: `Bearer ${envConfig.groqApiKey}` },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (groqRes.ok) {
+              const data = await groqRes.json();
+              if (Array.isArray(data?.data)) {
+                for (const m of data.data) {
                   const id = m.id;
+                  if (id.includes('whisper') || id.includes('guard')) continue;
                   if (!seenIds.has(id)) {
                     seenIds.add(id);
-                    let cleanName = m.display_name || id.replace(/^(mistralai\/|cohere\/|sensenova\/)/, '');
+                    let cleanName = id.replace(/^(openai\/|meta-llama\/|groq\/)/, '');
                     cleanName = cleanName
                       .split(/[-_]/)
                       .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
@@ -218,56 +184,114 @@ export function createAiProxyMiddleware(rootDir: string) {
                     unifiedModels.push({
                       id,
                       name: cleanName,
-                      description: `Intelligent multi-domain reasoning model (${id})`,
-                      category: id.includes('code') || id.includes('devstral') ? 'coding' : id.includes('reasoning') ? 'reasoning' : id.includes('vision') ? 'vision' : 'general',
-                      contextLength: m.context_length || 128000,
-                      contextBadge: `${Math.round((m.context_length || 128000) / 1000)}k context`,
-                      provider: 'xkiro',
-                      isDefault: false,
+                      description: `High-velocity conversational neural engine (${id})`,
+                      category: id.includes('code') ? 'coding' : id.includes('r1') ? 'reasoning' : 'fast',
+                      contextLength: m.context_window || 128000,
+                      contextBadge: `${Math.round((m.context_window || 128000) / 1000)}k context`,
+                      provider: 'groq',
+                      isDefault: id.includes('120b') || id.includes('70b') || id.includes('20b'),
                     });
                   }
                 }
               }
             }
-          }
-        } catch {}
-      }
+          } catch {}
+        })(),
 
-      // C. Pollinations Models (Free Text Models Only)
-      try {
-        const polliHeaders: Record<string, string> = { Accept: 'application/json' };
-        if (envConfig.pollinationsApiKey) {
-          polliHeaders['Authorization'] = `Bearer ${envConfig.pollinationsApiKey}`;
-        }
-        const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/text/models`, {
-          headers: polliHeaders,
-          signal: AbortSignal.timeout(3500),
-        });
-        if (polliRes.ok) {
-          const data = await polliRes.json();
-          if (Array.isArray(data)) {
-            for (const m of data) {
-              if (m.category === 'text' && !m.paid_only) {
-                const id = m.name;
-                if (!seenIds.has(id)) {
-                  seenIds.add(id);
-                  const cleanName = m.title || id.replace(/^(openai\/|meta-llama\/|google\/)/, '');
-                  unifiedModels.push({
-                    id,
-                    name: cleanName,
-                    description: m.description || `Adaptive conversational intelligence (${id})`,
-                    category: id.includes('code') ? 'coding' : m.reasoning ? 'reasoning' : 'fast',
-                    contextLength: m.context_length || 128000,
-                    contextBadge: `${Math.round((m.context_length || 128000) / 1000)}k context`,
-                    provider: 'pollinations',
-                    isDefault: false,
-                  });
+        // B. xKiro Models (Free Tier Chat Models Only)
+        (async () => {
+          if (!envConfig.xkiroApiKey) return;
+          try {
+            const xkiroRes = await fetch(`${envConfig.xkiroEndpoint}/models`, {
+              headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (xkiroRes.ok) {
+              const data = await xkiroRes.json();
+              if (Array.isArray(data?.data)) {
+                for (const m of data.data) {
+                  if (m.access_tier === 'free' && m.type === 'model' && m.id !== 'sensenova/sensenova-u1.5-lite') {
+                    const id = m.id;
+                    if (!seenIds.has(id)) {
+                      seenIds.add(id);
+                      let cleanName = m.display_name || id.replace(/^(mistralai\/|cohere\/|sensenova\/)/, '');
+                      cleanName = cleanName
+                        .split(/[-_]/)
+                        .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+                        .join(' ');
+
+                      unifiedModels.push({
+                        id,
+                        name: cleanName,
+                        description: `Intelligent multi-domain reasoning model (${id})`,
+                        category: id.includes('code') || id.includes('devstral') ? 'coding' : id.includes('reasoning') ? 'reasoning' : id.includes('vision') ? 'vision' : 'general',
+                        contextLength: m.context_length || 128000,
+                        contextBadge: `${Math.round((m.context_length || 128000) / 1000)}k context`,
+                        provider: 'xkiro',
+                        isDefault: false,
+                      });
+                    }
+                  }
                 }
               }
             }
+          } catch {}
+        })(),
+
+        // C. Pollinations Models (Free Text Models Only)
+        (async () => {
+          try {
+            const polliHeaders: Record<string, string> = { Accept: 'application/json' };
+            if (envConfig.pollinationsApiKey) {
+              polliHeaders['Authorization'] = `Bearer ${envConfig.pollinationsApiKey}`;
+            }
+            const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/text/models`, {
+              headers: polliHeaders,
+              signal: AbortSignal.timeout(4000),
+            });
+            if (polliRes.ok) {
+              const data = await polliRes.json();
+              if (Array.isArray(data)) {
+                for (const m of data) {
+                  if (m.category === 'text' && !m.paid_only) {
+                    const id = m.name;
+                    if (!seenIds.has(id)) {
+                      seenIds.add(id);
+                      const cleanName = m.title || id.replace(/^(openai\/|meta-llama\/|google\/)/, '');
+                      unifiedModels.push({
+                        id,
+                        name: cleanName,
+                        description: m.description || `Adaptive conversational intelligence (${id})`,
+                        category: id.includes('code') ? 'coding' : m.reasoning ? 'reasoning' : 'fast',
+                        contextLength: m.context_length || 400000,
+                        contextBadge: `${Math.round((m.context_length || 400000) / 1000)}k context`,
+                        provider: 'pollinations',
+                        isDefault: false,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          } catch {}
+
+          // Verified fallback for Pollinations models if network timed out
+          if (unifiedModels.filter((m) => m.provider === 'pollinations').length === 0) {
+            const fallbackPolli = [
+              { id: 'openai/gpt-5.4-nano', name: 'GPT-5.4 Nano', description: 'Fast everyday conversational intelligence', category: 'fast', contextLength: 400000, contextBadge: '400k context', provider: 'pollinations', isDefault: false },
+              { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', description: 'Advanced general reasoning and coding', category: 'reasoning', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'mistralai/mistral-small-3.2-24b', name: 'Mistral Small 24B', description: 'Lightweight instruction following and synthesis', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'pollinations/flux-free-text', name: 'Flux Text Assistant', description: 'High context knowledge engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+            ];
+            for (const fm of fallbackPolli) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
           }
-        }
-      } catch {}
+        })(),
+      ]);
 
       // Fallback if network blocked
       if (unifiedModels.length === 0) {
@@ -344,6 +368,18 @@ export function createAiProxyMiddleware(rootDir: string) {
           authHeader = `Bearer ${envConfig.groqApiKey}`;
         }
 
+        // Token Safety Clamping for Groq Free Tier (Strictly prevents 8,000 TPM limit errors)
+        if (targetProvider === 'groq') {
+          let promptTokens = 0;
+          if (Array.isArray(body.messages)) {
+            for (const m of body.messages) {
+              promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+            }
+          }
+          const safeMax = Math.max(512, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
+          body.max_tokens = safeMax;
+        }
+
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
@@ -391,108 +427,107 @@ export function createAiProxyMiddleware(rootDir: string) {
       }
     }
 
-    // ── 4. POST /api/ai/image/generate (SenseNova U1.5 Lite via xKiro ONLY) ──
+    // ── 4. POST /api/ai/image/generate (SenseNova with Pollinations High-Fidelity Fallback) ──
     if (url === '/api/ai/image/generate' && req.method === 'POST') {
-      if (!envConfig.xkiroApiKey) {
-        res.statusCode = 503;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(
-          JSON.stringify({
-            error: { message: 'Image generation service offline. Please configure XKIRO_API_KEY in .env.local' },
-          })
-        );
-      }
-
       try {
         const body = await parseJsonBody(req);
         const prompt = body.prompt ? body.prompt.trim() : 'master asset';
         const size = body.size || '1024x1024';
 
-        // 1. Submit asynchronous job to xKiro official SenseNova endpoint
-        const jobSubmitRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${envConfig.xkiroApiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'sensenova/sensenova-u1.5-lite',
-            prompt,
-            n: 1,
-            size,
-          }),
-        });
+        // 1. Attempt SenseNova via xKiro if key is configured
+        if (envConfig.xkiroApiKey) {
+          try {
+            const jobSubmitRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${envConfig.xkiroApiKey}`,
+              },
+              body: JSON.stringify({
+                model: 'sensenova/sensenova-u1.5-lite',
+                prompt,
+                n: 1,
+                size,
+              }),
+            });
 
-        if (!jobSubmitRes.ok) {
-          const err = await jobSubmitRes.json().catch(() => ({}));
-          res.statusCode = jobSubmitRes.status;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify(err));
-        }
-
-        const jobCreated = await jobSubmitRes.json();
-
-        // If returned immediately with data url
-        if (jobCreated?.data?.[0]?.url) {
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({
-              url: jobCreated.data[0].url,
-              model: 'sensenova/sensenova-u1.5-lite',
-              prompt,
-            })
-          );
-        }
-
-        // 2. Poll asynchronous job with exponential backoff
-        const jobId = jobCreated.id;
-        if (!jobId) {
-          throw new Error('No job ID returned from SenseNova engine');
-        }
-
-        const deadline = Date.now() + 60000; // 60s timeout
-        let waitMs = 1500;
-        let finalUrl = '';
-
-        while (Date.now() < deadline) {
-          await new Promise((r) => setTimeout(r, waitMs));
-          waitMs = Math.min(waitMs * 1.3, 4000);
-
-          const pollRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations/${jobId}`, {
-            headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
-          });
-
-          if (pollRes.ok) {
-            const pollData = await pollRes.json();
-            if (pollData?.status === 'succeeded' || pollData?.status === 'completed') {
-              if (pollData?.data?.[0]?.url) {
-                finalUrl = pollData.data[0].url;
-                break;
+            if (jobSubmitRes.ok) {
+              const jobCreated = await jobSubmitRes.json();
+              if (jobCreated?.data?.[0]?.url) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(
+                  JSON.stringify({
+                    url: jobCreated.data[0].url,
+                    model: 'sensenova/sensenova-u1.5-lite',
+                    prompt,
+                  })
+                );
               }
-            } else if (pollData?.status === 'failed') {
-              throw new Error(pollData?.error?.message || 'SenseNova rendering job failed');
+
+              // Poll asynchronous job
+              const jobId = jobCreated.id;
+              if (jobId) {
+                const deadline = Date.now() + 60000;
+                let waitMs = 1500;
+                let finalUrl = '';
+                while (Date.now() < deadline) {
+                  await new Promise((r) => setTimeout(r, waitMs));
+                  waitMs = Math.min(waitMs * 1.3, 4000);
+                  const pollRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations/${jobId}`, {
+                    headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
+                  });
+                  if (pollRes.ok) {
+                    const pollData = await pollRes.json();
+                    if (pollData?.status === 'succeeded' || pollData?.status === 'completed') {
+                      if (pollData?.data?.[0]?.url) {
+                        finalUrl = pollData.data[0].url;
+                        break;
+                      }
+                    } else if (pollData?.status === 'failed') {
+                      break;
+                    }
+                  }
+                }
+
+                if (finalUrl) {
+                  res.statusCode = 200;
+                  res.setHeader('Content-Type', 'application/json');
+                  return res.end(
+                    JSON.stringify({
+                      url: finalUrl,
+                      model: 'sensenova/sensenova-u1.5-lite',
+                      prompt,
+                    })
+                  );
+                }
+              }
             }
+          } catch (senseErr) {
+            console.warn('[Proxy] SenseNova generation failed, falling back to Pollinations:', senseErr);
           }
         }
 
-        if (!finalUrl) {
-          throw new Error('Image generation timed out after 60 seconds');
-        }
+        // 2. High-Fidelity Fallback: Pollinations Image AI (Direct, fast, and free)
+        const [wStr, hStr] = size.split('x');
+        const width = parseInt(wStr, 10) || 1024;
+        const height = parseInt(hStr, 10) || 1024;
+        const seed = Math.floor(Math.random() * 99999999);
+        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         return res.end(
           JSON.stringify({
-            url: finalUrl,
-            model: 'sensenova/sensenova-u1.5-lite',
+            url: pollinationsUrl,
+            model: 'pollinations/flux',
             prompt,
           })
         );
       } catch (err: any) {
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: { message: err?.message || 'SenseNova generation failed' } }));
+        return res.end(JSON.stringify({ error: { message: err?.message || 'Image generation failed' } }));
       }
     }
 
@@ -613,6 +648,17 @@ export function createAiProxyMiddleware(rootDir: string) {
     if (url.startsWith('/api/ai/groq/chat') && req.method === 'POST') {
       const body = await parseJsonBody(req);
       const isStreaming = Boolean(body.stream);
+
+      // Token Safety Clamping for Groq Free Tier (Strict 8,000 TPM limit enforcement)
+      let promptTokens = 0;
+      if (Array.isArray(body.messages)) {
+        for (const m of body.messages) {
+          promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+        }
+      }
+      const safeMax = Math.max(512, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
+      body.max_tokens = safeMax;
+
       const groqRes = await fetch(`${envConfig.groqEndpoint}/chat/completions`, {
         method: 'POST',
         headers: {

@@ -150,7 +150,8 @@ export function MasterAi2Shell() {
         history,
         text,
         attachments,
-        activeConv.systemPrompt
+        activeConv.systemPrompt,
+        selectedModelId
       );
 
       const assistantMsgId = createAssistantPlaceholder();

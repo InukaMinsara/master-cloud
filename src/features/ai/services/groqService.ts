@@ -150,7 +150,7 @@ class GroqService {
             messages: options.messages,
             stream: true,
             temperature: options.temperature ?? 0.7,
-            max_tokens: options.maxTokens ?? 4096,
+            max_tokens: options.maxTokens ?? 1800,
           }),
         });
 

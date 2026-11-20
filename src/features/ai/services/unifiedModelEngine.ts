@@ -10,6 +10,7 @@
 
 import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
 import { senseNovaImageService, SenseNovaImageResult } from './senseNovaImageService';
+import { ContextManager } from './contextManager';
 
 export interface UnifiedStreamOptions {
   model: string;
@@ -193,6 +194,10 @@ class UnifiedModelEngine {
       }
     }
 
+    // Calculate prompt tokens & safe max_tokens ceiling before dispatch
+    const promptTokens = ContextManager.estimateMessagesTokens(options.messages);
+    const safeMaxTokens = ContextManager.getSafeOutputTokens(options.model, promptTokens);
+
     let res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -200,20 +205,26 @@ class UnifiedModelEngine {
       body: JSON.stringify({
         model: options.model,
         messages: options.messages,
+        max_tokens: safeMaxTokens,
         stream: true,
       }),
     });
 
-    // 429 Rate Limit Intercept with Context-Compression Retry (Never silently switch models)
+    // 429 Rate Limit Intercept with Exponential Backoff Retry (Never silently switch models)
     if (res.status === 429) {
       const errPayload = await res.json().catch(() => ({}));
       const errMsg = errPayload?.error?.message || '';
 
-      // Wait 2.5s for token bucket recovery
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      // Parse retry-after from message or headers
+      const waitMatch = errMsg.match(/try again in ([0-9.]+)s/i);
+      const waitSec = waitMatch ? parseFloat(waitMatch[1]) : 2.5;
+      const waitMs = Math.min(8000, Math.max(1500, Math.ceil(waitSec * 1000) + 500));
+
+      // Wait for token bucket replenishment
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
       if (options.signal?.aborted) throw new Error('Request aborted');
 
-      // Re-compress context to only essential system instruction and latest user turn
+      // Re-compress context to essential system instruction and only latest user turn
       const compressedMessages = [
         options.messages.find((m) => m.role === 'system') || {
           role: 'system' as const,
@@ -222,6 +233,9 @@ class UnifiedModelEngine {
         ...options.messages.filter((m) => m.role === 'user').slice(-1),
       ];
 
+      const retryPromptTokens = ContextManager.estimateMessagesTokens(compressedMessages);
+      const retrySafeMaxTokens = ContextManager.getSafeOutputTokens(options.model, retryPromptTokens);
+
       res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -229,6 +243,7 @@ class UnifiedModelEngine {
         body: JSON.stringify({
           model: options.model,
           messages: compressedMessages,
+          max_tokens: Math.min(1024, retrySafeMaxTokens),
           stream: true,
         }),
       });
@@ -238,7 +253,7 @@ class UnifiedModelEngine {
         throw new Error(
           retryErr?.error?.message ||
             errMsg ||
-            'Rate limit reached on free tier (8,000 TPM limit). Please wait a few seconds before retrying.'
+            'Rate limit reached on free tier (8,000 TPM limit). We automatically compressed the context. Please wait a few seconds and click Retry Request, or shorten your prompt.'
         );
       }
     } else if (!res.ok) {
