@@ -2,8 +2,8 @@
  * src/features/ai/components/MasterAi2Sidebar.tsx
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI 2.0 — SIDEBAR NAVIGATION
- * Windows 11 Fluent design collapsible sidebar with fast conversation search,
- * pinning, renaming, and persistent storage management.
+ * Windows 11 Fluent design collapsible sidebar with deep full-text conversation
+ * and message search, conversation branching/forking, pinning, renaming, and persistent storage.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -18,9 +18,11 @@ import {
   MessageSquare,
   X,
   Zap,
+  GitBranch,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 
 export function MasterAi2Sidebar() {
   const isSidebarOpen = useAiChatStore((s) => s.isSidebarOpen);
@@ -32,6 +34,7 @@ export function MasterAi2Sidebar() {
   const deleteConversation = useAiChatStore((s) => s.deleteConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const togglePinConversation = useAiChatStore((s) => s.togglePinConversation);
+  const branchConversation = useAiChatStore((s) => s.branchConversation);
 
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,9 +42,14 @@ export function MasterAi2Sidebar() {
 
   const user = useAuthStore((s) => s.user);
 
-  const filtered = conversations.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase())
-  );
+  // Deep search across conversation titles AND individual message content
+  const filtered = conversations.filter((c) => {
+    const q = search.toLowerCase().trim();
+    if (!q) return true;
+    const titleMatch = c.title.toLowerCase().includes(q);
+    const messageMatch = c.messages.some((m) => m.content.toLowerCase().includes(q));
+    return titleMatch || messageMatch;
+  });
 
   const pinnedConvs = filtered.filter((c) => c.isPinned);
   const recentConvs = filtered.filter((c) => !c.isPinned);
@@ -57,6 +65,18 @@ export function MasterAi2Sidebar() {
       renameConversation(id, editTitle.trim());
     }
     setEditingId(null);
+  };
+
+  const handleBranch = (e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    const conv = conversations.find((c) => c.id === convId);
+    if (!conv || conv.messages.length === 0) {
+      toast.info('Cannot branch an empty conversation.');
+      return;
+    }
+    const lastMsgId = conv.messages[conv.messages.length - 1].id;
+    branchConversation(lastMsgId);
+    toast.success(`Branched from "${conv.title}"!`);
   };
 
   if (!isSidebarOpen) {
@@ -110,7 +130,7 @@ export function MasterAi2Sidebar() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search conversations..."
+            placeholder="Search chats & messages..."
             className="w-full h-8 pl-8 pr-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500/40 transition-colors font-sans"
           />
         </div>
@@ -136,6 +156,7 @@ export function MasterAi2Sidebar() {
                 onSelect={() => selectConversation(conv.id)}
                 onDelete={() => deleteConversation(conv.id)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onBranch={(e) => handleBranch(e, conv.id)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -165,6 +186,7 @@ export function MasterAi2Sidebar() {
                 onSelect={() => selectConversation(conv.id)}
                 onDelete={() => deleteConversation(conv.id)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onBranch={(e) => handleBranch(e, conv.id)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -202,6 +224,7 @@ interface ItemProps {
   onSelect: () => void;
   onDelete: () => void;
   onTogglePin: () => void;
+  onBranch: (e: React.MouseEvent) => void;
   onStartRename: (e: React.MouseEvent) => void;
   onSaveRename: () => void;
   onCancelRename: () => void;
@@ -216,6 +239,7 @@ function ConversationItem({
   onSelect,
   onDelete,
   onTogglePin,
+  onBranch,
   onStartRename,
   onSaveRename,
   onCancelRename,
@@ -234,14 +258,14 @@ function ConversationItem({
         <button
           type="button"
           onClick={onSaveRename}
-          className="text-orange-400 hover:text-orange-300 px-1 font-bold text-xs"
+          className="text-orange-400 hover:text-orange-300 px-1 font-bold text-xs cursor-pointer"
         >
           ✓
         </button>
         <button
           type="button"
           onClick={onCancelRename}
-          className="text-zinc-500 hover:text-zinc-300 px-1 text-xs"
+          className="text-zinc-500 hover:text-zinc-300 px-1 text-xs cursor-pointer"
         >
           ✕
         </button>
@@ -267,19 +291,27 @@ function ConversationItem({
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           type="button"
+          onClick={onBranch}
+          className="p-1 rounded text-zinc-500 hover:text-cyan-400 hover:bg-white/[0.1] cursor-pointer"
+          title="Branch this conversation"
+        >
+          <GitBranch className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onTogglePin();
           }}
-          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1]"
+          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
           title={conv.isPinned ? 'Unpin' : 'Pin to top'}
         >
-          {conv.isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+          {conv.isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3 text-orange-400" />}
         </button>
         <button
           type="button"
           onClick={onStartRename}
-          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1]"
+          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
           title="Rename"
         >
           <Edit2 className="w-3 h-3" />
@@ -290,7 +322,7 @@ function ConversationItem({
             e.stopPropagation();
             onDelete();
           }}
-          className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-white/[0.1]"
+          className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-white/[0.1] cursor-pointer"
           title="Delete"
         >
           <Trash2 className="w-3 h-3" />

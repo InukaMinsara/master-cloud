@@ -11,6 +11,9 @@
  * - Local file download & copy to clipboard
  * - Regenerate & Generate variation controls
  * - Edit in Chat shortcut (loads image into composer reference)
+ * - AI Background Removal (Upscale & isolate subject)
+ * - Super-resolution Upscaling 2x
+ * - Deep metadata inspector drawer (Seed, Dimensions, Duration, Provider)
  * - Provider & Model metadata pill with Free-tier badge
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -27,10 +30,13 @@ import {
   Edit3,
   Layers,
   Loader2,
-  ExternalLink,
+  Info,
+  Crop,
+  ArrowUpRight,
 } from 'lucide-react';
 import { AiImageDetails } from '../types/aiTypes';
 import { useAiChatStore } from '../stores/aiChatStore';
+import { pollinationsService } from '../services/pollinationsService';
 import { useFileStore } from '@/stores/fileStore';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
@@ -42,6 +48,8 @@ interface ImageCardProps {
   onRegenerate?: () => void;
   onEditImage?: (imageUrl: string, prompt: string) => void;
   onVariation?: (details: AiImageDetails) => void;
+  onRemoveBackground?: (imageUrl: string) => void;
+  onUpscale?: (imageUrl: string) => void;
 }
 
 export function MasterAi2ImageCard({
@@ -51,10 +59,14 @@ export function MasterAi2ImageCard({
   onRegenerate,
   onEditImage,
   onVariation,
+  onRemoveBackground,
+  onUpscale,
 }: ImageCardProps) {
   const [copied, setCopied] = useState(false);
   const [isSavingToDrive, setIsSavingToDrive] = useState(false);
   const [isSavedToDrive, setIsSavedToDrive] = useState(Boolean(details?.savedToDriveId));
+  const [showMetadata, setShowMetadata] = useState(false);
+  const [isTransforming, setIsTransforming] = useState(false);
 
   const setLightboxImage = useAiChatStore((s) => s.setLightboxImage);
   const fetchDriveItems = useFileStore((s) => s.fetchItems);
@@ -152,6 +164,22 @@ export function MasterAi2ImageCard({
     }
   };
 
+  const handleBgRemove = () => {
+    if (onRemoveBackground) {
+      onRemoveBackground(details.url);
+    } else if (onEditImage) {
+      onEditImage(details.url, 'Remove background and isolate subject on clean neutral backdrop');
+    }
+  };
+
+  const handleUpscale = () => {
+    if (onUpscale) {
+      onUpscale(details.url);
+    } else if (onEditImage) {
+      onEditImage(details.url, 'Upscale this image to 2x resolution with hyper-crisp fine details and texture enhancement');
+    }
+  };
+
   return (
     <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-zinc-950/80 backdrop-blur-md overflow-hidden shadow-xl animate-in fade-in duration-300">
       {/* Header Info Bar */}
@@ -161,7 +189,7 @@ export function MasterAi2ImageCard({
             <Sparkles className="w-3.5 h-3.5 text-orange-400" />
             {details.isEdited ? 'Edited Image' : 'Generated Image'}
           </span>
-          <span className="text-[10px] font-mono text-zinc-400">
+          <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[140px]">
             · {details.modelTitle || details.modelId}
           </span>
         </div>
@@ -175,6 +203,17 @@ export function MasterAi2ImageCard({
               {(details.generationTimeMs / 1000).toFixed(1)}s
             </span>
           )}
+          {/* Metadata Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowMetadata(!showMetadata)}
+            className={`p-1 rounded-md text-zinc-400 hover:text-white transition-colors cursor-pointer ${
+              showMetadata ? 'bg-orange-500/20 text-orange-400' : 'hover:bg-white/[0.06]'
+            }`}
+            title="Inspect generation metadata"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -205,6 +244,17 @@ export function MasterAi2ImageCard({
           </button>
         </div>
       </div>
+
+      {/* Deep Metadata Drawer (Expanded) */}
+      {showMetadata && (
+        <div className="px-3.5 py-2.5 bg-black/40 border-b border-white/[0.06] text-[11px] font-mono grid grid-cols-2 gap-2 text-zinc-300 animate-in fade-in duration-150">
+          <div><span className="text-zinc-500">Dimensions:</span> {details.width} × {details.height}</div>
+          <div><span className="text-zinc-500">Seed:</span> {details.seed}</div>
+          <div><span className="text-zinc-500">Aspect Ratio:</span> {details.aspectRatio || '1:1'}</div>
+          <div><span className="text-zinc-500">Provider:</span> {details.provider}</div>
+          <div className="col-span-2 truncate"><span className="text-zinc-500">Model ID:</span> {details.modelId}</div>
+        </div>
+      )}
 
       {/* Prompt Caption & Dimensions */}
       <div className="p-3.5 space-y-3">
@@ -265,12 +315,34 @@ export function MasterAi2ImageCard({
                 type="button"
                 onClick={() => onVariation(details)}
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
-                title="Generate another variation"
+                title="Generate creative variation"
               >
                 <Layers className="w-3.5 h-3.5 text-purple-400" />
                 <span>Variation</span>
               </button>
             )}
+
+            {/* Remove Background Action */}
+            <button
+              type="button"
+              onClick={handleBgRemove}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
+              title="Remove background & isolate subject"
+            >
+              <Crop className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Cutout</span>
+            </button>
+
+            {/* Upscale 2x Action */}
+            <button
+              type="button"
+              onClick={handleUpscale}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
+              title="Super-resolution upscale to 2x"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Upscale 2x</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-1">

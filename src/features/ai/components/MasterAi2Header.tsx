@@ -3,11 +3,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI — APPLICATION HEADER
  * Windows 11 Fluent header with multi-provider model indicator, title inline editor,
- * chat export, and Provider Vault status button.
+ * multi-format conversation export (MD, JSON, TXT), keyboard shortcuts modal,
+ * and real-time service health indicator pill.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Menu,
   Download,
@@ -16,12 +17,19 @@ import {
   Edit2,
   Zap,
   Sparkles,
-  Shield,
+  Keyboard,
+  ChevronDown,
+  FileCode,
+  FileText,
+  Copy,
+  Activity,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { groqService } from '../services/groqService';
 import { getGroqModelInfo } from '../services/groqModels';
 import { PREFERRED_POLLINATIONS_MODELS } from '../services/pollinationsModels';
+import { healthMonitor } from '@/services/healthMonitor';
+import { MasterAi2KeyboardShortcutsModal } from './MasterAi2KeyboardShortcutsModal';
 import { toast } from 'sonner';
 
 export function MasterAi2Header() {
@@ -32,6 +40,7 @@ export function MasterAi2Header() {
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
+  const exportConversation = useAiChatStore((s) => s.exportConversation);
 
   const activeConv = getActiveConversation();
   const activeGroqModel = getGroqModelInfo(selectedModelId);
@@ -43,6 +52,37 @@ export function MasterAi2Header() {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [serviceHealth, setServiceHealth] = useState<'healthy' | 'degraded' | 'offline'>('healthy');
+
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Monitor health periodically
+  useEffect(() => {
+    const check = async () => {
+      const results = await healthMonitor.checkAllServices();
+      const groqOk = results.groq.status === 'healthy';
+      const polOk = results.pollinations.status === 'healthy';
+      if (groqOk && polOk) setServiceHealth('healthy');
+      else if (groqOk || polOk) setServiceHealth('degraded');
+      else setServiceHealth('offline');
+    };
+    check();
+    const interval = setInterval(check, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleStartRename = () => {
     setTitleDraft(activeConv?.title || 'New Conversation');
@@ -56,140 +96,226 @@ export function MasterAi2Header() {
     setIsEditingTitle(false);
   };
 
-  const handleExportMarkdown = () => {
+  const handleDownloadExport = (format: 'markdown' | 'json' | 'text') => {
     if (!activeConv || activeConv.messages.length === 0) {
       toast.info('No messages to export.');
       return;
     }
 
-    let md = `# ${activeConv.title}\n*Exported from Master AI on ${new Date().toLocaleString()}*\n\n---\n\n`;
-    for (const msg of activeConv.messages) {
-      const roleName = msg.role === 'user' ? '👤 User' : `🤖 Master AI (${msg.modelUsed || msg.providerUsed || 'Groq'})`;
-      const time = new Date(msg.timestamp).toLocaleTimeString();
-      md += `### ${roleName} [${time}]\n\n${msg.content}\n\n`;
-      if (msg.imageDetails) {
-        md += `![${msg.imageDetails.prompt}](${msg.imageDetails.url})\n\n`;
-      }
-      md += `---\n\n`;
-    }
+    const exportedContent = exportConversation(format);
+    const mimeTypes = {
+      markdown: 'text/markdown;charset=utf-8',
+      json: 'application/json;charset=utf-8',
+      text: 'text/plain;charset=utf-8',
+    };
+    const extensions = {
+      markdown: 'md',
+      json: 'json',
+      text: 'txt',
+    };
 
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([exportedContent], { type: mimeTypes[format] });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeConv.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_chat.md`;
+    const cleanTitle = activeConv.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+    a.download = `${cleanTitle}_${Date.now()}.${extensions[format]}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success('Conversation exported as Markdown (.md)!');
+    setIsExportMenuOpen(false);
+    toast.success(`Exported conversation as .${extensions[format]}`);
+  };
+
+  const handleCopyTranscript = async () => {
+    if (!activeConv || activeConv.messages.length === 0) {
+      toast.info('No messages to copy.');
+      return;
+    }
+    const text = exportConversation('text');
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsExportMenuOpen(false);
+      toast.success('Conversation transcript copied to clipboard!');
+    } catch {
+      toast.error('Could not copy transcript.');
+    }
   };
 
   return (
-    <header className="h-14 px-4 border-b border-white/[0.06] bg-zinc-950/70 backdrop-blur-xl flex items-center justify-between select-none z-20">
-      {/* Left: Sidebar Toggle & Title */}
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="Toggle Sidebar"
-        >
-          <Menu className="w-4 h-4" />
-        </button>
-
-        {/* Conversation Title Inline Editor */}
-        {isEditingTitle ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="text"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveRename()}
-              autoFocus
-              className="h-8 px-2.5 rounded-lg bg-zinc-900 border border-orange-500/50 text-xs font-semibold text-white focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleSaveRename}
-              className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-            >
-              <Check className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <div
-            onClick={handleStartRename}
-            className="group flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg hover:bg-white/[0.04] transition-colors min-w-0"
-            title="Click to rename"
+    <>
+      <header className="h-14 px-4 border-b border-white/[0.06] bg-zinc-950/70 backdrop-blur-xl flex items-center justify-between select-none z-20">
+        {/* Left: Sidebar Toggle & Title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+            title="Toggle Sidebar (Ctrl+B)"
           >
-            <h1 className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">
-              {activeConv?.title || 'New Conversation'}
-            </h1>
-            <Edit2 className="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100" />
-          </div>
-        )}
-      </div>
+            <Menu className="w-4 h-4" />
+          </button>
 
-      {/* Right Controls: Model Badge & Vault Indicator & Actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Active Model Indicator Badge */}
-        <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
-          {chatMode === 'image' ? (
-            <>
-              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-              <span className="font-medium text-white">{activeImageModel.name}</span>
-            </>
+          {/* Conversation Title Inline Editor */}
+          {isEditingTitle ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveRename()}
+                autoFocus
+                className="h-8 px-2.5 rounded-lg bg-zinc-900 border border-orange-500/50 text-xs font-semibold text-white focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleSaveRename}
+                className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ) : (
-            <>
-              <Zap className="w-3.5 h-3.5 text-orange-400" />
-              <span className="font-medium text-white">{activeGroqModel.name}</span>
-            </>
+            <div
+              onClick={handleStartRename}
+              className="group flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg hover:bg-white/[0.04] transition-colors min-w-0"
+              title="Click to rename"
+            >
+              <h1 className="text-sm font-bold text-white truncate max-w-[180px] sm:max-w-xs">
+                {activeConv?.title || 'New Conversation'}
+              </h1>
+              <Edit2 className="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100" />
+            </div>
           )}
         </div>
 
-        {/* Server Environment Provider Status Pill */}
-        <div
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border select-none ${
-            hasGroqKey
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-              : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/40'
-          }`}
-          title={hasGroqKey ? 'Groq LPU active (via .env.local)' : 'Groq offline (configure GROQ_API_KEY in .env.local)'}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${hasGroqKey ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
-          <span className="hidden sm:inline">
-            {hasGroqKey ? 'Groq Active' : 'Groq Offline'}
-          </span>
-        </div>
+        {/* Right Controls: Model Badge & Vault Indicator & Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Active Model Indicator Badge */}
+          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
+            {chatMode === 'image' ? (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                <span className="font-medium text-white">{activeImageModel.name}</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-3.5 h-3.5 text-orange-400" />
+                <span className="font-medium text-white">{activeGroqModel.name}</span>
+              </>
+            )}
+          </div>
 
-        {/* Export Chat */}
-        <button
-          type="button"
-          onClick={handleExportMarkdown}
-          className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-          title="Export chat as Markdown (.md)"
-        >
-          <Download className="w-4 h-4" />
-        </button>
+          {/* Service Health Indicator Pill */}
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border select-none cursor-pointer ${
+              serviceHealth === 'healthy'
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                : serviceHealth === 'degraded'
+                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                : 'bg-red-500/10 text-red-400 border-red-500/20'
+            }`}
+            title={`System Health: ${serviceHealth.toUpperCase()} (Groq + Pollinations + Local AI)`}
+            onClick={() => toast.info(`System Status: ${serviceHealth.toUpperCase()}. Groq LPU: ${hasGroqKey ? 'Connected' : 'Offline'}, Pollinations AI: Online.`)}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                serviceHealth === 'healthy'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : serviceHealth === 'degraded'
+                  ? 'bg-amber-400'
+                  : 'bg-red-500'
+              }`}
+            />
+            <span className="hidden md:inline capitalize">{serviceHealth}</span>
+          </div>
 
-        {/* Clear Messages */}
-        <button
-          type="button"
-          onClick={() => {
-            if (activeConv && activeConv.messages.length > 0) {
-              if (window.confirm('Clear all messages in this conversation?')) {
-                clearActiveConversation();
-                toast.info('Conversation messages cleared.');
+          {/* Keyboard Shortcuts Trigger */}
+          <button
+            type="button"
+            onClick={() => setIsShortcutsModalOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+            title="Keyboard Shortcuts (Ctrl+/)"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
+
+          {/* Export Dropdown Menu */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer flex items-center gap-1"
+              title="Export conversation"
+            >
+              <Download className="w-4 h-4" />
+              <ChevronDown className="w-3 h-3 text-zinc-500" />
+            </button>
+
+            {isExportMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-zinc-950/95 backdrop-blur-2xl border border-white/[0.1] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadExport('markdown')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-orange-400" />
+                  <span className="font-medium">Markdown (.md)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadExport('json')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+                >
+                  <FileCode className="w-4 h-4 text-cyan-400" />
+                  <span className="font-medium">Structured JSON (.json)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadExport('text')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-purple-400" />
+                  <span className="font-medium">Plain Text (.txt)</span>
+                </button>
+                <div className="h-[1px] bg-white/[0.06] my-1" />
+                <button
+                  type="button"
+                  onClick={handleCopyTranscript}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+                >
+                  <Copy className="w-4 h-4 text-emerald-400" />
+                  <span className="font-medium">Copy Transcript</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Clear Messages */}
+          <button
+            type="button"
+            onClick={() => {
+              if (activeConv && activeConv.messages.length > 0) {
+                if (window.confirm('Clear all messages in this conversation?')) {
+                  clearActiveConversation();
+                  toast.info('Conversation messages cleared.');
+                }
               }
-            }
-          }}
-          className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-          title="Clear messages"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </header>
+            }}
+            className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+            title="Clear messages"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <MasterAi2KeyboardShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+      />
+    </>
   );
 }

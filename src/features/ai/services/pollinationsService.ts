@@ -29,6 +29,7 @@ export interface GenerateImageOptions {
   height?: number;
   seed?: number;
   aspectRatio?: ImageAspectRatio;
+  resolution?: number;
   enhance?: boolean;
   signal?: AbortSignal;
 }
@@ -352,15 +353,125 @@ class PollinationsService {
     };
   }
 
+  /**
+   * Generates a batch of multiple image variations in parallel.
+   */
+  public async generateBatchImages(
+    options: GenerateImageOptions,
+    count: number = 2
+  ): Promise<ImageOperationResult[]> {
+    const validCount = Math.max(1, Math.min(4, count));
+    const promises: Promise<ImageOperationResult>[] = [];
+
+    for (let i = 0; i < validCount; i++) {
+      const batchSeed = options.seed !== undefined ? options.seed + i * 1337 : Math.floor(Math.random() * 99999999);
+      promises.push(
+        this.generateImage({
+          ...options,
+          seed: batchSeed,
+        })
+      );
+    }
+
+    return Promise.all(promises);
+  }
+
+  /**
+   * Generates a creative variation of an existing image prompt.
+   */
+  public async generateVariation(
+    originalPrompt: string,
+    originalSeed: number,
+    modelId?: string
+  ): Promise<ImageOperationResult> {
+    const variationSeed = Math.floor(Math.random() * 99999999);
+    const variationPrompt = `${originalPrompt.trim()}, alternate creative variation, distinctive perspective`;
+    return this.generateImage({
+      prompt: variationPrompt,
+      modelId,
+      seed: variationSeed,
+    });
+  }
+
+  /**
+   * AI-powered background removal using the primary editing model.
+   */
+  public async removeBackground(imageBlobOrUrl: Blob | string): Promise<ImageOperationResult> {
+    return this.editImage({
+      prompt: 'Isolate the main subject completely on a clean, solid, pure neutral background with sharp clean edges',
+      imageBlobOrUrl,
+      modelId: DEFAULT_EDIT_MODEL,
+    });
+  }
+
+  /**
+   * Super-resolution image upscaling via diffusion enhancement.
+   */
+  public async upscaleImage(
+    imageBlobOrUrl: Blob | string,
+    factor: 2 | 4 = 2
+  ): Promise<ImageOperationResult> {
+    const prompt = `Upscale this image to ${factor}x ultra-high fidelity, 8k resolution, razor-sharp details, artifact cleanup, hyper-crisp textures`;
+    return this.editImage({
+      prompt,
+      imageBlobOrUrl,
+      modelId: DEFAULT_EDIT_MODEL,
+    });
+  }
+
   private resolveDimensions(
     aspectRatio?: ImageAspectRatio,
     customWidth?: number,
-    customHeight?: number
+    customHeight?: number,
+    baseResolution: number = 1024
   ): { width: number; height: number } {
     if (customWidth && customHeight) {
       return { width: customWidth, height: customHeight };
     }
 
+    // 512p Fast
+    if (baseResolution <= 512) {
+      switch (aspectRatio) {
+        case '16:9':
+          return { width: 640, height: 360 };
+        case '9:16':
+          return { width: 360, height: 640 };
+        case '4:3':
+          return { width: 512, height: 384 };
+        case '3:2':
+          return { width: 540, height: 360 };
+        case '2:3':
+          return { width: 360, height: 540 };
+        case '21:9':
+          return { width: 672, height: 288 };
+        case '1:1':
+        default:
+          return { width: 512, height: 512 };
+      }
+    }
+
+    // 1536p High Definition
+    if (baseResolution >= 1536) {
+      switch (aspectRatio) {
+        case '16:9':
+          return { width: 1920, height: 1080 };
+        case '9:16':
+          return { width: 1080, height: 1920 };
+        case '4:3':
+          return { width: 1536, height: 1152 };
+        case '3:2':
+          return { width: 1620, height: 1080 };
+        case '2:3':
+          return { width: 1080, height: 1620 };
+        case '21:9':
+          return { width: 2016, height: 864 };
+        case '1:1':
+        default:
+          return { width: 1536, height: 1536 };
+      }
+    }
+
+    // Default 1024p
     switch (aspectRatio) {
       case '16:9':
         return { width: 1280, height: 720 };
@@ -372,6 +483,8 @@ class PollinationsService {
         return { width: 1080, height: 720 };
       case '2:3':
         return { width: 720, height: 1080 };
+      case '21:9':
+        return { width: 1344, height: 576 };
       case '1:1':
       default:
         return { width: 1024, height: 1024 };

@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { Bot, User, Copy, Check, RotateCcw, FileText, Sparkles, Zap, Edit2, AlertCircle, ImageIcon } from 'lucide-react';
+import { Bot, Copy, Check, RotateCcw, FileText, Sparkles, Zap, Edit2, AlertCircle } from 'lucide-react';
 import { AiImageDetails, AiMessage } from '../types/aiTypes';
 import { MasterAi2Markdown } from './MasterAi2Markdown';
 import { MasterAi2ImageCard } from './MasterAi2ImageCard';
@@ -21,6 +21,8 @@ interface MessageBubbleProps {
   onEdit?: (newText: string) => void;
   onEditImage?: (imageUrl: string, prompt: string) => void;
   onVariation?: (details: AiImageDetails) => void;
+  onRemoveBackground?: (imageUrl: string) => void;
+  onUpscale?: (imageUrl: string) => void;
 }
 
 export function MasterAi2MessageBubble({
@@ -30,6 +32,8 @@ export function MasterAi2MessageBubble({
   onEdit,
   onEditImage,
   onVariation,
+  onRemoveBackground,
+  onUpscale,
 }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -145,14 +149,14 @@ export function MasterAi2MessageBubble({
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-2.5 py-1 rounded-lg hover:bg-white/[0.08] text-zinc-400"
+                  className="px-2.5 py-1 rounded-lg hover:bg-white/[0.08] text-zinc-400 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveEdit}
-                  className="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold"
+                  className="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-bold cursor-pointer"
                 >
                   Save & Resend
                 </button>
@@ -186,6 +190,8 @@ export function MasterAi2MessageBubble({
             onRegenerate={onRegenerate}
             onEditImage={onEditImage}
             onVariation={onVariation}
+            onRemoveBackground={onRemoveBackground}
+            onUpscale={onUpscale}
           />
         ) : (
           <MasterAi2Markdown content={message.content} isStreaming={isStreaming} />
@@ -198,7 +204,7 @@ export function MasterAi2MessageBubble({
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
                 title="Edit message"
               >
                 <Edit2 className="w-3.5 h-3.5" />

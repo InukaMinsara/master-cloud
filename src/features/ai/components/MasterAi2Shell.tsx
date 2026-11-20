@@ -3,14 +3,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI — TOP-LEVEL MULTI-PROVIDER APPLICATION SHELL
  * Seamlessly routes between Groq conversational LPU streaming, Pollinations AI
- * image generation and editing, and local ComfyUI.
- *
- * Provides:
- * - Deterministic intent router
- * - Safe fallback execution
- * - Keyboard shortcuts (Ctrl+N for new chat, Ctrl+K for Vault)
- * - Cloud Drive attachments and image saving
- * - Fullscreen image lightbox modal
+ * image generation, editing, variations, upscaling, background removal,
+ * batch generation (1-4x), and conversation branching.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -40,6 +34,9 @@ export function MasterAi2Shell() {
   const chatMode = useAiChatStore((s) => s.chatMode);
   const setChatMode = useAiChatStore((s) => s.setChatMode);
   const aspectRatio = useAiChatStore((s) => s.aspectRatio);
+  const batchCount = useAiChatStore((s) => s.batchCount);
+  const imageSeed = useAiChatStore((s) => s.imageSeed);
+  const imageResolution = useAiChatStore((s) => s.imageResolution);
   const addUserMessage = useAiChatStore((s) => s.addUserMessage);
   const createAssistantPlaceholder = useAiChatStore((s) => s.createAssistantPlaceholder);
   const updateAssistantContent = useAiChatStore((s) => s.updateAssistantContent);
@@ -52,6 +49,7 @@ export function MasterAi2Shell() {
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const newConversation = useAiChatStore((s) => s.newConversation);
   const refreshProviderStatus = useAiChatStore((s) => s.refreshProviderStatus);
+  const branchConversation = useAiChatStore((s) => s.branchConversation);
 
   // Automatic Provider Initialization on mount
   useEffect(() => {
@@ -93,11 +91,14 @@ export function MasterAi2Shell() {
     const preAttachedId = sessionStorage.getItem('master_ai_attached_file_id');
     if (preAttachedId) {
       sessionStorage.removeItem('master_ai_attached_file_id');
-      api.getFileContentText(preAttachedId).then((content) => {
-        if (content) {
-          toast.success('Attached file context from Drive to Master AI');
-        }
-      }).catch(() => {});
+      api
+        .getFileContentText(preAttachedId)
+        .then((content) => {
+          if (content) {
+            toast.success('Attached file context from Drive to Master AI');
+          }
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -127,12 +128,74 @@ export function MasterAi2Shell() {
 
       // ── ROUTE A: IMAGE GENERATION (Pollinations) ──
       if (route.intent === 'image_generation') {
+        const count = Math.max(1, Math.min(4, batchCount));
+
+        if (count > 1) {
+          // Batch Generation (2x or 4x)
+          const msgIds: string[] = [];
+          for (let i = 0; i < count; i++) {
+            msgIds.push(
+              createImagePlaceholder(
+                `${route.cleanedPrompt} (${i + 1}/${count})`,
+                activeImageModelId,
+                'pollinations'
+              )
+            );
+          }
+
+          try {
+            const results = await pollinationsService.generateBatchImages(
+              {
+                prompt: route.cleanedPrompt,
+                modelId: activeImageModelId,
+                aspectRatio,
+                seed: imageSeed ?? undefined,
+                baseResolution: imageResolution,
+                signal: abortCtrl.signal,
+              },
+              count
+            );
+
+            results.forEach((res, idx) => {
+              finalizeImageMessage(msgIds[idx], {
+                url: res.imageUrl,
+                prompt: route.cleanedPrompt,
+                provider: 'pollinations',
+                modelId: res.modelUsed,
+                modelTitle: res.modelTitle,
+                width: res.width,
+                height: res.height,
+                seed: res.seed,
+                aspectRatio,
+                generationTimeMs: res.generationTimeMs,
+              });
+            });
+
+            if (activeConv.messages.length <= 1) {
+              renameConversation(activeConv.id, `Art: ${route.cleanedPrompt.slice(0, 24)}`);
+            }
+          } catch (err: any) {
+            if (!abortCtrl.signal.aborted) {
+              msgIds.forEach((id) =>
+                setImageError(id, err?.message || 'Batch generation error')
+              );
+            }
+          } finally {
+            setStreaming(false);
+            abortControllerRef.current = null;
+          }
+          return;
+        }
+
+        // Single Image Generation
         const msgId = createImagePlaceholder(route.cleanedPrompt, activeImageModelId, 'pollinations');
         try {
           const result = await pollinationsService.generateImage({
             prompt: route.cleanedPrompt,
             modelId: activeImageModelId,
             aspectRatio,
+            seed: imageSeed ?? undefined,
+            baseResolution: imageResolution,
             signal: abortCtrl.signal,
           });
 
@@ -216,7 +279,7 @@ export function MasterAi2Shell() {
           model: selectedModelId,
           messages: inferenceMessages,
           signal: abortCtrl.signal,
-          onChunk: (chunk, fullText) => {
+          onChunk: (_chunk, fullText) => {
             accumulatedText = fullText;
           },
           onMetrics: (metrics) => {
@@ -233,11 +296,13 @@ export function MasterAi2Shell() {
 
         // Generate smart title if this is the first turn
         if (activeConv.messages.length <= 1) {
-          ContextManager.generateTitle(text).then((smartTitle) => {
-            if (smartTitle) {
-              renameConversation(activeConv.id, smartTitle);
-            }
-          }).catch(() => {});
+          ContextManager.generateTitle(text)
+            .then((smartTitle) => {
+              if (smartTitle) {
+                renameConversation(activeConv.id, smartTitle);
+              }
+            })
+            .catch(() => {});
         }
       } catch (err: any) {
         if (!abortCtrl.signal.aborted) {
@@ -254,6 +319,9 @@ export function MasterAi2Shell() {
       selectedModelId,
       activeImageModelId,
       aspectRatio,
+      batchCount,
+      imageSeed,
+      imageResolution,
       addUserMessage,
       createAssistantPlaceholder,
       updateAssistantContent,
@@ -289,11 +357,14 @@ export function MasterAi2Shell() {
     }
   }, [getActiveConversation, handleSendMessage]);
 
+  // Branch conversation on edit of a past message
   const handleEditMessage = useCallback(
-    (_msgId: string, newText: string) => {
+    (msgId: string, newText: string) => {
+      branchConversation(msgId, newText);
       handleSendMessage(newText, []);
+      toast.success('Branched conversation from edited message!');
     },
-    [handleSendMessage]
+    [branchConversation, handleSendMessage]
   );
 
   const handleEditImageInChat = useCallback(
@@ -313,11 +384,89 @@ export function MasterAi2Shell() {
   );
 
   const handleVariation = useCallback(
-    (details: AiImageDetails) => {
-      const variationPrompt = `${details.prompt} (variation)`;
-      handleSendMessage(`/image ${variationPrompt}`, []);
+    async (details: AiImageDetails) => {
+      toast.info('Generating creative variation...');
+      const msgId = createImagePlaceholder(
+        `${details.prompt} (Variation)`,
+        activeImageModelId,
+        'pollinations'
+      );
+      try {
+        const result = await pollinationsService.generateVariation(
+          details.prompt,
+          details.seed,
+          details.modelId
+        );
+        finalizeImageMessage(msgId, {
+          url: result.imageUrl,
+          prompt: `${details.prompt} (Variation)`,
+          provider: 'pollinations',
+          modelId: result.modelUsed,
+          modelTitle: result.modelTitle,
+          width: result.width,
+          height: result.height,
+          seed: result.seed,
+          aspectRatio: details.aspectRatio,
+          generationTimeMs: result.generationTimeMs,
+        });
+        toast.success('Variation generated!');
+      } catch (err: any) {
+        setImageError(msgId, err?.message || 'Variation failed');
+      }
     },
-    [handleSendMessage]
+    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
+  );
+
+  const handleRemoveBackground = useCallback(
+    async (imageUrl: string) => {
+      toast.info('Extracting subject and removing background...');
+      const msgId = createImagePlaceholder('Cutout: Isolated Subject', activeImageModelId, 'pollinations');
+      try {
+        const result = await pollinationsService.removeBackground(imageUrl);
+        finalizeImageMessage(msgId, {
+          url: result.imageUrl,
+          prompt: 'Cutout: Isolated Subject',
+          provider: 'pollinations',
+          modelId: result.modelUsed,
+          modelTitle: result.modelTitle,
+          width: result.width,
+          height: result.height,
+          seed: result.seed,
+          isEdited: true,
+          generationTimeMs: result.generationTimeMs,
+        });
+        toast.success('Background removed successfully!');
+      } catch (err: any) {
+        setImageError(msgId, err?.message || 'Background removal failed');
+      }
+    },
+    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
+  );
+
+  const handleUpscale = useCallback(
+    async (imageUrl: string) => {
+      toast.info('Enhancing and upscaling to 2x resolution...');
+      const msgId = createImagePlaceholder('Upscaled 2x Image', activeImageModelId, 'pollinations');
+      try {
+        const result = await pollinationsService.upscaleImage(imageUrl, 2);
+        finalizeImageMessage(msgId, {
+          url: result.imageUrl,
+          prompt: 'Upscaled 2x Ultra-High Fidelity',
+          provider: 'pollinations',
+          modelId: result.modelUsed,
+          modelTitle: result.modelTitle,
+          width: result.width,
+          height: result.height,
+          seed: result.seed,
+          isEdited: true,
+          generationTimeMs: result.generationTimeMs,
+        });
+        toast.success('Image upscaled to 2x resolution!');
+      } catch (err: any) {
+        setImageError(msgId, err?.message || 'Upscaling failed');
+      }
+    },
+    [activeImageModelId, createImagePlaceholder, finalizeImageMessage, setImageError]
   );
 
   return (
@@ -337,6 +486,8 @@ export function MasterAi2Shell() {
           onEditMessage={handleEditMessage}
           onEditImage={handleEditImageInChat}
           onVariation={handleVariation}
+          onRemoveBackground={handleRemoveBackground}
+          onUpscale={handleUpscale}
         />
 
         {/* Unified Multimodal Composer */}

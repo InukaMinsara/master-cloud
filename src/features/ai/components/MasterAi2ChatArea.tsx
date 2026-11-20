@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI — MULTIMODAL CHAT TIMELINE
  * Auto-scrolling message list, streaming animation, welcome screen,
- * and support for text bubbles and image cards.
+ * and support for text bubbles, image cards, variations, and image enhancements.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -19,6 +19,8 @@ interface ChatAreaProps {
   onEditMessage: (msgId: string, newText: string) => void;
   onEditImage?: (imageUrl: string, prompt: string) => void;
   onVariation?: (details: AiImageDetails) => void;
+  onRemoveBackground?: (imageUrl: string) => void;
+  onUpscale?: (imageUrl: string) => void;
 }
 
 export function MasterAi2ChatArea({
@@ -27,6 +29,8 @@ export function MasterAi2ChatArea({
   onEditMessage,
   onEditImage,
   onVariation,
+  onRemoveBackground,
+  onUpscale,
 }: ChatAreaProps) {
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const isStreaming = useAiChatStore((s) => s.isStreaming);
@@ -41,7 +45,11 @@ export function MasterAi2ChatArea({
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeConv?.messages.length, activeConv?.messages[activeConv.messages.length - 1]?.content, activeConv?.messages[activeConv.messages.length - 1]?.imageDetails]);
+  }, [
+    activeConv?.messages.length,
+    activeConv?.messages[activeConv.messages.length - 1]?.content,
+    activeConv?.messages[activeConv.messages.length - 1]?.imageDetails,
+  ]);
 
   if (!activeConv || activeConv.messages.length === 0) {
     return (
@@ -74,6 +82,8 @@ export function MasterAi2ChatArea({
             }
             onEditImage={onEditImage}
             onVariation={onVariation}
+            onRemoveBackground={onRemoveBackground}
+            onUpscale={onUpscale}
           />
         ))}
         <div ref={bottomRef} className="h-4" />

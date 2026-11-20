@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * MASTER AI — LOCAL COMFYUI INTEGRATION SERVICE
  * Optional local provider for ComfyUI workflows, local SD/Flux models,
- * and offline inpainting/image-to-image operations.
+ * offline inpainting/image-to-image operations, and RTX 3050 6GB low-VRAM presets.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -18,7 +18,25 @@ export interface ComfyUiConnectionStatus {
   error?: string;
 }
 
+export interface ComfyUiHardwarePreset {
+  name: string;
+  maxResolution: number;
+  lowVram: boolean;
+  batchLimit: number;
+  attentionMechanism: string;
+}
+
+export const RTX_3050_6GB_PRESET: ComfyUiHardwarePreset = {
+  name: 'NVIDIA RTX 3050 (6GB VRAM Optimized)',
+  maxResolution: 768,
+  lowVram: true,
+  batchLimit: 1,
+  attentionMechanism: 'xformers / sdp',
+};
+
 class ComfyUiService {
+  public readonly lowVramPreset = RTX_3050_6GB_PRESET;
+
   /**
    * Test connection to the local ComfyUI instance via server proxy /api/ai/comfyui/status.
    * Never fabricates connectivity: returns honest offline status if unreachable.
@@ -62,6 +80,29 @@ class ComfyUiService {
       endpoint: targetEndpoint,
       error: 'ComfyUI is offline or unreachable.',
     };
+  }
+
+  /**
+   * Queue a prompt workflow on the local ComfyUI instance.
+   */
+  public async queuePrompt(promptWorkflow: Record<string, any>): Promise<{ promptId?: string; error?: string }> {
+    const conn = await this.testConnection();
+    if (!conn.online) {
+      return { error: 'ComfyUI server is offline.' };
+    }
+
+    try {
+      const res = await fetch('/api/ai/comfyui/prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptWorkflow }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return { promptId: data.prompt_id };
+    } catch (e: any) {
+      return { error: e.message || 'Failed to queue ComfyUI prompt' };
+    }
   }
 }
 

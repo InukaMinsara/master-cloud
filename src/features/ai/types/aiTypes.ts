@@ -12,7 +12,7 @@ export type AiProviderId = 'groq' | 'pollinations' | 'comfyui';
 
 export type ChatMode = 'auto' | 'chat' | 'image';
 
-export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3';
+export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3' | '21:9';
 
 export interface AiAttachment {
   id: string;

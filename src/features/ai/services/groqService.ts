@@ -216,6 +216,7 @@ class GroqService {
 
             const liveMetrics: AiTokenMetrics = {
               completionTokens: estimatedTokens,
+              totalTokens: estimatedTokens,
               tokensPerSec: currentTokSec,
               latencyMs: Math.round(performance.now() - startTime),
               firstTokenMs: firstTokenTime ? Math.round(firstTokenTime - startTime) : undefined,
@@ -235,6 +236,7 @@ class GroqService {
 
     const finalMetrics: AiTokenMetrics = {
       completionTokens: estimatedTokens,
+      totalTokens: estimatedTokens,
       tokensPerSec: finalTokSec,
       latencyMs: Math.round(performance.now() - startTime),
       firstTokenMs: firstTokenTime ? Math.round(firstTokenTime - startTime) : undefined,

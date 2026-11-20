@@ -103,6 +103,11 @@ interface AiChatState {
   lightboxImage: { url: string; prompt?: string; title?: string } | null;
   isSidebarOpen: boolean;
   searchQuery: string;
+  imageResolution: number;
+  imageSeed: number | null;
+  batchCount: number;
+  favoriteModels: string[];
+  promptHistory: string[];
 
   // Actions
   refreshProviderStatus: () => Promise<void>;
@@ -112,10 +117,18 @@ interface AiChatState {
   renameConversation: (id: string, newTitle: string) => void;
   togglePinConversation: (id: string) => void;
   clearActiveConversation: () => void;
+  branchConversation: (fromMsgId: string, newContent?: string) => string;
+  deleteMessage: (msgId: string) => void;
   setSelectedModelId: (modelId: string) => void;
   setActiveImageModelId: (modelId: string) => void;
   setChatMode: (mode: ChatMode) => void;
   setAspectRatio: (ratio: ImageAspectRatio) => void;
+  setImageResolution: (res: number) => void;
+  setImageSeed: (seed: number | null) => void;
+  setBatchCount: (count: number) => void;
+  toggleFavoriteModel: (modelId: string) => void;
+  addPromptToHistory: (prompt: string) => void;
+  exportConversation: (format: 'markdown' | 'json' | 'text') => string;
   addUserMessage: (content: string, attachments?: AiAttachment[]) => string;
   createAssistantPlaceholder: () => string;
   updateAssistantContent: (msgId: string, chunk: string, metrics?: AiTokenMetrics) => void;
@@ -161,6 +174,17 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     lightboxImage: null,
     isSidebarOpen: true,
     searchQuery: '',
+    imageResolution: 1024,
+    imageSeed: null,
+    batchCount: 1,
+    favoriteModels: [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.8-27b',
+      'black-forest-labs/flux.1-schnell',
+      'black-forest-labs/flux.1-kontext-pro',
+    ],
+    promptHistory: [],
 
     refreshProviderStatus: async () => {
       try {
@@ -264,6 +288,125 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
           streamingMessageId: null,
         };
       });
+    },
+
+    branchConversation: (fromMsgId: string, newContent?: string) => {
+      const state = get();
+      const current = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (!current) return state.activeConversationId;
+
+      const msgIndex = current.messages.findIndex((m) => m.id === fromMsgId);
+      const sliced = msgIndex >= 0 ? current.messages.slice(0, msgIndex + 1) : [...current.messages];
+
+      if (newContent && msgIndex >= 0) {
+        sliced[msgIndex] = {
+          ...sliced[msgIndex],
+          content: newContent.trim(),
+          timestamp: Date.now(),
+        };
+      }
+
+      const branchId = `conv_branch_${Date.now()}`;
+      const branchConv: AiConversation = {
+        id: branchId,
+        title: `${current.title.replace(/\s*\(Branch.*?\)/, '')} (Branch)`,
+        messages: sliced,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        modelUsed: current.modelUsed,
+      };
+
+      const next = [branchConv, ...state.conversations];
+      persist(next, branchId);
+      set({
+        conversations: next,
+        activeConversationId: branchId,
+        activeMetrics: null,
+        isStreaming: false,
+        streamingMessageId: null,
+      });
+      return branchId;
+    },
+
+    deleteMessage: (msgId: string) => {
+      set((state) => {
+        const next = state.conversations.map((c) => {
+          if (c.id === state.activeConversationId) {
+            return {
+              ...c,
+              messages: c.messages.filter((m) => m.id !== msgId),
+              updatedAt: Date.now(),
+            };
+          }
+          return c;
+        });
+        persist(next, state.activeConversationId);
+        return { conversations: next };
+      });
+    },
+
+    setImageResolution: (res: number) => {
+      set({ imageResolution: res });
+    },
+
+    setImageSeed: (seed: number | null) => {
+      set({ imageSeed: seed });
+    },
+
+    setBatchCount: (count: number) => {
+      set({ batchCount: Math.max(1, Math.min(4, count)) });
+    },
+
+    toggleFavoriteModel: (modelId: string) => {
+      set((state) => {
+        const favs = new Set(state.favoriteModels);
+        if (favs.has(modelId)) {
+          favs.delete(modelId);
+        } else {
+          favs.add(modelId);
+        }
+        return { favoriteModels: Array.from(favs) };
+      });
+    },
+
+    addPromptToHistory: (prompt: string) => {
+      const trimmed = prompt.trim();
+      if (!trimmed) return;
+      set((state) => {
+        const next = [trimmed, ...state.promptHistory.filter((p) => p !== trimmed)].slice(0, 30);
+        return { promptHistory: next };
+      });
+    },
+
+    exportConversation: (format: 'markdown' | 'json' | 'text' = 'markdown') => {
+      const state = get();
+      const conv = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (!conv || conv.messages.length === 0) return '';
+
+      if (format === 'json') {
+        return JSON.stringify(conv, null, 2);
+      }
+
+      if (format === 'text') {
+        let text = `MASTER AI TRANSCRIPT: ${conv.title}\nDate: ${new Date(conv.createdAt).toLocaleString()}\n\n`;
+        conv.messages.forEach((m) => {
+          const role = m.role === 'user' ? 'USER' : `ASSISTANT (${m.modelUsed || 'Master AI'})`;
+          text += `[${new Date(m.timestamp).toLocaleTimeString()}] ${role}:\n${m.content}\n\n`;
+        });
+        return text;
+      }
+
+      // Markdown
+      let md = `# ${conv.title}\n*Exported from Master AI on ${new Date().toLocaleString()}*\n\n---\n\n`;
+      conv.messages.forEach((m) => {
+        const role = m.role === 'user' ? '👤 **User**' : `🤖 **Master AI** *(${m.modelUsed || 'Groq'})*`;
+        const time = new Date(m.timestamp).toLocaleTimeString();
+        md += `### ${role}  ·  *${time}*\n\n${m.content}\n\n`;
+        if (m.imageDetails) {
+          md += `![Generated Image](${m.imageDetails.url})\n*Model: ${m.imageDetails.modelTitle || m.imageDetails.modelId}*\n\n`;
+        }
+      });
+      return md;
     },
 
     setSelectedModelId: (modelId: string) => {
