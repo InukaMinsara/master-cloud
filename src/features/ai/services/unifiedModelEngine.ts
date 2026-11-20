@@ -47,7 +47,8 @@ class UnifiedModelEngine {
     }
 
     try {
-      const res = await fetch('/api/ai/models', {
+      const endpoint = forceRefresh ? '/api/ai/models?refresh=true' : '/api/ai/models';
+      const res = await fetch(endpoint, {
         signal: AbortSignal.timeout(6000),
       });
 
@@ -112,6 +113,26 @@ class UnifiedModelEngine {
         contextLength: 400000,
         contextBadge: '400k context',
         provider: 'pollinations',
+        isDefault: false,
+      },
+      {
+        id: 'qwen2.5-vl-72b-instruct:free',
+        name: 'Qwen 2.5 VL 72B Instruct',
+        description: 'Multimodal vision and conversational reasoning engine',
+        category: 'vision',
+        contextLength: 32000,
+        contextBadge: '32k context',
+        provider: 'unorouter',
+        isDefault: false,
+      },
+      {
+        id: 'inclusionai/ling-3.2-flash:free',
+        name: 'Ling 3.2 Flash',
+        description: 'Massive 1M-context hybrid reasoning model',
+        category: 'reasoning',
+        contextLength: 1048576,
+        contextBadge: '1M context',
+        provider: 'openrouter',
         isDefault: false,
       },
       {
@@ -197,6 +218,8 @@ class UnifiedModelEngine {
     // Calculate prompt tokens & safe max_tokens ceiling before dispatch
     const promptTokens = ContextManager.estimateMessagesTokens(options.messages);
     const safeMaxTokens = ContextManager.getSafeOutputTokens(options.model, promptTokens);
+    const targetModel = this.cachedModels.find((m) => m.id === options.model);
+    const targetProvider = targetModel?.provider;
 
     let res = await fetch('/api/ai/chat', {
       method: 'POST',
@@ -204,6 +227,7 @@ class UnifiedModelEngine {
       signal: options.signal,
       body: JSON.stringify({
         model: options.model,
+        provider: targetProvider,
         messages: options.messages,
         max_tokens: safeMaxTokens,
         stream: true,
@@ -242,6 +266,7 @@ class UnifiedModelEngine {
         signal: options.signal,
         body: JSON.stringify({
           model: options.model,
+          provider: targetProvider,
           messages: compressedMessages,
           max_tokens: Math.min(1024, retrySafeMaxTokens),
           stream: true,

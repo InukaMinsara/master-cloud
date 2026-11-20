@@ -9,7 +9,16 @@
 
 export type AiRole = 'user' | 'assistant' | 'system';
 
-export type AiProviderId = 'groq' | 'xkiro' | 'pollinations' | 'comfyui';
+export type AiProviderId =
+  | 'groq'
+  | 'xkiro'
+  | 'pollinations'
+  | 'comfyui'
+  | 'experiential'
+  | 'unorouter'
+  | 'abhibots'
+  | 'apmix'
+  | 'openrouter';
 
 export type ChatMode = 'auto' | 'chat' | 'image';
 
@@ -25,7 +34,7 @@ export interface UnifiedChatModel {
   contextLength?: number;
   contextBadge?: string;
   isDefault?: boolean;
-  provider: 'groq' | 'xkiro' | 'pollinations'; // Internal routing only
+  provider: AiProviderId; // Internal routing only
 }
 
 export interface AiAttachment {

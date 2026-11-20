@@ -18,12 +18,42 @@ export interface ProviderStatus {
     hasKey: boolean;
     endpoint: string;
   };
+  xkiro: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
   pollinations: {
     available: boolean;
     hasKey: boolean;
     endpoint: string;
   };
   comfyui: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  experiential: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  unorouter: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  abhibots: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  apmix: {
+    available: boolean;
+    hasKey: boolean;
+    endpoint: string;
+  };
+  openrouter: {
     available: boolean;
     hasKey: boolean;
     endpoint: string;
@@ -36,6 +66,11 @@ export const DEFAULT_PROVIDER_STATUS: ProviderStatus = {
     hasKey: false,
     endpoint: 'https://api.groq.com/openai/v1',
   },
+  xkiro: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.xkiro.com/v1',
+  },
   pollinations: {
     available: true,
     hasKey: false,
@@ -45,6 +80,31 @@ export const DEFAULT_PROVIDER_STATUS: ProviderStatus = {
     available: false,
     hasKey: false,
     endpoint: 'http://127.0.0.1:8188',
+  },
+  experiential: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.experientiallabs.com/v1',
+  },
+  unorouter: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.unorouter.com/v1',
+  },
+  abhibots: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.abhibots.com/v1',
+  },
+  apmix: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://api.apmix.net/v1',
+  },
+  openrouter: {
+    available: false,
+    hasKey: false,
+    endpoint: 'https://openrouter.ai/api/v1',
   },
 };
 
@@ -89,6 +149,11 @@ class AiVaultService {
             hasKey: Boolean(data?.groq?.hasKey),
             endpoint: data?.groq?.endpoint || DEFAULT_PROVIDER_STATUS.groq.endpoint,
           },
+          xkiro: {
+            available: Boolean(data?.xkiro?.available),
+            hasKey: Boolean(data?.xkiro?.hasKey),
+            endpoint: data?.xkiro?.endpoint || DEFAULT_PROVIDER_STATUS.xkiro.endpoint,
+          },
           pollinations: {
             available: data?.pollinations?.available !== false,
             hasKey: Boolean(data?.pollinations?.hasKey),
@@ -98,6 +163,31 @@ class AiVaultService {
             available: Boolean(data?.comfyui?.available),
             hasKey: Boolean(data?.comfyui?.hasKey),
             endpoint: data?.comfyui?.endpoint || DEFAULT_PROVIDER_STATUS.comfyui.endpoint,
+          },
+          experiential: {
+            available: Boolean(data?.experiential?.available),
+            hasKey: Boolean(data?.experiential?.hasKey),
+            endpoint: data?.experiential?.endpoint || DEFAULT_PROVIDER_STATUS.experiential.endpoint,
+          },
+          unorouter: {
+            available: Boolean(data?.unorouter?.available),
+            hasKey: Boolean(data?.unorouter?.hasKey),
+            endpoint: data?.unorouter?.endpoint || DEFAULT_PROVIDER_STATUS.unorouter.endpoint,
+          },
+          abhibots: {
+            available: Boolean(data?.abhibots?.available),
+            hasKey: Boolean(data?.abhibots?.hasKey),
+            endpoint: data?.abhibots?.endpoint || DEFAULT_PROVIDER_STATUS.abhibots.endpoint,
+          },
+          apmix: {
+            available: Boolean(data?.apmix?.available),
+            hasKey: Boolean(data?.apmix?.hasKey),
+            endpoint: data?.apmix?.endpoint || DEFAULT_PROVIDER_STATUS.apmix.endpoint,
+          },
+          openrouter: {
+            available: Boolean(data?.openrouter?.available),
+            hasKey: Boolean(data?.openrouter?.hasKey),
+            endpoint: data?.openrouter?.endpoint || DEFAULT_PROVIDER_STATUS.openrouter.endpoint,
           },
         };
         this.isInitialized = true;

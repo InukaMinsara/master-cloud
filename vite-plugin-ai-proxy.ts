@@ -21,6 +21,16 @@ export interface ServerAiConfig {
   pollinationsApiKey: string;
   comfyUiEndpoint: string;
   comfyUiApiKey: string;
+  experientialEndpoint: string;
+  experientialApiKey: string;
+  unorouterEndpoint: string;
+  unorouterApiKey: string;
+  abhibotsEndpoint: string;
+  abhibotsApiKey: string;
+  apmixEndpoint: string;
+  apmixApiKey: string;
+  openrouterEndpoint: string;
+  openrouterApiKey: string;
 }
 
 export function loadEnvLocal(rootDir: string): ServerAiConfig {
@@ -33,6 +43,16 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
     pollinationsApiKey: '',
     comfyUiEndpoint: 'http://127.0.0.1:8188',
     comfyUiApiKey: '',
+    experientialEndpoint: 'https://api.experientiallabs.com/v1',
+    experientialApiKey: '',
+    unorouterEndpoint: 'https://api.unorouter.com/v1',
+    unorouterApiKey: '',
+    abhibotsEndpoint: 'https://api.abhibots.com/v1',
+    abhibotsApiKey: '',
+    apmixEndpoint: 'https://api.apmix.net/v1',
+    apmixApiKey: '',
+    openrouterEndpoint: 'https://openrouter.ai/api/v1',
+    openrouterApiKey: '',
   };
 
   const candidateFiles = ['.env.local', '.env'];
@@ -62,6 +82,16 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
           if (key === 'POLLINATIONS_API_KEY' && val) config.pollinationsApiKey = val;
           if (key === 'COMFYUI_LOCAL_ENDPOINT' && val) config.comfyUiEndpoint = val.replace(/\/+$/, '');
           if (key === 'COMFYUI_LOCAL_API_KEY' && val) config.comfyUiApiKey = val;
+          if (key === 'EXPERIENTIAL_LABS_API_ENDPOINT' && val) config.experientialEndpoint = val.replace(/\/+$/, '');
+          if (key === 'EXPERIENTIAL_LABS_API_KEY' && val) config.experientialApiKey = val;
+          if (key === 'UNOROUTER_API_ENDPOINT' && val) config.unorouterEndpoint = val.replace(/\/+$/, '');
+          if (key === 'UNOROUTER_API_KEY' && val) config.unorouterApiKey = val;
+          if (key === 'ABHIBOTS_API_ENDPOINT' && val) config.abhibotsEndpoint = val.replace(/\/+$/, '');
+          if (key === 'ABHIBOTS_API_KEY' && val) config.abhibotsApiKey = val;
+          if (key === 'APMIX_API_ENDPOINT' && val) config.apmixEndpoint = val.replace(/\/+$/, '');
+          if (key === 'APMIX_API_KEY' && val) config.apmixApiKey = val;
+          if (key === 'OPENROUTER_API_ENDPOINT' && val) config.openrouterEndpoint = val.replace(/\/+$/, '');
+          if (key === 'OPENROUTER_API_KEY' && val) config.openrouterApiKey = val;
         }
       } catch (err) {
         console.warn(`[AI Proxy] Failed to parse ${file}:`, err);
@@ -78,6 +108,16 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
   if (process.env.POLLINATIONS_API_KEY) config.pollinationsApiKey = process.env.POLLINATIONS_API_KEY;
   if (process.env.COMFYUI_LOCAL_ENDPOINT) config.comfyUiEndpoint = process.env.COMFYUI_LOCAL_ENDPOINT.replace(/\/+$/, '');
   if (process.env.COMFYUI_LOCAL_API_KEY) config.comfyUiApiKey = process.env.COMFYUI_LOCAL_API_KEY;
+  if (process.env.EXPERIENTIAL_LABS_API_ENDPOINT) config.experientialEndpoint = process.env.EXPERIENTIAL_LABS_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.EXPERIENTIAL_LABS_API_KEY) config.experientialApiKey = process.env.EXPERIENTIAL_LABS_API_KEY;
+  if (process.env.UNOROUTER_API_ENDPOINT) config.unorouterEndpoint = process.env.UNOROUTER_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.UNOROUTER_API_KEY) config.unorouterApiKey = process.env.UNOROUTER_API_KEY;
+  if (process.env.ABHIBOTS_API_ENDPOINT) config.abhibotsEndpoint = process.env.ABHIBOTS_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.ABHIBOTS_API_KEY) config.abhibotsApiKey = process.env.ABHIBOTS_API_KEY;
+  if (process.env.APMIX_API_ENDPOINT) config.apmixEndpoint = process.env.APMIX_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.APMIX_API_KEY) config.apmixApiKey = process.env.APMIX_API_KEY;
+  if (process.env.OPENROUTER_API_ENDPOINT) config.openrouterEndpoint = process.env.OPENROUTER_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.OPENROUTER_API_KEY) config.openrouterApiKey = process.env.OPENROUTER_API_KEY;
 
   return config;
 }
@@ -111,6 +151,81 @@ function getRawBodyBuffer(req: any): Promise<Buffer> {
     req.on('error', reject);
   });
 }
+
+/**
+ * Strips provider prefixes, :free tags, vendor IDs, and formats clean display names.
+ * Ensures ZERO provider branding in the user interface.
+ */
+function cleanModelDisplayName(rawId: string, rawName?: string): string {
+  let name = (rawName || rawId).trim();
+  // Strip :free suffix or (free) anywhere in string
+  name = name.replace(/:free$/i, '').replace(/\s*\(free\)\s*/gi, ' ').trim();
+  // Strip provider colon prefix e.g. 'inclusionAI: ', 'Baidu: ', 'OpenRouter: '
+  name = name.replace(/^[A-Za-z0-9\s._-]+:\s+/, '');
+  // Strip namespace prefixes e.g. 'inclusionai/', 'baidu/', 'meta-llama/', 'openai/', 'mistralai/', 'liquid/'
+  name = name.replace(/^([a-zA-Z0-9._-]+\/)+/, '');
+  name = name.trim();
+  // If result is empty or ID-like with hyphens/underscores, format cleanly
+  if (!rawName || rawName === rawId || name.includes('-') || name.includes('_')) {
+    name = name.replace(/[-_]+/g, ' ');
+    name = name
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => {
+        if (/^(ai|vl|llm|gpt|r1|v[0-9]+|[0-9]+b|[0-9]+k|[0-9]+m)$/i.test(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      })
+      .join(' ');
+  }
+  // Remove any residual provider names from display name
+  name = name.replace(/\b(Groq|OpenRouter|UnoRouter|xKiro|Abhibots|APmix|Experiential)\b/gi, '').trim();
+  return name || rawId;
+}
+
+function categorizeModel(id: string, name = ''): 'reasoning' | 'coding' | 'fast' | 'general' | 'vision' {
+  const target = (id + ' ' + name).toLowerCase();
+  if (target.includes('vl') || target.includes('vision') || target.includes('multimodal') || target.includes('pixtral')) {
+    return 'vision';
+  }
+  if (target.includes('code') || target.includes('coder') || target.includes('codestral') || target.includes('devstral') || target.includes('starcoder')) {
+    return 'coding';
+  }
+  if (target.includes('reason') || target.includes('r1') || target.includes('o1') || target.includes('o3') || target.includes('qwq') || target.includes('thought')) {
+    return 'reasoning';
+  }
+  if (target.includes('flash') || target.includes('nano') || target.includes('instant') || target.includes('mini') || target.includes('small') || target.includes('lite') || target.includes('1.7b') || target.includes('3b') || target.includes('8b')) {
+    return 'fast';
+  }
+  return 'general';
+}
+
+function isNonChatModel(id: string, name = ''): boolean {
+  const target = (id + ' ' + name).toLowerCase();
+  return (
+    target.includes('whisper') ||
+    target.includes('audio') ||
+    target.includes('tts') ||
+    target.includes('voice') ||
+    target.includes('speech') ||
+    target.includes('embed') ||
+    target.includes('embedding') ||
+    target.includes('rerank') ||
+    target.includes('guard') ||
+    target.includes('moderation') ||
+    target.includes('image-generation') ||
+    target.includes('dall-e') ||
+    target.includes('midjourney') ||
+    target.includes('flux') ||
+    target.includes('sdxl') ||
+    target.includes('stable-diffusion') ||
+    target.includes('imagen') ||
+    target.includes('aihorde')
+  );
+}
+
+let serverModelCache: any[] = [];
+let serverModelCacheTime = 0;
+const SERVER_MODEL_CACHE_TTL = 60 * 1000; // 60 seconds
 
 export function createAiProxyMiddleware(rootDir: string) {
   return async (req: any, res: any, next: any) => {
@@ -146,20 +261,51 @@ export function createAiProxyMiddleware(rootDir: string) {
             hasKey: Boolean(envConfig.comfyUiApiKey),
             endpoint: envConfig.comfyUiEndpoint,
           },
+          experiential: {
+            available: Boolean(envConfig.experientialApiKey),
+            hasKey: Boolean(envConfig.experientialApiKey),
+            endpoint: envConfig.experientialEndpoint,
+          },
+          unorouter: {
+            available: Boolean(envConfig.unorouterApiKey) || true, // UnoRouter also provides public models
+            hasKey: Boolean(envConfig.unorouterApiKey),
+            endpoint: envConfig.unorouterEndpoint,
+          },
+          abhibots: {
+            available: Boolean(envConfig.abhibotsApiKey),
+            hasKey: Boolean(envConfig.abhibotsApiKey),
+            endpoint: envConfig.abhibotsEndpoint,
+          },
+          apmix: {
+            available: Boolean(envConfig.apmixApiKey),
+            hasKey: Boolean(envConfig.apmixApiKey),
+            endpoint: envConfig.apmixEndpoint,
+          },
+          openrouter: {
+            available: Boolean(envConfig.openrouterApiKey) || true, // OpenRouter has free tier accessible
+            hasKey: Boolean(envConfig.openrouterApiKey),
+            endpoint: envConfig.openrouterEndpoint,
+          },
         })
       );
     }
 
     // ── 2. GET /api/ai/models (Aggregated Dynamic Model Discovery) ───────────
-    if (url === '/api/ai/models' && req.method === 'GET') {
+    if (url.startsWith('/api/ai/models') && req.method === 'GET') {
       res.setHeader('Content-Type', 'application/json');
+
+      const isForcedRefresh = url.includes('refresh=true');
+      const now = Date.now();
+      if (!isForcedRefresh && serverModelCache.length > 0 && now - serverModelCacheTime < SERVER_MODEL_CACHE_TTL) {
+        return res.end(JSON.stringify({ models: serverModelCache }));
+      }
 
       const unifiedModels: any[] = [];
       const seenIds = new Set<string>();
 
-      // Fetch Groq, xKiro, and Pollinations models in parallel for fast response
+      // Fetch models from all configured providers in parallel (4s timeout per provider)
       await Promise.allSettled([
-        // A. Groq Models
+        // A. Groq Models (Fast conversational engines)
         (async () => {
           if (!envConfig.groqApiKey) return;
           try {
@@ -172,22 +318,21 @@ export function createAiProxyMiddleware(rootDir: string) {
               if (Array.isArray(data?.data)) {
                 for (const m of data.data) {
                   const id = m.id;
-                  if (id.includes('whisper') || id.includes('guard')) continue;
+                  if (isNonChatModel(id)) continue;
                   if (!seenIds.has(id)) {
                     seenIds.add(id);
-                    let cleanName = id.replace(/^(openai\/|meta-llama\/|groq\/)/, '');
-                    cleanName = cleanName
-                      .split(/[-_]/)
-                      .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
-                      .join(' ');
+                    const cleanName = cleanModelDisplayName(id);
+                    const cat = categorizeModel(id, cleanName);
+                    const ctx = m.context_window || 128000;
+                    const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
 
                     unifiedModels.push({
                       id,
                       name: cleanName,
                       description: `High-velocity conversational neural engine (${id})`,
-                      category: id.includes('code') ? 'coding' : id.includes('r1') ? 'reasoning' : 'fast',
-                      contextLength: m.context_window || 128000,
-                      contextBadge: `${Math.round((m.context_window || 128000) / 1000)}k context`,
+                      category: cat,
+                      contextLength: ctx,
+                      contextBadge: ctxBadge,
                       provider: 'groq',
                       isDefault: id.includes('120b') || id.includes('70b') || id.includes('20b'),
                     });
@@ -212,21 +357,21 @@ export function createAiProxyMiddleware(rootDir: string) {
                 for (const m of data.data) {
                   if (m.access_tier === 'free' && m.type === 'model' && m.id !== 'sensenova/sensenova-u1.5-lite') {
                     const id = m.id;
+                    if (isNonChatModel(id, m.display_name)) continue;
                     if (!seenIds.has(id)) {
                       seenIds.add(id);
-                      let cleanName = m.display_name || id.replace(/^(mistralai\/|cohere\/|sensenova\/)/, '');
-                      cleanName = cleanName
-                        .split(/[-_]/)
-                        .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
-                        .join(' ');
+                      const cleanName = cleanModelDisplayName(id, m.display_name);
+                      const cat = categorizeModel(id, cleanName);
+                      const ctx = m.context_length || 128000;
+                      const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
 
                       unifiedModels.push({
                         id,
                         name: cleanName,
                         description: `Intelligent multi-domain reasoning model (${id})`,
-                        category: id.includes('code') || id.includes('devstral') ? 'coding' : id.includes('reasoning') ? 'reasoning' : id.includes('vision') ? 'vision' : 'general',
-                        contextLength: m.context_length || 128000,
-                        contextBadge: `${Math.round((m.context_length || 128000) / 1000)}k context`,
+                        category: cat,
+                        contextLength: ctx,
+                        contextBadge: ctxBadge,
                         provider: 'xkiro',
                         isDefault: false,
                       });
@@ -255,16 +400,21 @@ export function createAiProxyMiddleware(rootDir: string) {
                 for (const m of data) {
                   if (m.category === 'text' && !m.paid_only) {
                     const id = m.name;
+                    if (isNonChatModel(id, m.title)) continue;
                     if (!seenIds.has(id)) {
                       seenIds.add(id);
-                      const cleanName = m.title || id.replace(/^(openai\/|meta-llama\/|google\/)/, '');
+                      const cleanName = cleanModelDisplayName(id, m.title);
+                      const cat = categorizeModel(id, cleanName);
+                      const ctx = m.context_length || 400000;
+                      const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
                       unifiedModels.push({
                         id,
                         name: cleanName,
                         description: m.description || `Adaptive conversational intelligence (${id})`,
-                        category: id.includes('code') ? 'coding' : m.reasoning ? 'reasoning' : 'fast',
-                        contextLength: m.context_length || 400000,
-                        contextBadge: `${Math.round((m.context_length || 400000) / 1000)}k context`,
+                        category: cat,
+                        contextLength: ctx,
+                        contextBadge: ctxBadge,
                         provider: 'pollinations',
                         isDefault: false,
                       });
@@ -281,7 +431,7 @@ export function createAiProxyMiddleware(rootDir: string) {
               { id: 'openai/gpt-5.4-nano', name: 'GPT-5.4 Nano', description: 'Fast everyday conversational intelligence', category: 'fast', contextLength: 400000, contextBadge: '400k context', provider: 'pollinations', isDefault: false },
               { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', description: 'Advanced general reasoning and coding', category: 'reasoning', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
               { id: 'mistralai/mistral-small-3.2-24b', name: 'Mistral Small 24B', description: 'Lightweight instruction following and synthesis', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
-              { id: 'pollinations/flux-free-text', name: 'Flux Text Assistant', description: 'High context knowledge engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
+              { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', description: 'High context knowledge and instruction engine', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'pollinations', isDefault: false },
             ];
             for (const fm of fallbackPolli) {
               if (!seenIds.has(fm.id)) {
@@ -291,9 +441,269 @@ export function createAiProxyMiddleware(rootDir: string) {
             }
           }
         })(),
+
+        // D. Experiential Labs (Free Chat Models; Exclude Decisions-only models)
+        (async () => {
+          if (!envConfig.experientialApiKey) return;
+          try {
+            const expRes = await fetch(`${envConfig.experientialEndpoint}/models`, {
+              headers: { Authorization: `Bearer ${envConfig.experientialApiKey}` },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (expRes.ok) {
+              const data = await expRes.json();
+              const list = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : Array.isArray(data) ? data : [];
+              for (const m of list) {
+                const id = m.id || m.name;
+                if (!id) continue;
+                if (isNonChatModel(id, m.name || m.description)) continue;
+                // Exclude Decisions-only models
+                if (/decision|classifier|rule-engine|orchestrat/i.test(id) || /decision/i.test(m.type || '') || /decision/i.test(m.capabilities || '')) continue;
+                // Verify free pricing or account eligibility
+                const isFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free';
+                if (m.pricing && m.pricing.prompt && m.pricing.prompt !== '0' && m.pricing.prompt !== 0) continue;
+                if (isFree && !seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.display_name || m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || m.context_window || 128000;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: m.description || `Specialized high-performance model (${id})`,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'experiential',
+                    isDefault: false,
+                  });
+                }
+              }
+            }
+          } catch {}
+        })(),
+
+        // E. UnoRouter (Dynamic Free Models Discovery; Respect :free or zero pricing)
+        (async () => {
+          try {
+            const headers: Record<string, string> = { Accept: 'application/json' };
+            if (envConfig.unorouterApiKey) {
+              headers['Authorization'] = `Bearer ${envConfig.unorouterApiKey}`;
+            }
+            const unoRes = await fetch(`${envConfig.unorouterEndpoint}/models`, {
+              headers,
+              signal: AbortSignal.timeout(8000),
+            });
+            if (unoRes.ok) {
+              const data = await unoRes.json();
+              const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+              let addedCount = 0;
+              for (const m of list) {
+                const id = m.id;
+                if (!id) continue;
+                const isFree = id.includes(':free') || m.free === true || m.is_free === true || m.pricing?.prompt === 0;
+                if (!isFree) continue;
+                if (isNonChatModel(id, m.name)) continue;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || m.max_output_tokens || 32000;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: m.description || `Dynamic low-latency neural model (${id})`,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'unorouter',
+                    isDefault: false,
+                  });
+                  addedCount++;
+                  if (addedCount >= 20) break; // Keep top 20 verified models
+                }
+              }
+              console.log(`[AI Proxy] UnoRouter discovered ${addedCount} free chat models`);
+            } else {
+              console.warn('[AI Proxy] UnoRouter fetch returned HTTP', unoRes.status);
+            }
+          } catch (err: any) {
+            console.warn('[AI Proxy] UnoRouter discovery failed:', err?.message || err);
+          }
+
+          // Verified resilient fallback for UnoRouter models
+          if (unifiedModels.filter((m) => m.provider === 'unorouter').length === 0) {
+            const fallbackUno = [
+              { id: 'qwen2.5-vl-72b-instruct:free', name: 'Qwen 2.5 VL 72B Instruct', description: 'Multimodal vision and conversational reasoning engine', category: 'vision', contextLength: 32000, contextBadge: '32k context', provider: 'unorouter', isDefault: false },
+              { id: 'codestral-latest:free', name: 'Codestral Latest', description: 'State-of-the-art coding and refactoring intelligence', category: 'coding', contextLength: 256000, contextBadge: '256k context', provider: 'unorouter', isDefault: false },
+              { id: 'glm-4.5-flash:free', name: 'GLM 4.5 Flash', description: 'Ultra-fast low-latency multi-turn dialogue model', category: 'fast', contextLength: 128000, contextBadge: '128k context', provider: 'unorouter', isDefault: false },
+            ];
+            for (const fm of fallbackUno) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
+          }
+        })(),
+
+        // F. Opus Proxy / Abhibots (Free Tier Quota Verification; Exclude Paid Image Models)
+        (async () => {
+          if (!envConfig.abhibotsApiKey) return;
+          try {
+            const abhiRes = await fetch(`${envConfig.abhibotsEndpoint}/models`, {
+              headers: { Authorization: `Bearer ${envConfig.abhibotsApiKey}` },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (abhiRes.ok) {
+              const data = await abhiRes.json();
+              const list = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : Array.isArray(data) ? data : [];
+              for (const m of list) {
+                const id = m.id || m.name;
+                if (!id) continue;
+                if (isNonChatModel(id, m.name || m.description)) continue;
+                const isFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.access_tier === 'free' || id.endsWith(':free') || m.tier === 'free';
+                if (m.pricing && m.pricing.prompt && m.pricing.prompt !== '0' && m.pricing.prompt !== 0) continue;
+                if (isFree && !seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.display_name || m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || m.context_window || 128000;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: m.description || `Advanced Opus Proxy reasoning engine (${id})`,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'abhibots',
+                    isDefault: false,
+                  });
+                }
+              }
+            }
+          } catch {}
+        })(),
+
+        // G. APmix (Verified Zero-Cost Models Only)
+        (async () => {
+          if (!envConfig.apmixApiKey) return;
+          try {
+            const apmixRes = await fetch(`${envConfig.apmixEndpoint}/models`, {
+              headers: { Authorization: `Bearer ${envConfig.apmixApiKey}` },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (apmixRes.ok) {
+              const data = await apmixRes.json();
+              const list = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : Array.isArray(data) ? data : [];
+              for (const m of list) {
+                const id = m.id || m.name;
+                if (!id) continue;
+                if (isNonChatModel(id, m.name || m.description)) continue;
+                const isVerifiedFree = m.is_free === true || m.free === true || m.pricing?.prompt === 0 || m.pricing?.prompt === '0' || id.endsWith(':free') || m.tier === 'free';
+                if (!isVerifiedFree) continue;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.display_name || m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || m.context_window || 128000;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: m.description || `APmix high-efficiency conversational model (${id})`,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'apmix',
+                    isDefault: false,
+                  });
+                }
+              }
+            }
+          } catch {}
+        })(),
+
+        // H. OpenRouter (Only Genuinely Free Models e.g. :free or 0 prompt/completion pricing)
+        (async () => {
+          try {
+            const headers: Record<string, string> = {
+              Accept: 'application/json',
+              'HTTP-Referer': 'https://mastercloud.local',
+              'X-Title': 'Master Cloud AI',
+            };
+            if (envConfig.openrouterApiKey) {
+              headers['Authorization'] = `Bearer ${envConfig.openrouterApiKey}`;
+            }
+            const orRes = await fetch(`${envConfig.openrouterEndpoint}/models`, {
+              headers,
+              signal: AbortSignal.timeout(8000),
+            });
+            if (orRes.ok) {
+              const data = await orRes.json();
+              const list = Array.isArray(data?.data) ? data.data : [];
+              let addedCount = 0;
+              for (const m of list) {
+                const id = m.id;
+                if (!id) continue;
+                const isZeroCost = id.endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0');
+                if (!isZeroCost) continue;
+                if (isNonChatModel(id, m.name)) continue;
+                if (m.architecture?.output_modalities && !m.architecture.output_modalities.includes('text')) continue;
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || 128000;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: m.description || `High-capacity conversational model (${id})`,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'openrouter',
+                    isDefault: false,
+                  });
+                  addedCount++;
+                  if (addedCount >= 20) break; // Keep top 20 verified models
+                }
+              }
+              console.log(`[AI Proxy] OpenRouter discovered ${addedCount} free chat models`);
+            } else {
+              console.warn('[AI Proxy] OpenRouter fetch returned HTTP', orRes.status);
+            }
+          } catch (err: any) {
+            console.warn('[AI Proxy] OpenRouter discovery failed:', err?.message || err);
+          }
+
+          // Verified resilient fallback for OpenRouter models
+          if (unifiedModels.filter((m) => m.provider === 'openrouter').length === 0) {
+            const fallbackOr = [
+              { id: 'inclusionai/ling-3.2-flash:free', name: 'Ling 3.2 Flash', description: 'Massive 1M-context hybrid reasoning model', category: 'reasoning', contextLength: 1048576, contextBadge: '1M context', provider: 'openrouter', isDefault: false },
+              { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ERNIE 5.5 Flash Preview', description: 'Advanced conversational synthesis and knowledge engine', category: 'general', contextLength: 1024000, contextBadge: '1M context', provider: 'openrouter', isDefault: false },
+              { id: 'liquid/lfm-3-1.7b:free', name: 'LFM3 1.7B', description: 'Ultra-lightweight edge-optimized reasoning model', category: 'fast', contextLength: 262144, contextBadge: '262k context', provider: 'openrouter', isDefault: false },
+            ];
+            for (const fm of fallbackOr) {
+              if (!seenIds.has(fm.id)) {
+                seenIds.add(fm.id);
+                unifiedModels.push(fm);
+              }
+            }
+          }
+        })(),
       ]);
 
-      // Fallback if network blocked
+      // Fallback if offline or all networks blocked
       if (unifiedModels.length === 0) {
         unifiedModels.push(
           {
@@ -325,71 +735,226 @@ export function createAiProxyMiddleware(rootDir: string) {
             contextBadge: '400k context',
             provider: 'pollinations',
             isDefault: false,
+          },
+          {
+            id: 'qwen2.5-vl-72b-instruct:free',
+            name: 'Qwen 2.5 VL 72B Instruct',
+            description: 'Multimodal vision and conversational reasoning engine',
+            category: 'vision',
+            contextLength: 32000,
+            contextBadge: '32k context',
+            provider: 'unorouter',
+            isDefault: false,
+          },
+          {
+            id: 'inclusionai/ling-3.2-flash:free',
+            name: 'Ling 3.2 Flash',
+            description: 'Massive 1M-context hybrid reasoning model',
+            category: 'reasoning',
+            contextLength: 1048576,
+            contextBadge: '1M context',
+            provider: 'openrouter',
+            isDefault: false,
           }
         );
       }
 
+      // Update server-side cache
+      serverModelCache = unifiedModels;
+      serverModelCacheTime = now;
+
       return res.end(JSON.stringify({ models: unifiedModels }));
     }
 
-    // ── 3. POST /api/ai/chat (Unified Intelligent Chat Completions Router) ──
+    // ── 3. POST /api/ai/chat (Unified Multi-Provider Intelligent Chat Router) ──
     if (url === '/api/ai/chat' && req.method === 'POST') {
       try {
         const body = await parseJsonBody(req);
         const modelId = body.model || 'openai/gpt-oss-120b';
         const isStreaming = Boolean(body.stream);
 
-        // Routing Decision
-        let targetEndpoint = '';
-        let authHeader = '';
-        let targetProvider = 'groq';
+        // Routing Decision: Use explicit provider metadata or resolve from model ID
+        let targetProvider = body.provider;
 
-        if (
-          modelId.startsWith('mistralai/') ||
-          modelId.startsWith('cohere/') ||
-          modelId.startsWith('sensenova/') ||
-          modelId.startsWith('stealth/')
-        ) {
-          targetProvider = 'xkiro';
-          targetEndpoint = `${envConfig.xkiroEndpoint}/chat/completions`;
-          authHeader = `Bearer ${envConfig.xkiroApiKey}`;
-        } else if (
-          modelId.startsWith('openai/gpt-5') ||
-          modelId.startsWith('deepseek/') ||
-          modelId.includes('pollinations')
-        ) {
-          targetProvider = 'pollinations';
-          targetEndpoint = `${envConfig.pollinationsEndpoint}/v1/chat/completions`;
-          authHeader = envConfig.pollinationsApiKey ? `Bearer ${envConfig.pollinationsApiKey}` : '';
-        } else {
-          // Default to Groq
-          targetProvider = 'groq';
-          targetEndpoint = `${envConfig.groqEndpoint}/chat/completions`;
-          authHeader = `Bearer ${envConfig.groqApiKey}`;
-        }
-
-        // Token Safety Clamping for Groq Free Tier (Strictly prevents 8,000 TPM limit errors)
-        if (targetProvider === 'groq') {
-          let promptTokens = 0;
-          if (Array.isArray(body.messages)) {
-            for (const m of body.messages) {
-              promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
-            }
+        if (!targetProvider) {
+          if (
+            modelId.startsWith('mistralai/') ||
+            modelId.startsWith('cohere/') ||
+            modelId.startsWith('sensenova/') ||
+            modelId.startsWith('stealth/')
+          ) {
+            targetProvider = 'xkiro';
+          } else if (
+            modelId.startsWith('openai/gpt-5') ||
+            modelId.startsWith('deepseek/') ||
+            modelId.includes('pollinations')
+          ) {
+            targetProvider = 'pollinations';
+          } else if (modelId.startsWith('experiential/')) {
+            targetProvider = 'experiential';
+          } else if (modelId.startsWith('abhibots/')) {
+            targetProvider = 'abhibots';
+          } else if (modelId.startsWith('apmix/')) {
+            targetProvider = 'apmix';
+          } else if (modelId.endsWith(':free')) {
+            targetProvider = modelId.includes('/') ? 'openrouter' : 'unorouter';
+          } else {
+            targetProvider = 'groq';
           }
-          const safeMax = Math.max(512, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
-          body.max_tokens = safeMax;
         }
 
+        let targetEndpoint = '';
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
-        if (authHeader) headers['Authorization'] = authHeader;
+
+        switch (targetProvider) {
+          case 'openrouter':
+            if (!envConfig.openrouterApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'OPENROUTER_API_KEY is not set in .env.local. Please add your OpenRouter API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.openrouterEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.openrouterApiKey}`;
+            headers['HTTP-Referer'] = 'https://mastercloud.local';
+            headers['X-Title'] = 'Master Cloud AI';
+            break;
+
+          case 'unorouter':
+            targetEndpoint = `${envConfig.unorouterEndpoint}/chat/completions`;
+            if (envConfig.unorouterApiKey) {
+              headers['Authorization'] = `Bearer ${envConfig.unorouterApiKey}`;
+            }
+            break;
+
+          case 'experiential':
+            if (!envConfig.experientialApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'EXPERIENTIAL_LABS_API_KEY is not set in .env.local. Please add your Experiential Labs API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.experientialEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.experientialApiKey}`;
+            break;
+
+          case 'abhibots':
+            if (!envConfig.abhibotsApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'ABHIBOTS_API_KEY is not set in .env.local. Please add your Abhibots API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.abhibotsEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.abhibotsApiKey}`;
+            break;
+
+          case 'apmix':
+            if (!envConfig.apmixApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'APMIX_API_KEY is not set in .env.local. Please add your APmix API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.apmixEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.apmixApiKey}`;
+            break;
+
+          case 'xkiro':
+            if (!envConfig.xkiroApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'XKIRO_API_KEY is not set in .env.local. Please add your xKiro API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.xkiroEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.xkiroApiKey}`;
+            break;
+
+          case 'pollinations':
+            targetEndpoint = `${envConfig.pollinationsEndpoint}/v1/chat/completions`;
+            if (envConfig.pollinationsApiKey) {
+              headers['Authorization'] = `Bearer ${envConfig.pollinationsApiKey}`;
+            }
+            break;
+
+          case 'groq':
+          default:
+            if (!envConfig.groqApiKey) {
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(
+                JSON.stringify({
+                  error: {
+                    message:
+                      'GROQ_API_KEY is not set in .env.local. Please add your Groq API key to .env.local to use this model.',
+                  },
+                })
+              );
+            }
+            targetEndpoint = `${envConfig.groqEndpoint}/chat/completions`;
+            headers['Authorization'] = `Bearer ${envConfig.groqApiKey}`;
+            // Token Safety Clamping for Groq Free Tier (Strict 8,000 TPM limit prevention)
+            let promptTokens = 0;
+            if (Array.isArray(body.messages)) {
+              for (const m of body.messages) {
+                promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+              }
+            }
+            const safeMax = Math.max(512, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
+            body.max_tokens = safeMax;
+            break;
+        }
+
+        // Clean internal provider metadata from upstream payload
+        const upstreamBody = { ...body };
+        delete upstreamBody.provider;
 
         const upstreamRes = await fetch(targetEndpoint, {
           method: 'POST',
           headers,
-          body: JSON.stringify(body),
+          body: JSON.stringify(upstreamBody),
         });
+
+        // Gracefully support 429 rate limit backoff by forwarding Retry-After
+        if (upstreamRes.status === 429) {
+          const retryAfter = upstreamRes.headers.get('retry-after');
+          if (retryAfter) {
+            res.setHeader('Retry-After', retryAfter);
+          }
+        }
 
         if (!upstreamRes.ok) {
           const errData = await upstreamRes.json().catch(() => ({}));
