@@ -371,7 +371,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Master AI anything, attach documents/images/videos, or request an image..."
+          placeholder="Ask Master AI anything, attach documents, images, videos or code..."
           rows={1}
           disabled={isStreaming}
           className="w-full bg-transparent px-2.5 py-1.5 text-sm font-sans text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-[180px] overflow-y-auto"

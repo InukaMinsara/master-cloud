@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Sparkles, Code2, Cpu, ImageIcon, Zap } from 'lucide-react';
+import { Sparkles, Code2, Cpu, FileText, Zap } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { groqService } from '../services/groqService';
 
@@ -21,11 +21,11 @@ const PROMPT_STARTERS = [
     borderColor: 'border-cyan-500/20 hover:border-cyan-500/40',
   },
   {
-    icon: ImageIcon,
-    title: 'Generative Image Art',
-    prompt: '/image Cinematic futuristic city at night in neon rain, volumetric lighting, photorealistic, 8k',
-    color: 'text-orange-400',
-    borderColor: 'border-orange-500/20 hover:border-orange-500/40',
+    icon: FileText,
+    title: 'Multimodal File Analysis',
+    prompt: 'Analyze attached PDF, Word, Excel, PowerPoint or Image files with structured insight breakdown.',
+    color: 'text-blue-400',
+    borderColor: 'border-blue-500/20 hover:border-blue-500/40',
   },
   {
     icon: Cpu,
@@ -51,8 +51,8 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
       {/* Brand Hero */}
       <div className="space-y-4 mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300 shadow-inner">
-          <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-          <span>HIGH-VELOCITY CONVERSATIONAL INTELLIGENCE & VISUAL STUDIO</span>
+          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span>HIGH-VELOCITY CONVERSATIONAL INTELLIGENCE & MULTIMODAL REASONING</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white flex items-center justify-center gap-3">
@@ -63,7 +63,7 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
         </h1>
 
         <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto leading-relaxed">
-          Ultra-low latency conversational intelligence, coding, deep reasoning, and live web search, paired with native in-chat FLUX.2 image synthesis.
+          Ultra-low latency conversational intelligence, coding, deep reasoning, live web search, and advanced multimodal file understanding.
         </p>
 
         <div className="pt-2 flex items-center justify-center gap-2">
@@ -71,9 +71,9 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span>Master AI Engine · Online</span>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-mono text-orange-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-            <span>FLUX.2 Image Engine · Ready</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[11px] font-mono text-cyan-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            <span>Multimodal Vision & Docs · Ready</span>
           </div>
         </div>
       </div>

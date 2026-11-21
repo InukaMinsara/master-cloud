@@ -9,7 +9,6 @@
  */
 
 import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
-import { fluxImageService, FluxImageResult, SenseNovaImageResult } from './fluxImageService';
 import { ContextManager } from './contextManager';
 import { resolveModelFamily } from '../components/ModelFamilyLogo';
 import { ModelCapabilityService } from './modelCapabilityService';
@@ -374,59 +373,10 @@ class UnifiedModelEngine {
   }
 
   /**
-   * Detects whether user message expresses an intent to generate an image.
-   * Recognizes slash commands, direct draw/paint commands, and natural language prompts.
+   * Image generation is disabled. Prompts route directly to conversational / multimodal chat.
    */
   public detectImageIntent(text: string): { isImage: boolean; prompt: string } {
-    const trimmed = text.trim();
-
-    // 1. Slash commands: /image, /img, /draw, /paint, /gen, /create-image
-    if (/^\/(image|img|draw|paint|gen|create-image)\b/i.test(trimmed)) {
-      const prompt = trimmed.replace(/^\/(image|img|draw|paint|gen|create-image)\s*/i, '').trim();
-      return { isImage: true, prompt: prompt || 'artistic asset' };
-    }
-
-    // 2. Direct drawing/painting command: "draw (me) (a/an) ...", "paint (me) (a/an) ..."
-    // Exclude programming contexts ("draw a diagram", "draw a flowchart", "draw a table")
-    const drawMatch = trimmed.match(
-      /^(?:please\s+)?(?:draw|paint|sketch)\s+(?:me\s+)?(?:an?\s+)?(.*)$/i
-    );
-    if (
-      drawMatch &&
-      drawMatch[1].trim() &&
-      !/^(diagram|chart|graph|flowchart|table|schema|architecture|code|function|component)/i.test(
-        drawMatch[1].trim()
-      )
-    ) {
-      return { isImage: true, prompt: drawMatch[1].trim() };
-    }
-
-    // 3. Natural language image request: "generate/create/make/render/produce/show me an image/picture/photo/illustration of ..."
-    const nlMatch = trimmed.match(
-      /^(?:please\s+)?(?:generate|create|make|render|produce|show(?:\s+me)?)\s+(?:an?\s+)?(?:image|picture|photo|photograph|painting|illustration|artwork|rendering|wallpaper|drawing)\s+(?:of|with|depicting|showing|for)\s+(.*)$/i
-    );
-    if (nlMatch && nlMatch[1].trim()) {
-      return { isImage: true, prompt: nlMatch[1].trim() };
-    }
-
-    return { isImage: false, prompt: trimmed };
-  }
-
-  /**
-   * Generates visual art using FLUX.2-klein-4b (NVIDIA NIM).
-   */
-  public async generateFluxImage(prompt: string, signal?: AbortSignal): Promise<FluxImageResult> {
-    return fluxImageService.generateImage({
-      prompt,
-      signal,
-    });
-  }
-
-  /**
-   * Backward-compatible alias for FLUX.2-klein-4b image generation.
-   */
-  public async generateSenseNovaImage(prompt: string, signal?: AbortSignal): Promise<SenseNovaImageResult> {
-    return this.generateFluxImage(prompt, signal);
+    return { isImage: false, prompt: text.trim() };
   }
 }
 

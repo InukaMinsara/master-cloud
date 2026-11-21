@@ -21,9 +21,8 @@ import { MasterAi2Composer } from './MasterAi2Composer';
 import { MasterAi2ImageLightbox } from './MasterAi2ImageLightbox';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { unifiedModelEngine } from '../services/unifiedModelEngine';
-import { fluxImageService, FLUX_MODEL_ID, FLUX_MODEL_TITLE } from '../services/fluxImageService';
 import { ContextManager } from '../services/contextManager';
-import { AiAttachment, AiImageDetails, WebSearchResult } from '../types/aiTypes';
+import { AiAttachment, WebSearchResult } from '../types/aiTypes';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -33,15 +32,11 @@ export function MasterAi2Shell() {
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
   const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
-  const aspectRatio = useAiChatStore((s) => s.aspectRatio);
   const addUserMessage = useAiChatStore((s) => s.addUserMessage);
   const createAssistantPlaceholder = useAiChatStore((s) => s.createAssistantPlaceholder);
   const updateAssistantContent = useAiChatStore((s) => s.updateAssistantContent);
   const finalizeAssistantMessage = useAiChatStore((s) => s.finalizeAssistantMessage);
   const setAssistantError = useAiChatStore((s) => s.setAssistantError);
-  const createImagePlaceholder = useAiChatStore((s) => s.createImagePlaceholder);
-  const finalizeImageMessage = useAiChatStore((s) => s.finalizeImageMessage);
-  const setImageError = useAiChatStore((s) => s.setImageError);
   const setStreaming = useAiChatStore((s) => s.setStreaming);
   const newConversation = useAiChatStore((s) => s.newConversation);
   const refreshProviderStatus = useAiChatStore((s) => s.refreshProviderStatus);
@@ -105,69 +100,7 @@ export function MasterAi2Shell() {
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
 
-      // 3. Resolve Intent: Image generation vs Image Editing vs Conversational Chat
-      const imageAttachment = attachments?.find((a) => a.type === 'image');
-      const imageIntent = unifiedModelEngine.detectImageIntent(text);
-      const isImageRequest =
-        imageIntent.isImage ||
-        (Boolean(imageAttachment) &&
-          /(?:edit|change|make|modify|transform|turn|wear|color|background|add|remove|replace|convert|create|generate|show|render)/i.test(
-            text
-          ));
-
-      // ── ROUTE A: FLUX.2-KLEIN-4B IMAGE SYNTHESIS & EDITING (NVIDIA NIM) ──
-      if (isImageRequest) {
-        const prompt = imageIntent.prompt || text;
-        const msgId = createImagePlaceholder(prompt, FLUX_MODEL_ID, 'nvidia');
-
-        try {
-          let result;
-          if (imageAttachment) {
-            const srcImage = imageAttachment.dataUri || imageAttachment.url;
-            if (!srcImage) {
-              throw new Error('Attached image has no valid data URL.');
-            }
-            // Image-to-Image Editing Workflow with User-Uploaded Image
-            result = await fluxImageService.editImage({
-              prompt,
-              image: srcImage,
-              aspectRatio,
-              signal: abortCtrl.signal,
-            });
-          } else {
-            // Text-to-Image Generation Workflow
-            result = await fluxImageService.generateImage({
-              prompt,
-              aspectRatio,
-              signal: abortCtrl.signal,
-            });
-          }
-
-          finalizeImageMessage(msgId, {
-            url: result.imageUrl,
-            prompt,
-            provider: 'nvidia',
-            modelId: result.modelUsed,
-            modelTitle: FLUX_MODEL_TITLE,
-            width: result.width,
-            height: result.height,
-            seed: result.seed,
-            aspectRatio,
-            isEdited: Boolean(imageAttachment),
-            generationTimeMs: result.generationTimeMs,
-          });
-        } catch (err: any) {
-          if (!abortCtrl.signal.aborted) {
-            setImageError(msgId, err?.message || 'FLUX.2 image synthesis error');
-          }
-        } finally {
-          setStreaming(false);
-          abortControllerRef.current = null;
-        }
-        return;
-      }
-
-      // ── ROUTE B: CONVERSATIONAL STREAMING CHAT (Groq / xKiro / Pollinations) ──
+      // 3. CONVERSATIONAL STREAMING CHAT (with Multimodal File & Vision Understanding)
       const history = activeConv.messages;
       const inferenceMessages = ContextManager.buildMessagesForInference(
         history,
@@ -217,16 +150,12 @@ export function MasterAi2Shell() {
     [
       getActiveConversation,
       selectedModelId,
-      aspectRatio,
       isWebSearchEnabled,
       addUserMessage,
       createAssistantPlaceholder,
       updateAssistantContent,
       finalizeAssistantMessage,
       setAssistantError,
-      createImagePlaceholder,
-      finalizeImageMessage,
-      setImageError,
       setStreaming,
     ]
   );
@@ -263,55 +192,6 @@ export function MasterAi2Shell() {
     [branchConversation, handleSendMessage]
   );
 
-  const handleEditImageInChat = useCallback(
-    (imageUrl: string, prompt: string) => {
-      const referenceAtt: AiAttachment = {
-        id: `att_ref_${Date.now()}`,
-        name: 'reference_image.png',
-        type: 'image',
-        sizeBytes: 1024,
-        url: imageUrl,
-      };
-      toast.info('Loaded reference image for creative synthesis.');
-      handleSendMessage(prompt, [referenceAtt]);
-    },
-    [handleSendMessage]
-  );
-
-  const handleVariation = useCallback(
-    async (details: AiImageDetails) => {
-      toast.info('Synthesizing creative variation with FLUX.2...');
-      const msgId = createImagePlaceholder(
-        `${details.prompt} (Variation)`,
-        FLUX_MODEL_ID,
-        'nvidia'
-      );
-      try {
-        const result = await fluxImageService.generateImage({
-          prompt: details.prompt,
-          aspectRatio: details.aspectRatio,
-        });
-
-        finalizeImageMessage(msgId, {
-          url: result.imageUrl,
-          prompt: `${details.prompt} (Variation)`,
-          provider: 'nvidia',
-          modelId: result.modelUsed,
-          modelTitle: FLUX_MODEL_TITLE,
-          width: result.width,
-          height: result.height,
-          seed: result.seed,
-          aspectRatio: details.aspectRatio,
-          generationTimeMs: result.generationTimeMs,
-        });
-        toast.success('Variation generated!');
-      } catch (err: any) {
-        setImageError(msgId, err?.message || 'Variation failed');
-      }
-    },
-    [createImagePlaceholder, finalizeImageMessage, setImageError]
-  );
-
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-white overflow-hidden font-sans">
       {/* Windows 11 Acrylic Collapsible Sidebar */}
@@ -327,8 +207,6 @@ export function MasterAi2Shell() {
           onSendMessage={(prompt) => handleSendMessage(prompt, [])}
           onRegenerate={handleRegenerate}
           onEditMessage={handleEditMessage}
-          onEditImage={handleEditImageInChat}
-          onVariation={handleVariation}
         />
 
         {/* Unified Multimodal Composer */}

@@ -22,20 +22,14 @@ import {
   Download,
   Copy,
   Check,
-  RotateCcw,
   Sparkles,
   CloudUpload,
-  Edit3,
-  Layers,
   Loader2,
   Info,
-  ArrowUpRight,
 } from 'lucide-react';
 import { AiImageDetails } from '../types/aiTypes';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { masterCloudImageSaveService } from '../services/masterCloudImageSaveService';
-import { MasterAi2ImageEditorModal } from './MasterAi2ImageEditorModal';
-import { MasterAi2UpscaleModal } from './MasterAi2UpscaleModal';
 import { toast } from 'sonner';
 
 interface ImageCardProps {
@@ -53,11 +47,6 @@ export function MasterAi2ImageCard({
   details,
   isGenerating = false,
   promptText,
-  onRegenerate,
-  onEditImage,
-  onVariation,
-  onRemoveBackground,
-  onUpscale,
 }: ImageCardProps) {
   const [copied, setCopied] = useState(false);
   const [isSavingToDrive, setIsSavingToDrive] = useState(false);
@@ -66,10 +55,6 @@ export function MasterAi2ImageCard({
     Boolean(details?.savedToDriveId || (details?.url && masterCloudImageSaveService.isSaved(details.url)))
   );
   const [showMetadata, setShowMetadata] = useState(false);
-
-  // Modal visibility states
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [isUpscaleOpen, setIsUpscaleOpen] = useState(false);
 
   const setLightboxImage = useAiChatStore((s) => s.setLightboxImage);
 
@@ -163,24 +148,6 @@ export function MasterAi2ImageCard({
     } finally {
       setIsSavingToDrive(false);
     }
-  };
-
-  const handleSaveEditedResultToChat = (newUrl: string, newPrompt: string) => {
-    const store = useAiChatStore.getState();
-    const msgId = store.createImagePlaceholder(newPrompt, details.modelId || 'black-forest-labs/flux.2-klein-4b', 'nvidia');
-    store.finalizeImageMessage(msgId, {
-      url: newUrl,
-      prompt: newPrompt,
-      provider: details.provider || 'nvidia',
-      modelId: details.modelId || 'black-forest-labs/flux.2-klein-4b',
-      modelTitle: details.modelTitle || 'FLUX.2 [klein] 4B',
-      width: details.width,
-      height: details.height,
-      seed: details.seed,
-      aspectRatio: details.aspectRatio,
-      isEdited: true,
-      generationTimeMs: 120,
-    });
   };
 
   return (
@@ -314,41 +281,6 @@ export function MasterAi2ImageCard({
                   </>
                 )}
               </button>
-
-              {/* Edit Image (Opens MasterAi2ImageEditorModal) */}
-              <button
-                type="button"
-                onClick={() => setIsEditorOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
-                title="Open Master AI Image Studio to crop, rotate, flip, and adjust"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Edit</span>
-              </button>
-
-              {/* Upscale (Opens MasterAi2UpscaleModal) */}
-              <button
-                type="button"
-                onClick={() => setIsUpscaleOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
-                title="Super-resolution 2x / 4x upscale with split comparison"
-              >
-                <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Upscale</span>
-              </button>
-
-              {/* Creative Variation */}
-              {onVariation && (
-                <button
-                  type="button"
-                  onClick={() => onVariation(details)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
-                  title="Generate creative variation with FLUX.2"
-                >
-                  <Layers className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="hidden sm:inline">Variation</span>
-                </button>
-              )}
             </div>
 
             <div className="flex items-center gap-1">
@@ -371,44 +303,10 @@ export function MasterAi2ImageCard({
               >
                 <Download className="w-4 h-4" />
               </button>
-
-              {/* Regenerate Button */}
-              {onRegenerate && (
-                <button
-                  type="button"
-                  onClick={onRegenerate}
-                  className="p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  title="Regenerate this prompt"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Dedicated Image Editor Modal */}
-      {isEditorOpen && (
-        <MasterAi2ImageEditorModal
-          isOpen={isEditorOpen}
-          imageUrl={details.url}
-          prompt={details.prompt}
-          onClose={() => setIsEditorOpen(false)}
-          onSaveToChat={handleSaveEditedResultToChat}
-        />
-      )}
-
-      {/* Dedicated Upscale Modal */}
-      {isUpscaleOpen && (
-        <MasterAi2UpscaleModal
-          isOpen={isUpscaleOpen}
-          imageUrl={details.url}
-          prompt={details.prompt}
-          onClose={() => setIsUpscaleOpen(false)}
-          onSaveToChat={handleSaveEditedResultToChat}
-        />
-      )}
     </>
   );
 }

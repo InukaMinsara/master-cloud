@@ -1191,200 +1191,32 @@ export function createAiProxyMiddleware(rootDir: string) {
       }
     }
 
-    // ── 4. POST /api/ai/image/generate (FLUX.2 [klein] 4B via NVIDIA NIM) ──
+    // ── 4. POST /api/ai/image/generate (Disabled) ──
     if (url === '/api/ai/image/generate' && req.method === 'POST') {
-      try {
-        const body = await parseJsonBody(req);
-        const prompt = body.prompt ? body.prompt.trim() : 'cinematic landscape';
-        const size = body.size || '1024x1024';
-
-        if (!envConfig.nvidiaApiKey) {
-          res.statusCode = 401;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({
-              error: {
-                message:
-                  'NVIDIA API Key not configured. Please add NVIDIA_API_KEY to your server-side environment (.env.local).',
-                code: 'NVIDIA_API_KEY_MISSING',
-              },
-            })
-          );
-        }
-
-        const [wStr, hStr] = size.split('x');
-        const width = Math.min(1440, Math.max(512, parseInt(wStr, 10) || 1024));
-        const height = Math.min(1440, Math.max(512, parseInt(hStr, 10) || 1024));
-
-        const genUrl = `${envConfig.nvidiaGenaiEndpoint}/genai/black-forest-labs/flux.2-klein-4b`;
-        const nvRes = await fetch(genUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${envConfig.nvidiaApiKey}`,
+      res.statusCode = 410;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(
+        JSON.stringify({
+          error: {
+            message: 'Image generation has been disabled in Master AI.',
+            code: 'IMAGE_GENERATION_DISABLED',
           },
-          body: JSON.stringify({
-            prompt,
-            width,
-            height,
-            steps: 4,
-            samples: 1,
-          }),
-          signal: AbortSignal.timeout(60000),
-        });
-
-        if (!nvRes.ok) {
-          const errData = await nvRes.json().catch(() => ({}));
-          const errMsg =
-            errData?.detail ||
-            errData?.message ||
-            errData?.error?.message ||
-            `NVIDIA FLUX generation failed with HTTP ${nvRes.status}`;
-          console.error('[AI Proxy] NVIDIA FLUX.2-klein-4b generation failed:', errMsg);
-          res.statusCode = nvRes.status;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify({ error: { message: errMsg } }));
-        }
-
-        const data = await nvRes.json();
-        const base64Img = data?.artifacts?.[0]?.base64 || data?.data?.[0]?.b64_json;
-        if (!base64Img) {
-          res.statusCode = 502;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({ error: { message: 'NVIDIA FLUX.2-klein-4b did not return generated image artifacts' } })
-          );
-        }
-
-        const finalUrl = base64Img.startsWith('data:') ? base64Img : `data:image/png;base64,${base64Img}`;
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(
-          JSON.stringify({
-            url: finalUrl,
-            model: 'black-forest-labs/flux.2-klein-4b',
-            modelTitle: 'FLUX.2 [klein] 4B',
-            prompt,
-            width,
-            height,
-            seed: data?.artifacts?.[0]?.seed || data?.seed || Math.floor(Math.random() * 99999999),
-          })
-        );
-      } catch (err: any) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: { message: err?.message || 'FLUX generation failed' } }));
-      }
+        })
+      );
     }
 
-    // ── 5. POST /api/ai/image/edit (FLUX.2 [klein] 4B Image Editing via NVIDIA NIM) ──
+    // ── 5. POST /api/ai/image/edit (Disabled) ──
     if (url === '/api/ai/image/edit' && req.method === 'POST') {
-      try {
-        const body = await parseJsonBody(req);
-        const prompt = body.prompt ? body.prompt.trim() : 'modify image';
-        const inputImage = body.image;
-        const size = body.size || '1024x1024';
-
-        if (!envConfig.nvidiaApiKey) {
-          res.statusCode = 401;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({
-              error: {
-                message:
-                  'NVIDIA API Key not configured. Please add NVIDIA_API_KEY to your server-side environment (.env.local).',
-                code: 'NVIDIA_API_KEY_MISSING',
-              },
-            })
-          );
-        }
-
-        if (!inputImage) {
-          res.statusCode = 400;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify({ error: { message: 'Original input image is required for image editing' } }));
-        }
-
-        const [wStr, hStr] = size.split('x');
-        const width = Math.min(1440, Math.max(512, parseInt(wStr, 10) || 1024));
-        const height = Math.min(1440, Math.max(512, parseInt(hStr, 10) || 1024));
-
-        const editUrl = `${envConfig.nvidiaGenaiEndpoint}/genai/black-forest-labs/flux.2-klein-4b`;
-        const nvRes = await fetch(editUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${envConfig.nvidiaApiKey}`,
+      res.statusCode = 410;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(
+        JSON.stringify({
+          error: {
+            message: 'Image editing has been disabled in Master AI.',
+            code: 'IMAGE_EDITING_DISABLED',
           },
-          body: JSON.stringify({
-            prompt,
-            image: inputImage,
-          }),
-          signal: AbortSignal.timeout(60000),
-        });
-
-        if (!nvRes.ok) {
-          const errData = await nvRes.json().catch(() => ({}));
-          const rawDetail = typeof errData?.detail === 'string' ? errData.detail : (errData?.detail ? JSON.stringify(errData.detail) : '');
-          const errMsg =
-            rawDetail ||
-            errData?.message ||
-            errData?.error?.message ||
-            `NVIDIA FLUX editing failed with HTTP ${nvRes.status}`;
-          console.error('[AI Proxy] NVIDIA FLUX.2-klein-4b image editing failed:', errMsg);
-          const isLimitation =
-            errMsg.includes('example_id') ||
-            errMsg.includes('example') ||
-            rawDetail.includes('example_id');
-
-          res.statusCode = nvRes.status;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({
-              error: {
-                message: errMsg,
-                details: errData,
-                apiLimitation: isLimitation,
-                limitationNotice: isLimitation
-                  ? 'NVIDIA Preview API Limitation: The hosted preview endpoint for FLUX.2-klein-4b restricts image editing input to predefined example IDs (data:image/png;example_id,...). A self-hosted NVIDIA NIM container deployment is required for arbitrary user image editing.'
-                  : undefined,
-              },
-            })
-          );
-        }
-
-        const data = await nvRes.json();
-        const base64Img = data?.artifacts?.[0]?.base64 || data?.data?.[0]?.b64_json;
-        if (!base64Img) {
-          res.statusCode = 502;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(
-            JSON.stringify({ error: { message: 'NVIDIA FLUX.2-klein-4b did not return edited image artifacts' } })
-          );
-        }
-
-        const finalUrl = base64Img.startsWith('data:') ? base64Img : `data:image/png;base64,${base64Img}`;
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(
-          JSON.stringify({
-            url: finalUrl,
-            originalUrl: inputImage,
-            model: 'black-forest-labs/flux.2-klein-4b',
-            modelTitle: 'FLUX.2 [klein] 4B',
-            prompt,
-            width,
-            height,
-            seed: data?.artifacts?.[0]?.seed || data?.seed || Math.floor(Math.random() * 99999999),
-          })
-        );
-      } catch (err: any) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: { message: err?.message || 'FLUX editing failed' } }));
-      }
+        })
+      );
     }
 
     // ── 5. GET /api/ai/search (Lightweight Web Intelligence Proxy) ───────────
