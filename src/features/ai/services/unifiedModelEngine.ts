@@ -11,10 +11,12 @@
 import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
 import { senseNovaImageService, SenseNovaImageResult } from './senseNovaImageService';
 import { ContextManager } from './contextManager';
+import { resolveModelFamily } from '../components/ModelFamilyLogo';
+import { ModelCapabilityService } from './modelCapabilityService';
 
 export interface UnifiedStreamOptions {
   model: string;
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
+  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string | any[] }>;
   signal?: AbortSignal;
   webSearch?: boolean;
   onChunk?: (chunk: string, accumulated: string) => void;
@@ -55,11 +57,16 @@ class UnifiedModelEngine {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data?.models) && data.models.length > 0) {
-          this.cachedModels = data.models;
+          const enriched = data.models.map((m: any) => ({
+            ...m,
+            family: resolveModelFamily(m.id),
+            capabilities: ModelCapabilityService.getModelCapabilities(m.id, m.category),
+          }));
+          this.cachedModels = enriched;
           this.lastFetchTime = now;
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify(data.models));
+              localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify(enriched));
             } catch {}
           }
           return this.cachedModels;
@@ -200,17 +207,26 @@ class UnifiedModelEngine {
     if (options.webSearch) {
       const lastUserMsg = [...options.messages].reverse().find((m) => m.role === 'user');
       if (lastUserMsg) {
-        webSources = await this.searchWeb(lastUserMsg.content);
-        if (webSources.length > 0) {
-          options.onWebSources?.(webSources);
-          const searchContext = webSources
-            .map((s, idx) => `[Source ${idx + 1}]: ${s.title}\n${s.snippet}`)
-            .join('\n\n');
+        const queryText =
+          typeof lastUserMsg.content === 'string'
+            ? lastUserMsg.content
+            : Array.isArray(lastUserMsg.content)
+            ? lastUserMsg.content.find((p: any) => p.type === 'text')?.text || ''
+            : '';
 
-          options.messages.push({
-            role: 'system',
-            content: `Real-time web search intelligence context:\n${searchContext}\n\nUse these fresh findings when responding.`,
-          });
+        if (queryText) {
+          webSources = await this.searchWeb(queryText);
+          if (webSources.length > 0) {
+            options.onWebSources?.(webSources);
+            const searchContext = webSources
+              .map((s, idx) => `[Source ${idx + 1}]: ${s.title}\n${s.snippet}`)
+              .join('\n\n');
+
+            options.messages.push({
+              role: 'system',
+              content: `Real-time web search intelligence context:\n${searchContext}\n\nUse these fresh findings when responding.`,
+            });
+          }
         }
       }
     }

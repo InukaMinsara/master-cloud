@@ -26,27 +26,69 @@ export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3' |
 
 export type ModelCategory = 'all' | 'reasoning' | 'coding' | 'fast' | 'general' | 'vision';
 
+export type ModelFamily =
+  | 'gpt'
+  | 'gemini'
+  | 'claude'
+  | 'deepseek'
+  | 'qwen'
+  | 'mistral'
+  | 'llama'
+  | 'cohere'
+  | 'sensenova'
+  | 'nvidia'
+  | 'general';
+
+export interface ModelCapabilities {
+  hasVision: boolean;          // Native vision (image/keyframe analysis)
+  hasAppDocument: boolean;     // Application-assisted document parsing (PDF, DOCX, XLSX, PPTX)
+  hasAppVideo: boolean;        // Application-assisted video keyframe analysis
+  hasCode: boolean;            // Advanced code understanding
+  hasReasoning: boolean;       // Extended reasoning
+  contextLength: number;       // Context window token limit
+}
+
 export interface UnifiedChatModel {
   id: string;
   name: string; // Clean display name with ZERO provider branding
   description: string;
   category: ModelCategory;
+  family?: ModelFamily;
+  capabilities?: ModelCapabilities;
   contextLength?: number;
   contextBadge?: string;
   isDefault?: boolean;
   provider: AiProviderId; // Internal routing only
 }
 
+export interface VideoKeyframe {
+  timestampSec: number;
+  formattedTime: string;
+  dataUri: string;
+}
+
 export interface AiAttachment {
   id: string;
   name: string;
-  type: 'file' | 'image';
+  type: 'file' | 'image' | 'video';
   sizeBytes: number;
   mimeType?: string;
-  content?: string; // Text content for document files
-  url?: string;     // Object URL, data URL, or remote URL
+  content?: string; // Text content for document files & video summary breakdown
+  url?: string;     // Object URL or preview URL
+  dataUri?: string; // Base64 data URI for vision models (image & video frames)
   width?: number;
   height?: number;
+  durationSec?: number;
+  fps?: number;
+  status?: 'pending' | 'processing' | 'ready' | 'error';
+  errorMessage?: string;
+  pageCount?: number;
+  sheetNames?: string[];
+  slideCount?: number;
+  keyframes?: VideoKeyframe[];
+  extractedSummary?: string;
+  metadata?: Record<string, any>;
+  driveFileId?: string;
 }
 
 export interface AiTokenMetrics {

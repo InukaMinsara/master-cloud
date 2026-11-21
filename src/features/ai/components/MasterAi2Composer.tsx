@@ -1,15 +1,18 @@
 /**
  * src/features/ai/components/MasterAi2Composer.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — UNIFIED CHAT COMPOSER
- * Single unified input interface for conversational AI and inline image requests.
- * Features:
- * - Auto-expanding textarea
- * - Drag-and-drop file/image dropzone
- * - Integrated Model Discovery & Selector with category filters (All / Fast / Reasoning / Coding / General)
- * - Live Web Search Grounding toggle
- * - Keyboard navigation (Enter to send, Shift+Enter for newline, Up/Down for prompt history)
- * - Strict Compliance: Zero third-party provider branding in the user interface.
+ * MASTER AI — UNIFIED MULTIMODAL CHAT COMPOSER
+ * Single unified input interface for conversational AI and inline image/document requests.
+ *
+ * Multimodal Enhancements:
+ * - Real document extraction (PDF page-by-page, DOCX, XLSX sheets, PPTX slides)
+ * - Real image understanding & safe compression for vision models
+ * - Video understanding engine: duration, resolution, representative keyframe scenes
+ * - Pre-upload File Analysis Compatibility Legend (Supported vs. Unsupported formats)
+ * - Model Selector with Model-Family Logos immediately AFTER model names
+ * - Model Capability Badges (Vision, Document, Code, Reasoning)
+ * - Real-time compatibility warning if text-only model is selected with visual attachments
+ * - Zero third-party provider branding in UI.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,11 +30,22 @@ import {
   Star,
   UploadCloud,
   Globe,
+  Eye,
+  Code,
+  Brain,
+  Video,
+  Table,
+  HelpCircle,
+  AlertCircle,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { ContextManager } from '../services/contextManager';
 import { appSettingsService } from '@/services/appSettingsService';
 import { AiAttachment, UnifiedChatModel } from '../types/aiTypes';
+import { FileAnalysisEngine } from '../services/fileAnalysisEngine';
+import { ModelCapabilityService } from '../services/modelCapabilityService';
+import { ModelFamilyLogo } from './ModelFamilyLogo';
 import { toast } from 'sonner';
 
 interface ComposerProps {
@@ -39,12 +53,15 @@ interface ComposerProps {
   onStopGenerating: () => void;
 }
 
-const CATEGORIES = ['All', 'Fast', 'Reasoning', 'Coding', 'General'] as const;
+const CATEGORIES = ['All', 'Fast', 'Reasoning', 'Coding', 'General', 'Vision'] as const;
 
 export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerProps) {
   const [inputText, setInputText] = useState(() => appSettingsService.getDraft('master_ai_composer'));
   const [attachments, setAttachments] = useState<AiAttachment[]>([]);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [processingStatusText, setProcessingStatusText] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isFormatGuideOpen, setIsFormatGuideOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isRefreshingModels, setIsRefreshingModels] = useState(false);
@@ -54,6 +71,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const formatGuideRef = useRef<HTMLDivElement>(null);
 
   const isStreaming = useAiChatStore((s) => s.isStreaming);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
@@ -90,6 +108,11 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
   const activeModelDisplayName =
     matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/[-_]/g, ' ') || 'Master AI');
+  const activeCapabilities =
+    matchedModel?.capabilities || ModelCapabilityService.getModelCapabilities(selectedModelId, matchedModel?.category);
+
+  // Live Model-Attachment Compatibility Check
+  const compatibility = ModelCapabilityService.checkCompatibility(matchedModel, attachments, unifiedModels);
 
   // Auto-resize textarea & save draft
   useEffect(() => {
@@ -101,11 +124,14 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
     appSettingsService.saveDraft('master_ai_composer', inputText);
   }, [inputText]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
         setIsModelDropdownOpen(false);
+      }
+      if (formatGuideRef.current && !formatGuideRef.current.contains(e.target as Node)) {
+        setIsFormatGuideOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -113,9 +139,9 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   }, []);
 
   const handleSend = () => {
-    if (!inputText.trim() || isStreaming) return;
+    if ((!inputText.trim() && attachments.length === 0) || isStreaming || isProcessingFile) return;
 
-    const text = inputText.trim();
+    const text = inputText.trim() || 'Please analyze the attached files and provide a detailed overview.';
     const currentAttachments = [...attachments];
     addPromptToHistory(text);
     setHistoryIndex(-1);
@@ -138,7 +164,6 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
       return;
     }
 
-    // Prompt history navigation on empty or cursor at start
     if (e.key === 'ArrowUp' && (inputText === '' || textareaRef.current?.selectionStart === 0)) {
       if (promptHistory.length > 0) {
         e.preventDefault();
@@ -161,45 +186,42 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
     }
   };
 
+  // Process uploaded files through real extraction pipeline
   const processUploadedFiles = async (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
+    if (files.length === 0) return;
+
+    setIsProcessingFile(true);
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.size > 25 * 1024 * 1024) {
-        toast.error(`File "${file.name}" exceeds 25 MB limit.`);
+
+      // Enforce 35MB size ceiling
+      if (file.size > 35 * 1024 * 1024) {
+        toast.error(`"${file.name}" exceeds 35 MB size limit.`);
         continue;
       }
 
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        const newAtt: AiAttachment = {
-          id: `att_img_${Date.now()}_${i}`,
-          name: file.name,
-          type: 'image',
-          sizeBytes: file.size,
-          mimeType: file.type,
-          url,
-        };
-        setAttachments((prev) => [...prev, newAtt]);
-        toast.success(`Attached image "${file.name}"`);
-      } else {
-        try {
-          const textContent = await ContextManager.readFileText(file);
-          const newAtt: AiAttachment = {
-            id: `att_${Date.now()}_${i}`,
-            name: file.name,
-            type: 'file',
-            sizeBytes: file.size,
-            mimeType: file.type || 'text/plain',
-            content: textContent,
-          };
-          setAttachments((prev) => [...prev, newAtt]);
-          toast.success(`Attached "${file.name}"`);
-        } catch (err: any) {
-          toast.error(`Could not read ${file.name}: ${err?.message}`);
-        }
+      setProcessingStatusText(`Extracting ${file.name}...`);
+
+      try {
+        const processedAttachment = await FileAnalysisEngine.processAttachment(
+          file,
+          (percent, step) => {
+            setProcessingStatusText(`${step} (${percent}%)`);
+          }
+        );
+
+        setAttachments((prev) => [...prev, processedAttachment]);
+        toast.success(`Attached "${file.name}" ready for analysis.`);
+      } catch (err: any) {
+        console.error('[Master AI] File extraction failed:', err);
+        toast.error(`Could not process "${file.name}": ${err?.message || 'Unsupported format'}`);
       }
     }
+
+    setIsProcessingFile(false);
+    setProcessingStatusText('');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,6 +261,10 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
     if (!matchesSearch) return false;
     if (selectedCategory === 'All') return true;
+    if (selectedCategory === 'Vision') {
+      const c = m.capabilities || ModelCapabilityService.getModelCapabilities(m.id, m.category);
+      return c.hasVision;
+    }
     return m.category.toLowerCase() === selectedCategory.toLowerCase();
   });
 
@@ -253,40 +279,89 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
       {isDragging && (
         <div className="absolute inset-x-4 inset-y-0 rounded-2xl border-2 border-dashed border-orange-500 bg-orange-500/10 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-2 pointer-events-none animate-in fade-in duration-150">
           <UploadCloud className="w-10 h-10 text-orange-400 animate-bounce" />
-          <span className="text-sm font-bold text-white tracking-wide">Drop files or images here to attach</span>
-          <span className="text-xs text-orange-300 font-mono">Supports code, documents, and reference images</span>
+          <span className="text-sm font-bold text-white tracking-wide">Drop documents, images, or videos here</span>
+          <span className="text-xs text-orange-300 font-mono">
+            Supported: PDF, DOCX, XLSX, PPTX, Images (PNG/JPG), Videos (MP4/WEBM), Code
+          </span>
         </div>
       )}
 
       {/* Main Composer Box */}
-      <div className="rounded-2xl border border-white/[0.1] bg-zinc-900/80 backdrop-blur-xl shadow-2xl p-2.5 space-y-2 focus-within:border-orange-500/40 transition-colors">
-        {/* Attachment Chips */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-1 pt-1">
-            {attachments.map((att) => (
-              <div
-                key={att.id}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.08] text-xs font-mono text-zinc-200"
+      <div className="rounded-2xl border border-white/[0.1] bg-zinc-900/85 backdrop-blur-xl shadow-2xl p-2.5 space-y-2 focus-within:border-orange-500/40 transition-colors">
+        {/* Model Compatibility Warning Banner */}
+        {!compatibility.isCompatible && compatibility.warningMessage && (
+          <div className="mx-1 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="leading-tight text-[11px] font-sans">{compatibility.warningMessage}</span>
+            </div>
+            {compatibility.recommendedModelId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedModelId(compatibility.recommendedModelId!);
+                  toast.success(`Switched to vision model: ${compatibility.recommendedModelName}`);
+                }}
+                className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-[11px] cursor-pointer transition-colors"
               >
-                {att.type === 'image' && att.url ? (
-                  <img
-                    src={att.url}
-                    alt={att.name}
-                    className="w-5 h-5 object-cover rounded border border-white/20"
-                  />
-                ) : (
-                  <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                )}
-                <span className="truncate max-w-[160px]">{att.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(att.id)}
-                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                Switch to {compatibility.recommendedModelName?.split(' ')[0]}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Attachment Chips & Processing Indicator */}
+        {(attachments.length > 0 || isProcessingFile) && (
+          <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+            {attachments.map((att) => {
+              const isImg = att.type === 'image';
+              const isVid = att.type === 'video';
+              return (
+                <div
+                  key={att.id}
+                  className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/[0.06] border border-white/[0.1] text-xs font-mono text-zinc-200"
                 >
-                  <X className="w-3 h-3" />
-                </button>
+                  {isImg && att.url ? (
+                    <img
+                      src={att.url}
+                      alt={att.name}
+                      className="w-5 h-5 object-cover rounded border border-white/20"
+                    />
+                  ) : isVid ? (
+                    <Video className="w-3.5 h-3.5 text-purple-400" />
+                  ) : att.name.endsWith('.xlsx') || att.name.endsWith('.csv') ? (
+                    <Table className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                  )}
+
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate max-w-[150px] font-medium">{att.name}</span>
+                    {att.extractedSummary && (
+                      <span className="text-[9px] text-zinc-400 truncate max-w-[150px]">
+                        {att.extractedSummary}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(att.id)}
+                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer ml-1"
+                    title="Remove attachment"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {isProcessingFile && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-orange-500/15 border border-orange-500/30 text-xs font-mono text-orange-300 animate-pulse">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400" />
+                <span>{processingStatusText || 'Extracting attachment...'}</span>
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -296,7 +371,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Master AI anything, or request an image (e.g. 'Generate an image of a futuristic skyline')..."
+          placeholder="Ask Master AI anything, attach documents/images/videos, or request an image..."
           rows={1}
           disabled={isStreaming}
           className="w-full bg-transparent px-2.5 py-1.5 text-sm font-sans text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-[180px] overflow-y-auto"
@@ -305,12 +380,12 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
         {/* Bottom Control Bar */}
         <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
           <div className="flex items-center gap-2">
-            {/* Hidden File Input */}
+            {/* Hidden Multimodal File Input */}
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*,.txt,.md,.json,.ts,.tsx,.js,.jsx,.py,.html,.css"
+              accept="image/*,video/*,.pdf,.docx,.xlsx,.xls,.csv,.pptx,.txt,.md,.json,.ts,.tsx,.js,.jsx,.py,.html,.css,.xml,.sql,.sh"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -319,12 +394,70 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isStreaming}
+              disabled={isStreaming || isProcessingFile}
               className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-              title="Attach code file, document, or reference image"
+              title="Attach PDF, Word, Excel, PowerPoint, Image, Video, or Code file"
             >
               <Paperclip className="w-4 h-4" />
             </button>
+
+            {/* Pre-Upload File Analysis Indicators & Compatibility Guide */}
+            <div className="relative" ref={formatGuideRef}>
+              <button
+                type="button"
+                onClick={() => setIsFormatGuideOpen(!isFormatGuideOpen)}
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-[11px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="View supported file formats and capabilities"
+              >
+                <HelpCircle className="w-3 h-3 text-orange-400" />
+                <span>File Formats</span>
+              </button>
+
+              {/* Supported File Formats Dropdown Popover */}
+              {isFormatGuideOpen && (
+                <div className="absolute bottom-full mb-2 left-0 w-80 rounded-2xl bg-zinc-950/95 backdrop-blur-2xl border border-white/[0.1] shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-2">
+                  <div className="text-xs font-bold text-white border-b border-white/[0.08] pb-1.5 flex items-center justify-between">
+                    <span>File Analysis Compatibility</span>
+                    <span className="text-[10px] font-mono text-orange-400">Master AI Engine</span>
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px] font-mono">
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <FileText className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>PDF — Supported (Page-by-page & tables)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span>DOCX — Supported (Paragraphs & tables)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <Table className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>XLSX / XLS / CSV — Supported (All sheets)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>PPTX — Supported (Slides & speaker notes)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <Eye className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>Images (PNG, JPG, WEBP) — Supported (Vision)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <Video className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <span>Videos (MP4, WEBM, MOV) — Supported (Keyframes)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-200">
+                      <Code className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <span>Code & Text (MD, JSON, TS, PY) — Supported</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400 pt-1 border-t border-white/[0.06]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      <span className="text-[10px]">Legacy .doc / binaries — Not supported</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Web Search Grounding Toggle Chip */}
             <button
@@ -341,23 +474,33 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
               <span className="hidden sm:inline font-sans">Search</span>
             </button>
 
-            {/* Model Selector Dropdown Trigger */}
+            {/* Model Selector Dropdown Trigger with Model Name & Model-Family Logo */}
             <div className="relative" ref={modelDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-xs font-mono text-zinc-300 border border-white/[0.08] transition-colors cursor-pointer"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                <span className="truncate max-w-[140px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="truncate max-w-[130px] font-medium text-white">
                   {activeModelDisplayName}
                 </span>
-                <ChevronDown className="w-3 h-3 text-zinc-400" />
+                {/* Official Model-Family Logo immediately AFTER model name */}
+                <ModelFamilyLogo modelId={selectedModelId} size={14} />
+
+                {/* Capability Icons on Active Badge */}
+                {activeCapabilities.hasVision && (
+                  <span title="Vision Capable">
+                    <Eye className="w-3 h-3 text-purple-400" />
+                  </span>
+                )}
+
+                <ChevronDown className="w-3 h-3 text-zinc-400 ml-0.5" />
               </button>
 
-              {/* Unified Model Dropdown Menu (Zero Provider Branding) */}
+              {/* Unified Model Dropdown Menu with Capabilities & Model-Family Logos */}
               {isModelDropdownOpen && (
-                <div className="absolute bottom-full mb-2 left-0 w-84 sm:w-96 rounded-2xl bg-zinc-950/95 backdrop-blur-2xl border border-white/[0.1] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-2">
+                <div className="absolute bottom-full mb-2 left-0 w-84 sm:w-[420px] rounded-2xl bg-zinc-950/95 backdrop-blur-2xl border border-white/[0.1] shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-2">
                   {/* Search and Refresh Bar */}
                   <div className="flex items-center gap-1.5">
                     <div className="relative flex-1">
@@ -366,8 +509,8 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                         type="text"
                         value={modelSearch}
                         onChange={(e) => setModelSearch(e.target.value)}
-                        placeholder="Search models..."
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none"
+                        placeholder="Search models by name or capability..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none placeholder-zinc-500"
                       />
                     </div>
                     {/* 1-Click Refresh */}
@@ -376,7 +519,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                       onClick={handleRefreshCatalogue}
                       disabled={isRefreshingModels}
                       className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
-                      title="1-Click Refresh Catalogue from Live Models API"
+                      title="Refresh Catalogue from Live Models API"
                     >
                       <RotateCw className={`w-3.5 h-3.5 ${isRefreshingModels ? 'animate-spin text-orange-400' : ''}`} />
                     </button>
@@ -391,7 +534,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                         onClick={() => setSelectedCategory(cat)}
                         className={`px-2 py-0.5 rounded-md font-mono shrink-0 cursor-pointer transition-all ${
                           selectedCategory === cat
-                            ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                            ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold'
                             : 'bg-white/[0.02] text-zinc-400 hover:text-white'
                         }`}
                       >
@@ -404,6 +547,9 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                   <div className="max-h-64 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
                     {filteredModels.map((m: UnifiedChatModel) => {
                       const isFav = favoriteModels.includes(m.id) || appSettingsService.isFavorite(m.id);
+                      const caps =
+                        m.capabilities || ModelCapabilityService.getModelCapabilities(m.id, m.category);
+
                       return (
                         <div
                           key={m.id}
@@ -420,12 +566,44 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                         >
                           <div className="flex-1 min-w-0 pr-2">
                             <div className="font-semibold text-xs flex items-center gap-1.5 flex-wrap">
+                              {/* 1. Model Name */}
                               <span className="truncate">{m.name}</span>
-                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-500/20 text-orange-300 shrink-0 capitalize">
-                                {m.category}
-                              </span>
+
+                              {/* 2. Official Model-Family Logo immediately AFTER name */}
+                              <ModelFamilyLogo modelId={m.id} size={14} />
+
+                              {/* 3. Capability Badges */}
+                              {caps.hasVision && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                                  title="Visual image and keyframe understanding supported"
+                                >
+                                  <Eye className="w-2.5 h-2.5" />
+                                  <span>Vision</span>
+                                </span>
+                              )}
+
+                              {caps.hasAppDocument && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+                                  title="Document extraction supported (PDF, DOCX, XLSX, PPTX)"
+                                >
+                                  <FileText className="w-2.5 h-2.5" />
+                                  <span>Docs</span>
+                                </span>
+                              )}
+
+                              {caps.hasReasoning && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                                  title="Extended reasoning supported"
+                                >
+                                  <Brain className="w-2.5 h-2.5" />
+                                </span>
+                              )}
+
                               {m.contextBadge && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0">
+                                <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/[0.05] text-zinc-400 shrink-0">
                                   {m.contextBadge}
                                 </span>
                               )}
@@ -434,6 +612,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
                               {m.description}
                             </div>
                           </div>
+
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
@@ -479,9 +658,9 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={!inputText.trim()}
+                disabled={(!inputText.trim() && attachments.length === 0) || isProcessingFile}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  inputText.trim()
+                  inputText.trim() || attachments.length > 0
                     ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/30 scale-100'
                     : 'bg-white/[0.05] text-zinc-500 cursor-not-allowed scale-95'
                 }`}

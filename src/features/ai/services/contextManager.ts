@@ -14,6 +14,7 @@
 
 import { AiAttachment, AiMessage, AiRole } from '../types/aiTypes';
 import { groqService } from './groqService';
+import { ModelCapabilityService } from './modelCapabilityService';
 
 const DEFAULT_SYSTEM_PROMPT = `You are MASTER AI, an elite, high-performance AI assistant.
 - Provide direct, concise, and deeply insightful answers.
@@ -50,12 +51,22 @@ export class ContextManager {
    * including OpenAI per-message formatting overhead (3 tokens per message + 3 priming).
    */
   public static estimateMessagesTokens(
-    messages: Array<{ role: string; content: string }>
+    messages: Array<{ role: string; content: string | any[] }>
   ): number {
     let total = 3; // Priming overhead
     for (const msg of messages) {
       total += 3; // Role + formatting markers
-      total += this.estimateTokens(msg.content);
+      if (typeof msg.content === 'string') {
+        total += this.estimateTokens(msg.content);
+      } else if (Array.isArray(msg.content)) {
+        for (const part of msg.content) {
+          if (part.type === 'text') {
+            total += this.estimateTokens(part.text || '');
+          } else if (part.type === 'image_url') {
+            total += 800; // Standard visual token budget allocation
+          }
+        }
+      }
     }
     return total;
   }
@@ -130,10 +141,11 @@ export class ContextManager {
     attachments?: AiAttachment[],
     customSystemPrompt?: string,
     modelId?: string
-  ): Array<{ role: AiRole; content: string }> {
+  ): Array<{ role: AiRole; content: string | any[] }> {
     const isGroq = this.isGroqRateLimitedModel(modelId);
-    // Safe prompt budget: 3200 for Groq (prevents 8000 TPM errors), 12000 for others
-    const maxPromptTokens = isGroq ? 3200 : 12000;
+    const caps = ModelCapabilityService.getModelCapabilities(modelId || '');
+    // Safe prompt budget: 3200 for Groq (prevents 8000 TPM errors), 16000 for high-context models
+    const maxPromptTokens = isGroq ? 3200 : 16000;
 
     // 1. System Persona
     const systemContent = customSystemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -141,31 +153,51 @@ export class ContextManager {
 
     // 2. Format Current User Message with Attachments
     let formattedPrompt = currentPrompt.trim();
+    const imageParts: Array<{ type: 'image_url'; image_url: { url: string } }> = [];
+
     if (attachments && attachments.length > 0) {
-      let attachmentContext = '\n\n[Attached Context Files]:\n';
+      let attachmentContext = '\n\n[Attached Reference Documents & Multimodal Data]:\n';
       for (const att of attachments) {
+        // Document / Code / Spreadsheet / Presentation
         if (att.content) {
-          // Truncate individual file if excessively long
-          const maxFileChars = isGroq ? 3000 : 8000;
+          const maxFileChars = isGroq ? 4000 : 16000;
           const snippet =
             att.content.length > maxFileChars
-              ? att.content.slice(0, maxFileChars) + '\n...[File Truncated to fit context window]'
+              ? att.content.slice(0, maxFileChars) + '\n...[Content Truncated to fit context window]'
               : att.content;
-          attachmentContext += `\n--- File: ${att.name} (${(att.sizeBytes / 1024).toFixed(1)} KB) ---\n\`\`\`\n${snippet}\n\`\`\`\n`;
+          attachmentContext += `\n--- [Attachment: ${att.name} (${(att.sizeBytes / 1024).toFixed(1)} KB)] ---\n${snippet}\n`;
+        }
+
+        // Native Image Vision Input
+        if (att.type === 'image' && att.dataUri && caps.hasVision) {
+          imageParts.push({
+            type: 'image_url',
+            image_url: { url: att.dataUri },
+          });
+        }
+
+        // Video Keyframe Vision Input
+        if (att.type === 'video' && att.keyframes && att.keyframes.length > 0 && caps.hasVision) {
+          for (const kf of att.keyframes) {
+            imageParts.push({
+              type: 'image_url',
+              image_url: { url: kf.dataUri },
+            });
+          }
         }
       }
       formattedPrompt = `${attachmentContext}\n[User Directive]:\n${formattedPrompt}`;
     }
 
-    let currentPromptTokens = this.estimateTokens(formattedPrompt) + 10;
+    let currentPromptTokens = this.estimateTokens(formattedPrompt) + 10 + imageParts.length * 800;
 
-    // If current prompt alone exceeds safe budget, compress prompt & attachments
+    // If current prompt alone exceeds safe budget, compress text attachments
     if (systemTokens + currentPromptTokens > maxPromptTokens) {
-      const allowedPromptChars = Math.max(600, (maxPromptTokens - systemTokens - 80) * 3);
+      const allowedPromptChars = Math.max(600, (maxPromptTokens - systemTokens - 80 - imageParts.length * 800) * 3);
       formattedPrompt =
         formattedPrompt.slice(0, allowedPromptChars) +
         '\n...[Context trimmed to respect model token safety limits]';
-      currentPromptTokens = this.estimateTokens(formattedPrompt) + 10;
+      currentPromptTokens = this.estimateTokens(formattedPrompt) + 10 + imageParts.length * 800;
     }
 
     // 3. Calculate remaining budget for conversation history
@@ -199,7 +231,7 @@ export class ContextManager {
     const olderSummary = this.summarizeOlderMessages(prunedHistory);
 
     // Assemble final ordered messages
-    const messages: Array<{ role: AiRole; content: string }> = [];
+    const messages: Array<{ role: AiRole; content: string | any[] }> = [];
 
     // System prompt
     messages.push({
@@ -220,11 +252,21 @@ export class ContextManager {
       messages.push(turn);
     }
 
-    // Active user turn
-    messages.push({
-      role: 'user',
-      content: formattedPrompt,
-    });
+    // Active user turn: Multimodal parts if vision images exist, otherwise plain text
+    if (imageParts.length > 0) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: formattedPrompt },
+          ...imageParts,
+        ],
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: formattedPrompt,
+      });
+    }
 
     return messages;
   }

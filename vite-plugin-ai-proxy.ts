@@ -954,7 +954,16 @@ export function createAiProxyMiddleware(rootDir: string) {
               let promptTokens = 0;
               if (Array.isArray(p.messages)) {
                 for (const m of p.messages) {
-                  promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+                  let contentLength = 0;
+                  if (typeof m.content === 'string') {
+                    contentLength = m.content.length;
+                  } else if (Array.isArray(m.content)) {
+                    for (const part of m.content) {
+                      if (part?.type === 'text') contentLength += (part.text?.length || 0);
+                      else if (part?.type === 'image_url') contentLength += 1000;
+                    }
+                  }
+                  promptTokens += 3 + Math.ceil(contentLength / 3.5);
                 }
               }
               const safeMax = Math.max(1024, Math.min(p.max_tokens || 1800, 7200 - promptTokens));
@@ -993,14 +1002,24 @@ export function createAiProxyMiddleware(rootDir: string) {
             console.warn(`[AI Proxy] ${targetProvider}:${modelId} returned HTTP ${upstreamRes.status}. Initiating Resilience Cascade...`);
           }
 
-          const cascadeCandidates = [
-            { prov: 'groq', model: 'openai/gpt-oss-120b' },
-            { prov: 'groq', model: 'qwen/qwen3.8-27b' },
-            { prov: 'xkiro', model: 'mistralai/ministral-14b' },
-            { prov: 'xkiro', model: 'mistralai/mistral-large-2512' },
-            { prov: 'openrouter', model: 'nvidia/nemotron-3.5-lightning:free' },
-            { prov: 'pollinations', model: 'minimax/minimax-m3.1-flash' },
-          ].filter((c) => !(c.prov === targetProvider && c.model === modelId));
+          const hasVisualPayload = Array.isArray(body?.messages) && body.messages.some((m: any) =>
+            Array.isArray(m?.content) && m.content.some((part: any) => part?.type === 'image_url')
+          );
+
+          const cascadeCandidates = hasVisualPayload
+            ? [
+                { prov: 'xkiro', model: 'cohere/command-a-vision' },
+                { prov: 'pollinations', model: 'openai/gpt-5.4-nano' },
+                { prov: 'openrouter', model: 'nvidia/nemotron-3.5-super-vl:free' },
+              ].filter((c) => !(c.prov === targetProvider && c.model === modelId))
+            : [
+                { prov: 'groq', model: 'openai/gpt-oss-120b' },
+                { prov: 'groq', model: 'qwen/qwen3.8-27b' },
+                { prov: 'xkiro', model: 'mistralai/ministral-14b' },
+                { prov: 'xkiro', model: 'mistralai/mistral-large-2512' },
+                { prov: 'openrouter', model: 'nvidia/nemotron-3.5-lightning:free' },
+                { prov: 'pollinations', model: 'minimax/minimax-m3.1-flash' },
+              ].filter((c) => !(c.prov === targetProvider && c.model === modelId));
 
           for (const cand of cascadeCandidates) {
             try {

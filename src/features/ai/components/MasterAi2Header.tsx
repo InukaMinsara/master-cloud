@@ -28,6 +28,7 @@ import {
 import { useAiChatStore } from '../stores/aiChatStore';
 import { healthMonitor } from '@/services/healthMonitor';
 import { MasterAi2KeyboardShortcutsModal } from './MasterAi2KeyboardShortcutsModal';
+import { ModelFamilyLogo } from './ModelFamilyLogo';
 import { toast } from 'sonner';
 
 export function MasterAi2Header() {
@@ -187,10 +188,10 @@ export function MasterAi2Header() {
 
         {/* Right Controls: Model Badge & Vault Indicator & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Active Model Indicator Badge */}
+          {/* Active Model Indicator Badge with Official Model-Family Logo immediately AFTER name */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
-            <Zap className="w-3.5 h-3.5 text-orange-400" />
             <span className="font-medium text-white">{activeModelDisplayName}</span>
+            <ModelFamilyLogo modelId={selectedModelId} size={14} />
           </div>
 
           {/* Web Search Grounding Toggle */}
