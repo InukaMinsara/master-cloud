@@ -105,21 +105,43 @@ export function MasterAi2Shell() {
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
 
-      // 3. Resolve Intent: Image generation vs Conversational Chat
+      // 3. Resolve Intent: Image generation vs Image Editing vs Conversational Chat
+      const imageAttachment = attachments?.find((a) => a.type === 'image');
       const imageIntent = unifiedModelEngine.detectImageIntent(text);
-      const isImageRequest = imageIntent.isImage;
+      const isImageRequest =
+        imageIntent.isImage ||
+        (Boolean(imageAttachment) &&
+          /(?:edit|change|make|modify|transform|turn|wear|color|background|add|remove|replace|convert|create|generate|show|render)/i.test(
+            text
+          ));
 
-      // ── ROUTE A: FLUX.2-KLEIN-4B IMAGE SYNTHESIS (NVIDIA NIM) ──
+      // ── ROUTE A: FLUX.2-KLEIN-4B IMAGE SYNTHESIS & EDITING (NVIDIA NIM) ──
       if (isImageRequest) {
-        const prompt = imageIntent.prompt;
+        const prompt = imageIntent.prompt || text;
         const msgId = createImagePlaceholder(prompt, FLUX_MODEL_ID, 'nvidia');
 
         try {
-          const result = await fluxImageService.generateImage({
-            prompt,
-            aspectRatio,
-            signal: abortCtrl.signal,
-          });
+          let result;
+          if (imageAttachment) {
+            const srcImage = imageAttachment.dataUri || imageAttachment.url;
+            if (!srcImage) {
+              throw new Error('Attached image has no valid data URL.');
+            }
+            // Image-to-Image Editing Workflow with User-Uploaded Image
+            result = await fluxImageService.editImage({
+              prompt,
+              image: srcImage,
+              aspectRatio,
+              signal: abortCtrl.signal,
+            });
+          } else {
+            // Text-to-Image Generation Workflow
+            result = await fluxImageService.generateImage({
+              prompt,
+              aspectRatio,
+              signal: abortCtrl.signal,
+            });
+          }
 
           finalizeImageMessage(msgId, {
             url: result.imageUrl,
@@ -131,6 +153,7 @@ export function MasterAi2Shell() {
             height: result.height,
             seed: result.seed,
             aspectRatio,
+            isEdited: Boolean(imageAttachment),
             generationTimeMs: result.generationTimeMs,
           });
         } catch (err: any) {
