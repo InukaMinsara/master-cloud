@@ -31,6 +31,9 @@ export interface ServerAiConfig {
   apmixApiKey: string;
   openrouterEndpoint: string;
   openrouterApiKey: string;
+  nvidiaEndpoint: string;
+  nvidiaGenaiEndpoint: string;
+  nvidiaApiKey: string;
 }
 
 export function loadEnvLocal(rootDir: string): ServerAiConfig {
@@ -53,6 +56,9 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
     apmixApiKey: '',
     openrouterEndpoint: 'https://openrouter.ai/api/v1',
     openrouterApiKey: '',
+    nvidiaEndpoint: 'https://integrate.api.nvidia.com/v1',
+    nvidiaGenaiEndpoint: 'https://ai.api.nvidia.com/v1',
+    nvidiaApiKey: '',
   };
 
   const candidateFiles = ['.env.local', '.env'];
@@ -92,6 +98,9 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
           if (key === 'APMIX_API_KEY' && val) config.apmixApiKey = val;
           if (key === 'OPENROUTER_API_ENDPOINT' && val) config.openrouterEndpoint = val.replace(/\/+$/, '');
           if (key === 'OPENROUTER_API_KEY' && val) config.openrouterApiKey = val;
+          if (key === 'NVIDIA_API_ENDPOINT' && val) config.nvidiaEndpoint = val.replace(/\/+$/, '');
+          if (key === 'NVIDIA_GENAI_ENDPOINT' && val) config.nvidiaGenaiEndpoint = val.replace(/\/+$/, '');
+          if (key === 'NVIDIA_API_KEY' && val) config.nvidiaApiKey = val;
         }
       } catch (err) {
         console.warn(`[AI Proxy] Failed to parse ${file}:`, err);
@@ -118,6 +127,9 @@ export function loadEnvLocal(rootDir: string): ServerAiConfig {
   if (process.env.APMIX_API_KEY) config.apmixApiKey = process.env.APMIX_API_KEY;
   if (process.env.OPENROUTER_API_ENDPOINT) config.openrouterEndpoint = process.env.OPENROUTER_API_ENDPOINT.replace(/\/+$/, '');
   if (process.env.OPENROUTER_API_KEY) config.openrouterApiKey = process.env.OPENROUTER_API_KEY;
+  if (process.env.NVIDIA_API_ENDPOINT) config.nvidiaEndpoint = process.env.NVIDIA_API_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.NVIDIA_GENAI_ENDPOINT) config.nvidiaGenaiEndpoint = process.env.NVIDIA_GENAI_ENDPOINT.replace(/\/+$/, '');
+  if (process.env.NVIDIA_API_KEY) config.nvidiaApiKey = process.env.NVIDIA_API_KEY;
 
   return config;
 }
@@ -178,7 +190,7 @@ function cleanModelDisplayName(rawId: string, rawName?: string): string {
       .join(' ');
   }
   // Remove any residual provider names from display name
-  name = name.replace(/\b(Groq|OpenRouter|UnoRouter|xKiro|Abhibots|APmix|Experiential)\b/gi, '').trim();
+  name = name.replace(/\b(Groq|OpenRouter|UnoRouter|xKiro|Abhibots|APmix|Experiential|Nvidia|NVIDIA|NIM)\b/gi, '').trim();
   return name || rawId;
 }
 
@@ -311,6 +323,11 @@ export function createAiProxyMiddleware(rootDir: string) {
             available: Boolean(envConfig.openrouterApiKey) || true, // OpenRouter has free tier accessible
             hasKey: Boolean(envConfig.openrouterApiKey),
             endpoint: envConfig.openrouterEndpoint,
+          },
+          nvidia: {
+            available: Boolean(envConfig.nvidiaApiKey),
+            hasKey: Boolean(envConfig.nvidiaApiKey),
+            endpoint: envConfig.nvidiaEndpoint,
           },
         })
       );
@@ -795,6 +812,82 @@ export function createAiProxyMiddleware(rootDir: string) {
             }
           }
         })(),
+
+        // K. NVIDIA NIM / Build API (Authenticated Dynamic Free Chat Model Discovery)
+        (async () => {
+          if (!envConfig.nvidiaApiKey) return;
+          try {
+            const nvRes = await fetch(`${envConfig.nvidiaEndpoint}/models`, {
+              headers: {
+                Authorization: `Bearer ${envConfig.nvidiaApiKey}`,
+                Accept: 'application/json',
+              },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (nvRes.ok) {
+              const data = await nvRes.json();
+              const list = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : [];
+              let addedCount = 0;
+              for (const m of list) {
+                const id = m.id || m.name;
+                if (!id) continue;
+                if (isNonChatModel(id, m.name || m.description)) continue;
+                // Exclude embeddings, rerank, audio, vision-only parse, guardrails, video detectors, pii, calibrations, safety
+                if (/embed|rerank|guard|safety|parse|audio|tts|whisper|ocr|asr|detector|synthetic|pii|calibration|clip/i.test(id)) continue;
+
+                if (!seenIds.has(id)) {
+                  seenIds.add(id);
+                  const cleanName = cleanModelDisplayName(id, m.name);
+                  const cat = categorizeModel(id, cleanName);
+                  const ctx = m.context_length || m.context_window || 131072;
+                  const ctxBadge = ctx >= 1000000 ? `${Math.round(ctx / 1000000)}M context` : `${Math.round(ctx / 1000)}k context`;
+
+                  const rawDesc = m.description || 'High-throughput conversational intelligence and reasoning engine';
+                  const cleanDesc = rawDesc
+                    .replace(/\b(Groq|OpenRouter|UnoRouter|xKiro|Abhibots|APmix|Experiential|Nvidia|NVIDIA|NIM)\b/gi, '')
+                    .replace(/\s{2,}/g, ' ')
+                    .trim() || 'High-throughput conversational engine';
+
+                  unifiedModels.push({
+                    id,
+                    name: cleanName,
+                    description: cleanDesc,
+                    category: cat,
+                    contextLength: ctx,
+                    contextBadge: ctxBadge,
+                    provider: 'nvidia',
+                    isDefault: false,
+                  });
+                  addedCount++;
+                  if (addedCount >= 30) break;
+                }
+              }
+              console.log(`[AI Proxy] NVIDIA NIM discovered ${addedCount} live chat models`);
+            } else {
+              console.warn('[AI Proxy] NVIDIA models endpoint returned HTTP', nvRes.status);
+            }
+          } catch (err: any) {
+            console.warn('[AI Proxy] NVIDIA NIM model discovery failed:', err?.message || err);
+          }
+
+          // Resilient fallback for vetted NVIDIA Build catalog entries when API key is configured
+          if (envConfig.nvidiaApiKey && unifiedModels.filter((m) => m.provider === 'nvidia').length === 0) {
+            const vettedCandidates = [
+              { id: 'nvidia/nemotron-3.5-bolt-e4b', name: 'Nemotron 3.5 Bolt E4B', description: 'NVIDIA high-speed conversational reasoning and tool-calling engine', category: 'fast', contextLength: 131072, contextBadge: '131k context', provider: 'nvidia', isDefault: false },
+              { id: 'nvidia/nemotron-3.5-super-vl-120b-a12b', name: 'Nemotron 3.5 Super VL', description: 'NVIDIA multimodal vision and deep synthesis engine', category: 'vision', contextLength: 131072, contextBadge: '131k context', provider: 'nvidia', isDefault: false },
+              { id: 'mistralai/mistral-large-4', name: 'Mistral Large 4', description: 'Frontier multilingual and reasoning architecture', category: 'general', contextLength: 128000, contextBadge: '128k context', provider: 'nvidia', isDefault: false },
+              { id: 'moonshotai/kimi-k3.1-pro', name: 'Kimi K3.1 Pro', description: 'Advanced agentic and long-context reasoning model', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'nvidia', isDefault: false },
+              { id: 'minimaxai/minimax-m3.1-flash', name: 'MiniMax M3.1 Flash', description: 'Fast multimodal Mixture-of-Experts architecture', category: 'fast', contextLength: 131072, contextBadge: '131k context', provider: 'nvidia', isDefault: false },
+              { id: 'stepfun-ai/step-5-preview', name: 'Step 5 Preview', description: 'High-capability multi-domain conversational model', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'nvidia', isDefault: false },
+            ];
+            for (const cand of vettedCandidates) {
+              if (!seenIds.has(cand.id)) {
+                seenIds.add(cand.id);
+                unifiedModels.push(cand);
+              }
+            }
+          }
+        })(),
       ]);
 
       // Fallback if offline or all networks blocked
@@ -877,6 +970,14 @@ export function createAiProxyMiddleware(rootDir: string) {
 
         if (!targetProvider) {
           if (
+            modelId.startsWith('nvidia/') ||
+            modelId === 'stepfun-ai/step-5-preview' ||
+            modelId === 'moonshotai/kimi-k3.1-pro' ||
+            modelId === 'minimaxai/minimax-m3.1-flash' ||
+            (modelId === 'mistralai/mistral-large-4' && envConfig.nvidiaApiKey)
+          ) {
+            targetProvider = 'nvidia';
+          } else if (
             modelId.startsWith('mistralai/') ||
             modelId.startsWith('cohere/') ||
             modelId.startsWith('sensenova/') ||
@@ -914,6 +1015,11 @@ export function createAiProxyMiddleware(rootDir: string) {
               if (envConfig.openrouterApiKey) headers['Authorization'] = `Bearer ${envConfig.openrouterApiKey}`;
               headers['HTTP-Referer'] = 'https://mastercloud.local';
               headers['X-Title'] = 'Master Cloud AI';
+              break;
+
+            case 'nvidia':
+              targetEndpoint = `${envConfig.nvidiaEndpoint}/chat/completions`;
+              if (envConfig.nvidiaApiKey) headers['Authorization'] = `Bearer ${envConfig.nvidiaApiKey}`;
               break;
 
             case 'unorouter':
@@ -1085,107 +1191,199 @@ export function createAiProxyMiddleware(rootDir: string) {
       }
     }
 
-    // ── 4. POST /api/ai/image/generate (SenseNova with Pollinations High-Fidelity Fallback) ──
+    // ── 4. POST /api/ai/image/generate (FLUX.2 [klein] 4B via NVIDIA NIM) ──
     if (url === '/api/ai/image/generate' && req.method === 'POST') {
       try {
         const body = await parseJsonBody(req);
-        const prompt = body.prompt ? body.prompt.trim() : 'master asset';
+        const prompt = body.prompt ? body.prompt.trim() : 'cinematic landscape';
         const size = body.size || '1024x1024';
 
-        // 1. Attempt SenseNova via xKiro if key is configured
-        if (envConfig.xkiroApiKey) {
-          try {
-            const jobSubmitRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${envConfig.xkiroApiKey}`,
+        if (!envConfig.nvidiaApiKey) {
+          res.statusCode = 401;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(
+            JSON.stringify({
+              error: {
+                message:
+                  'NVIDIA API Key not configured. Please add NVIDIA_API_KEY to your server-side environment (.env.local).',
+                code: 'NVIDIA_API_KEY_MISSING',
               },
-              body: JSON.stringify({
-                model: 'sensenova/sensenova-u1.5-lite',
-                prompt,
-                n: 1,
-                size,
-              }),
-            });
-
-            if (jobSubmitRes.ok) {
-              const jobCreated = await jobSubmitRes.json();
-              if (jobCreated?.data?.[0]?.url) {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                return res.end(
-                  JSON.stringify({
-                    url: jobCreated.data[0].url,
-                    model: 'sensenova/sensenova-u1.5-lite',
-                    prompt,
-                  })
-                );
-              }
-
-              // Poll asynchronous job
-              const jobId = jobCreated.id;
-              if (jobId) {
-                const deadline = Date.now() + 60000;
-                let waitMs = 1500;
-                let finalUrl = '';
-                while (Date.now() < deadline) {
-                  await new Promise((r) => setTimeout(r, waitMs));
-                  waitMs = Math.min(waitMs * 1.3, 4000);
-                  const pollRes = await fetch(`${envConfig.xkiroEndpoint}/images/generations/${jobId}`, {
-                    headers: { Authorization: `Bearer ${envConfig.xkiroApiKey}` },
-                  });
-                  if (pollRes.ok) {
-                    const pollData = await pollRes.json();
-                    if (pollData?.status === 'succeeded' || pollData?.status === 'completed') {
-                      if (pollData?.data?.[0]?.url) {
-                        finalUrl = pollData.data[0].url;
-                        break;
-                      }
-                    } else if (pollData?.status === 'failed') {
-                      break;
-                    }
-                  }
-                }
-
-                if (finalUrl) {
-                  res.statusCode = 200;
-                  res.setHeader('Content-Type', 'application/json');
-                  return res.end(
-                    JSON.stringify({
-                      url: finalUrl,
-                      model: 'sensenova/sensenova-u1.5-lite',
-                      prompt,
-                    })
-                  );
-                }
-              }
-            }
-          } catch (senseErr) {
-            console.warn('[Proxy] SenseNova generation failed, falling back to Pollinations:', senseErr);
-          }
+            })
+          );
         }
 
-        // 2. High-Fidelity Fallback: Pollinations Image AI (Direct, fast, and free)
         const [wStr, hStr] = size.split('x');
-        const width = parseInt(wStr, 10) || 1024;
-        const height = parseInt(hStr, 10) || 1024;
-        const seed = Math.floor(Math.random() * 99999999);
-        const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+        const width = Math.min(1440, Math.max(512, parseInt(wStr, 10) || 1024));
+        const height = Math.min(1440, Math.max(512, parseInt(hStr, 10) || 1024));
 
+        const genUrl = `${envConfig.nvidiaGenaiEndpoint}/genai/black-forest-labs/flux.2-klein-4b`;
+        const nvRes = await fetch(genUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${envConfig.nvidiaApiKey}`,
+          },
+          body: JSON.stringify({
+            prompt,
+            width,
+            height,
+            steps: 4,
+            samples: 1,
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+
+        if (!nvRes.ok) {
+          const errData = await nvRes.json().catch(() => ({}));
+          const errMsg =
+            errData?.detail ||
+            errData?.message ||
+            errData?.error?.message ||
+            `NVIDIA FLUX generation failed with HTTP ${nvRes.status}`;
+          console.error('[AI Proxy] NVIDIA FLUX.2-klein-4b generation failed:', errMsg);
+          res.statusCode = nvRes.status;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(JSON.stringify({ error: { message: errMsg } }));
+        }
+
+        const data = await nvRes.json();
+        const base64Img = data?.artifacts?.[0]?.base64 || data?.data?.[0]?.b64_json;
+        if (!base64Img) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(
+            JSON.stringify({ error: { message: 'NVIDIA FLUX.2-klein-4b did not return generated image artifacts' } })
+          );
+        }
+
+        const finalUrl = base64Img.startsWith('data:') ? base64Img : `data:image/png;base64,${base64Img}`;
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         return res.end(
           JSON.stringify({
-            url: pollinationsUrl,
-            model: 'pollinations/flux',
+            url: finalUrl,
+            model: 'black-forest-labs/flux.2-klein-4b',
+            modelTitle: 'FLUX.2 [klein] 4B',
             prompt,
+            width,
+            height,
+            seed: data?.artifacts?.[0]?.seed || data?.seed || Math.floor(Math.random() * 99999999),
           })
         );
       } catch (err: any) {
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: { message: err?.message || 'Image generation failed' } }));
+        return res.end(JSON.stringify({ error: { message: err?.message || 'FLUX generation failed' } }));
+      }
+    }
+
+    // ── 5. POST /api/ai/image/edit (FLUX.2 [klein] 4B Image Editing via NVIDIA NIM) ──
+    if (url === '/api/ai/image/edit' && req.method === 'POST') {
+      try {
+        const body = await parseJsonBody(req);
+        const prompt = body.prompt ? body.prompt.trim() : 'modify image';
+        const inputImage = body.image;
+        const size = body.size || '1024x1024';
+
+        if (!envConfig.nvidiaApiKey) {
+          res.statusCode = 401;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(
+            JSON.stringify({
+              error: {
+                message:
+                  'NVIDIA API Key not configured. Please add NVIDIA_API_KEY to your server-side environment (.env.local).',
+                code: 'NVIDIA_API_KEY_MISSING',
+              },
+            })
+          );
+        }
+
+        if (!inputImage) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(JSON.stringify({ error: { message: 'Original input image is required for image editing' } }));
+        }
+
+        const [wStr, hStr] = size.split('x');
+        const width = Math.min(1440, Math.max(512, parseInt(wStr, 10) || 1024));
+        const height = Math.min(1440, Math.max(512, parseInt(hStr, 10) || 1024));
+
+        const editUrl = `${envConfig.nvidiaGenaiEndpoint}/genai/black-forest-labs/flux.2-klein-4b`;
+        const nvRes = await fetch(editUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${envConfig.nvidiaApiKey}`,
+          },
+          body: JSON.stringify({
+            prompt,
+            image: inputImage,
+          }),
+          signal: AbortSignal.timeout(60000),
+        });
+
+        if (!nvRes.ok) {
+          const errData = await nvRes.json().catch(() => ({}));
+          const rawDetail = typeof errData?.detail === 'string' ? errData.detail : (errData?.detail ? JSON.stringify(errData.detail) : '');
+          const errMsg =
+            rawDetail ||
+            errData?.message ||
+            errData?.error?.message ||
+            `NVIDIA FLUX editing failed with HTTP ${nvRes.status}`;
+          console.error('[AI Proxy] NVIDIA FLUX.2-klein-4b image editing failed:', errMsg);
+          const isLimitation =
+            errMsg.includes('example_id') ||
+            errMsg.includes('example') ||
+            rawDetail.includes('example_id');
+
+          res.statusCode = nvRes.status;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(
+            JSON.stringify({
+              error: {
+                message: errMsg,
+                details: errData,
+                apiLimitation: isLimitation,
+                limitationNotice: isLimitation
+                  ? 'NVIDIA Preview API Limitation: The hosted preview endpoint for FLUX.2-klein-4b restricts image editing input to predefined example IDs (data:image/png;example_id,...). A self-hosted NVIDIA NIM container deployment is required for arbitrary user image editing.'
+                  : undefined,
+              },
+            })
+          );
+        }
+
+        const data = await nvRes.json();
+        const base64Img = data?.artifacts?.[0]?.base64 || data?.data?.[0]?.b64_json;
+        if (!base64Img) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(
+            JSON.stringify({ error: { message: 'NVIDIA FLUX.2-klein-4b did not return edited image artifacts' } })
+          );
+        }
+
+        const finalUrl = base64Img.startsWith('data:') ? base64Img : `data:image/png;base64,${base64Img}`;
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(
+          JSON.stringify({
+            url: finalUrl,
+            originalUrl: inputImage,
+            model: 'black-forest-labs/flux.2-klein-4b',
+            modelTitle: 'FLUX.2 [klein] 4B',
+            prompt,
+            width,
+            height,
+            seed: data?.artifacts?.[0]?.seed || data?.seed || Math.floor(Math.random() * 99999999),
+          })
+        );
+      } catch (err: any) {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ error: { message: err?.message || 'FLUX editing failed' } }));
       }
     }
 

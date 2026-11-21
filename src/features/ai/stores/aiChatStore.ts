@@ -22,7 +22,8 @@ import {
   WebSearchResult,
 } from '../types/aiTypes';
 import { DEFAULT_GROQ_MODEL } from '../services/groqModels';
-import { SENSENOVA_MODEL_ID } from '../services/senseNovaImageService';
+import { FLUX_MODEL_ID } from '../services/fluxImageService';
+import { AiProviderId } from '../types/aiTypes';
 import { unifiedModelEngine } from '../services/unifiedModelEngine';
 import { ChatNamingService } from '../services/chatNamingService';
 import { chatHistoryService, createInitialConversation } from '../services/chatHistoryService';
@@ -48,6 +49,7 @@ interface AiChatState {
     xkiro: boolean;
     pollinations: boolean;
     comfyui: boolean;
+    nvidia: boolean;
   };
   lightboxImage: { url: string; prompt?: string; title?: string } | null;
   isSidebarOpen: boolean;
@@ -96,7 +98,7 @@ interface AiChatState {
     webSearchResults?: WebSearchResult[]
   ) => void;
   setAssistantError: (msgId: string, errorText: string) => void;
-  createImagePlaceholder: (prompt: string, modelId?: string, provider?: 'xkiro' | 'pollinations' | 'comfyui') => string;
+  createImagePlaceholder: (prompt: string, modelId?: string, provider?: AiProviderId) => string;
   finalizeImageMessage: (msgId: string, details: AiImageDetails) => void;
   setImageError: (msgId: string, errorText: string) => void;
   setStreaming: (isStreaming: boolean, msgId?: string | null) => void;
@@ -117,7 +119,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
     conversations: initialConvs,
     activeConversationId: initialActiveId,
     selectedModelId: DEFAULT_GROQ_MODEL,
-    activeImageModelId: SENSENOVA_MODEL_ID,
+    activeImageModelId: FLUX_MODEL_ID,
     unifiedModels: [],
     isModelsLoading: false,
     isHistoryLoading: false,
@@ -132,6 +134,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       xkiro: false,
       pollinations: true,
       comfyui: false,
+      nvidia: false,
     },
     lightboxImage: null,
     isSidebarOpen: true,
@@ -160,6 +163,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
               xkiro: Boolean(data?.xkiro?.available),
               pollinations: Boolean(data?.pollinations?.available),
               comfyui: Boolean(data?.comfyui?.available),
+              nvidia: Boolean(data?.nvidia?.available),
             },
           });
         }
@@ -640,7 +644,7 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
       });
     },
 
-    createImagePlaceholder: (prompt: string, modelId: string = SENSENOVA_MODEL_ID, provider: 'xkiro' | 'pollinations' | 'comfyui' = 'xkiro') => {
+    createImagePlaceholder: (prompt: string, modelId: string = FLUX_MODEL_ID, provider: AiProviderId = 'nvidia') => {
       const msgId = `msg_img_${Date.now()}`;
       const placeholder: AiMessage = {
         id: msgId,

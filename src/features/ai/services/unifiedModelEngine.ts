@@ -9,7 +9,7 @@
  */
 
 import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
-import { senseNovaImageService, SenseNovaImageResult } from './senseNovaImageService';
+import { fluxImageService, FluxImageResult, SenseNovaImageResult } from './fluxImageService';
 import { ContextManager } from './contextManager';
 import { resolveModelFamily } from '../components/ModelFamilyLogo';
 import { ModelCapabilityService } from './modelCapabilityService';
@@ -413,13 +413,20 @@ class UnifiedModelEngine {
   }
 
   /**
-   * Generates visual art using SenseNova U1.5 Lite.
+   * Generates visual art using FLUX.2-klein-4b (NVIDIA NIM).
    */
-  public async generateSenseNovaImage(prompt: string, signal?: AbortSignal): Promise<SenseNovaImageResult> {
-    return senseNovaImageService.generateImage({
+  public async generateFluxImage(prompt: string, signal?: AbortSignal): Promise<FluxImageResult> {
+    return fluxImageService.generateImage({
       prompt,
       signal,
     });
+  }
+
+  /**
+   * Backward-compatible alias for FLUX.2-klein-4b image generation.
+   */
+  public async generateSenseNovaImage(prompt: string, signal?: AbortSignal): Promise<SenseNovaImageResult> {
+    return this.generateFluxImage(prompt, signal);
   }
 }
 

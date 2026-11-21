@@ -21,7 +21,7 @@ import { MasterAi2Composer } from './MasterAi2Composer';
 import { MasterAi2ImageLightbox } from './MasterAi2ImageLightbox';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { unifiedModelEngine } from '../services/unifiedModelEngine';
-import { senseNovaImageService, SENSENOVA_MODEL_ID, SENSENOVA_MODEL_TITLE } from '../services/senseNovaImageService';
+import { fluxImageService, FLUX_MODEL_ID, FLUX_MODEL_TITLE } from '../services/fluxImageService';
 import { ContextManager } from '../services/contextManager';
 import { AiAttachment, AiImageDetails, WebSearchResult } from '../types/aiTypes';
 import { api } from '@/services/api';
@@ -109,13 +109,13 @@ export function MasterAi2Shell() {
       const imageIntent = unifiedModelEngine.detectImageIntent(text);
       const isImageRequest = imageIntent.isImage;
 
-      // ── ROUTE A: SENSENOVA U1.5 LITE IMAGE SYNTHESIS ──
+      // ── ROUTE A: FLUX.2-KLEIN-4B IMAGE SYNTHESIS (NVIDIA NIM) ──
       if (isImageRequest) {
         const prompt = imageIntent.prompt;
-        const msgId = createImagePlaceholder(prompt, SENSENOVA_MODEL_ID, 'xkiro');
+        const msgId = createImagePlaceholder(prompt, FLUX_MODEL_ID, 'nvidia');
 
         try {
-          const result = await senseNovaImageService.generateImage({
+          const result = await fluxImageService.generateImage({
             prompt,
             aspectRatio,
             signal: abortCtrl.signal,
@@ -124,9 +124,9 @@ export function MasterAi2Shell() {
           finalizeImageMessage(msgId, {
             url: result.imageUrl,
             prompt,
-            provider: 'xkiro',
+            provider: 'nvidia',
             modelId: result.modelUsed,
-            modelTitle: SENSENOVA_MODEL_TITLE,
+            modelTitle: FLUX_MODEL_TITLE,
             width: result.width,
             height: result.height,
             seed: result.seed,
@@ -135,7 +135,7 @@ export function MasterAi2Shell() {
           });
         } catch (err: any) {
           if (!abortCtrl.signal.aborted) {
-            setImageError(msgId, err?.message || 'SenseNova image synthesis error');
+            setImageError(msgId, err?.message || 'FLUX.2 image synthesis error');
           }
         } finally {
           setStreaming(false);
@@ -257,14 +257,14 @@ export function MasterAi2Shell() {
 
   const handleVariation = useCallback(
     async (details: AiImageDetails) => {
-      toast.info('Synthesizing creative variation with SenseNova...');
+      toast.info('Synthesizing creative variation with FLUX.2...');
       const msgId = createImagePlaceholder(
         `${details.prompt} (Variation)`,
-        SENSENOVA_MODEL_ID,
-        'xkiro'
+        FLUX_MODEL_ID,
+        'nvidia'
       );
       try {
-        const result = await senseNovaImageService.generateImage({
+        const result = await fluxImageService.generateImage({
           prompt: details.prompt,
           aspectRatio: details.aspectRatio,
         });
@@ -272,9 +272,9 @@ export function MasterAi2Shell() {
         finalizeImageMessage(msgId, {
           url: result.imageUrl,
           prompt: `${details.prompt} (Variation)`,
-          provider: 'xkiro',
+          provider: 'nvidia',
           modelId: result.modelUsed,
-          modelTitle: SENSENOVA_MODEL_TITLE,
+          modelTitle: FLUX_MODEL_TITLE,
           width: result.width,
           height: result.height,
           seed: result.seed,

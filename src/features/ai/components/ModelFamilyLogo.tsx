@@ -32,7 +32,7 @@ export function resolveModelFamily(modelId?: string, family?: ModelFamily | stri
 
   const m = modelId.toLowerCase();
 
-  if (m.includes('gemini')) return 'gemini';
+  if (m.includes('gemini') || m.includes('gemma')) return 'gemini';
   if (m.includes('claude') || m.includes('anthropic')) return 'claude';
   if (m.includes('deepseek')) return 'deepseek';
   if (m.includes('qwen') || m.includes('tongyi')) return 'qwen';

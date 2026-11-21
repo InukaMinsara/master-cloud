@@ -39,8 +39,11 @@ import {
   Eye,
   SlidersHorizontal,
   Palette,
+  Wand2,
+  ArrowRight,
 } from 'lucide-react';
 import { masterCloudImageSaveService } from '../services/masterCloudImageSaveService';
+import { fluxImageService } from '../services/fluxImageService';
 import { toast } from 'sonner';
 
 interface ImageEditorModalProps {
@@ -80,7 +83,15 @@ export function MasterAi2ImageEditorModal({
   const [activeFilter, setActiveFilter] = useState<FilterPreset>('none');
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'adjust' | 'filters' | 'transform' | 'crop'>('adjust');
+  const [activeTab, setActiveTab] = useState<'ai-edit' | 'adjust' | 'filters' | 'transform' | 'crop'>('ai-edit');
+
+  // AI Prompt Edit State (FLUX.2-klein-4b in Image Editing mode)
+  const [aiEditPrompt, setAiEditPrompt] = useState<string>('');
+  const [isApplyingAiEdit, setIsApplyingAiEdit] = useState<boolean>(false);
+  const [aiEditError, setAiEditError] = useState<string | null>(null);
+  const [aiEditLimitation, setAiEditLimitation] = useState<string | null>(null);
+  const [editedResultUrl, setEditedResultUrl] = useState<string | null>(null);
+  const [showComparison, setShowComparison] = useState<boolean>(false);
 
   // Crop State
   const [cropAspectRatio, setCropAspectRatio] = useState<'free' | '1:1' | '16:9' | '9:16' | '4:3' | '3:2'>('free');
@@ -177,6 +188,70 @@ export function MasterAi2ImageEditorModal({
       }
     }
   }, [historyIndex, history]);
+
+  // AI Natural Language Image Editing (FLUX.2-klein-4b in Image Editing mode)
+  const handleApplyAiEdit = async (customPrompt?: string) => {
+    const promptToUse = (customPrompt || aiEditPrompt).trim();
+    if (!promptToUse) {
+      toast.warning('Please enter an editing instruction.');
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      toast.error('Canvas image not available');
+      return;
+    }
+
+    setIsApplyingAiEdit(true);
+    setAiEditError(null);
+    setAiEditLimitation(null);
+
+    try {
+      const currentDataUri = canvas.toDataURL('image/png');
+      toast.info('Dispatching editing request to NVIDIA FLUX.2-klein-4b...');
+
+      const result = await fluxImageService.editImage({
+        prompt: promptToUse,
+        image: currentDataUri,
+      });
+
+      setEditedResultUrl(result.imageUrl);
+      setShowComparison(true);
+      toast.success('FLUX.2 Image Editing completed!');
+    } catch (err: any) {
+      const msg = err?.message || 'FLUX.2 Image Editing failed';
+      setAiEditError(msg);
+      if (msg.includes('Preview API Limitation') || msg.includes('example_id')) {
+        setAiEditLimitation(msg);
+      }
+      toast.error(msg);
+    } finally {
+      setIsApplyingAiEdit(false);
+    }
+  };
+
+  const handleApplyEditedResultToCanvas = () => {
+    if (!editedResultUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = editedResultUrl;
+    img.onload = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      const newImgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      pushState(newImgData);
+      setShowComparison(false);
+      toast.success('Applied AI edited result to canvas (Undo/Redo supported)');
+    };
+    img.onerror = () => {
+      toast.error('Failed to load edited image onto canvas');
+    };
+  };
 
   // Rotate 90 degrees (clockwise or counter-clockwise)
   const handleRotate = (clockwise = true) => {
@@ -545,9 +620,22 @@ export function MasterAi2ImageEditorModal({
         </div>
 
         {/* Right Tools & Adjustment Sidebar */}
-        <div className="w-80 border-l border-white/[0.08] bg-zinc-950/70 backdrop-blur-xl flex flex-col">
+        <div className="w-84 sm:w-96 border-l border-white/[0.08] bg-zinc-950/70 backdrop-blur-xl flex flex-col">
           {/* Tool Category Tabs */}
-          <div className="p-2 border-b border-white/[0.08] grid grid-cols-4 gap-1 text-xs">
+          <div className="p-2 border-b border-white/[0.08] grid grid-cols-5 gap-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('ai-edit')}
+              className={`py-1.5 rounded-lg font-medium flex flex-col items-center gap-1 cursor-pointer transition-colors ${
+                activeTab === 'ai-edit'
+                  ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300 border border-orange-500/40 font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Wand2 className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-[10px]">AI Edit</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('adjust')}
@@ -603,6 +691,156 @@ export function MasterAi2ImageEditorModal({
 
           {/* Active Tab Panel Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            {/* 0. AI NATURAL LANGUAGE EDIT TAB (FLUX.2-klein-4b) */}
+            {activeTab === 'ai-edit' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Wand2 className="w-3.5 h-3.5 text-orange-400" />
+                    <span className="font-semibold uppercase tracking-wider text-[10px] text-zinc-300">
+                      FLUX.2 Image Editing
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-300 border border-orange-500/30">
+                    NVIDIA NIM
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-zinc-400 block font-medium">
+                    Natural Language Editing Prompt
+                  </label>
+                  <textarea
+                    value={aiEditPrompt}
+                    onChange={(e) => setAiEditPrompt(e.target.value)}
+                    placeholder="Describe how to modify this image (e.g., 'Change background to a golden sunset beach', 'Remove unwanted object', 'Apply cyberpunk aesthetic')..."
+                    rows={3}
+                    className="w-full p-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                {/* Quick Preset Editing Prompts */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase font-mono text-zinc-500">Quick Transform Presets</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      '🌅 Sunset beach background',
+                      '🌆 Cyberpunk neon city',
+                      '✨ Cinematic studio lighting',
+                      '🎨 Japanese anime illustration',
+                      '🌿 Lush enchanted forest',
+                      '🖼️ Oil painting aesthetic',
+                    ].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => {
+                          const clean = chip.replace(/^[^a-zA-Z0-9]+/, '').trim();
+                          setAiEditPrompt(clean);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-zinc-300 border border-white/10 transition-colors cursor-pointer"
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Apply AI Edit Button */}
+                <button
+                  type="button"
+                  onClick={() => handleApplyAiEdit()}
+                  disabled={isApplyingAiEdit || !aiEditPrompt.trim()}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold text-xs flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-50 transition-opacity cursor-pointer shadow-lg shadow-orange-500/20"
+                >
+                  {isApplyingAiEdit ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Synthesizing with FLUX.2-klein-4b...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      <span>Apply AI Transformation</span>
+                    </>
+                  )}
+                </button>
+
+                {/* API Limitation Notice if reported by NVIDIA NIM */}
+                {aiEditLimitation && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs space-y-1.5 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                      <span>NVIDIA Preview API Notice</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">
+                      {aiEditLimitation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Edited Result & Before/After Comparison Card */}
+                {editedResultUrl && (
+                  <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white">Edited Result (FLUX.2)</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowComparison(!showComparison)}
+                        className="text-[10px] text-orange-400 hover:underline cursor-pointer"
+                      >
+                        {showComparison ? 'Hide Before/After' : 'View Comparison'}
+                      </button>
+                    </div>
+
+                    {/* Side-by-side or Preview */}
+                    {showComparison ? (
+                      <div className="grid grid-cols-2 gap-2 text-center text-[10px] text-zinc-400">
+                        <div>
+                          <div className="aspect-square rounded-lg overflow-hidden border border-white/10 bg-black/40 mb-1">
+                            <img src={imageUrl} alt="Before" className="w-full h-full object-cover" />
+                          </div>
+                          <span>Original</span>
+                        </div>
+                        <div>
+                          <div className="aspect-square rounded-lg overflow-hidden border border-orange-500/40 bg-black/40 mb-1">
+                            <img src={editedResultUrl} alt="After" className="w-full h-full object-cover" />
+                          </div>
+                          <span className="text-orange-300 font-semibold">FLUX.2 Edited</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="aspect-video rounded-lg overflow-hidden border border-orange-500/30 bg-black/40">
+                        <img src={editedResultUrl} alt="Edited preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+
+                    {/* Actions for Edited Result */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleApplyEditedResultToCanvas}
+                        className="py-1.5 px-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                        title="Load this result onto the canvas so you can make further edits or undo"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Apply to Canvas</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onSaveToChat?.(editedResultUrl, aiEditPrompt || 'FLUX.2 Edited Image')}
+                        className="py-1.5 px-2 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Send to Chat</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 1. TUNING TAB */}
             {activeTab === 'adjust' && (
               <div className="space-y-4">

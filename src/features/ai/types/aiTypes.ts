@@ -18,7 +18,8 @@ export type AiProviderId =
   | 'unorouter'
   | 'abhibots'
   | 'apmix'
-  | 'openrouter';
+  | 'openrouter'
+  | 'nvidia';
 
 export type ChatMode = 'auto' | 'chat' | 'image';
 
@@ -115,7 +116,7 @@ export interface AiImageDetails {
   url: string;
   prompt: string;
   revisedPrompt?: string;
-  provider: 'xkiro' | 'pollinations' | 'comfyui';
+  provider: AiProviderId;
   modelId: string;
   modelTitle?: string;
   width: number;

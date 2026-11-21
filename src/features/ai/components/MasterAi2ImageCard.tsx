@@ -84,7 +84,7 @@ export function MasterAi2ImageCard({
             <div className="text-sm font-bold text-white flex items-center gap-2">
               <span>Synthesizing Visual Art...</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300">
-                SenseNova U1.5 Lite
+                FLUX.2 [klein] 4B
               </span>
             </div>
             <p className="text-xs text-zinc-400 line-clamp-1 italic mt-0.5">
@@ -167,13 +167,13 @@ export function MasterAi2ImageCard({
 
   const handleSaveEditedResultToChat = (newUrl: string, newPrompt: string) => {
     const store = useAiChatStore.getState();
-    const msgId = store.createImagePlaceholder(newPrompt, details.modelId, 'xkiro');
+    const msgId = store.createImagePlaceholder(newPrompt, details.modelId || 'black-forest-labs/flux.2-klein-4b', 'nvidia');
     store.finalizeImageMessage(msgId, {
       url: newUrl,
       prompt: newPrompt,
-      provider: details.provider || 'xkiro',
-      modelId: details.modelId || 'sensenova-u1.5-lite',
-      modelTitle: details.modelTitle || 'Master AI Studio',
+      provider: details.provider || 'nvidia',
+      modelId: details.modelId || 'black-forest-labs/flux.2-klein-4b',
+      modelTitle: details.modelTitle || 'FLUX.2 [klein] 4B',
       width: details.width,
       height: details.height,
       seed: details.seed,
@@ -194,7 +194,7 @@ export function MasterAi2ImageCard({
               {details.isEdited ? 'Edited Image' : 'Generated Image'}
             </span>
             <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[160px]">
-              · SenseNova U1.5 Lite
+              · FLUX.2 [klein] 4B
             </span>
           </div>
 
@@ -262,8 +262,8 @@ export function MasterAi2ImageCard({
             <div><span className="text-zinc-500">Dimensions:</span> {details.width} × {details.height}</div>
             <div><span className="text-zinc-500">Seed:</span> {details.seed}</div>
             <div><span className="text-zinc-500">Aspect Ratio:</span> {details.aspectRatio || '1:1'}</div>
-            <div><span className="text-zinc-500">Engine:</span> SenseNova Neural Canvas</div>
-            <div className="col-span-2 truncate"><span className="text-zinc-500">Model:</span> SenseNova U1.5 Lite</div>
+            <div><span className="text-zinc-500">Engine:</span> FLUX.2 Klein Neural Engine</div>
+            <div className="col-span-2 truncate"><span className="text-zinc-500">Model:</span> black-forest-labs/flux.2-klein-4b</div>
           </div>
         )}
 
@@ -343,7 +343,7 @@ export function MasterAi2ImageCard({
                   type="button"
                   onClick={() => onVariation(details)}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 border border-white/[0.08] text-xs font-medium cursor-pointer transition-colors"
-                  title="Generate creative variation with SenseNova"
+                  title="Generate creative variation with FLUX.2"
                 >
                   <Layers className="w-3.5 h-3.5 text-purple-400" />
                   <span className="hidden sm:inline">Variation</span>

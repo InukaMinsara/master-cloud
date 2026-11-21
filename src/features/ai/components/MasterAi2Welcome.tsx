@@ -63,7 +63,7 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
         </h1>
 
         <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto leading-relaxed">
-          Ultra-low latency conversational intelligence, coding, deep reasoning, and live web search, paired with native in-chat SenseNova image synthesis.
+          Ultra-low latency conversational intelligence, coding, deep reasoning, and live web search, paired with native in-chat FLUX.2 image synthesis.
         </p>
 
         <div className="pt-2 flex items-center justify-center gap-2">
@@ -73,7 +73,7 @@ export function MasterAi2Welcome({ onSelectPrompt }: { onSelectPrompt: (prompt: 
           </div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-mono text-orange-300">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-            <span>SenseNova Visual Studio · Ready</span>
+            <span>FLUX.2 Image Engine · Ready</span>
           </div>
         </div>
       </div>
