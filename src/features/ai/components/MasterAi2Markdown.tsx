@@ -1,14 +1,15 @@
 /**
  * src/features/ai/components/MasterAi2Markdown.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI 2.0 — HIGH-SPEED MARKDOWN & CODE COMPONENT
- * Renders streaming Markdown, code blocks with copy/syntax coloring,
- * tables, lists, and formatted text with zero lag.
+ * MASTER AI — HIGH-SPEED MARKDOWN, CODE & REASONING COMPONENT
+ * Renders streaming Markdown, syntax-highlighted code blocks with copy,
+ * collapsible reasoning/thinking disclosure panels (<think>), formatted tables,
+ * mathematical notation, and blockquotes with zero DOM thrashing.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import React, { useState } from 'react';
-import { Check, Copy, Code2, Terminal } from 'lucide-react';
+import { Check, Copy, Code2, Terminal, Brain, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface CodeBlockProps {
   code: string;
@@ -17,7 +18,8 @@ interface CodeBlockProps {
 }
 
 function highlightSyntax(line: string): React.ReactNode[] {
-  const tokenRegex = /(\/\/.*$|#.*$|\/\*.*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:const|let|var|function|return|import|export|from|default|class|extends|def|async|await|if|else|elif|for|while|try|catch|finally|throw|new|typeof|interface|type|public|private|static|readonly|true|false|null|undefined|None|True|False)\b|\b\d+(?:\.\d+)?\b|[{}()[\].,;+\-*/%=<>!&|^~?:])/g;
+  const tokenRegex =
+    /(\/\/.*$|#.*$|\/\*.*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b(?:const|let|var|function|return|import|export|from|default|class|extends|def|async|await|if|else|elif|for|while|try|catch|finally|throw|new|typeof|interface|type|public|private|static|readonly|true|false|null|undefined|None|True|False)\b|\b\d+(?:\.\d+)?\b|[{}()[\].,;+\-*/%=<>!&|^~?:])/g;
 
   const parts = line.split(tokenRegex);
   return parts.map((part, idx) => {
@@ -31,14 +33,22 @@ function highlightSyntax(line: string): React.ReactNode[] {
         </span>
       );
     }
-    if ((part.startsWith('"') && part.endsWith('"')) || (part.startsWith("'") && part.endsWith("'")) || (part.startsWith('`') && part.endsWith('`'))) {
+    if (
+      (part.startsWith('"') && part.endsWith('"')) ||
+      (part.startsWith("'") && part.endsWith("'")) ||
+      (part.startsWith('`') && part.endsWith('`'))
+    ) {
       return (
         <span key={key} className="text-emerald-400">
           {part}
         </span>
       );
     }
-    if (/^(?:const|let|var|function|return|import|export|from|default|class|extends|def|async|await|if|else|elif|for|while|try|catch|finally|throw|new|typeof|interface|type|public|private|static|readonly|true|false|null|undefined|None|True|False)$/.test(part)) {
+    if (
+      /^(?:const|let|var|function|return|import|export|from|default|class|extends|def|async|await|if|else|elif|for|while|try|catch|finally|throw|new|typeof|interface|type|public|private|static|readonly|true|false|null|undefined|None|True|False)$/.test(
+        part
+      )
+    ) {
       return (
         <span key={key} className="text-purple-400 font-semibold">
           {part}
@@ -132,17 +142,107 @@ export function MasterAi2CodeBlock({ code, language, isStreaming = false }: Code
   );
 }
 
+/**
+ * Collapsible Thinking/Reasoning disclosure block (<think>...</think>)
+ */
+function ReasoningBlock({ thought, isStreaming }: { thought: string; isStreaming?: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="my-2.5 rounded-xl border border-purple-500/20 bg-purple-950/10 overflow-hidden text-xs font-sans">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-purple-500/10 hover:bg-purple-500/15 text-purple-300 font-medium transition-colors cursor-pointer text-left"
+      >
+        <span className="flex items-center gap-2">
+          <Brain className="w-3.5 h-3.5 text-purple-400" />
+          <span>Thought Process {isStreaming && '(thinking...)'}</span>
+        </span>
+        {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+      </button>
+
+      {isOpen && (
+        <div className="p-3 text-zinc-400 leading-relaxed font-mono whitespace-pre-wrap border-t border-purple-500/15 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-900">
+          {thought}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Markdown Table component with clean Fluent glass styling
+ */
+function MarkdownTable({ rawTable }: { rawTable: string }) {
+  const lines = rawTable.trim().split('\n').filter(Boolean);
+  if (lines.length < 2) return null;
+
+  const parseRow = (line: string) =>
+    line
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
+
+  const headers = parseRow(lines[0]);
+  const rows = lines.slice(2).map(parseRow);
+
+  return (
+    <div className="my-3 overflow-x-auto rounded-xl border border-white/[0.08] bg-zinc-900/40">
+      <table className="w-full text-left text-xs text-zinc-200 border-collapse">
+        <thead className="bg-white/[0.04] border-b border-white/[0.08] text-white font-semibold">
+          <tr>
+            {headers.map((h, idx) => (
+              <th key={idx} className="px-3.5 py-2.5">
+                <FormattedInlineText text={h} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/[0.04]">
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx} className="hover:bg-white/[0.02] transition-colors">
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="px-3.5 py-2 text-zinc-300">
+                  <FormattedInlineText text={cell} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function MasterAi2Markdown({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
   if (!content) return null;
 
-  // Split content by code blocks ```lang ... ```
+  // 1. Extract <think>...</think> blocks from reasoning models
+  let mainContent = content;
+  let thoughtContent: string | null = null;
+
+  const thinkMatch = mainContent.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+  if (thinkMatch) {
+    thoughtContent = thinkMatch[1].trim();
+    mainContent = mainContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/i, '').trim();
+  }
+
+  // 2. Split content by code blocks ```lang ... ```
   const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
   const elements: React.ReactNode[] = [];
+
+  if (thoughtContent) {
+    elements.push(
+      <ReasoningBlock key="thought_block" thought={thoughtContent} isStreaming={isStreaming && !mainContent} />
+    );
+  }
+
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    const textBefore = content.substring(lastIndex, match.index);
+  while ((match = codeBlockRegex.exec(mainContent)) !== null) {
+    const textBefore = mainContent.substring(lastIndex, match.index);
     if (textBefore) {
       elements.push(<MarkdownTextChunk key={`text_${lastIndex}`} text={textBefore} />);
     }
@@ -157,9 +257,8 @@ export function MasterAi2Markdown({ content, isStreaming }: { content: string; i
   }
 
   // Remainder
-  if (lastIndex < content.length) {
-    const trailing = content.substring(lastIndex);
-    // Check if trailing is an unclosed code block currently streaming
+  if (lastIndex < mainContent.length) {
+    const trailing = mainContent.substring(lastIndex);
     if (trailing.includes('```')) {
       const codeStart = trailing.indexOf('```');
       const textBefore = trailing.substring(0, codeStart);
@@ -192,26 +291,43 @@ function MarkdownTextChunk({ text, isStreaming }: { text: string; isStreaming?: 
         const trimmed = p.trim();
         if (!trimmed) return null;
 
+        // Check if paragraph is a Markdown Table
+        if (trimmed.startsWith('|') && trimmed.includes('\n|') && trimmed.includes('---')) {
+          return <MarkdownTable key={pIdx} rawTable={trimmed} />;
+        }
+
         // Headings
         if (trimmed.startsWith('### ')) {
           return (
             <h3 key={pIdx} className="text-base font-semibold text-white mt-4 mb-2">
-              {trimmed.substring(4)}
+              <FormattedInlineText text={trimmed.substring(4)} />
             </h3>
           );
         }
         if (trimmed.startsWith('## ')) {
           return (
             <h2 key={pIdx} className="text-lg font-bold text-white mt-5 mb-2.5">
-              {trimmed.substring(3)}
+              <FormattedInlineText text={trimmed.substring(3)} />
             </h2>
           );
         }
         if (trimmed.startsWith('# ')) {
           return (
             <h1 key={pIdx} className="text-xl font-extrabold text-white mt-6 mb-3">
-              {trimmed.substring(2)}
+              <FormattedInlineText text={trimmed.substring(2)} />
             </h1>
+          );
+        }
+
+        // Block Math ($$...$$)
+        if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
+          return (
+            <div
+              key={pIdx}
+              className="my-3 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-cyan-500/20 text-center font-mono text-cyan-200 text-sm overflow-x-auto"
+            >
+              {trimmed.slice(2, -2).trim()}
+            </div>
           );
         }
 

@@ -1,14 +1,20 @@
 /**
  * src/features/ai/components/MasterAi2Header.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — APPLICATION HEADER
- * Windows 11 Fluent header with multi-provider model indicator, title inline editor,
- * multi-format conversation export (MD, JSON, TXT), keyboard shortcuts modal,
- * and real-time service health indicator pill.
+ * MASTER AI — APPLICATION HEADER & COMMAND STRIP
+ * Full suite:
+ * - Dynamic Context Window Usage meter (estimated tokens / max context %)
+ * - Active Model indicator with Model-Family Logo
+ * - 1-Click Comparison Mode Toggle
+ * - Prompt Templates Library trigger
+ * - Provider Health Dashboard trigger
+ * - Generation Settings & Personalization modal trigger
+ * - Conversation Share & Export hub trigger
+ * - Inline Title editor and Keyboard Shortcuts modal
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Menu,
   Download,
@@ -24,10 +30,19 @@ import {
   Copy,
   Activity,
   Globe,
+  Sliders,
+  Columns2,
+  BookTemplate,
+  Share2,
+  FileSpreadsheet,
+  PieChart,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
-import { healthMonitor } from '@/services/healthMonitor';
 import { MasterAi2KeyboardShortcutsModal } from './MasterAi2KeyboardShortcutsModal';
+import { MasterAi2GenerationSettingsModal } from './MasterAi2GenerationSettingsModal';
+import { MasterAi2PromptTemplatesModal } from './MasterAi2PromptTemplatesModal';
+import { MasterAi2ProviderHealthDrawer } from './MasterAi2ProviderHealthDrawer';
+import { MasterAi2ShareModal } from './MasterAi2ShareModal';
 import { ModelFamilyLogo } from './ModelFamilyLogo';
 import { toast } from 'sonner';
 
@@ -40,34 +55,28 @@ export function MasterAi2Header() {
   const clearActiveConversation = useAiChatStore((s) => s.clearActiveConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const exportConversation = useAiChatStore((s) => s.exportConversation);
+  const isComparisonMode = useAiChatStore((s) => s.isComparisonMode);
+  const setComparisonMode = useAiChatStore((s) => s.setComparisonMode);
+  const addUserMessage = useAiChatStore((s) => s.addUserMessage);
+
   const activeConv = useAiChatStore(
     (s) => s.conversations.find((c) => c.id === s.activeConversationId) || s.conversations[0]
   );
   const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
-  const activeModelDisplayName = matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/-/g, ' ') || 'Master AI');
+  const activeModelDisplayName =
+    matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/[-_]/g, ' ') || 'Master AI');
 
+  // Modals state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
-  const [serviceHealth, setServiceHealth] = useState<'healthy' | 'degraded' | 'offline'>('healthy');
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isHealthDrawerOpen, setIsHealthDrawerOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
-
-  // Monitor health periodically
-  useEffect(() => {
-    const check = async () => {
-      const results = await healthMonitor.checkAllServices();
-      const groqOk = results.groq.status === 'healthy';
-      const polOk = results.pollinations.status === 'healthy';
-      if (groqOk && polOk) setServiceHealth('healthy');
-      else if (groqOk || polOk) setServiceHealth('degraded');
-      else setServiceHealth('offline');
-    };
-    check();
-    const interval = setInterval(check, 20000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Close export dropdown on outside click
   useEffect(() => {
@@ -79,6 +88,26 @@ export function MasterAi2Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Compute live context-window usage estimate (#53)
+  const contextStats = useMemo(() => {
+    if (!activeConv || activeConv.messages.length === 0) {
+      return { usedTokens: 0, maxTokens: matchedModel?.contextLength || 131072, percent: 0 };
+    }
+    let totalChars = 0;
+    for (const msg of activeConv.messages) {
+      totalChars += (msg.content || '').length;
+      if (msg.attachments) {
+        for (const att of msg.attachments) {
+          totalChars += (att.content || '').length || 1000;
+        }
+      }
+    }
+    const estimatedTokens = Math.max(1, Math.round(totalChars / 4));
+    const maxTokens = matchedModel?.contextLength || 131072;
+    const percent = Math.min(100, Math.round((estimatedTokens / maxTokens) * 100));
+    return { usedTokens: estimatedTokens, maxTokens, percent };
+  }, [activeConv, matchedModel]);
 
   const handleStartRename = () => {
     setTitleDraft(activeConv?.title || 'New Conversation');
@@ -97,7 +126,6 @@ export function MasterAi2Header() {
       toast.info('No messages to export.');
       return;
     }
-
     const exportedContent = exportConversation(format);
     const mimeTypes = {
       markdown: 'text/markdown;charset=utf-8',
@@ -142,7 +170,7 @@ export function MasterAi2Header() {
   return (
     <>
       <header className="h-14 px-4 border-b border-white/[0.06] bg-zinc-950/70 backdrop-blur-xl flex items-center justify-between select-none z-20">
-        {/* Left: Sidebar Toggle & Title */}
+        {/* Left: Sidebar Toggle & Title Inline Editor */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -153,7 +181,6 @@ export function MasterAi2Header() {
             <Menu className="w-4 h-4" />
           </button>
 
-          {/* Conversation Title Inline Editor */}
           {isEditingTitle ? (
             <div className="flex items-center gap-1.5">
               <input
@@ -167,7 +194,7 @@ export function MasterAi2Header() {
               <button
                 type="button"
                 onClick={handleSaveRename}
-                className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                className="p-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />
               </button>
@@ -178,7 +205,7 @@ export function MasterAi2Header() {
               className="group flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg hover:bg-white/[0.04] transition-colors min-w-0"
               title="Click to rename"
             >
-              <h1 className="text-sm font-bold text-white truncate max-w-[180px] sm:max-w-xs">
+              <h1 className="text-sm font-bold text-white truncate max-w-[140px] sm:max-w-xs">
                 {activeConv?.title || 'New Conversation'}
               </h1>
               <Edit2 className="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100" />
@@ -186,54 +213,88 @@ export function MasterAi2Header() {
           )}
         </div>
 
-        {/* Right Controls: Model Badge & Vault Indicator & Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Active Model Indicator Badge with Official Model-Family Logo immediately AFTER name */}
-          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
+        {/* Right Controls: Model, Context Usage, Comparison, Templates, Health, Settings */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Active Model Indicator Badge */}
+          <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300">
             <span className="font-medium text-white">{activeModelDisplayName}</span>
             <ModelFamilyLogo modelId={selectedModelId} size={14} />
           </div>
 
-          {/* Web Search Grounding Toggle */}
+          {/* Context Window Usage Gauge (#53) */}
+          <div
+            className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-zinc-300 cursor-help"
+            title={`Context Window: ~${contextStats.usedTokens.toLocaleString()} / ${contextStats.maxTokens.toLocaleString()} tokens (${contextStats.percent}%)`}
+          >
+            <div className="w-12 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  contextStats.percent > 80
+                    ? 'bg-rose-500'
+                    : contextStats.percent > 50
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400'
+                }`}
+                style={{ width: `${Math.max(4, contextStats.percent)}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-zinc-400">{contextStats.percent}%</span>
+          </div>
+
+          {/* Comparison Mode Toggle (#176) */}
           <button
             type="button"
-            onClick={toggleWebSearch}
+            onClick={() => setComparisonMode(!isComparisonMode)}
             className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1 text-xs font-mono ${
-              isWebSearchEnabled
-                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm shadow-cyan-500/20'
+              isComparisonMode
+                ? 'bg-orange-500/15 border-orange-500/40 text-orange-300 shadow-sm shadow-orange-500/20'
                 : 'text-zinc-400 hover:text-white bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08]'
             }`}
-            title={isWebSearchEnabled ? 'Live Web Intelligence: Enabled' : 'Enable Live Web Search Grounding'}
+            title="Toggle Dual-Model Side-by-Side Comparison"
           >
-            <Globe className={`w-4 h-4 ${isWebSearchEnabled ? 'text-cyan-400 animate-pulse' : 'text-zinc-400'}`} />
-            <span className="hidden md:inline text-[11px] font-sans">
-              {isWebSearchEnabled ? 'Web Active' : 'Web'}
-            </span>
+            <Columns2 className={`w-4 h-4 ${isComparisonMode ? 'text-orange-400' : 'text-zinc-400'}`} />
+            <span className="hidden xl:inline text-[11px] font-sans">Compare</span>
           </button>
 
-          {/* Master AI Service Health Indicator Pill */}
-          <div
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-medium border select-none cursor-pointer ${
-              serviceHealth === 'healthy'
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                : serviceHealth === 'degraded'
-                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                : 'bg-red-500/10 text-red-400 border-red-500/20'
-            }`}
-            title="Master AI Neural Engine Status"
-            onClick={() => toast.info('Master AI: Fully operational with unified multi-engine intelligence.')}
+          {/* Prompt Templates Library (#146) */}
+          <button
+            type="button"
+            onClick={() => setIsTemplatesModalOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Prompt Template Library"
           >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                serviceHealth === 'healthy'
-                  ? 'bg-emerald-400 animate-pulse'
-                  : serviceHealth === 'degraded'
-                  ? 'bg-amber-400'
-                  : 'bg-red-500'
-              }`}
-            />
-            <span className="hidden md:inline capitalize">{serviceHealth === 'healthy' ? 'Online' : serviceHealth}</span>
-          </div>
+            <BookTemplate className="w-4 h-4 text-amber-400" />
+          </button>
+
+          {/* Provider Health Dashboard Drawer (#31, #182) */}
+          <button
+            type="button"
+            onClick={() => setIsHealthDrawerOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Multi-Provider Ecosystem Health"
+          >
+            <Activity className="w-4 h-4 text-emerald-400" />
+          </button>
+
+          {/* Generation Settings Modal (#41, #51) */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Generation Parameters & System Instructions"
+          >
+            <Sliders className="w-4 h-4 text-zinc-300" />
+          </button>
+
+          {/* Share Conversation Modal (#121) */}
+          <button
+            type="button"
+            onClick={() => setIsShareModalOpen(true)}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Share or Export Conversation"
+          >
+            <Share2 className="w-4 h-4 text-cyan-400" />
+          </button>
 
           {/* Keyboard Shortcuts Trigger */}
           <button
@@ -251,7 +312,7 @@ export function MasterAi2Header() {
               type="button"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
               className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer flex items-center gap-1"
-              title="Export conversation"
+              title="Download chat"
             >
               <Download className="w-4 h-4" />
               <ChevronDown className="w-3 h-3 text-zinc-500" />
@@ -315,10 +376,34 @@ export function MasterAi2Header() {
         </div>
       </header>
 
-      {/* Keyboard Shortcuts Dialog */}
+      {/* Modals & Drawers */}
       <MasterAi2KeyboardShortcutsModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      <MasterAi2GenerationSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      <MasterAi2PromptTemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={() => setIsTemplatesModalOpen(false)}
+        onSelectTemplate={(text) => {
+          // Send or paste into prompt
+          addUserMessage(text, []);
+        }}
+      />
+
+      <MasterAi2ProviderHealthDrawer
+        isOpen={isHealthDrawerOpen}
+        onClose={() => setIsHealthDrawerOpen(false)}
+      />
+
+      <MasterAi2ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
     </>
   );

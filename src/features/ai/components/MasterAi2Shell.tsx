@@ -1,24 +1,25 @@
 /**
  * src/features/ai/components/MasterAi2Shell.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI INFINITY — UNIFIED APPLICATION SHELL
- * Direct, single-pane AI assistant uniting Groq, xKiro, and Pollinations free chat models
- * with official SenseNova U1.5 Lite image synthesis and live web intelligence.
- *
- * Strict Compliance:
- * - One unified chat interface (no separate tabs, no separate apps)
- * - Zero third-party provider branding in UI
- * - Instant semantic chat naming on turn 1
- * - Exclusively SenseNova U1.5 Lite for visual asset generation
+ * MASTER AI — ENTERPRISE MULTI-PROVIDER CHAT PLATFORM
+ * Strictly CHAT-ONLY:
+ * - 9-provider unified chat routing & streaming
+ * - Dual-model side-by-side comparative mode (#176, #177)
+ * - Complete multimodal file understanding (PDF, Word, Excel, PPTX, Code, Vision, Video keyframes)
+ * - Regeneration with alternative model (#178)
+ * - Continue interrupted generation (#5)
+ * - Branching, folders, and persistent multi-tier synchronization
+ * - Zero image or video generation workflows
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MasterAi2Sidebar } from './MasterAi2Sidebar';
 import { MasterAi2Header } from './MasterAi2Header';
 import { MasterAi2ChatArea } from './MasterAi2ChatArea';
 import { MasterAi2Composer } from './MasterAi2Composer';
-import { MasterAi2ImageLightbox } from './MasterAi2ImageLightbox';
+import { MasterAi2CompareView } from './MasterAi2CompareView';
+import { MasterAi2PromptTemplatesModal } from './MasterAi2PromptTemplatesModal';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { unifiedModelEngine } from '../services/unifiedModelEngine';
 import { ContextManager } from '../services/contextManager';
@@ -31,7 +32,11 @@ export function MasterAi2Shell() {
 
   const getActiveConversation = useAiChatStore((s) => s.getActiveConversation);
   const selectedModelId = useAiChatStore((s) => s.selectedModelId);
+  const setSelectedModelId = useAiChatStore((s) => s.setSelectedModelId);
   const isWebSearchEnabled = useAiChatStore((s) => s.isWebSearchEnabled);
+  const isComparisonMode = useAiChatStore((s) => s.isComparisonMode);
+  const isFailoverEnabled = useAiChatStore((s) => s.isFailoverEnabled);
+  const generationParameters = useAiChatStore((s) => s.generationParameters);
   const addUserMessage = useAiChatStore((s) => s.addUserMessage);
   const createAssistantPlaceholder = useAiChatStore((s) => s.createAssistantPlaceholder);
   const updateAssistantContent = useAiChatStore((s) => s.updateAssistantContent);
@@ -44,7 +49,9 @@ export function MasterAi2Shell() {
   const syncHistoryWithServer = useAiChatStore((s) => s.syncHistoryWithServer);
   const branchConversation = useAiChatStore((s) => s.branchConversation);
 
-  // Initialize service status, sync persistent history with server, and discover free models on mount
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+
+  // Initialize service status, sync history, and discover free models on mount
   useEffect(() => {
     refreshProviderStatus();
     syncHistoryWithServer();
@@ -89,25 +96,27 @@ export function MasterAi2Shell() {
   }, [setStreaming]);
 
   const handleSendMessage = useCallback(
-    async (text: string, attachments: AiAttachment[] = []) => {
+    async (text: string, attachments: AiAttachment[] = [], overrideModelId?: string) => {
       const activeConv = getActiveConversation();
       if (!activeConv || !text.trim()) return;
 
-      // 1. Add user message (triggers automatic smart naming on turn 1)
+      const modelToUse = overrideModelId || selectedModelId;
+
+      // 1. Add user message
       addUserMessage(text, attachments);
 
       // 2. Create AbortController
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
 
-      // 3. CONVERSATIONAL STREAMING CHAT (with Multimodal File & Vision Understanding)
+      // 3. Build messages context
       const history = activeConv.messages;
       const inferenceMessages = ContextManager.buildMessagesForInference(
         history,
         text,
         attachments,
         activeConv.systemPrompt,
-        selectedModelId
+        modelToUse
       );
 
       const assistantMsgId = createAssistantPlaceholder();
@@ -116,10 +125,12 @@ export function MasterAi2Shell() {
       try {
         let accumulatedText = '';
         const result = await unifiedModelEngine.streamChat({
-          model: selectedModelId,
+          model: modelToUse,
           messages: inferenceMessages,
           signal: abortCtrl.signal,
           webSearch: isWebSearchEnabled,
+          failover: isFailoverEnabled,
+          generationParameters,
           onChunk: (_chunk, fullText) => {
             accumulatedText = fullText;
           },
@@ -128,6 +139,12 @@ export function MasterAi2Shell() {
           },
           onWebSources: (sources) => {
             webSourcesReported = sources;
+          },
+          onFailoverNotification: (orig, fallback) => {
+            toast.warning(`Primary model rate-limited. Resumed on ${fallback.split('/').pop()}`);
+          },
+          onAutoModelSelected: (chosen) => {
+            toast.info(`Auto selected: ${chosen.split('/').pop()}`);
           },
         });
 
@@ -151,6 +168,8 @@ export function MasterAi2Shell() {
       getActiveConversation,
       selectedModelId,
       isWebSearchEnabled,
+      isFailoverEnabled,
+      generationParameters,
       addUserMessage,
       createAssistantPlaceholder,
       updateAssistantContent,
@@ -160,29 +179,43 @@ export function MasterAi2Shell() {
     ]
   );
 
-  const handleRegenerate = useCallback(() => {
-    const activeConv = getActiveConversation();
-    if (!activeConv || activeConv.messages.length === 0) return;
+  const handleRegenerate = useCallback(
+    (overrideModelId?: string) => {
+      const activeConv = getActiveConversation();
+      if (!activeConv || activeConv.messages.length === 0) return;
 
-    // Find last user message
-    const msgs = [...activeConv.messages];
-    let lastUserPrompt = '';
-    let lastUserAttachments: AiAttachment[] | undefined;
+      const msgs = [...activeConv.messages];
+      let lastUserPrompt = '';
+      let lastUserAttachments: AiAttachment[] | undefined;
 
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role === 'user') {
-        lastUserPrompt = msgs[i].content;
-        lastUserAttachments = msgs[i].attachments;
-        break;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'user') {
+          lastUserPrompt = msgs[i].content;
+          lastUserAttachments = msgs[i].attachments;
+          break;
+        }
       }
-    }
 
-    if (lastUserPrompt) {
-      handleSendMessage(lastUserPrompt, lastUserAttachments || []);
-    }
-  }, [getActiveConversation, handleSendMessage]);
+      if (lastUserPrompt) {
+        handleSendMessage(lastUserPrompt, lastUserAttachments || [], overrideModelId);
+      }
+    },
+    [getActiveConversation, handleSendMessage]
+  );
 
-  // Branch conversation on edit of a past message
+  const handleContinueMessage = useCallback(() => {
+    handleSendMessage('Please continue from exactly where you left off.', []);
+  }, [handleSendMessage]);
+
+  const handleRegenerateWithModel = useCallback(
+    (modelId: string) => {
+      setSelectedModelId(modelId);
+      toast.info(`Regenerating using: ${modelId.split('/').pop()}`);
+      handleRegenerate(modelId);
+    },
+    [setSelectedModelId, handleRegenerate]
+  );
+
   const handleEditMessage = useCallback(
     (msgId: string, newText: string) => {
       branchConversation(msgId, newText);
@@ -194,7 +227,7 @@ export function MasterAi2Shell() {
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-white overflow-hidden font-sans">
-      {/* Windows 11 Acrylic Collapsible Sidebar */}
+      {/* Acrylic Collapsible History & Folders Sidebar */}
       <MasterAi2Sidebar />
 
       {/* Main Workspace Column */}
@@ -202,22 +235,36 @@ export function MasterAi2Shell() {
         {/* Workspace Header */}
         <MasterAi2Header />
 
-        {/* Central Chat Timeline */}
-        <MasterAi2ChatArea
-          onSendMessage={(prompt) => handleSendMessage(prompt, [])}
-          onRegenerate={handleRegenerate}
-          onEditMessage={handleEditMessage}
-        />
+        {/* Dual-Model Comparison Workbench (#176) OR Standard Chat Timeline */}
+        {isComparisonMode ? (
+          <MasterAi2CompareView />
+        ) : (
+          <>
+            {/* Central Chat Timeline */}
+            <MasterAi2ChatArea
+              onSendMessage={(prompt) => handleSendMessage(prompt, [])}
+              onRegenerate={() => handleRegenerate()}
+              onContinueMessage={handleContinueMessage}
+              onRegenerateWithModel={handleRegenerateWithModel}
+              onEditMessage={handleEditMessage}
+            />
 
-        {/* Unified Multimodal Composer */}
-        <MasterAi2Composer
-          onSendMessage={handleSendMessage}
-          onStopGenerating={handleStopGenerating}
-        />
+            {/* Unified Multimodal Composer */}
+            <MasterAi2Composer
+              onSendMessage={handleSendMessage}
+              onStopGenerating={handleStopGenerating}
+              onOpenTemplates={() => setIsTemplatesOpen(true)}
+            />
+          </>
+        )}
       </main>
 
-      {/* Fullscreen Image Lightbox Modal */}
-      <MasterAi2ImageLightbox />
+      {/* Prompt Templates Modal */}
+      <MasterAi2PromptTemplatesModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
+        onSelectTemplate={(prompt) => handleSendMessage(prompt, [])}
+      />
     </div>
   );
 }

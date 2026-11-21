@@ -13,7 +13,6 @@ export type AiProviderId =
   | 'groq'
   | 'xkiro'
   | 'pollinations'
-  | 'comfyui'
   | 'experiential'
   | 'unorouter'
   | 'abhibots'
@@ -21,11 +20,48 @@ export type AiProviderId =
   | 'openrouter'
   | 'nvidia';
 
-export type ChatMode = 'auto' | 'chat' | 'image';
+export type ChatMode = 'auto' | 'chat';
 
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:2' | '2:3' | '21:9';
 
 export type ModelCategory = 'all' | 'reasoning' | 'coding' | 'fast' | 'general' | 'vision';
+
+export interface GenerationParameters {
+  temperature?: number;      // 0.0 - 2.0 (default 0.7)
+  topP?: number;             // 0.0 - 1.0 (default 0.95)
+  topK?: number;             // 1 - 100
+  maxTokens?: number;        // 256 - 16384 (default 4096)
+  frequencyPenalty?: number; // -2.0 - 2.0 (default 0.0)
+  presencePenalty?: number;  // -2.0 - 2.0 (default 0.0)
+  seed?: number | null;
+  stopSequences?: string[];
+  stream?: boolean;          // default true
+  preset?: 'creative' | 'balanced' | 'precise' | 'coding' | 'custom';
+}
+
+export interface AiMemoryItem {
+  id: string;
+  content: string;
+  createdAt: number;
+  enabled: boolean;
+  scope?: 'global' | string;
+}
+
+export interface AiFolder {
+  id: string;
+  name: string;
+  color?: string;
+  createdAt: number;
+}
+
+export interface PromptTemplate {
+  id: string;
+  title: string;
+  category: 'coding' | 'writing' | 'analysis' | 'brainstorming' | 'productivity' | 'custom';
+  prompt: string;
+  description?: string;
+  isFavorite?: boolean;
+}
 
 export type ModelFamily =
   | 'gpt'
@@ -65,6 +101,13 @@ export interface UnifiedChatModel {
   contextBadge?: string;
   isDefault?: boolean;
   provider: AiProviderId; // Internal routing only
+  isFree?: boolean;
+  pricingPrompt?: number | string;
+  pricingCompletion?: number | string;
+  maxOutputTokens?: number;
+  supportsStreaming?: boolean;
+  supportsVision?: boolean;
+  supportsJson?: boolean;
 }
 
 export interface VideoKeyframe {
@@ -151,9 +194,16 @@ export interface AiConversation {
   updatedAt: number;
   isPinned?: boolean;
   isArchived?: boolean;
+  folderId?: string | null;
+  tags?: string[];
   messages: AiMessage[];
   systemPrompt?: string;
   modelUsed?: string;
+  generationParameters?: GenerationParameters;
+  modelLocked?: boolean;
+  memoryEnabled?: boolean;
+  isShared?: boolean;
+  shareId?: string;
 }
 
 export type GroqCategory = string;

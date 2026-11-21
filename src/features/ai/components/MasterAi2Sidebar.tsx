@@ -1,17 +1,16 @@
 /**
  * src/features/ai/components/MasterAi2Sidebar.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * MASTER AI — CHATGPT-STYLE PERSISTENT CHAT HISTORY SIDEBAR
- * Full feature set:
- * - "+ New Chat" action
- * - Live search across conversation titles and message bodies
- * - Time-based grouping: Today / Yesterday / Previous 7 Days / Older
- * - Pinned conversations section
- * - 1-click Pin & Unpin toggles
- * - Inline Rename with keyboard shortcuts (Enter to save, Esc to cancel)
- * - Archive and Restore workflow with dedicated expandable archive drawer
- * - Delete with confirmation to prevent accidental loss
- * - Synchronized with Master Cloud backend persistence
+ * MASTER AI — ENTERPRISE CONVERSATION SIDEBAR & WORKBENCH
+ * Comprehensive features:
+ * - "+ New Chat" with instant focus
+ * - Folder Management: Create, rename, delete folders, and filter chats by folder
+ * - Bulk Selection Mode: Multi-select chats for bulk delete, archive, or export
+ * - Time-based grouping: Today / Yesterday / Previous 7 Days / Older / Pinned
+ * - Search across titles and message bodies with instant filtering
+ * - Date and Sort filter controls (Newest / Oldest)
+ * - Chat Item actions: Duplicate Chat, Branch, Pin, Rename, Archive, Move to Folder, Delete
+ * - Expandable Archive drawer
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -33,6 +32,15 @@ import {
   ChevronRight,
   AlertCircle,
   Check,
+  Folder,
+  FolderPlus,
+  Copy,
+  CheckSquare,
+  Square,
+  Layers,
+  ArrowUpDown,
+  Download,
+  MoreVertical,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -58,30 +66,75 @@ export function MasterAi2Sidebar() {
   const deleteConversation = useAiChatStore((s) => s.deleteConversation);
   const renameConversation = useAiChatStore((s) => s.renameConversation);
   const togglePinConversation = useAiChatStore((s) => s.togglePinConversation);
+  const duplicateConversation = useAiChatStore((s) => s.duplicateConversation);
   const archiveConversation = useAiChatStore((s) => s.archiveConversation);
   const restoreConversation = useAiChatStore((s) => s.restoreConversation);
   const branchConversation = useAiChatStore((s) => s.branchConversation);
+
+  // Folder state
+  const folders = useAiChatStore((s) => s.folders);
+  const activeFolderId = useAiChatStore((s) => s.activeFolderId);
+  const createFolder = useAiChatStore((s) => s.createFolder);
+  const deleteFolder = useAiChatStore((s) => s.deleteFolder);
+  const setActiveFolderId = useAiChatStore((s) => s.setActiveFolderId);
+  const setConversationFolder = useAiChatStore((s) => s.setConversationFolder);
+
+  // Bulk actions state
+  const isBulkMode = useAiChatStore((s) => s.isBulkMode);
+  const selectedConversationIds = useAiChatStore((s) => s.selectedConversationIds);
+  const toggleBulkMode = useAiChatStore((s) => s.toggleBulkMode);
+  const toggleSelectConversation = useAiChatStore((s) => s.toggleSelectConversation);
+  const selectAllConversations = useAiChatStore((s) => s.selectAllConversations);
+  const clearSelectedConversations = useAiChatStore((s) => s.clearSelectedConversations);
+  const bulkDeleteConversations = useAiChatStore((s) => s.bulkDeleteConversations);
+  const bulkArchiveConversations = useAiChatStore((s) => s.bulkArchiveConversations);
+  const bulkExportConversations = useAiChatStore((s) => s.bulkExportConversations);
+
+  // Sort and filter state
+  const selectedSortOrder = useAiChatStore((s) => s.selectedSortOrder);
+  const setSelectedSortOrder = useAiChatStore((s) => s.setSelectedSortOrder);
 
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isFoldersOpen, setIsFoldersOpen] = useState(true);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
   const user = useAuthStore((s) => s.user);
 
-  // Filter conversations by search query (matching title or any message content)
+  // Filter conversations by search and folder
   const filteredConvs = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return conversations;
-    return conversations.filter((c) => {
-      const titleMatch = c.title.toLowerCase().includes(q);
-      const messageMatch = c.messages.some((m) => m.content && m.content.toLowerCase().includes(q));
-      return titleMatch || messageMatch;
-    });
-  }, [conversations, search]);
+    let list = [...conversations];
 
-  // Group conversations into Today, Yesterday, Previous 7 Days, Older, Pinned, and Archived
+    // Filter by active folder
+    if (activeFolderId) {
+      list = list.filter((c) => c.folderId === activeFolderId);
+    }
+
+    // Filter by search query (title or message body)
+    const q = search.toLowerCase().trim();
+    if (q) {
+      list = list.filter((c) => {
+        const titleMatch = c.title.toLowerCase().includes(q);
+        const messageMatch = c.messages.some((m) => m.content && m.content.toLowerCase().includes(q));
+        return titleMatch || messageMatch;
+      });
+    }
+
+    // Sort order
+    list.sort((a, b) => {
+      const timeA = a.updatedAt || a.createdAt || 0;
+      const timeB = b.updatedAt || b.createdAt || 0;
+      return selectedSortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+
+    return list;
+  }, [conversations, activeFolderId, search, selectedSortOrder]);
+
+  // Group conversations
   const grouped = useMemo((): GroupedConversations => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -102,12 +155,10 @@ export function MasterAi2Sidebar() {
         res.archived.push(conv);
         continue;
       }
-
       if (conv.isPinned) {
         res.pinned.push(conv);
         continue;
       }
-
       const timestamp = conv.updatedAt || conv.createdAt || Date.now();
       if (timestamp >= startOfToday) {
         res.today.push(conv);
@@ -119,11 +170,14 @@ export function MasterAi2Sidebar() {
         res.older.push(conv);
       }
     }
-
     return res;
   }, [filteredConvs]);
 
   const handleSelect = (id: string) => {
+    if (isBulkMode) {
+      toggleSelectConversation(id);
+      return;
+    }
     selectConversation(id);
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       toggleSidebar();
@@ -181,9 +235,22 @@ export function MasterAi2Sidebar() {
     toast.success(`Branched from "${conv.title}"!`);
   };
 
-  if (!isSidebarOpen) {
-    return null;
-  }
+  const handleDuplicate = (e: React.MouseEvent, convId: string) => {
+    e.stopPropagation();
+    const newId = duplicateConversation(convId);
+    toast.success('Duplicated conversation!');
+  };
+
+  const handleCreateFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) return;
+    createFolder(newFolderName.trim());
+    setNewFolderName('');
+    setIsCreatingFolder(false);
+    toast.success('Folder created.');
+  };
+
+  if (!isSidebarOpen) return null;
 
   const hasAnyTimelineConversations =
     grouped.pinned.length > 0 ||
@@ -205,7 +272,7 @@ export function MasterAi2Sidebar() {
           <div>
             <span className="text-xs font-bold text-white tracking-wide">MASTER AI</span>
             <span className="text-[10px] font-mono text-orange-400 font-bold ml-1.5 px-1 py-0.2 rounded bg-orange-500/10 border border-orange-500/20">
-              2.0
+              CHAT ONLY
             </span>
           </div>
         </div>
@@ -219,20 +286,33 @@ export function MasterAi2Sidebar() {
         </button>
       </div>
 
-      {/* New Chat Button */}
-      <div className="p-3">
+      {/* Action Row: New Chat & Bulk Mode Toggle */}
+      <div className="p-3 flex items-center gap-2">
         <button
           type="button"
           onClick={newConversation}
-          className="w-full h-9 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all cursor-pointer active:scale-95"
+          className="flex-1 h-9 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all cursor-pointer active:scale-95"
         >
           <Plus className="w-4 h-4" />
           <span>New Chat</span>
         </button>
+
+        <button
+          type="button"
+          onClick={toggleBulkMode}
+          className={`h-9 px-2.5 rounded-xl border text-xs font-mono transition-colors cursor-pointer flex items-center justify-center ${
+            isBulkMode
+              ? 'bg-orange-500/20 border-orange-500/50 text-orange-300'
+              : 'bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:text-white hover:bg-white/[0.08]'
+          }`}
+          title={isBulkMode ? 'Exit Bulk Actions Mode' : 'Enter Multi-Select Bulk Mode'}
+        >
+          <CheckSquare className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Search Input */}
-      <div className="px-3 pb-2">
+      {/* Search Input & Sort Order Toggle */}
+      <div className="px-3 pb-2 space-y-2">
         <div className="relative flex items-center">
           <Search className="w-3.5 h-3.5 absolute left-2.5 text-zinc-500 pointer-events-none" />
           <input
@@ -252,6 +332,119 @@ export function MasterAi2Sidebar() {
             </button>
           )}
         </div>
+
+        {/* Filter bar: Sort toggle */}
+        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
+          <span>Sort by:</span>
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedSortOrder(selectedSortOrder === 'newest' ? 'oldest' : 'newest')
+            }
+            className="inline-flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+          >
+            <ArrowUpDown className="w-3 h-3 text-orange-400" />
+            <span className="capitalize">{selectedSortOrder}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Folders Accordion */}
+      <div className="px-3 pb-2 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pb-1">
+          <button
+            type="button"
+            onClick={() => setIsFoldersOpen(!isFoldersOpen)}
+            className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+          >
+            {isFoldersOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            <Folder className="w-3.5 h-3.5 text-amber-400" />
+            <span>Folders ({folders.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreatingFolder(!isCreatingFolder)}
+            className="p-1 rounded hover:bg-white/[0.08] hover:text-white transition-colors cursor-pointer"
+            title="Create Folder"
+          >
+            <FolderPlus className="w-3 h-3 text-amber-400" />
+          </button>
+        </div>
+
+        {isCreatingFolder && (
+          <form onSubmit={handleCreateFolder} className="mt-1 flex items-center gap-1">
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Folder name..."
+              className="flex-1 h-7 px-2 rounded-lg bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-400"
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="h-7 px-2 rounded-lg bg-amber-500 text-black font-bold text-xs"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreatingFolder(false)}
+              className="p-1 text-zinc-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        )}
+
+        {isFoldersOpen && (
+          <div className="mt-1 space-y-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveFolderId(null)}
+              className={`w-full text-left px-2 py-1 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                activeFolderId === null
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <span>All Chats</span>
+              <span className="text-[10px] font-mono text-zinc-500">{conversations.length}</span>
+            </button>
+            {folders.map((f) => {
+              const count = conversations.filter((c) => c.folderId === f.id).length;
+              return (
+                <div
+                  key={f.id}
+                  onClick={() => setActiveFolderId(f.id)}
+                  className={`group w-full text-left px-2 py-1 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                    activeFolderId === f.id
+                      ? 'bg-amber-500/15 text-amber-300 font-medium'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="truncate">{f.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-mono text-zinc-500">{count}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteFolder(f.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-500 hover:text-red-400"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Conversation List Scroll Area */}
@@ -267,18 +460,24 @@ export function MasterAi2Sidebar() {
               <ConversationItem
                 key={conv.id}
                 conv={conv}
+                folders={folders}
                 isActive={conv.id === activeConversationId}
+                isBulkMode={isBulkMode}
+                isSelected={selectedConversationIds.includes(conv.id)}
                 isEditing={editingId === conv.id}
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 onSelect={() => handleSelect(conv.id)}
+                onToggleSelect={() => toggleSelectConversation(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onDuplicate={(e) => handleDuplicate(e, conv.id)}
                 onArchive={(e) => handleArchive(e, conv.id)}
                 onBranch={(e) => handleBranch(e, conv.id)}
+                onMoveToFolder={(folderId) => setConversationFolder(conv.id, folderId)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -297,18 +496,24 @@ export function MasterAi2Sidebar() {
               <ConversationItem
                 key={conv.id}
                 conv={conv}
+                folders={folders}
                 isActive={conv.id === activeConversationId}
+                isBulkMode={isBulkMode}
+                isSelected={selectedConversationIds.includes(conv.id)}
                 isEditing={editingId === conv.id}
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 onSelect={() => handleSelect(conv.id)}
+                onToggleSelect={() => toggleSelectConversation(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onDuplicate={(e) => handleDuplicate(e, conv.id)}
                 onArchive={(e) => handleArchive(e, conv.id)}
                 onBranch={(e) => handleBranch(e, conv.id)}
+                onMoveToFolder={(folderId) => setConversationFolder(conv.id, folderId)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -327,18 +532,24 @@ export function MasterAi2Sidebar() {
               <ConversationItem
                 key={conv.id}
                 conv={conv}
+                folders={folders}
                 isActive={conv.id === activeConversationId}
+                isBulkMode={isBulkMode}
+                isSelected={selectedConversationIds.includes(conv.id)}
                 isEditing={editingId === conv.id}
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 onSelect={() => handleSelect(conv.id)}
+                onToggleSelect={() => toggleSelectConversation(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onDuplicate={(e) => handleDuplicate(e, conv.id)}
                 onArchive={(e) => handleArchive(e, conv.id)}
                 onBranch={(e) => handleBranch(e, conv.id)}
+                onMoveToFolder={(folderId) => setConversationFolder(conv.id, folderId)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -357,18 +568,24 @@ export function MasterAi2Sidebar() {
               <ConversationItem
                 key={conv.id}
                 conv={conv}
+                folders={folders}
                 isActive={conv.id === activeConversationId}
+                isBulkMode={isBulkMode}
+                isSelected={selectedConversationIds.includes(conv.id)}
                 isEditing={editingId === conv.id}
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 onSelect={() => handleSelect(conv.id)}
+                onToggleSelect={() => toggleSelectConversation(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onDuplicate={(e) => handleDuplicate(e, conv.id)}
                 onArchive={(e) => handleArchive(e, conv.id)}
                 onBranch={(e) => handleBranch(e, conv.id)}
+                onMoveToFolder={(folderId) => setConversationFolder(conv.id, folderId)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -387,18 +604,24 @@ export function MasterAi2Sidebar() {
               <ConversationItem
                 key={conv.id}
                 conv={conv}
+                folders={folders}
                 isActive={conv.id === activeConversationId}
+                isBulkMode={isBulkMode}
+                isSelected={selectedConversationIds.includes(conv.id)}
                 isEditing={editingId === conv.id}
                 isConfirmingDelete={confirmDeleteId === conv.id}
                 editTitle={editTitle}
                 setEditTitle={setEditTitle}
                 onSelect={() => handleSelect(conv.id)}
+                onToggleSelect={() => toggleSelectConversation(conv.id)}
                 onPromptDelete={(e) => handlePromptDelete(e, conv.id)}
                 onExecuteDelete={() => handleExecuteDelete(conv.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onTogglePin={() => togglePinConversation(conv.id)}
+                onDuplicate={(e) => handleDuplicate(e, conv.id)}
                 onArchive={(e) => handleArchive(e, conv.id)}
                 onBranch={(e) => handleBranch(e, conv.id)}
+                onMoveToFolder={(folderId) => setConversationFolder(conv.id, folderId)}
                 onStartRename={(e) => handleStartRename(e, conv.id, conv.title)}
                 onSaveRename={() => handleSaveRename(conv.id)}
                 onCancelRename={() => setEditingId(null)}
@@ -407,7 +630,7 @@ export function MasterAi2Sidebar() {
           </div>
         )}
 
-        {/* Empty state for search or timeline */}
+        {/* Empty state */}
         {!hasAnyTimelineConversations && (
           <div className="px-3 py-8 text-center text-xs text-zinc-500 font-sans">
             {search ? (
@@ -456,7 +679,6 @@ export function MasterAi2Sidebar() {
                   >
                     <span className="truncate max-w-[150px]">{conv.title}</span>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {/* Restore */}
                       <button
                         type="button"
                         onClick={(e) => handleRestore(e, conv.id)}
@@ -465,7 +687,6 @@ export function MasterAi2Sidebar() {
                       >
                         <ArchiveRestore className="w-3.5 h-3.5" />
                       </button>
-                      {/* Delete */}
                       <button
                         type="button"
                         onClick={(e) => handlePromptDelete(e, conv.id)}
@@ -482,6 +703,58 @@ export function MasterAi2Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Floating Bulk Actions Bar (when bulk mode is active) */}
+      {isBulkMode && (
+        <div className="p-2.5 bg-orange-950/40 border-t border-orange-500/30 flex items-center justify-between text-xs">
+          <span className="font-mono text-orange-300">
+            {selectedConversationIds.length} selected
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={selectAllConversations}
+              className="px-2 py-1 rounded bg-white/[0.08] text-zinc-200 hover:text-white text-[10px]"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={bulkArchiveConversations}
+              disabled={selectedConversationIds.length === 0}
+              className="p-1 rounded hover:bg-amber-500/20 text-amber-300 disabled:opacity-40"
+              title="Archive selected"
+            >
+              <Archive className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkExportConversations('markdown')}
+              disabled={selectedConversationIds.length === 0}
+              className="p-1 rounded hover:bg-cyan-500/20 text-cyan-300 disabled:opacity-40"
+              title="Export selected as Markdown"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={bulkDeleteConversations}
+              disabled={selectedConversationIds.length === 0}
+              className="p-1 rounded hover:bg-red-500/20 text-red-400 disabled:opacity-40"
+              title="Delete selected"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={toggleBulkMode}
+              className="p-1 text-zinc-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar Footer: User Profile & Cloud Sync Indicator */}
       <div className="p-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 bg-white/[0.02]">
@@ -505,18 +778,24 @@ export function MasterAi2Sidebar() {
 
 interface ItemProps {
   conv: AiConversation;
+  folders: any[];
   isActive: boolean;
+  isBulkMode: boolean;
+  isSelected: boolean;
   isEditing: boolean;
   isConfirmingDelete: boolean;
   editTitle: string;
   setEditTitle: (s: string) => void;
   onSelect: () => void;
+  onToggleSelect: () => void;
   onPromptDelete: (e: React.MouseEvent) => void;
   onExecuteDelete: () => void;
   onCancelDelete: () => void;
   onTogglePin: () => void;
+  onDuplicate: (e: React.MouseEvent) => void;
   onArchive: (e: React.MouseEvent) => void;
   onBranch: (e: React.MouseEvent) => void;
+  onMoveToFolder: (folderId: string | null) => void;
   onStartRename: (e: React.MouseEvent) => void;
   onSaveRename: () => void;
   onCancelRename: () => void;
@@ -524,22 +803,30 @@ interface ItemProps {
 
 function ConversationItem({
   conv,
+  folders,
   isActive,
+  isBulkMode,
+  isSelected,
   isEditing,
   isConfirmingDelete,
   editTitle,
   setEditTitle,
   onSelect,
+  onToggleSelect,
   onPromptDelete,
   onExecuteDelete,
   onCancelDelete,
   onTogglePin,
+  onDuplicate,
   onArchive,
   onBranch,
+  onMoveToFolder,
   onStartRename,
   onSaveRename,
   onCancelRename,
 }: ItemProps) {
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
+
   // Inline Rename Mode
   if (isEditing) {
     return (
@@ -607,71 +894,152 @@ function ConversationItem({
     <div
       onClick={onSelect}
       className={`group w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
-        isActive
-          ? 'bg-orange-500/15 text-white font-semibold border border-orange-500/30 shadow-sm'
-          : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
+        isSelected
+          ? 'bg-orange-500/25 border border-orange-500/40 text-white font-semibold'
+          : isActive
+            ? 'bg-orange-500/15 text-white font-semibold border border-orange-500/30 shadow-sm'
+            : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
       }`}
     >
       <div className="flex items-center gap-2 truncate">
-        <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-400' : 'text-zinc-500'}`} />
+        {isBulkMode ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect();
+            }}
+            className="text-orange-400 cursor-pointer"
+          >
+            {isSelected ? (
+              <CheckSquare className="w-3.5 h-3.5" />
+            ) : (
+              <Square className="w-3.5 h-3.5 text-zinc-600" />
+            )}
+          </button>
+        ) : (
+          <MessageSquare
+            className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-400' : 'text-zinc-500'}`}
+          />
+        )}
         <span className="truncate">{conv.title}</span>
       </div>
 
       {/* Action Controls on Hover */}
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Branch */}
-        <button
-          type="button"
-          onClick={onBranch}
-          className="p-1 rounded text-zinc-500 hover:text-cyan-400 hover:bg-white/[0.1] cursor-pointer"
-          title="Branch this conversation"
-        >
-          <GitBranch className="w-3 h-3" />
-        </button>
+      {!isBulkMode && (
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Duplicate Chat (#64) */}
+          <button
+            type="button"
+            onClick={onDuplicate}
+            className="p-1 rounded text-zinc-500 hover:text-emerald-400 hover:bg-white/[0.1] cursor-pointer"
+            title="Duplicate chat"
+          >
+            <Copy className="w-3 h-3" />
+          </button>
 
-        {/* Pin / Unpin */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin();
-          }}
-          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
-          title={conv.isPinned ? 'Unpin' : 'Pin to top'}
-        >
-          {conv.isPinned ? <PinOff className="w-3 h-3 text-orange-400" /> : <Pin className="w-3 h-3" />}
-        </button>
+          {/* Branch */}
+          <button
+            type="button"
+            onClick={onBranch}
+            className="p-1 rounded text-zinc-500 hover:text-cyan-400 hover:bg-white/[0.1] cursor-pointer"
+            title="Branch this conversation"
+          >
+            <GitBranch className="w-3 h-3" />
+          </button>
 
-        {/* Rename */}
-        <button
-          type="button"
-          onClick={onStartRename}
-          className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
-          title="Rename chat"
-        >
-          <Edit2 className="w-3 h-3" />
-        </button>
+          {/* Pin / Unpin */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePin();
+            }}
+            className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
+            title={conv.isPinned ? 'Unpin' : 'Pin to top'}
+          >
+            {conv.isPinned ? <PinOff className="w-3 h-3 text-orange-400" /> : <Pin className="w-3 h-3" />}
+          </button>
 
-        {/* Archive */}
-        <button
-          type="button"
-          onClick={onArchive}
-          className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-white/[0.1] cursor-pointer"
-          title="Archive chat"
-        >
-          <Archive className="w-3 h-3" />
-        </button>
+          {/* Move to Folder */}
+          {folders.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFolderMenu(!showFolderMenu);
+                }}
+                className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-white/[0.1] cursor-pointer"
+                title="Move to Folder"
+              >
+                <Folder className="w-3 h-3" />
+              </button>
 
-        {/* Delete with Confirmation */}
-        <button
-          type="button"
-          onClick={onPromptDelete}
-          className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-white/[0.1] cursor-pointer"
-          title="Delete chat"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
-      </div>
+              {showFolderMenu && (
+                <div
+                  className="absolute right-0 bottom-full mb-1 w-36 rounded-xl bg-zinc-950 border border-white/10 shadow-2xl p-1 z-50 space-y-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMoveToFolder(null);
+                      setShowFolderMenu(false);
+                    }}
+                    className="w-full text-left px-2 py-1 rounded text-[11px] text-zinc-400 hover:text-white hover:bg-white/[0.08]"
+                  >
+                    No Folder
+                  </button>
+                  {folders.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        onMoveToFolder(f.id);
+                        setShowFolderMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-[11px] text-zinc-200 hover:text-white hover:bg-white/[0.08] truncate"
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rename */}
+          <button
+            type="button"
+            onClick={onStartRename}
+            className="p-1 rounded text-zinc-500 hover:text-white hover:bg-white/[0.1] cursor-pointer"
+            title="Rename chat"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+
+          {/* Archive */}
+          <button
+            type="button"
+            onClick={onArchive}
+            className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-white/[0.1] cursor-pointer"
+            title="Archive chat"
+          >
+            <Archive className="w-3 h-3" />
+          </button>
+
+          {/* Delete with Confirmation */}
+          <button
+            type="button"
+            onClick={onPromptDelete}
+            className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-white/[0.1] cursor-pointer"
+            title="Delete chat"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

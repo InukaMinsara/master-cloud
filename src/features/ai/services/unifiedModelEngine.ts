@@ -8,7 +8,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { UnifiedChatModel, AiTokenMetrics, WebSearchResult } from '../types/aiTypes';
+import { UnifiedChatModel, AiTokenMetrics, WebSearchResult, GenerationParameters } from '../types/aiTypes';
 import { ContextManager } from './contextManager';
 import { resolveModelFamily } from '../components/ModelFamilyLogo';
 import { ModelCapabilityService } from './modelCapabilityService';
@@ -18,9 +18,13 @@ export interface UnifiedStreamOptions {
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string | any[] }>;
   signal?: AbortSignal;
   webSearch?: boolean;
+  failover?: boolean;
+  generationParameters?: GenerationParameters;
   onChunk?: (chunk: string, accumulated: string) => void;
   onMetrics?: (metrics: AiTokenMetrics) => void;
   onWebSources?: (sources: WebSearchResult[]) => void;
+  onFailoverNotification?: (fallbackModel: string, provider: string) => void;
+  onAutoModelSelected?: (modelId: string) => void;
 }
 
 export interface UnifiedStreamResult {
@@ -244,10 +248,28 @@ class UnifiedModelEngine {
         model: options.model,
         provider: targetProvider,
         messages: options.messages,
-        max_tokens: safeMaxTokens,
-        stream: true,
+        max_tokens: options.generationParameters?.maxTokens || safeMaxTokens,
+        temperature: options.generationParameters?.temperature,
+        top_p: options.generationParameters?.topP,
+        frequency_penalty: options.generationParameters?.frequencyPenalty,
+        presence_penalty: options.generationParameters?.presencePenalty,
+        seed: options.generationParameters?.seed,
+        stop: options.generationParameters?.stopSequences,
+        stream: options.generationParameters?.stream !== false,
+        failover: Boolean(options.failover),
+        autoModel: options.model === 'auto',
       }),
     });
+
+    const fallbackModel = res.headers.get('X-Master-Fallback-Model');
+    const fallbackProvider = res.headers.get('X-Master-Fallback-Provider');
+    if (fallbackModel) {
+      options.onFailoverNotification?.(fallbackModel, fallbackProvider || '');
+    }
+    const autoChosen = res.headers.get('X-Master-Auto-Selected-Model');
+    if (autoChosen) {
+      options.onAutoModelSelected?.(autoChosen);
+    }
 
     // 429 Rate Limit Intercept with Exponential Backoff Retry (Never silently switch models)
     if (res.status === 429) {

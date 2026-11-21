@@ -39,6 +39,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Loader2,
+  BookTemplate,
+  Sparkles,
 } from 'lucide-react';
 import { useAiChatStore } from '../stores/aiChatStore';
 import { appSettingsService } from '@/services/appSettingsService';
@@ -51,11 +53,12 @@ import { toast } from 'sonner';
 interface ComposerProps {
   onSendMessage: (text: string, attachments: AiAttachment[]) => void;
   onStopGenerating: () => void;
+  onOpenTemplates?: () => void;
 }
 
 const CATEGORIES = ['All', 'Fast', 'Reasoning', 'Coding', 'General', 'Vision'] as const;
 
-export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerProps) {
+export function MasterAi2Composer({ onSendMessage, onStopGenerating, onOpenTemplates }: ComposerProps) {
   const [inputText, setInputText] = useState(() => appSettingsService.getDraft('master_ai_composer'));
   const [attachments, setAttachments] = useState<AiAttachment[]>([]);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
@@ -107,7 +110,9 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
   // Active Model Clean Display Name
   const matchedModel = unifiedModels.find((m) => m.id === selectedModelId);
   const activeModelDisplayName =
-    matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/[-_]/g, ' ') || 'Master AI');
+    selectedModelId === 'auto'
+      ? 'Auto (Smart Model)'
+      : matchedModel?.name || (selectedModelId.split('/').pop()?.replace(/[-_]/g, ' ') || 'Master AI');
   const activeCapabilities =
     matchedModel?.capabilities || ModelCapabilityService.getModelCapabilities(selectedModelId, matchedModel?.category);
 
@@ -371,7 +376,7 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Master AI anything, attach documents, images, videos or code..."
+          placeholder="Ask Master AI anything, attach documents or images for analysis, or insert prompt templates..."
           rows={1}
           disabled={isStreaming}
           className="w-full bg-transparent px-2.5 py-1.5 text-sm font-sans text-white placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-[180px] overflow-y-auto"
@@ -459,6 +464,19 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
               )}
             </div>
 
+            {/* Prompt Templates Quick Trigger (#146) */}
+            {onOpenTemplates && (
+              <button
+                type="button"
+                onClick={onOpenTemplates}
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-[11px] font-mono text-amber-300 hover:text-white transition-colors cursor-pointer"
+                title="Open Prompt Templates Library"
+              >
+                <BookTemplate className="w-3 h-3 text-amber-400" />
+                <span>Templates</span>
+              </button>
+            )}
+
             {/* Web Search Grounding Toggle Chip */}
             <button
               type="button"
@@ -545,6 +563,38 @@ export function MasterAi2Composer({ onSendMessage, onStopGenerating }: ComposerP
 
                   {/* Unified Models List */}
                   <div className="max-h-64 overflow-y-auto space-y-1 pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                    {/* Auto (Smart Selection) Adaptive Model */}
+                    {(selectedCategory === 'All' || selectedCategory === 'General') && !modelSearch && (
+                      <div
+                        className={`w-full text-left p-2 rounded-xl transition-all flex items-center justify-between cursor-pointer group mb-1 ${
+                          selectedModelId === 'auto'
+                            ? 'bg-orange-500/15 border border-orange-500/30 text-white'
+                            : 'hover:bg-white/[0.04] text-zinc-300'
+                        }`}
+                        onClick={() => {
+                          setSelectedModelId('auto');
+                          setIsModelDropdownOpen(false);
+                          toast.info('Switched to: Auto (Smart Model Selection)');
+                        }}
+                      >
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="font-semibold text-xs flex items-center gap-1.5 flex-wrap">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Auto (Smart Selection)</span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Adaptive
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5 line-clamp-1">
+                            Analyzes complexity, code, & visual attachments to route dynamically
+                          </div>
+                        </div>
+                        {selectedModelId === 'auto' && (
+                          <Check className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                        )}
+                      </div>
+                    )}
+
                     {filteredModels.map((m: UnifiedChatModel) => {
                       const isFav = favoriteModels.includes(m.id) || appSettingsService.isFavorite(m.id);
                       const caps =

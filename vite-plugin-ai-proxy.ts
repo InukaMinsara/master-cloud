@@ -222,9 +222,13 @@ function isNonChatModel(id: string, name = ''): boolean {
     target.includes('speech') ||
     target.includes('eleven') ||
     target.includes('aura-') ||
-    // Embeddings, reranking, guards
+    // Embeddings, reranking, guards, moderation
     target.includes('embed') ||
     target.includes('embedding') ||
+    target.includes('bge-') ||
+    target.includes('e5-') ||
+    target.includes('clip') ||
+    target.includes('bert') ||
     target.includes('rerank') ||
     target.includes('guard') ||
     target.includes('safeguard') ||
@@ -252,9 +256,19 @@ function isNonChatModel(id: string, name = ''): boolean {
     target.includes('lora') ||
     target.includes('checkpoint') ||
     target.includes('agnes-image') ||
-    // Video generation
+    target.includes('sensenova-u1.5-lite') ||
+    // Dedicated Video generation models
     target.includes('veo') ||
     target.includes('sora') ||
+    target.includes('cosmos') ||
+    target.includes('wan') ||
+    target.includes('runway') ||
+    target.includes('pika') ||
+    target.includes('kling') ||
+    target.includes('hunyuan-video') ||
+    target.includes('cogvideo') ||
+    target.includes('ltx-video') ||
+    target.includes('mochi') ||
     // Broken / consent-locked models
     target.includes('glm-4.5-flash:free') ||
     target.includes('liquid/lfm-3-1.7b')
@@ -277,57 +291,73 @@ export function createAiProxyMiddleware(rootDir: string) {
     // ── 1. GET /api/ai/status ───────────────────────────────────────────────
     if (url === '/api/ai/status' && req.method === 'GET') {
       res.setHeader('Content-Type', 'application/json');
+      const groqOk = Boolean(envConfig.groqApiKey);
+      const xkiroOk = Boolean(envConfig.xkiroApiKey);
+      const polOk = Boolean(envConfig.pollinationsApiKey) || true;
+      const expOk = Boolean(envConfig.experientialApiKey);
+      const unoOk = Boolean(envConfig.unorouterApiKey) || true;
+      const abhiOk = Boolean(envConfig.abhibotsApiKey);
+      const apmixOk = Boolean(envConfig.apmixApiKey);
+      const orOk = Boolean(envConfig.openrouterApiKey) || true;
+      const nvOk = Boolean(envConfig.nvidiaApiKey);
+
       return res.end(
         JSON.stringify({
           groq: {
-            available: Boolean(envConfig.groqApiKey),
-            hasKey: Boolean(envConfig.groqApiKey),
+            available: groqOk,
+            hasKey: groqOk,
             endpoint: envConfig.groqEndpoint,
           },
           xkiro: {
-            available: Boolean(envConfig.xkiroApiKey),
-            hasKey: Boolean(envConfig.xkiroApiKey),
+            available: xkiroOk,
+            hasKey: xkiroOk,
             endpoint: envConfig.xkiroEndpoint,
           },
           pollinations: {
-            available: true,
+            available: polOk,
             hasKey: Boolean(envConfig.pollinationsApiKey),
             endpoint: envConfig.pollinationsEndpoint,
           },
-          comfyui: {
-            available: Boolean(envConfig.comfyUiEndpoint),
-            hasKey: Boolean(envConfig.comfyUiApiKey),
-            endpoint: envConfig.comfyUiEndpoint,
-          },
           experiential: {
-            available: Boolean(envConfig.experientialApiKey),
-            hasKey: Boolean(envConfig.experientialApiKey),
+            available: expOk,
+            hasKey: expOk,
             endpoint: envConfig.experientialEndpoint,
           },
           unorouter: {
-            available: Boolean(envConfig.unorouterApiKey) || true, // UnoRouter also provides public models
+            available: unoOk,
             hasKey: Boolean(envConfig.unorouterApiKey),
             endpoint: envConfig.unorouterEndpoint,
           },
           abhibots: {
-            available: Boolean(envConfig.abhibotsApiKey),
-            hasKey: Boolean(envConfig.abhibotsApiKey),
+            available: abhiOk,
+            hasKey: abhiOk,
             endpoint: envConfig.abhibotsEndpoint,
           },
           apmix: {
-            available: Boolean(envConfig.apmixApiKey),
-            hasKey: Boolean(envConfig.apmixApiKey),
+            available: apmixOk,
+            hasKey: apmixOk,
             endpoint: envConfig.apmixEndpoint,
           },
           openrouter: {
-            available: Boolean(envConfig.openrouterApiKey) || true, // OpenRouter has free tier accessible
+            available: orOk,
             hasKey: Boolean(envConfig.openrouterApiKey),
             endpoint: envConfig.openrouterEndpoint,
           },
           nvidia: {
-            available: Boolean(envConfig.nvidiaApiKey),
-            hasKey: Boolean(envConfig.nvidiaApiKey),
+            available: nvOk,
+            hasKey: nvOk,
             endpoint: envConfig.nvidiaEndpoint,
+          },
+          providers: {
+            groq: groqOk,
+            xkiro: xkiroOk,
+            pollinations: polOk,
+            experiential: expOk,
+            unorouter: unoOk,
+            abhibots: abhiOk,
+            apmix: apmixOk,
+            openrouter: orOk,
+            nvidia: nvOk,
           },
         })
       );
@@ -959,14 +989,43 @@ export function createAiProxyMiddleware(rootDir: string) {
         const body = await parseJsonBody(req);
         let modelId = body.model || 'openai/gpt-oss-120b';
         const isStreaming = Boolean(body.stream);
+        const allowFailover = Boolean(body.failover);
 
         // Sanitize known deprecated or inaccessible model aliases immediately
         if (modelId === 'llama-3.3-70b-versatile' || modelId === 'llama-3.1-8b-instant') {
           modelId = 'openai/gpt-oss-120b';
         }
 
-        // Routing Decision: Use explicit provider metadata or resolve from model ID
-        let targetProvider = body.provider;
+        // ── Auto Model Routing (Active only when user explicitly chooses Auto mode) ──
+        let autoSelectedModel: string | null = null;
+        let autoSelectedProvider: string | null = null;
+        if (modelId === 'auto' || body.autoModel) {
+          const hasVisualPayload = Array.isArray(body?.messages) && body.messages.some((m: any) =>
+            Array.isArray(m?.content) && m.content.some((part: any) => part?.type === 'image_url')
+          );
+          const lastMsg = Array.isArray(body?.messages) ? body.messages[body.messages.length - 1]?.content : '';
+          const lastText = typeof lastMsg === 'string' ? lastMsg : (Array.isArray(lastMsg) ? lastMsg.find((p: any) => p.type === 'text')?.text || '' : '');
+          const isComplex = /(?:architect|algorithm|calculate|solve|proof|refactor|optimize|compare|analyze|evaluate|debug|complex|theory)/i.test(lastText);
+          const isCoding = /(?:code|function|typescript|javascript|python|react|html|css|class|interface|sql|query|api|regex)/i.test(lastText);
+
+          if (hasVisualPayload) {
+            autoSelectedModel = 'cohere/command-a-vision';
+            autoSelectedProvider = 'xkiro';
+          } else if (isCoding) {
+            autoSelectedModel = 'qwen/qwen3.8-27b';
+            autoSelectedProvider = 'groq';
+          } else if (isComplex) {
+            autoSelectedModel = 'openai/gpt-oss-120b';
+            autoSelectedProvider = 'groq';
+          } else {
+            autoSelectedModel = 'openai/gpt-oss-20b';
+            autoSelectedProvider = 'groq';
+          }
+          modelId = autoSelectedModel;
+        }
+
+        // Routing Decision: Use explicit provider metadata, autoSelectedProvider, or resolve from model ID
+        let targetProvider = body.provider || autoSelectedProvider;
 
         if (!targetProvider) {
           if (
@@ -1008,6 +1067,16 @@ export function createAiProxyMiddleware(rootDir: string) {
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           const p = { ...payload, model: mId };
           delete p.provider;
+          delete p.failover;
+          delete p.autoModel;
+
+          // Apply user generation parameters
+          if (typeof p.temperature === 'number') p.temperature = Math.max(0, Math.min(2, p.temperature));
+          if (typeof p.top_p === 'number') p.top_p = Math.max(0, Math.min(1, p.top_p));
+          if (typeof p.frequency_penalty === 'number') p.frequency_penalty = Math.max(-2, Math.min(2, p.frequency_penalty));
+          if (typeof p.presence_penalty === 'number') p.presence_penalty = Math.max(-2, Math.min(2, p.presence_penalty));
+          if (typeof p.seed === 'number') p.seed = p.seed;
+          if (Array.isArray(p.stop) || typeof p.stop === 'string') p.stop = p.stop;
 
           switch (prov) {
             case 'openrouter':
@@ -1101,11 +1170,11 @@ export function createAiProxyMiddleware(rootDir: string) {
           console.warn(`[AI Proxy] Primary request to ${targetProvider}:${modelId} failed:`, fetchErr?.message || fetchErr);
         }
 
-        // Intelligent Resilience Cascade: If primary failed or returned error HTTP status
-        if (!upstreamRes || !upstreamRes.ok) {
+        // Provider Failover (Active ONLY when user explicitly enables failover)
+        if ((!upstreamRes || !upstreamRes.ok) && allowFailover) {
           if (upstreamRes) {
             lastErrorData = await upstreamRes.json().catch(() => ({}));
-            console.warn(`[AI Proxy] ${targetProvider}:${modelId} returned HTTP ${upstreamRes.status}. Initiating Resilience Cascade...`);
+            console.warn(`[AI Proxy] ${targetProvider}:${modelId} returned HTTP ${upstreamRes.status}. User-enabled failover cascading...`);
           }
 
           const hasVisualPayload = Array.isArray(body?.messages) && body.messages.some((m: any) =>
@@ -1137,22 +1206,38 @@ export function createAiProxyMiddleware(rootDir: string) {
                 signal: AbortSignal.timeout(18000),
               });
               if (candRes.ok) {
-                console.log(`[AI Proxy] Resilience Cascade to ${cand.prov}:${cand.model} succeeded!`);
+                console.log(`[AI Proxy] User-enabled Failover to ${cand.prov}:${cand.model} succeeded!`);
                 upstreamRes = candRes;
                 res.setHeader('X-Master-Fallback-Model', cand.model);
                 res.setHeader('X-Master-Fallback-Provider', cand.prov);
                 break;
               }
             } catch (cErr: any) {
-              console.warn(`[AI Proxy] Cascade candidate ${cand.prov}:${cand.model} failed:`, cErr?.message || cErr);
+              console.warn(`[AI Proxy] Failover candidate ${cand.prov}:${cand.model} failed:`, cErr?.message || cErr);
             }
           }
         }
 
         if (!upstreamRes || !upstreamRes.ok) {
+          if (upstreamRes && !lastErrorData) {
+            lastErrorData = await upstreamRes.json().catch(() => ({}));
+          }
           res.statusCode = upstreamRes ? upstreamRes.status : 502;
           res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify(lastErrorData || { error: { message: 'All upstream model providers failed' } }));
+          return res.end(
+            JSON.stringify(
+              lastErrorData || {
+                error: {
+                  message: `Provider request to ${modelId} failed (${upstreamRes ? `HTTP ${upstreamRes.status}` : 'Connection Timeout'}). Enable failover in settings to automatically route around outages.`,
+                  code: 'PROVIDER_OUTAGE',
+                },
+              }
+            )
+          );
+        }
+
+        if (autoSelectedModel) {
+          res.setHeader('X-Master-Auto-Selected-Model', autoSelectedModel);
         }
 
         if (upstreamRes.status === 429) {
@@ -1554,48 +1639,6 @@ export function createAiProxyMiddleware(rootDir: string) {
 
       res.statusCode = 405;
       return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
-    }
-
-    if (url.startsWith('/api/ai/pollinations/models') && req.method === 'GET') {
-      const polliRes = await fetch(`${envConfig.pollinationsEndpoint}/image/models`);
-      const data = await polliRes.json();
-      res.statusCode = polliRes.status;
-      res.setHeader('Content-Type', 'application/json');
-      return res.end(JSON.stringify(data));
-    }
-
-    if (url.startsWith('/api/ai/pollinations/generate') && req.method === 'POST') {
-      const body = await parseJsonBody(req);
-      const prompt = body.prompt ? encodeURIComponent(body.prompt.trim()) : 'image';
-      const queryParams = new URLSearchParams({
-        model: body.model || 'black-forest-labs/flux.1-schnell',
-        width: String(body.width || 1024),
-        height: String(body.height || 1024),
-        nologo: 'true',
-      });
-      const targetUrl = `${envConfig.pollinationsEndpoint}/image/${prompt}?${queryParams.toString()}`;
-      const polliRes = await fetch(targetUrl);
-      const arrayBuffer = await polliRes.arrayBuffer();
-      res.statusCode = 200;
-      res.setHeader('Content-Type', polliRes.headers.get('content-type') || 'image/png');
-      return res.end(Buffer.from(arrayBuffer));
-    }
-
-    if (url.startsWith('/api/ai/comfyui/status') && req.method === 'GET') {
-      const t0 = performance.now();
-      try {
-        const comfyRes = await fetch(`${envConfig.comfyUiEndpoint}/system_stats`, {
-          signal: AbortSignal.timeout(2000),
-        });
-        const latencyMs = Math.round(performance.now() - t0);
-        if (comfyRes.ok) {
-          const data = await comfyRes.json().catch(() => ({}));
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify({ online: true, latencyMs, endpoint: envConfig.comfyUiEndpoint, data }));
-        }
-      } catch {}
-      res.setHeader('Content-Type', 'application/json');
-      return res.end(JSON.stringify({ online: false, endpoint: envConfig.comfyUiEndpoint }));
     }
 
     next();
