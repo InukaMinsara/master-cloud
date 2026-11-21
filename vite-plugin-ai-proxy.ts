@@ -215,6 +215,7 @@ function isNonChatModel(id: string, name = ''): boolean {
     target.includes('embedding') ||
     target.includes('rerank') ||
     target.includes('guard') ||
+    target.includes('safeguard') ||
     target.includes('moderation') ||
     target.includes('prompt-guard') ||
     // Terms-acceptance required models (e.g. CanopyLabs on Groq)
@@ -359,7 +360,7 @@ export function createAiProxyMiddleware(rootDir: string) {
                       contextLength: ctx,
                       contextBadge: ctxBadge,
                       provider: 'groq',
-                      isDefault: id.includes('120b') || id.includes('70b') || id.includes('20b'),
+                      isDefault: id === 'openai/gpt-oss-120b',
                     });
                   }
                 }
@@ -747,7 +748,7 @@ export function createAiProxyMiddleware(rootDir: string) {
                 if (!id) continue;
                 const isZeroCost = id.endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0');
                 if (!isZeroCost) continue;
-                if (isNonChatModel(id, m.name)) continue;
+                if (isNonChatModel(id, m.name) || id.includes('llama-3.3-70b-instruct')) continue;
                 if (m.architecture?.output_modalities && !m.architecture.output_modalities.includes('text')) continue;
                 if (!seenIds.has(id)) {
                   seenIds.add(id);
@@ -781,9 +782,10 @@ export function createAiProxyMiddleware(rootDir: string) {
           // Verified resilient fallback for OpenRouter models
           if (unifiedModels.filter((m) => m.provider === 'openrouter').length === 0) {
             const fallbackOr = [
-              { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ERNIE 5.5 Flash Preview', description: 'Advanced conversational synthesis and knowledge engine', category: 'general', contextLength: 1024000, contextBadge: '1M context', provider: 'openrouter', isDefault: false },
-              { id: 'recursive/flint-v1.0:free', name: 'Flint V1.0', description: 'Recursive reasoning and conversational synthesis model', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
+              { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron 3.5 Lightning', description: 'Ultra-fast conversational reasoning and code assistant', category: 'fast', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
               { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'Nemotron 3.5 Super VL', description: 'High-speed multimodal vision and chat model', category: 'vision', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
+              { id: 'recursive/flint-v1.0:free', name: 'Flint V1.0', description: 'Recursive reasoning and conversational synthesis model', category: 'reasoning', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
+              { id: 'particle-ai/particle-1:free', name: 'Particle 1', description: 'Lightweight high-efficiency conversational model', category: 'general', contextLength: 131072, contextBadge: '131k context', provider: 'openrouter', isDefault: false },
             ];
             for (const fm of fallbackOr) {
               if (!seenIds.has(fm.id)) {
@@ -858,12 +860,17 @@ export function createAiProxyMiddleware(rootDir: string) {
       return res.end(JSON.stringify({ models: unifiedModels }));
     }
 
-    // ── 3. POST /api/ai/chat (Unified Multi-Provider Intelligent Chat Router) ──
+    // ── 3. POST /api/ai/chat (Unified Multi-Provider Intelligent Chat Router & Resilience Cascade) ──
     if (url === '/api/ai/chat' && req.method === 'POST') {
       try {
         const body = await parseJsonBody(req);
-        const modelId = body.model || 'openai/gpt-oss-120b';
+        let modelId = body.model || 'openai/gpt-oss-120b';
         const isStreaming = Boolean(body.stream);
+
+        // Sanitize known deprecated or inaccessible model aliases immediately
+        if (modelId === 'llama-3.3-70b-versatile' || modelId === 'llama-3.1-8b-instant') {
+          modelId = 'openai/gpt-oss-120b';
+        }
 
         // Routing Decision: Use explicit provider metadata or resolve from model ID
         let targetProvider = body.provider;
@@ -895,171 +902,139 @@ export function createAiProxyMiddleware(rootDir: string) {
           }
         }
 
-        let targetEndpoint = '';
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
+        const buildProviderCall = (prov: string, mId: string, payload: any) => {
+          let targetEndpoint = '';
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          const p = { ...payload, model: mId };
+          delete p.provider;
+
+          switch (prov) {
+            case 'openrouter':
+              targetEndpoint = `${envConfig.openrouterEndpoint}/chat/completions`;
+              if (envConfig.openrouterApiKey) headers['Authorization'] = `Bearer ${envConfig.openrouterApiKey}`;
+              headers['HTTP-Referer'] = 'https://mastercloud.local';
+              headers['X-Title'] = 'Master Cloud AI';
+              break;
+
+            case 'unorouter':
+              targetEndpoint = `${envConfig.unorouterEndpoint}/chat/completions`;
+              if (envConfig.unorouterApiKey) headers['Authorization'] = `Bearer ${envConfig.unorouterApiKey}`;
+              break;
+
+            case 'experiential':
+              targetEndpoint = `${envConfig.experientialEndpoint}/chat/completions`;
+              if (envConfig.experientialApiKey) headers['Authorization'] = `Bearer ${envConfig.experientialApiKey}`;
+              break;
+
+            case 'abhibots':
+              targetEndpoint = `${envConfig.abhibotsEndpoint}/chat/completions`;
+              if (envConfig.abhibotsApiKey) headers['Authorization'] = `Bearer ${envConfig.abhibotsApiKey}`;
+              break;
+
+            case 'apmix':
+              targetEndpoint = `${envConfig.apmixEndpoint}/chat/completions`;
+              if (envConfig.apmixApiKey) headers['Authorization'] = `Bearer ${envConfig.apmixApiKey}`;
+              break;
+
+            case 'xkiro':
+              targetEndpoint = `${envConfig.xkiroEndpoint}/chat/completions`;
+              if (envConfig.xkiroApiKey) headers['Authorization'] = `Bearer ${envConfig.xkiroApiKey}`;
+              break;
+
+            case 'pollinations':
+              targetEndpoint = `${envConfig.pollinationsEndpoint}/v1/chat/completions`;
+              if (envConfig.pollinationsApiKey) headers['Authorization'] = `Bearer ${envConfig.pollinationsApiKey}`;
+              if (!p.max_tokens || p.max_tokens < 1024) p.max_tokens = 1024;
+              break;
+
+            case 'groq':
+            default:
+              targetEndpoint = `${envConfig.groqEndpoint}/chat/completions`;
+              if (envConfig.groqApiKey) headers['Authorization'] = `Bearer ${envConfig.groqApiKey}`;
+              let promptTokens = 0;
+              if (Array.isArray(p.messages)) {
+                for (const m of p.messages) {
+                  promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+                }
+              }
+              const safeMax = Math.max(1024, Math.min(p.max_tokens || 1800, 7200 - promptTokens));
+              p.max_tokens = safeMax;
+              break;
+          }
+
+          const isReasoning = /reason|r1|o1|o3|qwq|thought|kimi/i.test(mId);
+          if (isReasoning && (!p.max_tokens || p.max_tokens < 1536)) {
+            p.max_tokens = 1536;
+          }
+
+          return { targetEndpoint, headers, payload: p };
         };
 
-        switch (targetProvider) {
-          case 'openrouter':
-            if (!envConfig.openrouterApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'OPENROUTER_API_KEY is not set in .env.local. Please add your OpenRouter API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.openrouterEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.openrouterApiKey}`;
-            headers['HTTP-Referer'] = 'https://mastercloud.local';
-            headers['X-Title'] = 'Master Cloud AI';
-            break;
+        // Execute primary target request
+        const primary = buildProviderCall(targetProvider, modelId, body);
+        let upstreamRes: Response | null = null;
+        let lastErrorData: any = null;
 
-          case 'unorouter':
-            targetEndpoint = `${envConfig.unorouterEndpoint}/chat/completions`;
-            if (envConfig.unorouterApiKey) {
-              headers['Authorization'] = `Bearer ${envConfig.unorouterApiKey}`;
-            }
-            break;
+        try {
+          upstreamRes = await fetch(primary.targetEndpoint, {
+            method: 'POST',
+            headers: primary.headers,
+            body: JSON.stringify(primary.payload),
+            signal: AbortSignal.timeout(30000),
+          });
+        } catch (fetchErr: any) {
+          console.warn(`[AI Proxy] Primary request to ${targetProvider}:${modelId} failed:`, fetchErr?.message || fetchErr);
+        }
 
-          case 'experiential':
-            if (!envConfig.experientialApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'EXPERIENTIAL_LABS_API_KEY is not set in .env.local. Please add your Experiential Labs API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.experientialEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.experientialApiKey}`;
-            break;
+        // Intelligent Resilience Cascade: If primary failed or returned error HTTP status
+        if (!upstreamRes || !upstreamRes.ok) {
+          if (upstreamRes) {
+            lastErrorData = await upstreamRes.json().catch(() => ({}));
+            console.warn(`[AI Proxy] ${targetProvider}:${modelId} returned HTTP ${upstreamRes.status}. Initiating Resilience Cascade...`);
+          }
 
-          case 'abhibots':
-            if (!envConfig.abhibotsApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'ABHIBOTS_API_KEY is not set in .env.local. Please add your Abhibots API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.abhibotsEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.abhibotsApiKey}`;
-            break;
+          const cascadeCandidates = [
+            { prov: 'groq', model: 'openai/gpt-oss-120b' },
+            { prov: 'groq', model: 'qwen/qwen3.8-27b' },
+            { prov: 'xkiro', model: 'mistralai/ministral-14b' },
+            { prov: 'xkiro', model: 'mistralai/mistral-large-2512' },
+            { prov: 'openrouter', model: 'nvidia/nemotron-3.5-lightning:free' },
+            { prov: 'pollinations', model: 'minimax/minimax-m3.1-flash' },
+          ].filter((c) => !(c.prov === targetProvider && c.model === modelId));
 
-          case 'apmix':
-            if (!envConfig.apmixApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'APMIX_API_KEY is not set in .env.local. Please add your APmix API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.apmixEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.apmixApiKey}`;
-            break;
-
-          case 'xkiro':
-            if (!envConfig.xkiroApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'XKIRO_API_KEY is not set in .env.local. Please add your xKiro API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.xkiroEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.xkiroApiKey}`;
-            break;
-
-          case 'pollinations':
-            targetEndpoint = `${envConfig.pollinationsEndpoint}/v1/chat/completions`;
-            if (envConfig.pollinationsApiKey) {
-              headers['Authorization'] = `Bearer ${envConfig.pollinationsApiKey}`;
-            }
-            break;
-
-          case 'groq':
-          default:
-            if (!envConfig.groqApiKey) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(
-                JSON.stringify({
-                  error: {
-                    message:
-                      'GROQ_API_KEY is not set in .env.local. Please add your Groq API key to .env.local to use this model.',
-                  },
-                })
-              );
-            }
-            targetEndpoint = `${envConfig.groqEndpoint}/chat/completions`;
-            headers['Authorization'] = `Bearer ${envConfig.groqApiKey}`;
-            // Token Safety Clamping for Groq Free Tier (Strict 8,000 TPM limit prevention)
-            let promptTokens = 0;
-            if (Array.isArray(body.messages)) {
-              for (const m of body.messages) {
-                promptTokens += 3 + Math.ceil(((m.content || '') as string).length / 3.5);
+          for (const cand of cascadeCandidates) {
+            try {
+              const candCall = buildProviderCall(cand.prov, cand.model, body);
+              const candRes = await fetch(candCall.targetEndpoint, {
+                method: 'POST',
+                headers: candCall.headers,
+                body: JSON.stringify(candCall.payload),
+                signal: AbortSignal.timeout(18000),
+              });
+              if (candRes.ok) {
+                console.log(`[AI Proxy] Resilience Cascade to ${cand.prov}:${cand.model} succeeded!`);
+                upstreamRes = candRes;
+                res.setHeader('X-Master-Fallback-Model', cand.model);
+                res.setHeader('X-Master-Fallback-Provider', cand.prov);
+                break;
               }
+            } catch (cErr: any) {
+              console.warn(`[AI Proxy] Cascade candidate ${cand.prov}:${cand.model} failed:`, cErr?.message || cErr);
             }
-            const safeMax = Math.max(1024, Math.min(body.max_tokens || 1800, 7200 - promptTokens));
-            body.max_tokens = safeMax;
-            break;
+          }
         }
 
-        // Clean internal provider metadata from upstream payload
-        const upstreamBody = { ...body };
-        delete upstreamBody.provider;
-
-        // Ensure sufficient token budget for reasoning and multi-step models (e.g. Kimi, DeepSeek, R1, QwQ)
-        const isReasoning = /reason|r1|o1|o3|qwq|thought|kimi/i.test(modelId);
-        if (isReasoning && (!upstreamBody.max_tokens || upstreamBody.max_tokens < 1536)) {
-          upstreamBody.max_tokens = 1536;
+        if (!upstreamRes || !upstreamRes.ok) {
+          res.statusCode = upstreamRes ? upstreamRes.status : 502;
+          res.setHeader('Content-Type', 'application/json');
+          return res.end(JSON.stringify(lastErrorData || { error: { message: 'All upstream model providers failed' } }));
         }
 
-        const upstreamRes = await fetch(targetEndpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(30000),
-        });
-
-        // Gracefully support 429 rate limit backoff by forwarding Retry-After
         if (upstreamRes.status === 429) {
           const retryAfter = upstreamRes.headers.get('retry-after');
           if (retryAfter) {
             res.setHeader('Retry-After', retryAfter);
           }
-        }
-
-        if (!upstreamRes.ok) {
-          const errData = await upstreamRes.json().catch(() => ({}));
-          res.statusCode = upstreamRes.status;
-          res.setHeader('Content-Type', 'application/json');
-          return res.end(JSON.stringify(errData));
         }
 
         if (isStreaming && upstreamRes.body) {

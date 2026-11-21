@@ -175,9 +175,9 @@ export const useAiChatStore = create<AiChatState>((set, get) => {
         if (models && models.length > 0) {
           set({ unifiedModels: models });
           const current = get().selectedModelId;
-          const exists = models.some((m) => m.id === current);
-          if (!exists) {
-            const def = models.find((m) => m.isDefault) || models[0];
+          const isInvalid = current === 'llama-3.3-70b-versatile' || !models.some((m) => m.id === current);
+          if (isInvalid) {
+            const def = models.find((m) => m.id === DEFAULT_GROQ_MODEL) || models.find((m) => m.isDefault) || models[0];
             if (def) {
               set({ selectedModelId: def.id });
             }

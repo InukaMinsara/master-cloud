@@ -179,14 +179,14 @@ export const VERIFIED_GROQ_MODELS: GroqModelInfo[] = Object.entries(OFFICIAL_GRO
     maxOutputTokens: meta.maxOutputTokens,
     category: meta.category,
     groqCategory: meta.groqCategory,
-    isDefault: id === 'llama-3.3-70b-versatile',
+    isDefault: id === 'openai/gpt-oss-120b',
     isFreeTier: meta.isFree,
     isActive: true,
     rateLimits: meta.rateLimits,
   })
 );
 
-export const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 
 export const GROQ_AUDIO_MODELS = {
   whisperLarge: 'whisper-large-v3',
