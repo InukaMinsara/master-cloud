@@ -37,6 +37,11 @@ export type ModelFamily =
   | 'cohere'
   | 'sensenova'
   | 'nvidia'
+  | 'minimax'
+  | 'moonshot'
+  | 'grok'
+  | 'stepfun'
+  | 'baichuan'
   | 'general';
 
 export interface ModelCapabilities {
